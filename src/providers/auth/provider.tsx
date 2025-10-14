@@ -17,9 +17,12 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       logoutPath: props.logoutPath,
       tokenRefreshPath: props.tokenRefreshPath,
       userInfoPath: props.userInfoPath,
+      accountManagementPath: props.accountManagementPath,
       accessTokenExpiryCookieName: props.accessTokenExpiryCookieName,
       shouldAutoRefresh: props.shouldAutoRefresh,
       shouldAutoFetchUserInfo: props.shouldAutoFetchUserInfo,
+      shouldTimeoutSession: props.shouldTimeoutSession,
+      shouldInvalidateSession: props.shouldInvalidateSession,
     }),
     [
       props.serverUrl,
@@ -28,9 +31,12 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       props.logoutPath,
       props.tokenRefreshPath,
       props.userInfoPath,
+      props.accountManagementPath,
       props.accessTokenExpiryCookieName,
       props.shouldAutoRefresh,
       props.shouldAutoFetchUserInfo,
+      props.shouldTimeoutSession,
+      props.shouldInvalidateSession,
     ],
   );
 

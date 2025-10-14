@@ -4,7 +4,7 @@ import { Provider } from "react-redux";
 
 import App from "./App";
 import store from "./store";
-import type { AuthConfig } from "@/config/auth";
+import type { AuthConfig } from "@/lib/auth";
 import { AuthProvider } from "@/providers/auth";
 
 const authConfig: AuthConfig = {

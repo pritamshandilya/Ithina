@@ -11,5 +11,5 @@ export interface AuthConfig {
   shouldAutoFetchUserInfo?: boolean;
   shouldTimeoutSession?: boolean;
   shouldInvalidateSession?: boolean;
-  onTokenExpiration: () => void;
+  onTokenExpiration?: () => void;
 }

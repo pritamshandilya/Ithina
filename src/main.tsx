@@ -1,10 +1,22 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.tsx'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import { Provider } from "react-redux";
 
-createRoot(document.getElementById('root')!).render(
+import App from "./App";
+import store from "./store";
+import type { AuthConfig } from "@/config/auth";
+import { AuthProvider } from "@/providers/auth";
+
+const authConfig: AuthConfig = {
+  serverUrl: import.meta.env.VITE_AUTH_SERVER_URL,
+};
+
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <Provider store={store}>
+      <AuthProvider {...authConfig}>
+        <App />
+      </AuthProvider>
+    </Provider>
   </StrictMode>,
-)
+);

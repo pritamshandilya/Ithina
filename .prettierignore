@@ -1,0 +1,5 @@
+.tanstack
+.vscode
+dist
+public
+routeTree.gen.ts

@@ -3,6 +3,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import { useAuth } from "./providers/auth";
 import { routeTree } from "./routeTree.gen";
 
 const queryClient = new QueryClient();
@@ -19,9 +20,11 @@ const router = createRouter({
 });
 
 export default function App() {
+  const auth = useAuth();
+
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <RouterProvider router={router} context={{ auth }} />
 
       {Boolean(import.meta.env.VITE_DEBUG) && (
         <>

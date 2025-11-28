@@ -1,5 +1,6 @@
 export interface AuthConfig {
   serverUrl: string;
+  redirectUri: string;
   loginPath?: string;
   registerPath?: string;
   logoutPath?: string;
@@ -9,7 +10,5 @@ export interface AuthConfig {
   accessTokenExpiryCookieName?: string;
   shouldAutoRefresh?: boolean;
   shouldAutoFetchUserInfo?: boolean;
-  shouldTimeoutSession?: boolean;
-  shouldInvalidateSession?: boolean;
   onTokenExpiration?: () => void;
 }

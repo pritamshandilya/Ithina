@@ -1,3 +1,10 @@
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+
 export function getCookie(name: string) {
   return document.cookie
     .split("; ")
@@ -6,6 +13,7 @@ export function getCookie(name: string) {
 }
 
 export function toMilliseconds(seconds?: number | string): number {
-  if (!seconds) return -1;
-  else return Number(seconds) * 1000;
+  if (seconds) return Number(seconds) * 1000;
+
+  return -1;
 }

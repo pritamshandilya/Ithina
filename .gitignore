@@ -27,3 +27,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# We are using pnpm, so we don't need these lock files
+package-lock.json
+yarn.lock
+bun.lock

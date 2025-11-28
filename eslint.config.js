@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import reactQuery from "@tanstack/eslint-plugin-query";
 import reactRouter from "@tanstack/eslint-plugin-router";
+import prettier from "eslint-config-prettier/flat";
 import reactHooks from "eslint-plugin-react-hooks";
 import reactRefresh from "eslint-plugin-react-refresh";
 import { defineConfig, globalIgnores } from "eslint/config";
@@ -23,5 +24,9 @@ export default defineConfig([
       ecmaVersion: 2020,
       globals: globals.browser,
     },
+    rules: {
+      "no-console": "error",
+    },
   },
+  prettier,
 ]);

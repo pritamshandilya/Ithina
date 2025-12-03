@@ -13,3 +13,8 @@ export interface AuthConfig {
   shouldAutoFetchUserInfo?: boolean;
   onTokenExpiration?: () => void;
 }
+
+export interface UserInvite {
+  email: string;
+  role?: string;
+}

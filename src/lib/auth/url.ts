@@ -3,43 +3,52 @@ import type { AuthConfig } from "./config";
 type UrlHelperConfig = Pick<
   AuthConfig,
   | "serverUrl"
+  | "redirectUri"
   | "loginPath"
   | "registerPath"
   | "logoutPath"
   | "tokenRefreshPath"
   | "userInfoPath"
-  | "accountManagementPath"
+  | "manageAccountPath"
+  | "userInvitePath"
 >;
 
 export class UrlHelper {
   serverUrl: string;
+  redirectUri: string;
   loginPath: string;
   registerPath: string;
   logoutPath: string;
   tokenRefreshPath: string;
   userInfoPath: string;
-  accountManagementPath: string;
+  manageAccountPath: string;
+  userInvitePath: string;
 
   constructor(config: UrlHelperConfig) {
     this.serverUrl = config.serverUrl;
+    this.redirectUri = config.redirectUri;
     this.loginPath = config.loginPath ?? "/sign-in";
     this.registerPath = config.registerPath ?? "/sign-up";
-    this.logoutPath = config.logoutPath ?? "/app/logout/";
-    this.tokenRefreshPath = config.tokenRefreshPath ?? "/app/refresh/";
-    this.userInfoPath = config.userInfoPath ?? "/app/userinfo/";
-    this.accountManagementPath = config.accountManagementPath ?? "account";
+    this.logoutPath = config.logoutPath ?? "/api/sign-out";
+    this.tokenRefreshPath = config.tokenRefreshPath ?? "/api/refresh-token";
+    this.userInfoPath = config.userInfoPath ?? "/api/user-info";
+    this.manageAccountPath = config.manageAccountPath ?? "/manage-account";
+    this.userInvitePath = config.userInvitePath ?? "/invite";
   }
 
-  getLoginUrl(redirect?: string): URL {
-    return this.generateUrl(this.loginPath, { redirect });
+  getLoginUrl(redirectPath?: string): URL {
+    const redirectUrl = this.getRedirectUrl(redirectPath);
+    return this.generateUrl(this.loginPath, { redirect_url: redirectUrl });
   }
 
-  getRegisterUrl(redirect?: string): URL {
-    return this.generateUrl(this.registerPath, { redirect });
+  getRegisterUrl(redirectPath?: string): URL {
+    const redirectUrl = this.getRedirectUrl(redirectPath);
+    return this.generateUrl(this.registerPath, { redirect_url: redirectUrl });
   }
 
   getLogoutUrl(): URL {
-    return this.generateUrl(this.logoutPath);
+    const redirectUrl = this.getRedirectUrl();
+    return this.generateUrl(this.logoutPath, { redirect_url: redirectUrl });
   }
 
   getTokenRefreshUrl(): URL {
@@ -50,8 +59,16 @@ export class UrlHelper {
     return this.generateUrl(this.userInfoPath);
   }
 
-  getAccountManagementUrl(): URL {
-    return this.generateUrl(this.accountManagementPath);
+  getManageAccountUrl(): URL {
+    return this.generateUrl(this.manageAccountPath);
+  }
+
+  getUserInviteUrl(): URL {
+    return this.generateUrl(this.userInvitePath);
+  }
+
+  private getRedirectUrl(path?: string): string {
+    return new URL(path ?? "", this.redirectUri).toString();
   }
 
   private generateUrl(path: string, params?: Record<string, unknown>): URL {
@@ -65,13 +82,34 @@ export class UrlHelper {
   }
 
   private generateUrlSearchParams(params: Record<string, unknown>) {
-    const searchParams = new URLSearchParams();
+    const urlSearchParams = new URLSearchParams();
 
-    Object.entries(params).forEach(([key, value]) => {
-      if (value === null || value === undefined) return;
-      searchParams.append(key, value as string);
-    });
+    const appendParams = (key: string, value: unknown) => {
+      if (value === undefined || value === null) return;
 
-    return searchParams;
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          if (item === undefined || item === null) continue;
+
+          if (typeof item === "object") {
+            appendParams(key, item);
+          } else {
+            urlSearchParams.append(key, String(item));
+          }
+        }
+      } else if (typeof value === "object") {
+        for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+          appendParams(k, v);
+        }
+      } else {
+        urlSearchParams.append(key, value as string);
+      }
+    };
+
+    for (const [key, value] of Object.entries(params)) {
+      appendParams(key, value);
+    }
+
+    return urlSearchParams;
   }
 }

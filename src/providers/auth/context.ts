@@ -1,7 +1,18 @@
+import type { UserInvite } from '@/lib/auth';
 import { createContext } from "react";
 
 export interface UserInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
   email: string;
+  emailVerified: boolean;
+  locale?: string;
+  profilePictureUrl?: string;
+  externalId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  lastSignInAt?: string;
 }
 
 export interface AuthProviderContext {
@@ -10,10 +21,11 @@ export interface AuthProviderContext {
   isFetchingUserInfo: boolean;
   error: Error | null;
   fetchUserInfo: () => Promise<UserInfo | undefined>;
-  startLogin: (redirectTo?: string) => void;
-  startRegister: (redirectTo?: string) => void;
+  startLogin: (redirectPath?: string) => void;
+  startRegister: (redirectPath?: string) => void;
   startLogout: () => void;
   manageAccount: () => void;
+  sendInvitation: (data: UserInvite | UserInvite[]) => Promise<void>;
   refreshToken: () => Promise<Response | undefined>;
   initAutoRefresh: () => void;
 }
@@ -27,7 +39,8 @@ export const defaultContext: AuthProviderContext = {
   startLogin: () => {},
   startRegister: () => {},
   startLogout: () => {},
-  manageAccount: () => {},
+  manageAccount: () => { },
+  sendInvitation: () => Promise.resolve(),
   refreshToken: () => Promise.resolve(undefined),
   initAutoRefresh: () => {},
 };

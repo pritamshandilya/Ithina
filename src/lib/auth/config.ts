@@ -7,7 +7,7 @@ export interface AuthConfig {
   tokenRefreshPath?: string;
   userInfoPath?: string;
   manageAccountPath?: string;
-  userInvitePath?: string;
+  userInvitationPath?: string;
   accessTokenExpiryCookieName?: string;
   shouldAutoRefresh?: boolean;
   shouldAutoFetchUserInfo?: boolean;

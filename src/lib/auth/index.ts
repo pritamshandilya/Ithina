@@ -1,6 +1,6 @@
-import type { AuthConfig } from "./config";
-import { UrlHelper } from "./url";
 import { getCookie, toMilliseconds } from "@/lib/utils";
+import type { AuthConfig, UserInvite } from "./config";
+import { UrlHelper } from "./url";
 
 export * from "./config";
 
@@ -17,11 +17,14 @@ export class Auth {
 
     this.urlHelper = new UrlHelper({
       serverUrl: config.serverUrl,
+      redirectUri: config.redirectUri,
       loginPath: config.loginPath,
       registerPath: config.registerPath,
       logoutPath: config.logoutPath,
       tokenRefreshPath: config.tokenRefreshPath,
       userInfoPath: config.userInfoPath,
+      manageAccountPath: config.manageAccountPath,
+      userInvitationPath: config.userInvitationPath,
     });
 
     this.scheduleTokenExpiration();
@@ -46,7 +49,7 @@ export class Auth {
   }
 
   manageAccount() {
-    window.location.assign(this.urlHelper.getAccountManagementUrl());
+    window.location.assign(this.urlHelper.getManageAccountUrl());
   }
 
   async fetchUserInfo<T>(): Promise<T> {
@@ -63,6 +66,27 @@ export class Auth {
     const userInfo: T = await userInfoResponse.json();
 
     return userInfo;
+  }
+
+  async sendInvitation(data: UserInvite | UserInvite[]) {
+    const invitePayload = Array.isArray(data) ? data : [data];
+
+    const inviteResponse = await fetch(this.urlHelper.getUserInvitationUrl(), {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(invitePayload),
+    });
+
+    if (!inviteResponse.ok) {
+      throw new Error(
+        `Unable to invite user(s). Request failed with status code ${inviteResponse?.status}`,
+      );
+    }
+
+    return await inviteResponse.json();
   }
 
   async refreshToken(): Promise<Response> {
@@ -83,6 +107,7 @@ export class Auth {
       throw new Error(JSON.stringify(errorDetails));
     }
 
+    // Reschedule token expiration callback after successful refresh
     this.scheduleTokenExpiration();
 
     return response;
@@ -90,14 +115,19 @@ export class Auth {
 
   initAutoRefresh(): NodeJS.Timeout | undefined {
     if (!this.isLoggedIn || this.isDisposed) {
+      console.log(
+        "Not scheduling token refresh: either logged out or disposed",
+        { isLoggedIn: this.isLoggedIn, isDisposed: this.isDisposed },
+      );
       return;
     }
 
-    const secondsBeforeRefresh = 30;
+    const secondsBeforeRefresh = 27 * 60;
     const millisecondsBeforeRefresh = secondsBeforeRefresh * 1000;
-    const now = new Date().getTime();
+    const now = Date.now();
     const refreshTime = this.at_exp - millisecondsBeforeRefresh;
     const timeTillRefresh = Math.max(refreshTime - now, 0);
+    console.log(`Scheduling token refresh in ${timeTillRefresh} ms`);
 
     this.refreshTokenTimeout = setTimeout(async () => {
       try {
@@ -112,7 +142,7 @@ export class Auth {
   }
 
   get isLoggedIn() {
-    return this.at_exp > new Date().getTime();
+    return this.at_exp > Date.now();
   }
 
   private get at_exp(): number {
@@ -122,10 +152,9 @@ export class Auth {
   private scheduleTokenExpiration(): void {
     clearTimeout(this.tokenExpirationTimeout);
 
-    const now = new Date().getTime();
-    const millisecondsTillExpiration = this.at_exp - now;
+    const millisecondsTillExpiration = this.at_exp - Date.now();
 
-    if (millisecondsTillExpiration > 0) {
+    if (millisecondsTillExpiration > 0 && this.config.onTokenExpiration) {
       this.tokenExpirationTimeout = setTimeout(
         this.config.onTokenExpiration,
         millisecondsTillExpiration,

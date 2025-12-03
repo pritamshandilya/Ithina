@@ -6,7 +6,8 @@ export interface AuthConfig {
   logoutPath?: string;
   tokenRefreshPath?: string;
   userInfoPath?: string;
-  accountManagementPath?: string;
+  manageAccountPath?: string;
+  userInvitePath?: string;
   accessTokenExpiryCookieName?: string;
   shouldAutoRefresh?: boolean;
   shouldAutoFetchUserInfo?: boolean;

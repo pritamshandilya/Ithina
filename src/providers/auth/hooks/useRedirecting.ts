@@ -6,12 +6,12 @@ export function useRedirecting(auth: Auth) {
   const manageAccount = useCallback(() => auth.manageAccount(), [auth]);
 
   const startLogin = useCallback(
-    (redirect?: string) => auth.startLogin(redirect),
+    (redirectPath?: string) => auth.startLogin(redirectPath),
     [auth],
   );
 
   const startRegister = useCallback(
-    (redirect?: string) => auth.startRegister(redirect),
+    (redirectPath?: string) => auth.startRegister(redirectPath),
     [auth],
   );
 

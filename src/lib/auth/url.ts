@@ -10,7 +10,7 @@ type UrlHelperConfig = Pick<
   | "tokenRefreshPath"
   | "userInfoPath"
   | "manageAccountPath"
-  | "userInvitePath"
+  | "userInvitationPath"
 >;
 
 export class UrlHelper {
@@ -22,7 +22,7 @@ export class UrlHelper {
   tokenRefreshPath: string;
   userInfoPath: string;
   manageAccountPath: string;
-  userInvitePath: string;
+  userInvitationPath: string;
 
   constructor(config: UrlHelperConfig) {
     this.serverUrl = config.serverUrl;
@@ -33,7 +33,7 @@ export class UrlHelper {
     this.tokenRefreshPath = config.tokenRefreshPath ?? "/api/refresh-token";
     this.userInfoPath = config.userInfoPath ?? "/api/user-info";
     this.manageAccountPath = config.manageAccountPath ?? "/manage-account";
-    this.userInvitePath = config.userInvitePath ?? "/api/invitation";
+    this.userInvitationPath = config.userInvitationPath ?? "/api/invitation";
   }
 
   getLoginUrl(redirectPath?: string): URL {
@@ -63,8 +63,8 @@ export class UrlHelper {
     return this.generateUrl(this.manageAccountPath);
   }
 
-  getUserInviteUrl(): URL {
-    return this.generateUrl(this.userInvitePath);
+  getUserInvitationUrl(): URL {
+    return this.generateUrl(this.userInvitationPath);
   }
 
   private getRedirectUrl(path?: string): string {

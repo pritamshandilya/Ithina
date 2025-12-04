@@ -33,7 +33,7 @@ export class UrlHelper {
     this.tokenRefreshPath = config.tokenRefreshPath ?? "/api/refresh-token";
     this.userInfoPath = config.userInfoPath ?? "/api/user-info";
     this.manageAccountPath = config.manageAccountPath ?? "/manage-account";
-    this.userInvitationPath = config.userInvitationPath ?? "/api/invitation";
+    this.userInvitationPath = config.userInvitationPath ?? "/api/invitations";
   }
 
   getLoginUrl(redirectPath?: string): URL {

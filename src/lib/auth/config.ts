@@ -11,7 +11,9 @@ export interface AuthConfig {
   accessTokenExpiryCookieName?: string;
   shouldAutoRefresh?: boolean;
   shouldAutoFetchUserInfo?: boolean;
+  autoRefreshSecondsBeforeExpiry?: number;
   onTokenExpiration?: () => void;
+  onAutoRefreshFailure?: (error: Error) => void;
 }
 
 export interface UserInvite {

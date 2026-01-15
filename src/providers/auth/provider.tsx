@@ -1,13 +1,13 @@
 import type { PropsWithChildren } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { Auth, type AuthConfig } from "@/lib/auth";
 import type { AuthProviderContext, UserInfo } from "./context";
 import { AuthContext } from "./context";
-import { useInvitation } from './hooks/useInvitation';
+import { useInvitation } from "./hooks/useInvitation";
 import { useRedirecting } from "./hooks/useRedirecting";
 import { useTokenRefresh } from "./hooks/useTokenRefresh";
 import { useUserInfo } from "./hooks/useUserInfo";
+import { Auth, type AuthConfig } from "@/lib/auth";
 
 export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
   const config: Omit<AuthConfig, "onTokenExpiration"> = useMemo(
@@ -24,6 +24,8 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       accessTokenExpiryCookieName: props.accessTokenExpiryCookieName,
       shouldAutoRefresh: props.shouldAutoRefresh,
       shouldAutoFetchUserInfo: props.shouldAutoFetchUserInfo,
+      autoRefreshSecondsBeforeExpiry: props.autoRefreshSecondsBeforeExpiry,
+      onAutoRefreshFailure: props.onAutoRefreshFailure,
     }),
     [
       props.serverUrl,
@@ -38,43 +40,15 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       props.accessTokenExpiryCookieName,
       props.shouldAutoRefresh,
       props.shouldAutoFetchUserInfo,
+      props.autoRefreshSecondsBeforeExpiry,
+      props.onAutoRefreshFailure,
     ],
   );
 
-  const authRef = useRef<Auth>(null);
-
-  // useEffect(() => {
-  //   return () => {
-  //     if (authRef.current) {
-  //       console.log("Disposed Auth instance on unmount");
-  //       authRef.current.dispose();
-  //       authRef.current = null;
-  //     }
-  //   };
-  // }, []);
-
-  const auth: Auth = useMemo(() => {
-    if (authRef.current) {
-      console.log("Disposing previous Auth instance");
-      authRef.current.dispose();
-    }
-
-    const newAuth = new Auth({
-      ...config,
-      onTokenExpiration: () => setIsLoggedIn(false),
-    });
-
-    console.log("Created new Auth instance");
-
-    authRef.current = newAuth;
-
-    return newAuth;
-  }, [config]);
-
-  // const auth = new Auth({
-  //   ...config,
-  //   onTokenExpiration: () => setIsLoggedIn(false),
-  // });
+  const auth = Auth.getInstance({
+    ...config,
+    onTokenExpiration: () => setIsLoggedIn(false),
+  });
 
   const [isLoggedIn, setIsLoggedIn] = useState(auth.isLoggedIn);
 
@@ -83,8 +57,9 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
 
   const { userInfo, isFetchingUserInfo, error, fetchUserInfo } =
     useUserInfo<UserInfo>(auth, config.shouldAutoFetchUserInfo ?? true);
-  
-  const { sendInvitation } = useInvitation(auth);
+
+  const { sendInvitation, listInvitations, revokeInvitation } =
+    useInvitation(auth);
 
   const { refreshToken, initAutoRefresh } = useTokenRefresh(
     auth,
@@ -103,6 +78,8 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       startLogout,
       manageAccount,
       sendInvitation,
+      listInvitations,
+      revokeInvitation,
       refreshToken,
       initAutoRefresh,
     }),
@@ -117,6 +94,8 @@ export function AuthProvider(props: PropsWithChildren<AuthConfig>) {
       startLogout,
       manageAccount,
       sendInvitation,
+      listInvitations,
+      revokeInvitation,
       refreshToken,
       initAutoRefresh,
     ],

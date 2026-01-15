@@ -63,8 +63,8 @@ export class UrlHelper {
     return this.generateUrl(this.manageAccountPath);
   }
 
-  getUserInvitationUrl(): URL {
-    return this.generateUrl(this.userInvitationPath);
+  getUserInvitationUrl(organizationId?: string): URL {
+    return this.generateUrl(this.userInvitationPath, organizationId ? { organizationId } : undefined);
   }
 
   private getRedirectUrl(path?: string): string {

@@ -5,14 +5,15 @@ import { UrlHelper } from "./url";
 export * from "./config";
 
 export class Auth {
+  private static instance?: Auth;
+
   private readonly config: AuthConfig;
   private readonly urlHelper: UrlHelper;
 
   private tokenExpirationTimeout?: NodeJS.Timeout;
   private refreshTokenTimeout?: NodeJS.Timeout;
-  private isDisposed = false;
 
-  constructor(config: AuthConfig) {
+  private constructor(config: AuthConfig) {
     this.config = config;
 
     this.urlHelper = new UrlHelper({
@@ -30,10 +31,25 @@ export class Auth {
     this.scheduleTokenExpiration();
   }
 
+  static getInstance(config?: AuthConfig) {
+    if (!Auth.instance) {
+      if (!config) {
+        throw new Error(
+          "Auth not initialized. Call Auth.getInstance(config) first.",
+        );
+      }
+
+      Auth.instance = new Auth(config);
+    }
+
+    // If caller passes a new config after initialization, ignore it.
+    return Auth.instance;
+  }
+
   dispose() {
     clearTimeout(this.tokenExpirationTimeout);
     clearTimeout(this.refreshTokenTimeout);
-    this.isDisposed = true;
+    Auth.instance = undefined;
   }
 
   startLogin(redirect?: string) {
@@ -68,10 +84,10 @@ export class Auth {
     return userInfo;
   }
 
-  async sendInvitation(data: UserInvite | UserInvite[]) {
+  async sendInvitation(data: UserInvite | UserInvite[], organizationId?: string) {
     const invitePayload = Array.isArray(data) ? data : [data];
 
-    const inviteResponse = await fetch(this.urlHelper.getUserInvitationUrl(), {
+    const inviteResponse = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
       method: "POST",
       credentials: "include",
       headers: {
@@ -87,6 +103,36 @@ export class Auth {
     }
 
     return await inviteResponse.json();
+  }
+
+  async fetchInvitations(organizationId?: string) {
+    const response = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Unable to fetch invitations. Request failed with status code ${response?.status}`,
+      );
+    }
+
+    return await response.json();
+  }
+
+  async revokeInvitation(organizationId?: string) {
+    const response = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Unable to revoke invitation. Request failed with status code ${response?.status}`,
+      );
+    }
+
+    return await response.json();
   }
 
   async refreshToken(): Promise<Response> {
@@ -114,27 +160,24 @@ export class Auth {
   }
 
   initAutoRefresh(): NodeJS.Timeout | undefined {
-    if (!this.isLoggedIn || this.isDisposed) {
-      console.log(
-        "Not scheduling token refresh: either logged out or disposed",
-        { isLoggedIn: this.isLoggedIn, isDisposed: this.isDisposed },
-      );
+    if (!this.isLoggedIn) {
       return;
     }
 
-    const secondsBeforeRefresh = 27 * 60;
+    clearTimeout(this.refreshTokenTimeout);
+
+    const secondsBeforeRefresh =
+      this.config.autoRefreshSecondsBeforeExpiry ?? 10;
     const millisecondsBeforeRefresh = secondsBeforeRefresh * 1000;
-    const now = Date.now();
     const refreshTime = this.at_exp - millisecondsBeforeRefresh;
-    const timeTillRefresh = Math.max(refreshTime - now, 0);
-    console.log(`Scheduling token refresh in ${timeTillRefresh} ms`);
+    const timeTillRefresh = Math.max(refreshTime - Date.now(), 0);
 
     this.refreshTokenTimeout = setTimeout(async () => {
       try {
         await this.refreshToken();
         this.initAutoRefresh();
       } catch (error) {
-        console.error("Failed to refresh token:", error);
+        this.config.onAutoRefreshFailure?.(error as Error);
       }
     }, timeTillRefresh);
 

@@ -4,22 +4,22 @@ import type { Auth, UserInvite } from "@/lib/auth";
 
 export function useInvitation(auth: Auth) {
   const sendInvitation = useCallback(
-    async (data: UserInvite | UserInvite[]) => {
-      const response = await auth.sendInvitation(data);
+    async (data: UserInvite | UserInvite[], organizationId?: string) => {
+      const response = await auth.sendInvitation(data, organizationId);
       
       return response;
     },
     [auth],
   );
 
-  const listInvitations = useCallback(async () => {
-    const invitations = await auth.fetchInvitations();
+  const listInvitations = useCallback(async (organizationId?: string) => {
+    const invitations = await auth.fetchInvitations(organizationId);
 
     return invitations;
   }, [auth]);
 
   const revokeInvitation = useCallback(
-    async (invitationId: string) => {
+    async (invitationId: string,) => {
       const response = await auth.revokeInvitation(invitationId);
 
       return response;

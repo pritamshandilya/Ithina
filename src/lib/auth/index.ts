@@ -120,8 +120,8 @@ export class Auth {
     return await response.json();
   }
 
-  async revokeInvitation(organizationId?: string) {
-    const response = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
+  async revokeInvitation(invitationId: string) {
+    const response = await fetch(this.urlHelper.getUserInvitationUrl(invitationId), {
       method: "DELETE",
       credentials: "include",
     });

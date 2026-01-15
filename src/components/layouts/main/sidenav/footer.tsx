@@ -1,4 +1,3 @@
-import { Link } from "@tanstack/react-router";
 import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,7 +21,8 @@ import { useAuth } from "@/providers/auth";
 export default function SidenavFooter() {
   const { isMobile } = useSidebar();
 
-  const { userInfo, isFetchingUserInfo, startLogout } = useAuth();
+  const { userInfo, isFetchingUserInfo, manageAccount, startLogout } =
+    useAuth();
 
   if (isFetchingUserInfo || !userInfo) return null;
 
@@ -92,11 +92,9 @@ export default function SidenavFooter() {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
-                <Link to="/account">
-                  <BadgeCheck />
-                  Account
-                </Link>
+              <DropdownMenuItem onClick={manageAccount}>
+                <BadgeCheck />
+                Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

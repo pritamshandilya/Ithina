@@ -1,5 +1,6 @@
-import type { UserInvite } from '@/lib/auth';
 import { createContext } from "react";
+
+import type { UserInvite } from "@/lib/auth";
 
 export interface UserInfo {
   id: string;
@@ -26,6 +27,8 @@ export interface AuthProviderContext {
   startLogout: () => void;
   manageAccount: () => void;
   sendInvitation: (data: UserInvite | UserInvite[]) => Promise<void>;
+  listInvitations: () => Promise<UserInvite[]>;
+  revokeInvitation: (invitationId: string) => Promise<void>;
   refreshToken: () => Promise<Response | undefined>;
   initAutoRefresh: () => void;
 }
@@ -39,8 +42,10 @@ export const defaultContext: AuthProviderContext = {
   startLogin: () => {},
   startRegister: () => {},
   startLogout: () => {},
-  manageAccount: () => { },
+  manageAccount: () => {},
   sendInvitation: () => Promise.resolve(),
+  listInvitations: () => Promise.resolve([]),
+  revokeInvitation: () => Promise.resolve(),
   refreshToken: () => Promise.resolve(undefined),
   initAutoRefresh: () => {},
 };

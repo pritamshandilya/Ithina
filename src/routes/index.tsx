@@ -6,13 +6,13 @@ export const Route = createFileRoute("/")({
 
 function RouteComponent() {
   return (
-    <div className="flex flex-1 flex-col gap-4 p-4">
-      <div className="grid auto-rows-min gap-4 md:grid-cols-3">
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-        <div className="bg-muted/50 aspect-video rounded-xl" />
-      </div>
-      <div className="bg-muted/50 min-h-screen flex-1 rounded-xl md:min-h-min" />
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-4">
+      <h1 className="text-4xl font-bold tracking-tight">
+        Planogram Assistant Starter Template
+      </h1>
+      <p className="text-muted-foreground text-center max-w-md">
+        A modern React template with TanStack Router, TanStack Query, and Tailwind CSS.
+      </p>
     </div>
   );
 }

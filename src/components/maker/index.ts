@@ -10,3 +10,11 @@ export {
   PrimaryActionSection,
   type PrimaryActionSectionProps,
 } from "./primary-action-section";
+export {
+  ShelfCard,
+  type ShelfCardProps,
+} from "./shelf-card";
+export {
+  AssignedShelvesList,
+  type AssignedShelvesListProps,
+} from "./assigned-shelves-list";

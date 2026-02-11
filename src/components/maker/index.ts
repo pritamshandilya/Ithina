@@ -18,3 +18,7 @@ export {
   AssignedShelvesList,
   type AssignedShelvesListProps,
 } from "./assigned-shelves-list";
+export {
+  QuickStatsPanel,
+  type QuickStatsPanelProps,
+} from "./quick-stats-panel";

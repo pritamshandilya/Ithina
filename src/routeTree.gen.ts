@@ -9,9 +9,15 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestComponentsRouteImport } from './routes/test-components'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
 
+const TestComponentsRoute = TestComponentsRouteImport.update({
+  id: '/test-components',
+  path: '/test-components',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -25,32 +31,43 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/test-components': typeof TestComponentsRoute
   '/maker': typeof MakerLayoutRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/test-components': typeof TestComponentsRoute
   '/maker': typeof MakerLayoutRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/test-components': typeof TestComponentsRoute
   '/maker/_layout': typeof MakerLayoutRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/maker'
+  fullPaths: '/' | '/test-components' | '/maker'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/maker'
-  id: '__root__' | '/' | '/maker/_layout'
+  to: '/' | '/test-components' | '/maker'
+  id: '__root__' | '/' | '/test-components' | '/maker/_layout'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TestComponentsRoute: typeof TestComponentsRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test-components': {
+      id: '/test-components'
+      path: '/test-components'
+      fullPath: '/test-components'
+      preLoaderRoute: typeof TestComponentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -70,6 +87,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TestComponentsRoute: TestComponentsRoute,
   MakerLayoutRoute: MakerLayoutRoute,
 }
 export const routeTree = rootRouteImport

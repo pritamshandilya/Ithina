@@ -40,6 +40,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-maker-primary: var(--maker-primary);
+  --color-maker-pending: var(--maker-pending);
+  --color-maker-approved: var(--maker-approved);
+  --color-maker-returned: var(--maker-returned);
+  --color-maker-never-audited: var(--maker-never-audited);
 }
 
 :root {
@@ -166,24 +171,47 @@
     @apply bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm;
   }
 
+  .stat-card-success {
+    border-color: color-mix(in oklch, var(--maker-approved) 50%, transparent);
+    background-color: color-mix(in oklch, var(--maker-approved) 5%, var(--card));
+  }
+
+  .stat-card-warning {
+    border-color: color-mix(in oklch, var(--maker-returned) 50%, transparent);
+    background-color: color-mix(in oklch, var(--maker-returned) 5%, var(--card));
+  }
+
+  .stat-card-accent {
+    border-color: color-mix(in oklch, var(--maker-primary) 50%, transparent);
+    background-color: color-mix(in oklch, var(--maker-primary) 5%, var(--card));
+  }
+
   .shelf-card-interactive {
     @apply bg-card border border-border rounded-lg p-4 hover:border-accent transition-all cursor-pointer;
   }
 
   /* Status-specific styles */
   .status-pending {
-    @apply bg-maker-pending/20 text-maker-pending border border-maker-pending/50;
+    background-color: color-mix(in oklch, var(--maker-pending) 20%, transparent);
+    color: var(--maker-pending);
+    border: 1px solid color-mix(in oklch, var(--maker-pending) 50%, transparent);
   }
 
   .status-approved {
-    @apply bg-maker-approved/20 text-maker-approved border border-maker-approved/50;
+    background-color: color-mix(in oklch, var(--maker-approved) 20%, transparent);
+    color: var(--maker-approved);
+    border: 1px solid color-mix(in oklch, var(--maker-approved) 50%, transparent);
   }
 
   .status-returned {
-    @apply bg-maker-returned/20 text-maker-returned border border-maker-returned/50;
+    background-color: color-mix(in oklch, var(--maker-returned) 20%, transparent);
+    color: var(--maker-returned);
+    border: 1px solid color-mix(in oklch, var(--maker-returned) 50%, transparent);
   }
 
   .status-never-audited {
-    @apply bg-maker-never-audited/20 text-muted-foreground border border-maker-never-audited/50;
+    background-color: color-mix(in oklch, var(--maker-never-audited) 20%, transparent);
+    color: var(--muted-foreground);
+    border: 1px solid color-mix(in oklch, var(--maker-never-audited) 50%, transparent);
   }
 }

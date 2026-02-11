@@ -87,6 +87,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
+  
+  /* Maker-specific semantic colors */
+  --maker-primary: var(--accent); /* Purple for maker actions */
+  --maker-pending: var(--chart-1); /* Purple accent for pending */
+  --maker-approved: var(--chart-2); /* Green for approved */
+  --maker-returned: var(--destructive); /* Red for returned/rejected */
+  --maker-never-audited: var(--muted); /* Gray for never audited */
 }
 
 .dark {
@@ -122,6 +129,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
+  
+  /* Maker-specific semantic colors */
+  --maker-primary: var(--accent); /* Purple for maker actions */
+  --maker-pending: var(--chart-1); /* Purple accent for pending */
+  --maker-approved: var(--chart-2); /* Green for approved */
+  --maker-returned: var(--destructive); /* Red for returned/rejected */
+  --maker-never-audited: var(--muted); /* Gray for never audited */
 }
 
 @layer base {
@@ -138,5 +152,38 @@
     [role="button"]:not(:disabled) {
       cursor: pointer;
     }
+  }
+}
+
+@layer components {
+  /* Dashboard Layouts */
+  .dashboard-grid {
+    @apply grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3;
+  }
+
+  /* Card Components */
+  .stat-card {
+    @apply bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm;
+  }
+
+  .shelf-card-interactive {
+    @apply bg-card border border-border rounded-lg p-4 hover:border-accent transition-all cursor-pointer;
+  }
+
+  /* Status-specific styles */
+  .status-pending {
+    @apply bg-maker-pending/20 text-maker-pending border border-maker-pending/50;
+  }
+
+  .status-approved {
+    @apply bg-maker-approved/20 text-maker-approved border border-maker-approved/50;
+  }
+
+  .status-returned {
+    @apply bg-maker-returned/20 text-maker-returned border border-maker-returned/50;
+  }
+
+  .status-never-audited {
+    @apply bg-maker-never-audited/20 text-muted-foreground border border-maker-never-audited/50;
   }
 }

@@ -19,6 +19,7 @@ import { Route as TestComponentsRouteImport } from './routes/test-components'
 import { Route as TestComplianceOverviewRouteImport } from './routes/test-compliance-overview'
 import { Route as TestCheckerHeaderRouteImport } from './routes/test-checker-header'
 import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
+import { Route as TestAuditReviewQueueRouteImport } from './routes/test-audit-review-queue'
 import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
@@ -76,6 +77,11 @@ const TestCheckerFoundationRoute = TestCheckerFoundationRouteImport.update({
   path: '/test-checker-foundation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestAuditReviewQueueRoute = TestAuditReviewQueueRouteImport.update({
+  id: '/test-audit-review-queue',
+  path: '/test-audit-review-queue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
   id: '/test-audit-mode-selector',
   path: '/test-audit-mode-selector',
@@ -110,6 +116,7 @@ const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
@@ -128,6 +135,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
@@ -146,6 +154,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
@@ -166,6 +175,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
     | '/test-compliance-overview'
@@ -184,6 +194,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
     | '/test-compliance-overview'
@@ -201,6 +212,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
     | '/test-compliance-overview'
@@ -220,6 +232,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
+  TestAuditReviewQueueRoute: typeof TestAuditReviewQueueRoute
   TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
   TestCheckerHeaderRoute: typeof TestCheckerHeaderRoute
   TestComplianceOverviewRoute: typeof TestComplianceOverviewRoute
@@ -308,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestCheckerFoundationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test-audit-review-queue': {
+      id: '/test-audit-review-queue'
+      path: '/test-audit-review-queue'
+      fullPath: '/test-audit-review-queue'
+      preLoaderRoute: typeof TestAuditReviewQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/test-audit-mode-selector': {
       id: '/test-audit-mode-selector'
       path: '/test-audit-mode-selector'
@@ -356,6 +376,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
+  TestAuditReviewQueueRoute: TestAuditReviewQueueRoute,
   TestCheckerFoundationRoute: TestCheckerFoundationRoute,
   TestCheckerHeaderRoute: TestCheckerHeaderRoute,
   TestComplianceOverviewRoute: TestComplianceOverviewRoute,

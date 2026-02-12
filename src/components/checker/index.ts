@@ -18,3 +18,11 @@ export {
   ComplianceOverview,
   type ComplianceOverviewProps,
 } from "./compliance-overview";
+export {
+  AuditQueueCard,
+  type AuditQueueCardProps,
+} from "./audit-queue-card";
+export {
+  AuditReviewQueue,
+  type AuditReviewQueueProps,
+} from "./audit-review-queue";

@@ -13,6 +13,7 @@ import { Route as TestShelvesListRouteImport } from './routes/test-shelves-list'
 import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-audits'
 import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
 import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
+import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
@@ -46,6 +47,11 @@ const TestQuickStatsRoute = TestQuickStatsRouteImport.update({
 const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
   id: '/test-primary-action',
   path: '/test-primary-action',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
+  id: '/test-knowledge-center',
+  path: '/test-knowledge-center',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestHeaderRoute = TestHeaderRouteImport.update({
@@ -130,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
+  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -150,6 +157,7 @@ export interface FileRoutesByTo {
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
+  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
+  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
+    | '/test-knowledge-center'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -212,6 +222,7 @@ export interface FileRouteTypes {
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
+    | '/test-knowledge-center'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -231,6 +242,7 @@ export interface FileRouteTypes {
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
+    | '/test-knowledge-center'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -252,6 +264,7 @@ export interface RootRouteChildren {
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
   TestHeaderRoute: typeof TestHeaderRoute
+  TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
   TestPrimaryActionRoute: typeof TestPrimaryActionRoute
   TestQuickStatsRoute: typeof TestQuickStatsRoute
   TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
@@ -290,6 +303,13 @@ declare module '@tanstack/react-router' {
       path: '/test-primary-action'
       fullPath: '/test-primary-action'
       preLoaderRoute: typeof TestPrimaryActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-knowledge-center': {
+      id: '/test-knowledge-center'
+      path: '/test-knowledge-center'
+      fullPath: '/test-knowledge-center'
+      preLoaderRoute: typeof TestKnowledgeCenterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-header': {
@@ -404,6 +424,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,
   TestHeaderRoute: TestHeaderRoute,
+  TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
   TestPrimaryActionRoute: TestPrimaryActionRoute,
   TestQuickStatsRoute: TestQuickStatsRoute,
   TestReturnedAuditsRoute: TestReturnedAuditsRoute,

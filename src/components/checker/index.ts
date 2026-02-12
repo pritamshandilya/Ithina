@@ -26,3 +26,7 @@ export {
   AuditReviewQueue,
   type AuditReviewQueueProps,
 } from "./audit-review-queue";
+export {
+  KnowledgeCenterSection,
+  type KnowledgeCenterSectionProps,
+} from "./knowledge-center-section";

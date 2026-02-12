@@ -16,6 +16,7 @@ import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-act
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
+import { Route as TestCheckerHeaderRouteImport } from './routes/test-checker-header'
 import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
 import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
 import { Route as IndexRouteImport } from './routes/index'
@@ -59,6 +60,11 @@ const TestComponentsRoute = TestComponentsRouteImport.update({
   path: '/test-components',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestCheckerHeaderRoute = TestCheckerHeaderRouteImport.update({
+  id: '/test-checker-header',
+  path: '/test-checker-header',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TestCheckerFoundationRoute = TestCheckerFoundationRouteImport.update({
   id: '/test-checker-foundation',
   path: '/test-checker-foundation',
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
+  '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -115,6 +122,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
+  '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -131,6 +139,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
+  '/test-checker-header': typeof TestCheckerHeaderRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -149,6 +158,7 @@ export interface FileRouteTypes {
     | '/'
     | '/test-audit-mode-selector'
     | '/test-checker-foundation'
+    | '/test-checker-header'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -165,6 +175,7 @@ export interface FileRouteTypes {
     | '/'
     | '/test-audit-mode-selector'
     | '/test-checker-foundation'
+    | '/test-checker-header'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -180,6 +191,7 @@ export interface FileRouteTypes {
     | '/'
     | '/test-audit-mode-selector'
     | '/test-checker-foundation'
+    | '/test-checker-header'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -197,6 +209,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
   TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
+  TestCheckerHeaderRoute: typeof TestCheckerHeaderRoute
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
   TestHeaderRoute: typeof TestHeaderRoute
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestComponentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test-checker-header': {
+      id: '/test-checker-header'
+      path: '/test-checker-header'
+      fullPath: '/test-checker-header'
+      preLoaderRoute: typeof TestCheckerHeaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/test-checker-foundation': {
       id: '/test-checker-foundation'
       path: '/test-checker-foundation'
@@ -317,6 +337,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
   TestCheckerFoundationRoute: TestCheckerFoundationRoute,
+  TestCheckerHeaderRoute: TestCheckerHeaderRoute,
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,
   TestHeaderRoute: TestHeaderRoute,

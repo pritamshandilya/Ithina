@@ -30,3 +30,11 @@ export {
   KnowledgeCenterSection,
   type KnowledgeCenterSectionProps,
 } from "./knowledge-center-section";
+export {
+  OverrideActivityPanel,
+  type OverrideActivityPanelProps,
+} from "./override-activity-panel";
+export {
+  PublishingStatusPanel,
+  type PublishingStatusPanelProps,
+} from "./publishing-status-panel";

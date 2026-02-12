@@ -13,6 +13,7 @@ import { Route as TestShelvesListRouteImport } from './routes/test-shelves-list'
 import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-audits'
 import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
 import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
+import { Route as TestOverridePublishingRouteImport } from './routes/test-override-publishing'
 import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
@@ -47,6 +48,11 @@ const TestQuickStatsRoute = TestQuickStatsRouteImport.update({
 const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
   id: '/test-primary-action',
   path: '/test-primary-action',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestOverridePublishingRoute = TestOverridePublishingRouteImport.update({
+  id: '/test-override-publishing',
+  path: '/test-override-publishing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -179,6 +187,7 @@ export interface FileRoutesById {
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
@@ -202,6 +211,7 @@ export interface FileRouteTypes {
     | '/test-data-layer'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -223,6 +233,7 @@ export interface FileRouteTypes {
     | '/test-data-layer'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -243,6 +254,7 @@ export interface FileRouteTypes {
     | '/test-data-layer'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
@@ -265,6 +277,7 @@ export interface RootRouteChildren {
   TestDataLayerRoute: typeof TestDataLayerRoute
   TestHeaderRoute: typeof TestHeaderRoute
   TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
+  TestOverridePublishingRoute: typeof TestOverridePublishingRoute
   TestPrimaryActionRoute: typeof TestPrimaryActionRoute
   TestQuickStatsRoute: typeof TestQuickStatsRoute
   TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
@@ -303,6 +316,13 @@ declare module '@tanstack/react-router' {
       path: '/test-primary-action'
       fullPath: '/test-primary-action'
       preLoaderRoute: typeof TestPrimaryActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-override-publishing': {
+      id: '/test-override-publishing'
+      path: '/test-override-publishing'
+      fullPath: '/test-override-publishing'
+      preLoaderRoute: typeof TestOverridePublishingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-knowledge-center': {
@@ -425,6 +445,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestDataLayerRoute: TestDataLayerRoute,
   TestHeaderRoute: TestHeaderRoute,
   TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
+  TestOverridePublishingRoute: TestOverridePublishingRoute,
   TestPrimaryActionRoute: TestPrimaryActionRoute,
   TestQuickStatsRoute: TestQuickStatsRoute,
   TestReturnedAuditsRoute: TestReturnedAuditsRoute,

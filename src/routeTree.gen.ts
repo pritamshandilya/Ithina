@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TestShelvesListRouteImport } from './routes/test-shelves-list'
+import { Route as TestReturnedAuditsRedesignRouteImport } from './routes/test-returned-audits-redesign'
 import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-audits'
 import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
 import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
@@ -38,6 +39,12 @@ const TestShelvesListRoute = TestShelvesListRouteImport.update({
   path: '/test-shelves-list',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestReturnedAuditsRedesignRoute =
+  TestReturnedAuditsRedesignRouteImport.update({
+    id: '/test-returned-audits-redesign',
+    path: '/test-returned-audits-redesign',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const TestReturnedAuditsRoute = TestReturnedAuditsRouteImport.update({
   id: '/test-returned-audits',
   path: '/test-returned-audits',
@@ -166,6 +173,7 @@ export interface FileRoutesByFullPath {
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker': typeof CheckerLayoutRoute
   '/maker': typeof MakerLayoutRoute
@@ -191,6 +199,7 @@ export interface FileRoutesByTo {
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker': typeof CheckerIndexRoute
   '/maker': typeof MakerIndexRoute
@@ -215,6 +224,7 @@ export interface FileRoutesById {
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/_layout': typeof CheckerLayoutRoute
   '/maker/_layout': typeof MakerLayoutRoute
@@ -242,6 +252,7 @@ export interface FileRouteTypes {
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
+    | '/test-returned-audits-redesign'
     | '/test-shelves-list'
     | '/checker'
     | '/maker'
@@ -267,6 +278,7 @@ export interface FileRouteTypes {
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
+    | '/test-returned-audits-redesign'
     | '/test-shelves-list'
     | '/checker'
     | '/maker'
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/test-primary-action'
     | '/test-quick-stats'
     | '/test-returned-audits'
+    | '/test-returned-audits-redesign'
     | '/test-shelves-list'
     | '/checker/_layout'
     | '/maker/_layout'
@@ -316,6 +329,7 @@ export interface RootRouteChildren {
   TestPrimaryActionRoute: typeof TestPrimaryActionRoute
   TestQuickStatsRoute: typeof TestQuickStatsRoute
   TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
+  TestReturnedAuditsRedesignRoute: typeof TestReturnedAuditsRedesignRoute
   TestShelvesListRoute: typeof TestShelvesListRoute
   CheckerLayoutRoute: typeof CheckerLayoutRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
@@ -332,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/test-shelves-list'
       fullPath: '/test-shelves-list'
       preLoaderRoute: typeof TestShelvesListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-returned-audits-redesign': {
+      id: '/test-returned-audits-redesign'
+      path: '/test-returned-audits-redesign'
+      fullPath: '/test-returned-audits-redesign'
+      preLoaderRoute: typeof TestReturnedAuditsRedesignRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-returned-audits': {
@@ -508,6 +529,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestPrimaryActionRoute: TestPrimaryActionRoute,
   TestQuickStatsRoute: TestQuickStatsRoute,
   TestReturnedAuditsRoute: TestReturnedAuditsRoute,
+  TestReturnedAuditsRedesignRoute: TestReturnedAuditsRedesignRoute,
   TestShelvesListRoute: TestShelvesListRoute,
   CheckerLayoutRoute: CheckerLayoutRoute,
   MakerLayoutRoute: MakerLayoutRoute,

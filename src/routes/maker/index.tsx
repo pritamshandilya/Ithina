@@ -65,10 +65,10 @@ function MakerDashboard() {
 
         {/* 5. Returned Audits Section (conditional - only shows if audits exist) */}
         <ReturnedAuditsSection
-          onResubmit={(auditId, shelfId) => {
-            // TODO: Navigate to audit edit page when implemented
-            console.log("Re-submit requested:", { auditId, shelfId });
-            // Future: navigate({ to: '/maker/audit/$id/edit', params: { id: auditId }})
+          onViewReport={(auditId, shelfId) => {
+            // TODO: Navigate to detailed feedback report page when implemented
+            console.log("View report requested:", { auditId, shelfId });
+            // Future: navigate({ to: '/maker/report/$id', params: { id: auditId }})
           }}
         />
 

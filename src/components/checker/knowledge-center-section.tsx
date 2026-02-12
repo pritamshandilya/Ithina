@@ -99,7 +99,7 @@ export function KnowledgeCenterSection({
       title: "View Rules",
       description: "Browse all active compliance rules",
       icon: BookOpenIcon,
-      colorClass: "bg-[var(--checker-primary)]",
+      colorClass: "bg-accent",
       action: handleViewRules,
       isPrimary: true,
     },
@@ -108,7 +108,7 @@ export function KnowledgeCenterSection({
       title: "Create New Rule",
       description: "Define a new compliance rule",
       icon: PlusCircleIcon,
-      colorClass: "bg-[var(--checker-success)]",
+      colorClass: "bg-chart-2",
       action: handleCreateRule,
     },
     {
@@ -116,7 +116,7 @@ export function KnowledgeCenterSection({
       title: "Manage Versions",
       description: "View history and rollback changes",
       icon: GitBranchIcon,
-      colorClass: "bg-[var(--checker-warning)]",
+      colorClass: "bg-[var(--action-warning)]",
       action: handleManageVersions,
     },
     {
@@ -124,7 +124,7 @@ export function KnowledgeCenterSection({
       title: "Retire Rule",
       description: "Archive outdated rules",
       icon: ArchiveIcon,
-      colorClass: "bg-[var(--checker-neutral)]",
+      colorClass: "bg-muted",
       action: handleRetireRule,
     },
   ];
@@ -134,7 +134,7 @@ export function KnowledgeCenterSection({
       {/* Section Header with Rule Metadata */}
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-[var(--checker-primary)] p-2">
+          <div className="rounded-lg bg-accent p-2">
             <ActivityIcon className="h-6 w-6 text-white" />
           </div>
           <div>
@@ -200,7 +200,7 @@ export function KnowledgeCenterSection({
               "hover:scale-105 hover:shadow-lg hover:border-border/80",
               "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background",
               "active:scale-100",
-              card.isPrimary && "ring-2 ring-[var(--checker-primary)]/20"
+              card.isPrimary && "ring-2 ring-accent/20"
             )}
             aria-label={`${card.title}: ${card.description}`}
           >
@@ -227,7 +227,7 @@ export function KnowledgeCenterSection({
 
               {/* Text */}
               <div className="space-y-1">
-                <h3 className="font-semibold text-foreground group-hover:text-[var(--checker-primary)]">
+                <h3 className="font-semibold text-foreground group-hover:text-accent">
                   {card.title}
                 </h3>
                 <p className="text-sm text-muted-foreground">
@@ -237,7 +237,7 @@ export function KnowledgeCenterSection({
 
               {/* Primary Badge */}
               {card.isPrimary && (
-                <span className="inline-flex items-center rounded-full bg-[var(--checker-primary)]/10 px-2 py-1 text-xs font-medium text-[var(--checker-primary)]">
+                <span className="inline-flex items-center rounded-full bg-accent/10 px-2 py-1 text-xs font-medium text-accent">
                   Recommended
                 </span>
               )}

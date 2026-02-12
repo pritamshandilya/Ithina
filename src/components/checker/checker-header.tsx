@@ -123,13 +123,7 @@ export function CheckerHeader({
             src={undefined} // No image for mock user
             alt={fullName}
           />
-          <AvatarFallback 
-            className="font-semibold"
-            style={{ 
-              backgroundColor: "var(--checker-primary)", 
-              color: "white" 
-            }}
-          >
+          <AvatarFallback className="bg-accent text-accent-foreground font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -138,13 +132,7 @@ export function CheckerHeader({
             {fullName}
           </p>
           <div className="flex items-center gap-2">
-            <span
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold"
-              style={{ 
-                backgroundColor: "var(--checker-primary)", 
-                color: "white" 
-              }}
-            >
+            <span className="inline-flex items-center rounded-full bg-accent text-accent-foreground px-2 py-0.5 text-xs font-semibold">
               Checker
             </span>
           </div>

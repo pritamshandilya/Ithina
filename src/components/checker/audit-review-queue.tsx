@@ -225,36 +225,23 @@ export function AuditReviewQueue({
                 onClick={() => setActiveFilter(option.value)}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
-                  "border-2 focus:outline-none focus:ring-2 focus:ring-offset-2",
+                  "border-2 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
                   isActive
-                    ? "border-checker-primary shadow-sm"
-                    : "border-border hover:border-checker-primary/50"
+                    ? "border-accent bg-accent/15 text-accent shadow-sm"
+                    : "border-border bg-card text-card-foreground hover:border-accent/50"
                 )}
-                style={
-                  isActive
-                    ? {
-                        backgroundColor: "color-mix(in oklch, var(--checker-primary) 15%, transparent)",
-                        color: "var(--checker-primary)",
-                        focusRing: "var(--checker-primary)",
-                      }
-                    : {
-                        backgroundColor: "var(--card)",
-                        color: "var(--card-foreground)",
-                      }
-                }
                 aria-label={`Filter: ${option.label}`}
                 aria-pressed={isActive}
               >
                 <span>{option.label}</span>
                 {count > 0 && (
                   <span
-                    className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold"
-                    style={{
-                      backgroundColor: isActive
-                        ? "var(--checker-primary)"
-                        : "var(--muted)",
-                      color: "white",
-                    }}
+                    className={cn(
+                      "inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-bold",
+                      isActive
+                        ? "bg-accent text-white"
+                        : "bg-muted text-white"
+                    )}
                   >
                     {count}
                   </span>
@@ -287,7 +274,7 @@ export function AuditReviewQueue({
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value as AuditQueueSort)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-card-foreground focus:outline-none focus:ring-2 focus:ring-checker-primary"
+          className="rounded-md border border-border bg-card px-3 py-1.5 text-card-foreground focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label="Sort audits"
         >
           <option value="compliance-asc">Lowest Compliance First</option>
@@ -310,8 +297,7 @@ export function AuditReviewQueue({
           {searchQuery.trim() && (
             <button
               onClick={() => setSearchQuery("")}
-              className="mt-3 text-sm underline"
-              style={{ color: "var(--checker-primary)" }}
+              className="mt-3 text-sm underline text-accent hover:text-accent/80"
             >
               Clear search
             </button>

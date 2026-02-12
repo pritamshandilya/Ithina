@@ -44,18 +44,18 @@ export interface AuditQueueCardProps {
  * Get color for compliance score
  */
 function getComplianceColor(score: number): string {
-  if (score < 50) return "var(--checker-critical)";
-  if (score < 80) return "var(--checker-warning)";
-  return "var(--checker-success)";
+  if (score < 50) return "var(--destructive)";
+  if (score < 80) return "var(--action-warning)";
+  return "var(--chart-2)";
 }
 
 /**
  * Get background color for compliance score badge
  */
 function getComplianceBgColor(score: number): string {
-  if (score < 50) return "color-mix(in oklch, var(--checker-critical) 15%, transparent)";
-  if (score < 80) return "color-mix(in oklch, var(--checker-warning) 15%, transparent)";
-  return "color-mix(in oklch, var(--checker-success) 15%, transparent)";
+  if (score < 50) return "color-mix(in oklch, var(--destructive) 15%, transparent)";
+  if (score < 80) return "color-mix(in oklch, var(--action-warning) 15%, transparent)";
+  return "color-mix(in oklch, var(--chart-2) 15%, transparent)";
 }
 
 /**
@@ -77,8 +77,11 @@ function getInitials(name: string): string {
  */
 export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProps) {
   const isClickable = Boolean(onClick);
-  const isCritical = (audit.complianceScore || 0) < 50;
+  const complianceScore = audit.complianceScore || 0;
+  const isCritical = complianceScore < 50;
   const hasViolations = audit.violationCount > 0;
+  const complianceColor = getComplianceColor(complianceScore);
+  const complianceBg = getComplianceBgColor(complianceScore);
   
   const handleClick = () => {
     if (onClick) {
@@ -93,17 +96,13 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
     }
   };
 
-  const complianceScore = audit.complianceScore || 0;
-  const complianceColor = getComplianceColor(complianceScore);
-  const complianceBg = getComplianceBgColor(complianceScore);
-
   return (
     <div
       className={cn(
-        "rounded-lg bg-card border-2 p-5 space-y-4 transition-all",
-        isClickable && "cursor-pointer hover:border-checker-primary hover:shadow-lg",
-        isCritical && "border-checker-critical",
-        !isCritical && "border-border",
+        "rounded-lg bg-card/50 backdrop-blur-sm border-2 p-5 space-y-4 transition-all",
+        isClickable && "cursor-pointer hover:border-accent hover:shadow-lg group",
+        isCritical && "border-destructive/50",
+        !isCritical && "border-border/50",
         className
       )}
       onClick={isClickable ? handleClick : undefined}
@@ -127,26 +126,34 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
           </p>
         </div>
         
-        {/* Compliance Score Badge */}
-        <div 
-          className="flex flex-col items-center justify-center rounded-lg px-4 py-2 shrink-0"
-          style={{ 
-            backgroundColor: complianceBg,
-            borderWidth: "2px",
-            borderStyle: "solid",
-            borderColor: complianceColor,
-          }}
-        >
-          <span 
-            className="text-2xl font-bold tabular-nums"
-            style={{ color: complianceColor }}
+        {/* Compliance Score Badge - Only for Vision Edge */}
+        {audit.mode === "vision-edge" && complianceScore !== undefined ? (
+          <div 
+            className="flex flex-col items-center justify-center rounded-lg px-4 py-2 shrink-0"
+            style={{ 
+              backgroundColor: complianceBg,
+              borderWidth: "2px",
+              borderStyle: "solid",
+              borderColor: complianceColor,
+            }}
           >
-            {complianceScore}%
-          </span>
-          <span className="text-xs text-muted-foreground">
-            Compliance
-          </span>
-        </div>
+            <span 
+              className="text-2xl font-bold tabular-nums"
+              style={{ color: complianceColor }}
+            >
+              {complianceScore}%
+            </span>
+            <span className="text-xs text-muted-foreground">
+              Compliance
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center rounded-lg px-4 py-2 shrink-0 bg-muted/20 border-2 border-muted/40">
+            <span className="text-sm font-semibold text-muted-foreground text-center">
+              Awaiting<br />Review
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Submitter and Mode */}
@@ -168,14 +175,12 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
         {/* Audit Mode Badge */}
         <span
           className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0"
-          style={{
-            backgroundColor: audit.mode === "vision-edge"
-              ? "color-mix(in oklch, var(--checker-primary) 20%, transparent)"
-              : "color-mix(in oklch, var(--muted) 20%, transparent)",
-            color: audit.mode === "vision-edge"
-              ? "var(--checker-primary)"
-              : "var(--muted-foreground)",
-          }}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+            audit.mode === "vision-edge"
+              ? "bg-accent/20 text-accent border border-accent/40"
+              : "bg-muted/20 text-muted-foreground border border-muted/40"
+          )}
         >
           {audit.mode === "vision-edge" ? (
             <>
@@ -210,7 +215,7 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
             </span>
           )}
           {!hasViolations && (
-            <span style={{ color: "var(--checker-success)" }}>
+            <span className="text-chart-2">
               No violations
             </span>
           )}
@@ -221,11 +226,7 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
       {onClick && (
         <div className="pt-2 border-t border-border">
           <Button
-            className="w-full"
-            style={{
-              backgroundColor: "var(--checker-primary)",
-              color: "white",
-            }}
+            className="w-full bg-accent text-white hover:bg-accent/90"
             onClick={(e) => {
               e.stopPropagation();
               onClick(audit.id);

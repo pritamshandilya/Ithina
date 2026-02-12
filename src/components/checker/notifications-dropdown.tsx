@@ -122,11 +122,7 @@ export function NotificationsDropdown({
           <Bell className="size-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <span
-              className="absolute -top-1 -right-1 inline-flex items-center justify-center size-5 rounded-full text-xs font-bold"
-              style={{ 
-                backgroundColor: "var(--checker-critical)", 
-                color: "white" 
-              }}
+              className="absolute -top-1 -right-1 inline-flex items-center justify-center size-5 rounded-full text-xs font-bold bg-destructive text-white"
               aria-label={`${unreadCount} unread notifications`}
             >
               {unreadCount > 9 ? "9+" : unreadCount}
@@ -143,8 +139,7 @@ export function NotificationsDropdown({
               variant="ghost"
               size="sm"
               onClick={handleMarkAllAsRead}
-              className="h-auto py-1 px-2 text-xs"
-              style={{ color: "var(--checker-primary)" }}
+              className="h-auto py-1 px-2 text-xs text-accent hover:text-accent/80"
             >
               Mark all as read
             </Button>
@@ -178,8 +173,7 @@ export function NotificationsDropdown({
                   {/* Unread Indicator */}
                   {!notification.read && (
                     <div 
-                      className="size-2 rounded-full mt-2 shrink-0"
-                      style={{ backgroundColor: "var(--checker-primary)" }}
+                      className="size-2 rounded-full mt-2 shrink-0 bg-accent"
                       aria-hidden="true"
                     />
                   )}
@@ -189,11 +183,9 @@ export function NotificationsDropdown({
                   <div className="shrink-0 mt-0.5">
                     <Icon 
                       className="size-4" 
-                      style={{ 
-                        color: isCritical 
-                          ? "var(--checker-critical)" 
-                          : "var(--muted-foreground)" 
-                      }}
+                      className={cn(
+                        isCritical ? "text-destructive" : "text-muted-foreground"
+                      )}
                       aria-hidden="true"
                     />
                   </div>
@@ -223,7 +215,7 @@ export function NotificationsDropdown({
                       className="shrink-0 mt-1 p-1 rounded-sm hover:bg-accent-foreground/10 transition-colors"
                       aria-label="Mark as read"
                     >
-                      <Check className="size-4" style={{ color: "var(--checker-primary)" }} aria-hidden="true" />
+                      <Check className="size-4 text-accent" aria-hidden="true" />
                     </button>
                   )}
                 </button>

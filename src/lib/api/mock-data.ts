@@ -14,6 +14,7 @@ import type {
   PublishingStatus,
   RuleInfo,
   Store,
+  Violation,
 } from "@/types/checker";
 
 /**
@@ -400,26 +401,49 @@ export function generateMockPendingAudits(storeId: string): CheckerAudit[] {
   const shelves = generateMockShelves();
   const pendingAudits: CheckerAudit[] = [];
   
-  const makerNames = ["John Doe", "Jane Smith", "Mike Johnson", "Emily Davis"];
+  const makerNames = ["John Doe", "Jane Smith", "Mike Johnson", "Emily Davis", "Sarah Wilson", "David Brown"];
   const ruleVersions = ["v2.3.1", "v2.3.0", "v2.2.5"];
+  
+  // Expanded shelf names for more diverse mock data
+  const additionalShelves = [
+    { aisle: 4, bay: 1, name: "Dairy - Milk & Cream" },
+    { aisle: 4, bay: 2, name: "Dairy - Cheese" },
+    { aisle: 4, bay: 3, name: "Dairy - Yogurt" },
+    { aisle: 5, bay: 1, name: "Frozen - Ice Cream" },
+    { aisle: 5, bay: 2, name: "Frozen - Vegetables" },
+    { aisle: 6, bay: 1, name: "Bakery - Bread" },
+    { aisle: 6, bay: 2, name: "Bakery - Pastries" },
+    { aisle: 7, bay: 1, name: "Canned Goods - Vegetables" },
+  ];
   
   // Filter to pending status shelves
   const pendingShelves = shelves.filter((shelf) => shelf.status === "pending");
   
   pendingShelves.forEach((shelf, index) => {
-    if (!shelf.lastAuditDate || !shelf.complianceScore) return;
+    if (!shelf.lastAuditDate) return;
     
-    // Generate varying compliance scores including critical ones
-    let complianceScore = shelf.complianceScore;
-    if (index % 5 === 0) {
-      // Every 5th audit is critical
-      complianceScore = randomScore(35, 49);
-    } else if (index % 3 === 0) {
-      // Every 3rd audit needs attention
-      complianceScore = randomScore(60, 79);
+    // Determine audit mode
+    const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
+    
+    // Only Vision Edge has AI-generated compliance scores
+    // Assist Mode requires manual checker review first
+    let complianceScore: number | undefined;
+    let violationCount = 0;
+    
+    if (mode === "vision-edge" && shelf.complianceScore) {
+      // Generate varying compliance scores including critical ones
+      complianceScore = shelf.complianceScore;
+      if (index % 5 === 0) {
+        // Every 5th audit is critical
+        complianceScore = randomScore(35, 49);
+      } else if (index % 3 === 0) {
+        // Every 3rd audit needs attention
+        complianceScore = randomScore(60, 79);
+      }
+      violationCount = Math.ceil((100 - complianceScore) / 10);
     }
+    // Assist Mode: no compliance score until checker reviews
     
-    const violationCount = Math.ceil((100 - complianceScore) / 10);
     const publishingStatus: PublishingStatus = "pending";
     
     const checkerAudit: CheckerAudit = {
@@ -427,9 +451,9 @@ export function generateMockPendingAudits(storeId: string): CheckerAudit[] {
       shelfId: shelf.id,
       submittedBy: mockUser.id,
       submittedAt: shelf.lastAuditDate,
-      mode: index % 2 === 0 ? "vision-edge" : "assist-mode",
+      mode,
       status: "pending",
-      complianceScore,
+      complianceScore, // undefined for assist-mode
       violationCount,
       ruleVersionUsed: ruleVersions[index % ruleVersions.length],
       publishingStatus,
@@ -438,6 +462,43 @@ export function generateMockPendingAudits(storeId: string): CheckerAudit[] {
         aisleNumber: shelf.aisleNumber,
         bayNumber: shelf.bayNumber,
         shelfName: shelf.shelfName,
+      },
+    };
+    
+    pendingAudits.push(checkerAudit);
+  });
+  
+  // Add additional mock audits to fill the queue
+  additionalShelves.forEach((shelf, index) => {
+    // Determine audit mode
+    const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
+    
+    // Only Vision Edge has AI-generated compliance scores
+    let complianceScore: number | undefined;
+    let violationCount = 0;
+    
+    if (mode === "vision-edge") {
+      complianceScore = randomScore(45, 95);
+      violationCount = Math.ceil((100 - complianceScore) / 10);
+    }
+    // Assist Mode: no compliance score until checker reviews
+    
+    const checkerAudit: CheckerAudit = {
+      id: `audit-extra-${index}`,
+      shelfId: `shelf-extra-${index}`,
+      submittedBy: mockUser.id,
+      submittedAt: randomPastDate(1),
+      mode,
+      status: "pending",
+      complianceScore, // undefined for assist-mode
+      violationCount,
+      ruleVersionUsed: ruleVersions[index % ruleVersions.length],
+      publishingStatus: "pending",
+      submittedByName: makerNames[index % makerNames.length],
+      shelfInfo: {
+        aisleNumber: shelf.aisle,
+        bayNumber: shelf.bay,
+        shelfName: shelf.name,
       },
     };
     

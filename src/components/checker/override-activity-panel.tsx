@@ -49,7 +49,7 @@ export function OverrideActivityPanel({
     <div className={cn("space-y-4", className)}>
       {/* Section Header */}
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-[var(--checker-override)] p-2">
+        <div className="rounded-lg bg-[var(--action-warning)] p-2">
           <ShieldAlert className="h-5 w-5 text-white" aria-hidden="true" />
         </div>
         <div>
@@ -95,7 +95,7 @@ export function OverrideActivityPanel({
                   Today
                 </p>
                 <TrendingUp
-                  className="h-4 w-4 text-[var(--checker-override)]"
+                  className="h-4 w-4 text-[var(--action-warning)]"
                   aria-hidden="true"
                 />
               </div>
@@ -114,7 +114,7 @@ export function OverrideActivityPanel({
                   This Week
                 </p>
                 <TrendingUp
-                  className="h-4 w-4 text-[var(--checker-override)]"
+                  className="h-4 w-4 text-[var(--action-warning)]"
                   aria-hidden="true"
                 />
               </div>
@@ -133,7 +133,7 @@ export function OverrideActivityPanel({
                   Top Rule
                 </p>
                 <ShieldAlert
-                  className="h-4 w-4 text-[var(--checker-override)]"
+                  className="h-4 w-4 text-[var(--action-warning)]"
                   aria-hidden="true"
                 />
               </div>
@@ -147,7 +147,7 @@ export function OverrideActivityPanel({
           </div>
 
           {/* Transparency Notice */}
-          <div className="rounded-lg border border-[var(--checker-override)]/30 bg-[var(--checker-override)]/5 p-4">
+          <div className="rounded-lg border border-[var(--action-warning)]/30 bg-[var(--action-warning)]/5 p-4">
             <p className="text-sm text-muted-foreground">
               <strong className="text-foreground">Governance Note:</strong>{" "}
               Overrides are tracked to ensure transparency in human-AI

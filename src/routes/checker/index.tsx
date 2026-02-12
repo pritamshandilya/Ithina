@@ -31,7 +31,7 @@ import {
   AuditReviewQueue,
   KnowledgeCenterSection,
   OverrideActivityPanel,
-  PublishingStatusPanel,
+  // PublishingStatusPanel, // Commented out - not in use for Phase 1
 } from "@/components/checker";
 import {
   useStores,
@@ -129,28 +129,27 @@ function CheckerDashboard() {
   );
 
   return (
-    <div className="min-h-screen">
-      {/* Main container with max width for readability */}
-      <div className="mx-auto max-w-[1920px]">
-        {/* 1. Checker Header - Full width, no side padding */}
-        <CheckerHeader
-          user={mockCheckerUser}
-          stores={stores || []}
-          selectedStoreId={selectedStoreId}
-          onStoreChange={handleStoreChange}
-          notifications={notifications || []}
-          onNotificationClick={handleNotificationClick}
-          onMarkAsRead={handleMarkAsRead}
-          onMarkAllAsRead={handleMarkAllAsRead}
-        />
+    <div className="min-h-screen bg-primary">
+      {/* Main container with max width matching Maker dashboard */}
+      <div className="mx-auto max-w-7xl">
+        {/* 1. Checker Header - Full width within container */}
+        <div className="px-4 sm:px-6 lg:px-8">
+          <CheckerHeader
+            user={mockCheckerUser}
+            stores={stores || []}
+            selectedStoreId={selectedStoreId}
+            onStoreChange={handleStoreChange}
+            notifications={notifications || []}
+            onNotificationClick={handleNotificationClick}
+            onMarkAsRead={handleMarkAsRead}
+            onMarkAllAsRead={handleMarkAllAsRead}
+          />
+        </div>
 
-        {/* Main content area with padding */}
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+        {/* Main content area with padding matching Maker dashboard */}
+        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
           {/* 2. Compliance Overview - 5 key governance metrics */}
           <section aria-labelledby="compliance-overview-heading">
-            <h2 id="compliance-overview-heading" className="sr-only">
-              Compliance Overview
-            </h2>
             <ComplianceOverview
               data={complianceData}
               isLoading={complianceLoading}
@@ -169,7 +168,7 @@ function CheckerDashboard() {
                   Audit Review Queue
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Review, approve, or return audits submitted by store workers
+                  Review, approve, or reject audits submitted by store workers
                 </p>
               </div>
 
@@ -183,35 +182,26 @@ function CheckerDashboard() {
           </section>
 
           {/* Two-column layout for Knowledge Center and Governance Panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* 4. Knowledge Center Section - Spans 2 columns on large screens */}
             <section
               aria-labelledby="knowledge-center-heading"
               className="lg:col-span-2"
             >
-              <h2 id="knowledge-center-heading" className="sr-only">
-                Knowledge Center
-              </h2>
               <KnowledgeCenterSection storeId={selectedStoreId} />
             </section>
 
             {/* Governance Transparency Panels - Stacked in 1 column */}
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* 5. Override Activity Panel */}
               <section aria-labelledby="override-activity-heading">
-                <h2 id="override-activity-heading" className="sr-only">
-                  Override Activity
-                </h2>
                 <OverrideActivityPanel storeId={selectedStoreId} />
               </section>
 
-              {/* 6. Publishing Status Panel */}
-              <section aria-labelledby="publishing-status-heading">
-                <h2 id="publishing-status-heading" className="sr-only">
-                  Publishing Status
-                </h2>
+              {/* 6. Publishing Status Panel - COMMENTED OUT */}
+              {/* <section aria-labelledby="publishing-status-heading">
                 <PublishingStatusPanel storeId={selectedStoreId} />
-              </section>
+              </section> */}
             </div>
           </div>
         </div>

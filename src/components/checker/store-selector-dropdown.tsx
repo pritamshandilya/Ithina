@@ -106,7 +106,7 @@ export function StoreSelectorDropdown({
             >
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 {isSelected && (
-                  <Check className="size-4 shrink-0" style={{ color: "var(--checker-primary)" }} aria-hidden="true" />
+                  <Check className="size-4 shrink-0 text-accent" aria-hidden="true" />
                 )}
                 {!isSelected && <div className="size-4 shrink-0" />}
                 
@@ -120,11 +120,7 @@ export function StoreSelectorDropdown({
               
               {hasPendingAudits && (
                 <span
-                  className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold shrink-0"
-                  style={{ 
-                    backgroundColor: "var(--checker-primary)", 
-                    color: "white" 
-                  }}
+                  className="inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold shrink-0 bg-accent text-white"
                   aria-label={`${store.pendingAuditCount} pending audits`}
                 >
                   {store.pendingAuditCount}

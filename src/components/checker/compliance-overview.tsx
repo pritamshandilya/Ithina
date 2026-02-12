@@ -69,20 +69,26 @@ export function ComplianceOverview({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn(
-        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4",
-        className
-      )}>
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div
-            key={i}
-            className="rounded-lg border border-border bg-card p-6 space-y-4"
-          >
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-10 w-20" />
-            <Skeleton className="h-3 w-40" />
-          </div>
-        ))}
+      <div className={cn("space-y-4", className)}>
+        {/* Header Skeleton */}
+        <div className="space-y-2">
+          <Skeleton className="h-7 w-48" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        
+        {/* Stats Grid Skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div
+              key={i}
+              className="rounded-lg border border-border bg-card/50 backdrop-blur-sm p-6 space-y-4"
+            >
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-10 w-20" />
+              <Skeleton className="h-3 w-40" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -90,16 +96,20 @@ export function ComplianceOverview({
   // Error state
   if (error) {
     return (
-      <div className={cn(
-        "rounded-lg bg-destructive/10 border border-destructive p-6",
-        className
-      )}>
-        <p className="text-destructive font-semibold text-center">
-          Failed to load compliance overview
-        </p>
-        <p className="text-sm text-muted-foreground text-center mt-2">
-          {error.message}
-        </p>
+      <div className={cn("space-y-4", className)}>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Compliance Overview
+          </h2>
+        </div>
+        <div className="rounded-lg bg-destructive/10 border border-destructive p-6">
+          <p className="text-destructive font-semibold text-center">
+            Failed to load compliance overview
+          </p>
+          <p className="text-sm text-muted-foreground text-center mt-2">
+            {error.message}
+          </p>
+        </div>
       </div>
     );
   }
@@ -121,23 +131,37 @@ export function ComplianceOverview({
   const hasCriticalAudits = data.criticalAudits > 0;
 
   return (
-    <div 
-      className={cn(
-        "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4",
-        className
-      )}
-      role="region"
-      aria-label="Compliance overview metrics"
-    >
-      {/* 1. Total Pending Audits */}
-      <StatCard
-        title="Pending Audits"
-        value={data.totalPendingAudits}
-        icon={ClipboardList}
-        variant="accent"
-        description="Awaiting your review"
-        className="stat-card"
-      />
+    <div className={cn("space-y-4", className)}>
+      {/* Section Header */}
+      <div className="flex items-center gap-3">
+        <div className="rounded-lg bg-accent/20 p-2">
+          <TrendingUp className="h-6 w-6 text-accent" aria-hidden="true" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold text-foreground">
+            Compliance Overview
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Key governance metrics for operational clarity
+          </p>
+        </div>
+      </div>
+
+      {/* Stats Grid */}
+      <div 
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4"
+        role="region"
+        aria-label="Compliance overview metrics"
+      >
+        {/* 1. Total Pending Audits */}
+        <StatCard
+          title="Pending Audits"
+          value={data.totalPendingAudits}
+          icon={ClipboardList}
+          variant="accent"
+          description="Awaiting your review"
+          className="stat-card"
+        />
 
       {/* 2. Critical Audits */}
       <div className={cn(hasCriticalAudits && "animate-pulse-slow")}>
@@ -148,14 +172,6 @@ export function ComplianceOverview({
           variant="default"
           description="Compliance below 50%"
           className="stat-card"
-          style={{
-            borderColor: hasCriticalAudits 
-              ? "var(--checker-critical)" 
-              : undefined,
-            backgroundColor: hasCriticalAudits
-              ? "color-mix(in oklch, var(--checker-critical) 10%, transparent)"
-              : undefined,
-          }}
           trend={hasCriticalAudits ? {
             value: "Needs attention",
             isPositive: false,
@@ -191,15 +207,8 @@ export function ComplianceOverview({
         variant="default"
         description="AI decisions overridden"
         className="stat-card"
-        style={{
-          borderColor: data.totalOverridesToday > 0 
-            ? "var(--checker-override)" 
-            : undefined,
-          color: data.totalOverridesToday > 0
-            ? "var(--checker-override)"
-            : undefined,
-        }}
       />
+      </div>
     </div>
   );
 }

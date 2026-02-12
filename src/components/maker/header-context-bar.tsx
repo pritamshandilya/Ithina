@@ -94,9 +94,11 @@ export function HeaderContextBar({
           <p className="text-sm font-semibold text-card-foreground truncate">
             {fullName}
           </p>
-          <p className="text-xs text-muted-foreground capitalize">
-            {userInfo.role}
-          </p>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center rounded-full bg-accent text-accent-foreground px-2 py-0.5 text-xs font-semibold capitalize">
+              {userInfo.role}
+            </span>
+          </div>
         </div>
       </div>
 

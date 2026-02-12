@@ -14,3 +14,7 @@ export {
   NotificationsDropdown,
   type NotificationsDropdownProps,
 } from "./notifications-dropdown";
+export {
+  ComplianceOverview,
+  type ComplianceOverviewProps,
+} from "./compliance-overview";

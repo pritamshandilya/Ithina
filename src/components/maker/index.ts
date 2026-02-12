@@ -26,3 +26,7 @@ export {
   ReturnedAuditsSection,
   type ReturnedAuditsSectionProps,
 } from "./returned-audits-section";
+export {
+  AuditModeSelector,
+  type AuditModeSelectorProps,
+} from "./audit-mode-selector";

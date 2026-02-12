@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import {
   AssignedShelvesList,
@@ -29,6 +29,16 @@ export const Route = createFileRoute("/maker/")({
 });
 
 function MakerDashboard() {
+  const navigate = useNavigate();
+
+  /**
+   * Handler for starting a new audit
+   * Navigates to the audit mode selection screen
+   */
+  const handleStartAudit = () => {
+    navigate({ to: "/maker/audit/new" });
+  };
+
   return (
     <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
       {/* Main container with max width for readability */}
@@ -37,7 +47,7 @@ function MakerDashboard() {
         <HeaderContextBar />
 
         {/* 2. Primary Action Section */}
-        <PrimaryActionSection />
+        <PrimaryActionSection onClick={handleStartAudit} />
 
         {/* 3. Quick Stats Panel */}
         <QuickStatsPanel />

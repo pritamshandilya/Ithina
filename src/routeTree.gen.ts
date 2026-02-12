@@ -16,9 +16,11 @@ import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-act
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
+import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
+import { Route as MakerAuditNewRouteImport } from './routes/maker/audit/new'
 
 const TestShelvesListRoute = TestShelvesListRouteImport.update({
   id: '/test-shelves-list',
@@ -55,6 +57,11 @@ const TestComponentsRoute = TestComponentsRouteImport.update({
   path: '/test-components',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
+  id: '/test-audit-mode-selector',
+  path: '/test-audit-mode-selector',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -70,9 +77,15 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
   path: '/maker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
+  id: '/maker/audit/new',
+  path: '/maker/audit/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -82,9 +95,11 @@ export interface FileRoutesByFullPath {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/maker': typeof MakerLayoutRoute
   '/maker/': typeof MakerIndexRoute
+  '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -93,10 +108,12 @@ export interface FileRoutesByTo {
   '/test-returned-audits': typeof TestReturnedAuditsRoute
   '/test-shelves-list': typeof TestShelvesListRoute
   '/maker': typeof MakerIndexRoute
+  '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -106,11 +123,13 @@ export interface FileRoutesById {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/maker/_layout': typeof MakerLayoutRoute
   '/maker/': typeof MakerIndexRoute
+  '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/test-audit-mode-selector'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -120,9 +139,11 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/maker'
     | '/maker/'
+    | '/maker/audit/new'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/test-audit-mode-selector'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -131,9 +152,11 @@ export interface FileRouteTypes {
     | '/test-returned-audits'
     | '/test-shelves-list'
     | '/maker'
+    | '/maker/audit/new'
   id:
     | '__root__'
     | '/'
+    | '/test-audit-mode-selector'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -143,10 +166,12 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/maker/_layout'
     | '/maker/'
+    | '/maker/audit/new'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
   TestHeaderRoute: typeof TestHeaderRoute
@@ -156,6 +181,7 @@ export interface RootRouteChildren {
   TestShelvesListRoute: typeof TestShelvesListRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
   MakerIndexRoute: typeof MakerIndexRoute
+  MakerAuditNewRoute: typeof MakerAuditNewRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -209,6 +235,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestComponentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test-audit-mode-selector': {
+      id: '/test-audit-mode-selector'
+      path: '/test-audit-mode-selector'
+      fullPath: '/test-audit-mode-selector'
+      preLoaderRoute: typeof TestAuditModeSelectorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -230,11 +263,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maker/audit/new': {
+      id: '/maker/audit/new'
+      path: '/maker/audit/new'
+      fullPath: '/maker/audit/new'
+      preLoaderRoute: typeof MakerAuditNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,
   TestHeaderRoute: TestHeaderRoute,
@@ -244,6 +285,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestShelvesListRoute: TestShelvesListRoute,
   MakerLayoutRoute: MakerLayoutRoute,
   MakerIndexRoute: MakerIndexRoute,
+  MakerAuditNewRoute: MakerAuditNewRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -32,3 +32,6 @@ dist-ssr
 package-lock.json
 yarn.lock
 bun.lock
+
+# documentation
+/docs

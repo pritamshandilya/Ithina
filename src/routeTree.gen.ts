@@ -9,10 +9,47 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TestShelvesListRouteImport } from './routes/test-shelves-list'
+import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-audits'
+import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
+import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
+import { Route as TestHeaderRouteImport } from './routes/test-header'
+import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
 
+const TestShelvesListRoute = TestShelvesListRouteImport.update({
+  id: '/test-shelves-list',
+  path: '/test-shelves-list',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestReturnedAuditsRoute = TestReturnedAuditsRouteImport.update({
+  id: '/test-returned-audits',
+  path: '/test-returned-audits',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestQuickStatsRoute = TestQuickStatsRouteImport.update({
+  id: '/test-quick-stats',
+  path: '/test-quick-stats',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
+  id: '/test-primary-action',
+  path: '/test-primary-action',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestHeaderRoute = TestHeaderRouteImport.update({
+  id: '/test-header',
+  path: '/test-header',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestDataLayerRoute = TestDataLayerRouteImport.update({
+  id: '/test-data-layer',
+  path: '/test-data-layer',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TestComponentsRoute = TestComponentsRouteImport.update({
   id: '/test-components',
   path: '/test-components',
@@ -21,6 +58,11 @@ const TestComponentsRoute = TestComponentsRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MakerIndexRoute = MakerIndexRouteImport.update({
+  id: '/maker/',
+  path: '/maker/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MakerLayoutRoute = MakerLayoutRouteImport.update({
@@ -32,35 +74,134 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/test-components': typeof TestComponentsRoute
+  '/test-data-layer': typeof TestDataLayerRoute
+  '/test-header': typeof TestHeaderRoute
+  '/test-primary-action': typeof TestPrimaryActionRoute
+  '/test-quick-stats': typeof TestQuickStatsRoute
+  '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-shelves-list': typeof TestShelvesListRoute
   '/maker': typeof MakerLayoutRoute
+  '/maker/': typeof MakerIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/test-components': typeof TestComponentsRoute
-  '/maker': typeof MakerLayoutRoute
+  '/test-data-layer': typeof TestDataLayerRoute
+  '/test-header': typeof TestHeaderRoute
+  '/test-primary-action': typeof TestPrimaryActionRoute
+  '/test-quick-stats': typeof TestQuickStatsRoute
+  '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-shelves-list': typeof TestShelvesListRoute
+  '/maker': typeof MakerIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/test-components': typeof TestComponentsRoute
+  '/test-data-layer': typeof TestDataLayerRoute
+  '/test-header': typeof TestHeaderRoute
+  '/test-primary-action': typeof TestPrimaryActionRoute
+  '/test-quick-stats': typeof TestQuickStatsRoute
+  '/test-returned-audits': typeof TestReturnedAuditsRoute
+  '/test-shelves-list': typeof TestShelvesListRoute
   '/maker/_layout': typeof MakerLayoutRoute
+  '/maker/': typeof MakerIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/test-components' | '/maker'
+  fullPaths:
+    | '/'
+    | '/test-components'
+    | '/test-data-layer'
+    | '/test-header'
+    | '/test-primary-action'
+    | '/test-quick-stats'
+    | '/test-returned-audits'
+    | '/test-shelves-list'
+    | '/maker'
+    | '/maker/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/test-components' | '/maker'
-  id: '__root__' | '/' | '/test-components' | '/maker/_layout'
+  to:
+    | '/'
+    | '/test-components'
+    | '/test-data-layer'
+    | '/test-header'
+    | '/test-primary-action'
+    | '/test-quick-stats'
+    | '/test-returned-audits'
+    | '/test-shelves-list'
+    | '/maker'
+  id:
+    | '__root__'
+    | '/'
+    | '/test-components'
+    | '/test-data-layer'
+    | '/test-header'
+    | '/test-primary-action'
+    | '/test-quick-stats'
+    | '/test-returned-audits'
+    | '/test-shelves-list'
+    | '/maker/_layout'
+    | '/maker/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TestComponentsRoute: typeof TestComponentsRoute
+  TestDataLayerRoute: typeof TestDataLayerRoute
+  TestHeaderRoute: typeof TestHeaderRoute
+  TestPrimaryActionRoute: typeof TestPrimaryActionRoute
+  TestQuickStatsRoute: typeof TestQuickStatsRoute
+  TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
+  TestShelvesListRoute: typeof TestShelvesListRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
+  MakerIndexRoute: typeof MakerIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/test-shelves-list': {
+      id: '/test-shelves-list'
+      path: '/test-shelves-list'
+      fullPath: '/test-shelves-list'
+      preLoaderRoute: typeof TestShelvesListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-returned-audits': {
+      id: '/test-returned-audits'
+      path: '/test-returned-audits'
+      fullPath: '/test-returned-audits'
+      preLoaderRoute: typeof TestReturnedAuditsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-quick-stats': {
+      id: '/test-quick-stats'
+      path: '/test-quick-stats'
+      fullPath: '/test-quick-stats'
+      preLoaderRoute: typeof TestQuickStatsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-primary-action': {
+      id: '/test-primary-action'
+      path: '/test-primary-action'
+      fullPath: '/test-primary-action'
+      preLoaderRoute: typeof TestPrimaryActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-header': {
+      id: '/test-header'
+      path: '/test-header'
+      fullPath: '/test-header'
+      preLoaderRoute: typeof TestHeaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-data-layer': {
+      id: '/test-data-layer'
+      path: '/test-data-layer'
+      fullPath: '/test-data-layer'
+      preLoaderRoute: typeof TestDataLayerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/test-components': {
       id: '/test-components'
       path: '/test-components'
@@ -73,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/maker/': {
+      id: '/maker/'
+      path: '/maker'
+      fullPath: '/maker/'
+      preLoaderRoute: typeof MakerIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/maker/_layout': {
@@ -88,7 +236,14 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TestComponentsRoute: TestComponentsRoute,
+  TestDataLayerRoute: TestDataLayerRoute,
+  TestHeaderRoute: TestHeaderRoute,
+  TestPrimaryActionRoute: TestPrimaryActionRoute,
+  TestQuickStatsRoute: TestQuickStatsRoute,
+  TestReturnedAuditsRoute: TestReturnedAuditsRoute,
+  TestShelvesListRoute: TestShelvesListRoute,
   MakerLayoutRoute: MakerLayoutRoute,
+  MakerIndexRoute: MakerIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

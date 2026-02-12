@@ -17,6 +17,7 @@ import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
 import { Route as TestComplianceOverviewRouteImport } from './routes/test-compliance-overview'
+import { Route as TestCheckerHooksRouteImport } from './routes/test-checker-hooks'
 import { Route as TestCheckerHeaderRouteImport } from './routes/test-checker-header'
 import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
 import { Route as TestAuditReviewQueueRouteImport } from './routes/test-audit-review-queue'
@@ -65,6 +66,11 @@ const TestComponentsRoute = TestComponentsRouteImport.update({
 const TestComplianceOverviewRoute = TestComplianceOverviewRouteImport.update({
   id: '/test-compliance-overview',
   path: '/test-compliance-overview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestCheckerHooksRoute = TestCheckerHooksRouteImport.update({
+  id: '/test-checker-hooks',
+  path: '/test-checker-hooks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestCheckerHeaderRoute = TestCheckerHeaderRouteImport.update({
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
+  '/test-checker-hooks': typeof TestCheckerHooksRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
+  '/test-checker-hooks': typeof TestCheckerHooksRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
@@ -157,6 +165,7 @@ export interface FileRoutesById {
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-checker-header': typeof TestCheckerHeaderRoute
+  '/test-checker-hooks': typeof TestCheckerHooksRoute
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
@@ -178,6 +187,7 @@ export interface FileRouteTypes {
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
+    | '/test-checker-hooks'
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
+    | '/test-checker-hooks'
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
     | '/test-checker-header'
+    | '/test-checker-hooks'
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   TestAuditReviewQueueRoute: typeof TestAuditReviewQueueRoute
   TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
   TestCheckerHeaderRoute: typeof TestCheckerHeaderRoute
+  TestCheckerHooksRoute: typeof TestCheckerHooksRoute
   TestComplianceOverviewRoute: typeof TestComplianceOverviewRoute
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
@@ -305,6 +318,13 @@ declare module '@tanstack/react-router' {
       path: '/test-compliance-overview'
       fullPath: '/test-compliance-overview'
       preLoaderRoute: typeof TestComplianceOverviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-checker-hooks': {
+      id: '/test-checker-hooks'
+      path: '/test-checker-hooks'
+      fullPath: '/test-checker-hooks'
+      preLoaderRoute: typeof TestCheckerHooksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-checker-header': {
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestAuditReviewQueueRoute: TestAuditReviewQueueRoute,
   TestCheckerFoundationRoute: TestCheckerFoundationRoute,
   TestCheckerHeaderRoute: TestCheckerHeaderRoute,
+  TestCheckerHooksRoute: TestCheckerHooksRoute,
   TestComplianceOverviewRoute: TestComplianceOverviewRoute,
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,

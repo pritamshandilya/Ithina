@@ -25,3 +25,10 @@ export {
   useReturnAudit,
   useOverrideAndApprove,
 } from "./useAuditActions";
+
+// Audit Detail Hooks
+export {
+  useAuditDetail,
+  useAuditViolations,
+  auditDetailKeys,
+} from "./useAuditDetail";

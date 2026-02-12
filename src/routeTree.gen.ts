@@ -30,6 +30,7 @@ import { Route as CheckerIndexRouteImport } from './routes/checker/index'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
 import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
 import { Route as MakerAuditNewRouteImport } from './routes/maker/audit/new'
+import { Route as CheckerReviewAuditIdRouteImport } from './routes/checker/review.$auditId'
 
 const TestShelvesListRoute = TestShelvesListRouteImport.update({
   id: '/test-shelves-list',
@@ -136,6 +137,11 @@ const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
   path: '/maker/audit/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckerReviewAuditIdRoute = CheckerReviewAuditIdRouteImport.update({
+  id: '/checker/review/$auditId',
+  path: '/checker/review/$auditId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/maker': typeof MakerLayoutRoute
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRoutesByTo {
@@ -179,6 +186,7 @@ export interface FileRoutesByTo {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker': typeof CheckerIndexRoute
   '/maker': typeof MakerIndexRoute
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRoutesById {
@@ -203,6 +211,7 @@ export interface FileRoutesById {
   '/maker/_layout': typeof MakerLayoutRoute
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
 }
 export interface FileRouteTypes {
@@ -228,6 +237,7 @@ export interface FileRouteTypes {
     | '/maker'
     | '/checker/'
     | '/maker/'
+    | '/checker/review/$auditId'
     | '/maker/audit/new'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -249,6 +259,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker'
     | '/maker'
+    | '/checker/review/$auditId'
     | '/maker/audit/new'
   id:
     | '__root__'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/maker/_layout'
     | '/checker/'
     | '/maker/'
+    | '/checker/review/$auditId'
     | '/maker/audit/new'
   fileRoutesById: FileRoutesById
 }
@@ -296,6 +308,7 @@ export interface RootRouteChildren {
   MakerLayoutRoute: typeof MakerLayoutRoute
   CheckerIndexRoute: typeof CheckerIndexRoute
   MakerIndexRoute: typeof MakerIndexRoute
+  CheckerReviewAuditIdRoute: typeof CheckerReviewAuditIdRoute
   MakerAuditNewRoute: typeof MakerAuditNewRoute
 }
 
@@ -448,6 +461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerAuditNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checker/review/$auditId': {
+      id: '/checker/review/$auditId'
+      path: '/checker/review/$auditId'
+      fullPath: '/checker/review/$auditId'
+      preLoaderRoute: typeof CheckerReviewAuditIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -472,6 +492,7 @@ const rootRouteChildren: RootRouteChildren = {
   MakerLayoutRoute: MakerLayoutRoute,
   CheckerIndexRoute: CheckerIndexRoute,
   MakerIndexRoute: MakerIndexRoute,
+  CheckerReviewAuditIdRoute: CheckerReviewAuditIdRoute,
   MakerAuditNewRoute: MakerAuditNewRoute,
 }
 export const routeTree = rootRouteImport

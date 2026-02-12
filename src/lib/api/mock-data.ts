@@ -548,3 +548,81 @@ export function generateMockPublishedAudits(storeId: string): PublishedAudit[] {
   
   return published;
 }
+
+/**
+ * Generate mock violations for an audit
+ */
+export function generateMockViolations(audit: CheckerAudit): Violation[] {
+  const violations: Violation[] = [];
+  const violationCount = audit.violationCount;
+  
+  const ruleTemplates = [
+    {
+      ruleName: "Product Spacing Requirements",
+      severity: "critical" as const,
+      description: "Products must maintain minimum spacing of 2 inches",
+      expected: "2 inches spacing",
+      actual: "0.5 inches spacing",
+    },
+    {
+      ruleName: "Price Tag Placement",
+      severity: "warning" as const,
+      description: "Price tags must be positioned at shelf edge",
+      expected: "Tag at shelf edge",
+      actual: "Tag 3 inches back",
+    },
+    {
+      ruleName: "Product Facing Direction",
+      severity: "critical" as const,
+      description: "All product labels must face forward",
+      expected: "Labels facing forward",
+      actual: "3 products facing sideways",
+    },
+    {
+      ruleName: "Stock Level Compliance",
+      severity: "warning" as const,
+      description: "Shelf must be at least 70% stocked",
+      expected: "70% stock level",
+      actual: "55% stock level",
+    },
+    {
+      ruleName: "Product Grouping",
+      severity: "info" as const,
+      description: "Similar products must be grouped together",
+      expected: "Grouped by category",
+      actual: "Mixed categories detected",
+    },
+    {
+      ruleName: "Expiration Date Visibility",
+      severity: "critical" as const,
+      description: "Expiration dates must be clearly visible",
+      expected: "Dates visible from front",
+      actual: "5 products with hidden dates",
+    },
+    {
+      ruleName: "Promotional Material Placement",
+      severity: "info" as const,
+      description: "Promotional tags must not obstruct product labels",
+      expected: "No obstruction",
+      actual: "2 promotional tags blocking labels",
+    },
+    {
+      ruleName: "Shelf Cleanliness",
+      severity: "warning" as const,
+      description: "Shelves must be free of dust and debris",
+      expected: "Clean shelf surface",
+      actual: "Visible dust accumulation",
+    },
+  ];
+  
+  for (let i = 0; i < Math.min(violationCount, ruleTemplates.length); i++) {
+    const template = ruleTemplates[i];
+    violations.push({
+      id: `violation-${audit.id}-${i + 1}`,
+      ...template,
+      overridden: false,
+    });
+  }
+  
+  return violations;
+}

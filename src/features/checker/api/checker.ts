@@ -15,6 +15,7 @@ import {
   generateMockRuleInfo,
   generateMockOverrideActivity,
   generateMockPublishedAudits,
+  generateMockViolations,
 } from "@/lib/api/mock-data";
 import type {
   Store,
@@ -24,6 +25,7 @@ import type {
   RuleInfo,
   OverrideActivity,
   PublishedAudit,
+  Violation,
 } from "@/types/checker";
 
 /**
@@ -175,4 +177,37 @@ export async function overrideAndApprove(
   await delay(600);
   // In real app, would make API call to override and approve
   console.log("Overridden and approved audit:", auditId, "Reason:", overrideReason);
+}
+
+/**
+ * Fetch a single audit by ID with detailed information
+ * 
+ * @param auditId - The audit ID to fetch
+ * @returns Promise resolving to audit details
+ */
+export async function fetchAuditById(auditId: string): Promise<CheckerAudit | null> {
+  await delay(400);
+  
+  // Get all pending audits and find the one matching the ID
+  const allAudits = generateMockPendingAudits("store-1234");
+  const audit = allAudits.find((a) => a.id === auditId);
+  
+  return audit || null;
+}
+
+/**
+ * Fetch violations for a specific audit
+ * 
+ * @param auditId - The audit ID to fetch violations for
+ * @returns Promise resolving to array of violations
+ */
+export async function fetchAuditViolations(auditId: string): Promise<Violation[]> {
+  await delay(400);
+  
+  // Get the audit first
+  const audit = await fetchAuditById(auditId);
+  if (!audit) return [];
+  
+  // Generate violations based on the audit
+  return generateMockViolations(audit);
 }

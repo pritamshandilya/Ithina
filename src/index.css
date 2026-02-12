@@ -40,17 +40,6 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-maker-primary: var(--maker-primary);
-  --color-maker-pending: var(--maker-pending);
-  --color-maker-approved: var(--maker-approved);
-  --color-maker-returned: var(--maker-returned);
-  --color-maker-never-audited: var(--maker-never-audited);
-  --color-checker-primary: var(--checker-primary);
-  --color-checker-critical: var(--checker-critical);
-  --color-checker-warning: var(--checker-warning);
-  --color-checker-success: var(--checker-success);
-  --color-checker-neutral: var(--checker-neutral);
-  --color-checker-override: var(--checker-override);
 }
 
 :root {
@@ -141,12 +130,32 @@
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
   
-  /* Maker-specific semantic colors */
-  --maker-primary: var(--accent); /* Purple for maker actions */
-  --maker-pending: var(--chart-1); /* Purple accent for pending */
-  --maker-approved: var(--chart-2); /* Green for approved */
-  --maker-returned: var(--destructive); /* Red for returned/rejected */
-  --maker-never-audited: var(--muted); /* Gray for never audited */
+  /* Unified semantic colors (used by both Maker and Checker) */
+  /* Status Colors */
+  --status-pending: var(--chart-1); /* Purple accent for pending/in-progress */
+  --status-approved: var(--chart-2); /* Green for approved/success */
+  --status-rejected: var(--destructive); /* Red for returned/rejected/critical */
+  --status-neutral: var(--muted); /* Gray for inactive/never-audited/neutral */
+  
+  /* Action Colors */
+  --action-primary: var(--accent); /* Purple for primary actions */
+  --action-warning: oklch(0.72 0.16 65); /* #f59e0b - Orange for warnings/overrides */
+  --action-critical: var(--destructive); /* Red for critical issues */
+  --action-success: var(--chart-2); /* Green for success states */
+  
+  /* Legacy aliases for backward compatibility (will be removed) */
+  --maker-primary: var(--action-primary);
+  --maker-pending: var(--status-pending);
+  --maker-approved: var(--status-approved);
+  --maker-returned: var(--status-rejected);
+  --maker-never-audited: var(--status-neutral);
+  
+  --checker-primary: var(--action-primary);
+  --checker-critical: var(--action-critical);
+  --checker-warning: var(--action-warning);
+  --checker-success: var(--action-success);
+  --checker-neutral: var(--status-neutral);
+  --checker-override: var(--action-warning);
 }
 
 @layer base {
@@ -177,48 +186,95 @@
     @apply bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm;
   }
 
+  /* Unified Card Styles (used by both Maker and Checker) */
   .stat-card-success {
-    border-color: color-mix(in oklch, var(--maker-approved) 50%, transparent);
-    background-color: color-mix(in oklch, var(--maker-approved) 5%, var(--card));
+    border-color: color-mix(in oklch, var(--status-approved) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-approved) 5%, var(--card));
   }
 
   .stat-card-warning {
-    border-color: color-mix(in oklch, var(--maker-returned) 50%, transparent);
-    background-color: color-mix(in oklch, var(--maker-returned) 5%, var(--card));
+    border-color: color-mix(in oklch, var(--action-warning) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-warning) 5%, var(--card));
+  }
+
+  .stat-card-critical {
+    border-color: color-mix(in oklch, var(--action-critical) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-critical) 5%, var(--card));
   }
 
   .stat-card-accent {
-    border-color: color-mix(in oklch, var(--maker-primary) 50%, transparent);
-    background-color: color-mix(in oklch, var(--maker-primary) 5%, var(--card));
+    border-color: color-mix(in oklch, var(--action-primary) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-primary) 5%, var(--card));
+  }
+
+  /* Interactive Card Styles */
+  .card-interactive {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .card-interactive:hover {
+    border-color: var(--accent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
   }
 
   .shelf-card-interactive {
-    @apply bg-card border border-border rounded-lg p-4 hover:border-accent transition-all cursor-pointer;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
   }
 
-  /* Status-specific styles */
+  .shelf-card-interactive:hover {
+    border-color: var(--accent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  /* Unified Status Badge Styles */
   .status-pending {
-    background-color: color-mix(in oklch, var(--maker-pending) 20%, transparent);
-    color: var(--maker-pending);
-    border: 1px solid color-mix(in oklch, var(--maker-pending) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-pending) 20%, transparent);
+    color: var(--status-pending);
+    border: 1px solid color-mix(in oklch, var(--status-pending) 50%, transparent);
   }
 
   .status-approved {
-    background-color: color-mix(in oklch, var(--maker-approved) 20%, transparent);
-    color: var(--maker-approved);
-    border: 1px solid color-mix(in oklch, var(--maker-approved) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-approved) 20%, transparent);
+    color: var(--status-approved);
+    border: 1px solid color-mix(in oklch, var(--status-approved) 50%, transparent);
   }
 
-  .status-returned {
-    background-color: color-mix(in oklch, var(--maker-returned) 20%, transparent);
-    color: var(--maker-returned);
-    border: 1px solid color-mix(in oklch, var(--maker-returned) 50%, transparent);
+  .status-returned,
+  .status-rejected,
+  .status-critical {
+    background-color: color-mix(in oklch, var(--status-rejected) 20%, transparent);
+    color: var(--status-rejected);
+    border: 1px solid color-mix(in oklch, var(--status-rejected) 50%, transparent);
   }
 
-  .status-never-audited {
-    background-color: color-mix(in oklch, var(--maker-never-audited) 20%, transparent);
+  .status-never-audited,
+  .status-neutral,
+  .status-inactive {
+    background-color: color-mix(in oklch, var(--status-neutral) 20%, transparent);
     color: var(--muted-foreground);
-    border: 1px solid color-mix(in oklch, var(--maker-never-audited) 50%, transparent);
+    border: 1px solid color-mix(in oklch, var(--status-neutral) 50%, transparent);
+  }
+
+  .status-warning {
+    background-color: color-mix(in oklch, var(--action-warning) 20%, transparent);
+    color: var(--action-warning);
+    border: 1px solid color-mix(in oklch, var(--action-warning) 50%, transparent);
+  }
+
+  .status-draft {
+    background-color: color-mix(in oklch, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
   }
 }
 

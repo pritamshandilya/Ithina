@@ -97,16 +97,27 @@ export function ShelfCard({ shelf, onClick, className }: ShelfCardProps) {
         </p>
       )}
 
-      {/* Last Audit Info */}
+      {/* Last Audit Info / Draft Info */}
       {shelf.lastAuditDate && (
         <div className="pt-2 border-t border-border">
           <p className="text-xs text-muted-foreground">
-            Last audited{" "}
-            <span className="font-medium text-card-foreground">
-              {formatDistanceToNow(new Date(shelf.lastAuditDate), {
-                addSuffix: true,
-              })}
-            </span>
+            {shelf.status === "draft" ? (
+              <>
+                <span className="font-medium text-accent">Draft saved</span>{" "}
+                {formatDistanceToNow(new Date(shelf.lastAuditDate), {
+                  addSuffix: true,
+                })}
+              </>
+            ) : (
+              <>
+                Last audited{" "}
+                <span className="font-medium text-card-foreground">
+                  {formatDistanceToNow(new Date(shelf.lastAuditDate), {
+                    addSuffix: true,
+                  })}
+                </span>
+              </>
+            )}
           </p>
         </div>
       )}
@@ -131,6 +142,28 @@ export function ShelfCard({ shelf, onClick, className }: ShelfCardProps) {
         <div className="pt-2 border-t border-border">
           <p className="text-xs text-muted-foreground italic">
             This shelf has not been audited yet
+          </p>
+        </div>
+      )}
+
+      {/* Draft Resume CTA */}
+      {shelf.status === "draft" && (
+        <div className="pt-2 border-t border-border">
+          <p className="text-xs text-accent font-medium flex items-center gap-1.5">
+            <svg
+              className="h-3.5 w-3.5"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+            Click to resume audit
           </p>
         </div>
       )}

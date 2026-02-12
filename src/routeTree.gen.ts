@@ -16,6 +16,7 @@ import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-act
 import { Route as TestOverridePublishingRouteImport } from './routes/test-override-publishing'
 import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
 import { Route as TestHeaderRouteImport } from './routes/test-header'
+import { Route as TestDraftAuditsRouteImport } from './routes/test-draft-audits'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
 import { Route as TestComplianceOverviewRouteImport } from './routes/test-compliance-overview'
@@ -65,6 +66,11 @@ const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
 const TestHeaderRoute = TestHeaderRouteImport.update({
   id: '/test-header',
   path: '/test-header',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestDraftAuditsRoute = TestDraftAuditsRouteImport.update({
+  id: '/test-draft-audits',
+  path: '/test-draft-audits',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestDataLayerRoute = TestDataLayerRouteImport.update({
@@ -153,6 +159,7 @@ export interface FileRoutesByFullPath {
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
+  '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
@@ -177,6 +184,7 @@ export interface FileRoutesByTo {
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
+  '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
@@ -200,6 +208,7 @@ export interface FileRoutesById {
   '/test-compliance-overview': typeof TestComplianceOverviewRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
+  '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
@@ -226,6 +235,7 @@ export interface FileRouteTypes {
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
+    | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
     | '/test-override-publishing'
@@ -250,6 +260,7 @@ export interface FileRouteTypes {
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
+    | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
     | '/test-override-publishing'
@@ -272,6 +283,7 @@ export interface FileRouteTypes {
     | '/test-compliance-overview'
     | '/test-components'
     | '/test-data-layer'
+    | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
     | '/test-override-publishing'
@@ -297,6 +309,7 @@ export interface RootRouteChildren {
   TestComplianceOverviewRoute: typeof TestComplianceOverviewRoute
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
+  TestDraftAuditsRoute: typeof TestDraftAuditsRoute
   TestHeaderRoute: typeof TestHeaderRoute
   TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
   TestOverridePublishingRoute: typeof TestOverridePublishingRoute
@@ -361,6 +374,13 @@ declare module '@tanstack/react-router' {
       path: '/test-header'
       fullPath: '/test-header'
       preLoaderRoute: typeof TestHeaderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-draft-audits': {
+      id: '/test-draft-audits'
+      path: '/test-draft-audits'
+      fullPath: '/test-draft-audits'
+      preLoaderRoute: typeof TestDraftAuditsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-data-layer': {
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestComplianceOverviewRoute: TestComplianceOverviewRoute,
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,
+  TestDraftAuditsRoute: TestDraftAuditsRoute,
   TestHeaderRoute: TestHeaderRoute,
   TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
   TestOverridePublishingRoute: TestOverridePublishingRoute,

@@ -1,5 +1,5 @@
 import type { AuditStatus } from "@/types/maker";
-import { CheckCircle2Icon, ClockIcon, XCircleIcon, AlertCircleIcon } from "lucide-react";
+import { CheckCircle2Icon, ClockIcon, XCircleIcon, AlertCircleIcon, FileEditIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -29,6 +29,11 @@ const statusConfig: Record<
     label: "Never Audited",
     icon: AlertCircleIcon,
     className: "status-never-audited",
+  },
+  draft: {
+    label: "Draft",
+    icon: FileEditIcon,
+    className: "status-draft",
   },
   pending: {
     label: "Pending Review",

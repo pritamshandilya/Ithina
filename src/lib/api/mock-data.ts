@@ -52,6 +52,7 @@ export const mockUser: MockUserContext = {
 export function generateMockShelves(): Shelf[] {
   const statuses: AuditStatus[] = [
     "never-audited",
+    "draft",
     "pending",
     "approved",
     "returned",
@@ -85,9 +86,8 @@ export function generateMockShelves(): Shelf[] {
       aisleNumber: 1,
       bayNumber: 3,
       shelfName: "Beverages - Water",
-      status: "pending",
-      lastAuditDate: randomPastDate(1),
-      complianceScore: 88,
+      status: "draft", // Draft audit in progress
+      lastAuditDate: randomPastDate(0), // Today
       assignedTo: mockUser.id,
     }
   );
@@ -120,7 +120,8 @@ export function generateMockShelves(): Shelf[] {
       aisleNumber: 2,
       bayNumber: 3,
       shelfName: "Snacks - Cookies",
-      status: "never-audited",
+      status: "draft", // Another draft in progress
+      lastAuditDate: randomPastDate(1),
       assignedTo: mockUser.id,
     }
   );
@@ -238,11 +239,20 @@ export function generateMockAudits(): Audit[] {
         id: `audit-${shelf.id}`,
         shelfId: shelf.id,
         submittedBy: mockUser.id,
-        submittedAt: shelf.lastAuditDate,
         mode: Math.random() > 0.5 ? "vision-edge" : "assist-mode",
         status: shelf.status,
         complianceScore: shelf.complianceScore,
       };
+
+      // Draft-specific fields
+      if (shelf.status === "draft") {
+        audit.draftSavedAt = shelf.lastAuditDate;
+        audit.draftProgress = Math.floor(Math.random() * 40) + 30; // 30-70% complete
+        // Drafts don't have submittedAt
+      } else {
+        // All other statuses have submittedAt
+        audit.submittedAt = shelf.lastAuditDate;
+      }
 
       // Add rejection details if returned
       if (shelf.status === "returned") {
@@ -312,6 +322,14 @@ export function generateMockQuickStats(): QuickStats {
 export function getReturnedAudits(): Audit[] {
   const audits = generateMockAudits();
   return audits.filter((audit) => audit.status === "returned");
+}
+
+/**
+ * Get draft audits (in progress, not submitted)
+ */
+export function getDraftAudits(): Audit[] {
+  const audits = generateMockAudits();
+  return audits.filter((audit) => audit.status === "draft");
 }
 
 // ============================================================================

@@ -30,6 +30,11 @@ const filterOptions: { value: FilterOption; label: string; count?: (shelves: She
     count: (shelves) => shelves.length,
   },
   {
+    value: "draft",
+    label: "Draft",
+    count: (shelves) => shelves.filter((s) => s.status === "draft").length,
+  },
+  {
     value: "never-audited",
     label: "Never Audited",
     count: (shelves) => shelves.filter((s) => s.status === "never-audited").length,

@@ -30,3 +30,7 @@ export {
   AuditModeSelector,
   type AuditModeSelectorProps,
 } from "./audit-mode-selector";
+export {
+  DraftAuditsSection,
+  type DraftAuditsSectionProps,
+} from "./draft-audits-section";

@@ -7,6 +7,7 @@
  */
 export type AuditStatus =
   | "never-audited" // Shelf has never been audited
+  | "draft" // Audit started but not submitted (in progress)
   | "pending" // Audit submitted, awaiting checker review
   | "approved" // Audit approved by checker
   | "returned"; // Audit rejected by checker, needs resubmission
@@ -40,7 +41,7 @@ export interface Audit {
   id: string;
   shelfId: string;
   submittedBy: string; // User ID
-  submittedAt: Date;
+  submittedAt?: Date; // Optional for drafts
   mode: AuditMode;
   status: AuditStatus;
   complianceScore?: number;
@@ -48,6 +49,8 @@ export interface Audit {
   rejectedAt?: Date;
   rejectedBy?: string; // Checker user ID
   approvedAt?: Date;
+  draftSavedAt?: Date; // Last save timestamp for drafts
+  draftProgress?: number; // 0-100 percentage for draft completion
   approvedBy?: string; // Checker user ID
 }
 

@@ -8,6 +8,7 @@ import {
   generateMockQuickStats,
   generateMockShelves,
   getReturnedAudits,
+  getDraftAudits,
 } from "@/lib/api/mock-data";
 import type { Audit, QuickStats, Shelf } from "@/types/maker";
 
@@ -194,4 +195,77 @@ export async function resubmitAudit(auditId: string): Promise<Audit> {
     rejectedAt: undefined,
     rejectedBy: undefined,
   };
+}
+
+/**
+ * Fetch all draft audits for the current user
+ * 
+ * @returns Promise<Audit[]> - Array of draft audits
+ * 
+ * @example
+ * ```ts
+ * const drafts = await fetchDraftAudits();
+ * ```
+ */
+export async function fetchDraftAudits(): Promise<Audit[]> {
+  await simulateNetworkDelay(400);
+  
+  // In production, this would be:
+  // const response = await api.get('/maker/audits/drafts');
+  // return response.data;
+  
+  return getDraftAudits();
+}
+
+/**
+ * Save draft audit progress
+ * 
+ * @param auditId - The audit ID to save
+ * @param progress - Progress percentage (0-100)
+ * @returns Promise<Audit> - Updated audit object
+ * 
+ * @example
+ * ```ts
+ * const saved = await saveDraftProgress('audit-123', 65);
+ * ```
+ */
+export async function saveDraftProgress(auditId: string, progress: number): Promise<Audit> {
+  await simulateNetworkDelay(300);
+  
+  // In production, this would be:
+  // const response = await api.put(`/maker/audits/${auditId}/draft`, { progress });
+  // return response.data;
+  
+  const audits = generateMockAudits();
+  const audit = audits.find((a) => a.id === auditId);
+  
+  if (!audit) {
+    throw new Error("Draft audit not found");
+  }
+  
+  return {
+    ...audit,
+    draftProgress: progress,
+    draftSavedAt: new Date(),
+  };
+}
+
+/**
+ * Delete a draft audit
+ * 
+ * @param auditId - The audit ID to delete
+ * @returns Promise<void>
+ * 
+ * @example
+ * ```ts
+ * await deleteDraft('audit-123');
+ * ```
+ */
+export async function deleteDraft(auditId: string): Promise<void> {
+  await simulateNetworkDelay(300);
+  
+  // In production, this would be:
+  // await api.delete(`/maker/audits/${auditId}/draft`);
+  
+  console.log("Draft deleted:", auditId);
 }

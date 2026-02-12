@@ -6,6 +6,7 @@ import {
   PrimaryActionSection,
   QuickStatsPanel,
   ReturnedAuditsSection,
+  DraftAuditsSection,
 } from "@/components/maker";
 
 /**
@@ -19,8 +20,9 @@ import {
  * 1. Header Context Bar - User, store, date, sync status
  * 2. Primary Action Section - Start New Shelf Audit CTA
  * 3. Quick Stats Panel - Today's metrics at a glance
- * 4. Returned Audits Section - Audits requiring resubmission (conditional)
- * 5. Assigned Shelves List - All assigned shelves with filtering
+ * 4. Draft Audits Section - In-progress audits (conditional)
+ * 5. Returned Audits Section - Audits requiring resubmission (conditional)
+ * 6. Assigned Shelves List - All assigned shelves with filtering
  * 
  * Access at: /maker
  */
@@ -52,7 +54,16 @@ function MakerDashboard() {
         {/* 3. Quick Stats Panel */}
         <QuickStatsPanel />
 
-        {/* 4. Returned Audits Section (conditional - only shows if audits exist) */}
+        {/* 4. Draft Audits Section (conditional - only shows if drafts exist) */}
+        <DraftAuditsSection
+          onResume={(auditId, shelfId) => {
+            // TODO: Navigate to audit editor with draft data when implemented
+            console.log("Resume draft requested:", { auditId, shelfId });
+            // Future: navigate({ to: '/maker/audit/$id/edit', params: { id: auditId }})
+          }}
+        />
+
+        {/* 5. Returned Audits Section (conditional - only shows if audits exist) */}
         <ReturnedAuditsSection
           onResubmit={(auditId, shelfId) => {
             // TODO: Navigate to audit edit page when implemented
@@ -61,7 +72,7 @@ function MakerDashboard() {
           }}
         />
 
-        {/* 5. Assigned Shelves List */}
+        {/* 6. Assigned Shelves List */}
         <div className="space-y-4">
           <div>
             <h2 className="text-2xl font-bold text-foreground">

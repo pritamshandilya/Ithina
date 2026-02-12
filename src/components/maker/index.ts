@@ -22,3 +22,7 @@ export {
   QuickStatsPanel,
   type QuickStatsPanelProps,
 } from "./quick-stats-panel";
+export {
+  ReturnedAuditsSection,
+  type ReturnedAuditsSectionProps,
+} from "./returned-audits-section";

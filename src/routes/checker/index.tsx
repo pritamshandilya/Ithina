@@ -129,80 +129,75 @@ function CheckerDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-primary">
+    <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
       {/* Main container with max width matching Maker dashboard */}
-      <div className="mx-auto max-w-7xl">
-        {/* 1. Checker Header - Full width within container */}
-        <div className="px-4 sm:px-6 lg:px-8">
-          <CheckerHeader
-            user={mockCheckerUser}
-            stores={stores || []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={handleStoreChange}
-            notifications={notifications || []}
-            onNotificationClick={handleNotificationClick}
-            onMarkAsRead={handleMarkAsRead}
-            onMarkAllAsRead={handleMarkAllAsRead}
+      <div className="mx-auto max-w-7xl space-y-6">
+        {/* 1. Checker Header */}
+        <CheckerHeader
+          user={mockCheckerUser}
+          stores={stores || []}
+          selectedStoreId={selectedStoreId}
+          onStoreChange={handleStoreChange}
+          notifications={notifications || []}
+          onNotificationClick={handleNotificationClick}
+          onMarkAsRead={handleMarkAsRead}
+          onMarkAllAsRead={handleMarkAllAsRead}
+        />
+
+        {/* 2. Compliance Overview - 5 key governance metrics */}
+        <section aria-labelledby="compliance-overview-heading">
+          <ComplianceOverview
+            data={complianceData}
+            isLoading={complianceLoading}
+            error={complianceError}
           />
-        </div>
+        </section>
 
-        {/* Main content area with padding matching Maker dashboard */}
-        <div className="p-4 sm:p-6 lg:p-8 space-y-6">
-          {/* 2. Compliance Overview - 5 key governance metrics */}
-          <section aria-labelledby="compliance-overview-heading">
-            <ComplianceOverview
-              data={complianceData}
-              isLoading={complianceLoading}
-              error={complianceError}
-            />
-          </section>
-
-          {/* 3. Audit Review Queue - Main body */}
-          <section aria-labelledby="audit-queue-heading">
-            <div className="space-y-4">
-              <div>
-                <h2
-                  id="audit-queue-heading"
-                  className="text-2xl font-bold text-foreground"
-                >
-                  Audit Review Queue
-                </h2>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Review, approve, or reject audits submitted by store workers
-                </p>
-              </div>
-
-              <AuditReviewQueue
-                audits={audits || []}
-                isLoading={auditsLoading}
-                error={auditsError}
-                onAuditClick={handleAuditClick}
-              />
+        {/* 3. Audit Review Queue - Main body */}
+        <section aria-labelledby="audit-queue-heading">
+          <div className="space-y-4">
+            <div>
+              <h2
+                id="audit-queue-heading"
+                className="text-2xl font-bold text-foreground"
+              >
+                Audit Review Queue
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                Review, approve, or return audits submitted by store workers
+              </p>
             </div>
+
+            <AuditReviewQueue
+              audits={audits || []}
+              isLoading={auditsLoading}
+              error={auditsError}
+              onAuditClick={handleAuditClick}
+            />
+          </div>
+        </section>
+
+        {/* Two-column layout for Knowledge Center and Governance Panels */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* 4. Knowledge Center Section - Spans 2 columns on large screens */}
+          <section
+            aria-labelledby="knowledge-center-heading"
+            className="lg:col-span-2"
+          >
+            <KnowledgeCenterSection storeId={selectedStoreId} />
           </section>
 
-          {/* Two-column layout for Knowledge Center and Governance Panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* 4. Knowledge Center Section - Spans 2 columns on large screens */}
-            <section
-              aria-labelledby="knowledge-center-heading"
-              className="lg:col-span-2"
-            >
-              <KnowledgeCenterSection storeId={selectedStoreId} />
+          {/* Governance Transparency Panels - Stacked in 1 column */}
+          <div className="space-y-6">
+            {/* 5. Override Activity Panel */}
+            <section aria-labelledby="override-activity-heading">
+              <OverrideActivityPanel storeId={selectedStoreId} />
             </section>
 
-            {/* Governance Transparency Panels - Stacked in 1 column */}
-            <div className="space-y-6">
-              {/* 5. Override Activity Panel */}
-              <section aria-labelledby="override-activity-heading">
-                <OverrideActivityPanel storeId={selectedStoreId} />
-              </section>
-
-              {/* 6. Publishing Status Panel - COMMENTED OUT */}
-              {/* <section aria-labelledby="publishing-status-heading">
-                <PublishingStatusPanel storeId={selectedStoreId} />
-              </section> */}
-            </div>
+            {/* 6. Publishing Status Panel - COMMENTED OUT */}
+            {/* <section aria-labelledby="publishing-status-heading">
+              <PublishingStatusPanel storeId={selectedStoreId} />
+            </section> */}
           </div>
         </div>
       </div>

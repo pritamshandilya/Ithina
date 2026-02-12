@@ -158,7 +158,7 @@ export function ComplianceOverview({
           title="Pending Audits"
           value={data.totalPendingAudits}
           icon={ClipboardList}
-          variant="accent"
+          variant="default"
           description="Awaiting your review"
           className="stat-card"
         />
@@ -184,7 +184,7 @@ export function ComplianceOverview({
         title="Avg Compliance"
         value={`${data.avgComplianceScore.toFixed(1)}%`}
         icon={TrendingUp}
-        variant={avgScoreVariant}
+        variant="default"
         description="Last 7 days average"
         className="stat-card"
       />
@@ -194,7 +194,7 @@ export function ComplianceOverview({
         title="Approved Today"
         value={data.totalApprovedToday}
         icon={CheckCircle}
-        variant="success"
+        variant="default"
         description="Audits approved today"
         className="stat-card"
       />

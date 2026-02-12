@@ -45,6 +45,12 @@
   --color-maker-approved: var(--maker-approved);
   --color-maker-returned: var(--maker-returned);
   --color-maker-never-audited: var(--maker-never-audited);
+  --color-checker-primary: var(--checker-primary);
+  --color-checker-critical: var(--checker-critical);
+  --color-checker-warning: var(--checker-warning);
+  --color-checker-success: var(--checker-success);
+  --color-checker-neutral: var(--checker-neutral);
+  --color-checker-override: var(--checker-override);
 }
 
 :root {

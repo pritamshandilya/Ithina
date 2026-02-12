@@ -16,10 +16,12 @@ import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-act
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
 import { Route as TestComponentsRouteImport } from './routes/test-components'
+import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
 import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
+import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
 import { Route as MakerAuditNewRouteImport } from './routes/maker/audit/new'
 
 const TestShelvesListRoute = TestShelvesListRouteImport.update({
@@ -57,6 +59,11 @@ const TestComponentsRoute = TestComponentsRouteImport.update({
   path: '/test-components',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TestCheckerFoundationRoute = TestCheckerFoundationRouteImport.update({
+  id: '/test-checker-foundation',
+  path: '/test-checker-foundation',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
   id: '/test-audit-mode-selector',
   path: '/test-audit-mode-selector',
@@ -77,6 +84,11 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
   path: '/maker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckerLayoutRoute = CheckerLayoutRouteImport.update({
+  id: '/checker/_layout',
+  path: '/checker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
   id: '/maker/audit/new',
   path: '/maker/audit/new',
@@ -86,6 +98,7 @@ const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -93,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
   '/test-shelves-list': typeof TestShelvesListRoute
+  '/checker': typeof CheckerLayoutRoute
   '/maker': typeof MakerLayoutRoute
   '/maker/': typeof MakerIndexRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
@@ -100,6 +114,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -107,6 +122,7 @@ export interface FileRoutesByTo {
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
   '/test-shelves-list': typeof TestShelvesListRoute
+  '/checker': typeof CheckerLayoutRoute
   '/maker': typeof MakerIndexRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
 }
@@ -114,6 +130,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
+  '/test-checker-foundation': typeof TestCheckerFoundationRoute
   '/test-components': typeof TestComponentsRoute
   '/test-data-layer': typeof TestDataLayerRoute
   '/test-header': typeof TestHeaderRoute
@@ -121,6 +138,7 @@ export interface FileRoutesById {
   '/test-quick-stats': typeof TestQuickStatsRoute
   '/test-returned-audits': typeof TestReturnedAuditsRoute
   '/test-shelves-list': typeof TestShelvesListRoute
+  '/checker/_layout': typeof CheckerLayoutRoute
   '/maker/_layout': typeof MakerLayoutRoute
   '/maker/': typeof MakerIndexRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
@@ -130,6 +148,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-checker-foundation'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -137,6 +156,7 @@ export interface FileRouteTypes {
     | '/test-quick-stats'
     | '/test-returned-audits'
     | '/test-shelves-list'
+    | '/checker'
     | '/maker'
     | '/maker/'
     | '/maker/audit/new'
@@ -144,6 +164,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-checker-foundation'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -151,12 +172,14 @@ export interface FileRouteTypes {
     | '/test-quick-stats'
     | '/test-returned-audits'
     | '/test-shelves-list'
+    | '/checker'
     | '/maker'
     | '/maker/audit/new'
   id:
     | '__root__'
     | '/'
     | '/test-audit-mode-selector'
+    | '/test-checker-foundation'
     | '/test-components'
     | '/test-data-layer'
     | '/test-header'
@@ -164,6 +187,7 @@ export interface FileRouteTypes {
     | '/test-quick-stats'
     | '/test-returned-audits'
     | '/test-shelves-list'
+    | '/checker/_layout'
     | '/maker/_layout'
     | '/maker/'
     | '/maker/audit/new'
@@ -172,6 +196,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
+  TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
   TestComponentsRoute: typeof TestComponentsRoute
   TestDataLayerRoute: typeof TestDataLayerRoute
   TestHeaderRoute: typeof TestHeaderRoute
@@ -179,6 +204,7 @@ export interface RootRouteChildren {
   TestQuickStatsRoute: typeof TestQuickStatsRoute
   TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
   TestShelvesListRoute: typeof TestShelvesListRoute
+  CheckerLayoutRoute: typeof CheckerLayoutRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
   MakerIndexRoute: typeof MakerIndexRoute
   MakerAuditNewRoute: typeof MakerAuditNewRoute
@@ -235,6 +261,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestComponentsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/test-checker-foundation': {
+      id: '/test-checker-foundation'
+      path: '/test-checker-foundation'
+      fullPath: '/test-checker-foundation'
+      preLoaderRoute: typeof TestCheckerFoundationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/test-audit-mode-selector': {
       id: '/test-audit-mode-selector'
       path: '/test-audit-mode-selector'
@@ -263,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checker/_layout': {
+      id: '/checker/_layout'
+      path: '/checker'
+      fullPath: '/checker'
+      preLoaderRoute: typeof CheckerLayoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker/audit/new': {
       id: '/maker/audit/new'
       path: '/maker/audit/new'
@@ -276,6 +316,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
+  TestCheckerFoundationRoute: TestCheckerFoundationRoute,
   TestComponentsRoute: TestComponentsRoute,
   TestDataLayerRoute: TestDataLayerRoute,
   TestHeaderRoute: TestHeaderRoute,
@@ -283,6 +324,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestQuickStatsRoute: TestQuickStatsRoute,
   TestReturnedAuditsRoute: TestReturnedAuditsRoute,
   TestShelvesListRoute: TestShelvesListRoute,
+  CheckerLayoutRoute: CheckerLayoutRoute,
   MakerLayoutRoute: MakerLayoutRoute,
   MakerIndexRoute: MakerIndexRoute,
   MakerAuditNewRoute: MakerAuditNewRoute,

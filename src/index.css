@@ -46,8 +46,8 @@
   --radius: 0.625rem;
   
   /* Figma Design Colors */
-  /* #0f172a - Primary/Highlight */
-  /* #1e1c41 - Card 1 */
+  /* #0f172a - Background/Primary */
+  /* #1d2a3d - Card (Updated) */
   /* #262427 - Card 2 */
   /* #0e273d - Card 3 */
   /* #0e2930 - Card 4 */
@@ -55,13 +55,13 @@
   /* #10b982 - Success (Green) */
   /* #ef4444 - Destructive (Red) */
   
-  --background: oklch(0.145 0.025 264.5); /* #0f172a */
+  --background: oklch(0.18 0.03 255); /* #0f172a - Main app background */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.19 0.04 278); /* #1e1c41 */
+  --card: oklch(0.21 0.03 245); /* #1d2a3d */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.17 0.015 264.5); /* Slightly lighter than background */
+  --popover: oklch(0.19 0.025 255); /* Slightly lighter than background */
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.145 0.025 264.5); /* #0f172a */
+  --primary: oklch(0.18 0.03 255); /* #0f172a - Same as background */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.18 0.02 255); /* #262427 */
   --secondary-foreground: oklch(0.985 0 0);
@@ -72,7 +72,7 @@
   --destructive: oklch(0.62 0.23 25); /* #ef4444 - Red for destructive actions */
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.25 0.02 264.5);
-  --input: oklch(0.22 0.02 264.5);
+  --input: oklch(0.35 0.04 264.5); /* Lighter border for better visibility */
   --ring: oklch(0.72 0.17 285); /* Purple accent for focus rings */
   --chart-1: oklch(0.72 0.17 285); /* #a78bfa - Purple */
   --chart-2: oklch(0.68 0.17 165); /* #10b982 - Green */

@@ -42,7 +42,7 @@ function AuditModeSelectionPage() {
   };
 
   const handleGoBack = () => {
-    navigate({ to: "/maker" });
+    navigate({ to: "/maker/dashboard" });
   };
 
   return (

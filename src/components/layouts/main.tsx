@@ -1,18 +1,16 @@
+import type { PropsWithChildren } from "react";
 import { Outlet } from "@tanstack/react-router";
 
-import Header from "./main/header";
 import Sidenav from "./main/sidenav";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
-export default function MainLayout() {
+export default function MainLayout({ children }: PropsWithChildren) {
   return (
     <SidebarProvider>
       <Sidenav />
 
       <SidebarInset>
-        <Header />
-
-        <Outlet />
+        {children ?? <Outlet />}
       </SidebarInset>
     </SidebarProvider>
   );

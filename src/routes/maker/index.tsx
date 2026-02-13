@@ -9,6 +9,7 @@ import {
   ReturnedAuditsSection,
   DraftAuditsSection,
 } from "@/components/maker";
+import MainLayout from "@/components/layouts/main";
 import { useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
 
@@ -49,9 +50,10 @@ function MakerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-      {/* Main container with max width for readability */}
-      <div className="mx-auto max-w-7xl space-y-6">
+    <MainLayout>
+      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+        {/* Main container with max width for readability */}
+        <div className="mx-auto max-w-7xl space-y-6">
         {/* 1. Header Context Bar */}
         <HeaderContextBar
           stores={stores ?? []}
@@ -65,28 +67,38 @@ function MakerDashboard() {
         {/* 3. Quick Stats Panel */}
         <QuickStatsPanel />
 
-        {/* 4. Draft Audits Section (conditional - only shows if drafts exist) */}
-        <DraftAuditsSection
-          onResume={(auditId, shelfId) => {
-            // TODO: Navigate to audit editor with draft data when implemented
-            console.log("Resume draft requested:", { auditId, shelfId });
-            // Future: navigate({ to: '/maker/audit/$id/edit', params: { id: auditId }})
-          }}
-        />
+        {/* 4-5. My Audits section */}
+        <section aria-labelledby="my-audits-heading" className="space-y-4">
+          <div>
+            <h2 id="my-audits-heading" className="text-2xl font-bold text-foreground">
+              My Audits
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Continue draft audits and resolve returned submissions
+            </p>
+          </div>
 
-        {/* 5. Returned Audits Section (conditional - only shows if audits exist) */}
-        <ReturnedAuditsSection
-          onViewReport={(auditId, shelfId) => {
-            // TODO: Navigate to detailed feedback report page when implemented
-            console.log("View report requested:", { auditId, shelfId });
-            // Future: navigate({ to: '/maker/report/$id', params: { id: auditId }})
-          }}
-        />
+          <DraftAuditsSection
+            onResume={(auditId, shelfId) => {
+              // TODO: Navigate to audit editor with draft data when implemented
+              console.log("Resume draft requested:", { auditId, shelfId });
+              // Future: navigate({ to: '/maker/audit/$id/edit', params: { id: auditId }})
+            }}
+          />
+
+          <ReturnedAuditsSection
+            onViewReport={(auditId, shelfId) => {
+              // TODO: Navigate to detailed feedback report page when implemented
+              console.log("View report requested:", { auditId, shelfId });
+              // Future: navigate({ to: '/maker/report/$id', params: { id: auditId }})
+            }}
+          />
+        </section>
 
         {/* 6. Assigned Shelves List */}
-        <div className="space-y-4">
+        <div className="space-y-4" aria-labelledby="assigned-shelves-heading">
           <div>
-            <h2 className="text-2xl font-bold text-foreground">
+            <h2 id="assigned-shelves-heading" className="text-2xl font-bold text-foreground">
               Assigned Shelves
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
@@ -102,7 +114,8 @@ function MakerDashboard() {
             }}
           />
         </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

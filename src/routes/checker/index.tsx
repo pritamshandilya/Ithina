@@ -33,6 +33,7 @@ import {
   OverrideActivityPanel,
   // PublishingStatusPanel, // Commented out - not in use for Phase 1
 } from "@/components/checker";
+import MainLayout from "@/components/layouts/main";
 import {
   useStores,
   useComplianceOverview,
@@ -129,9 +130,10 @@ function CheckerDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-      {/* Main container with max width matching Maker dashboard */}
-      <div className="mx-auto max-w-7xl space-y-6">
+    <MainLayout>
+      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+        {/* Main container with max width matching Maker dashboard */}
+        <div className="mx-auto max-w-7xl space-y-6">
         {/* 1. Checker Header */}
         <CheckerHeader
           user={mockCheckerUser}
@@ -200,7 +202,8 @@ function CheckerDashboard() {
             </section> */}
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </MainLayout>
   );
 }

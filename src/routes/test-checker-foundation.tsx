@@ -231,7 +231,9 @@ function TestCheckerFoundationPage() {
                       {audit.complianceScore}%
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(audit.submittedAt).toLocaleTimeString()}
+                      {audit.submittedAt
+                        ? new Date(audit.submittedAt).toLocaleTimeString()
+                        : "Not submitted"}
                     </p>
                   </div>
                 </div>

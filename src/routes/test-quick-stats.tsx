@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { AlertTriangleIcon, CheckCircleIcon, ClockIcon } from "lucide-react";
 
 import { QuickStatsPanel } from "@/components/maker";
 

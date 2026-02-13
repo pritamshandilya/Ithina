@@ -182,8 +182,8 @@ export function NotificationsDropdown({
                   {/* Icon */}
                   <div className="shrink-0 mt-0.5">
                     <Icon 
-                      className="size-4" 
                       className={cn(
+                        "size-4",
                         isCritical ? "text-destructive" : "text-muted-foreground"
                       )}
                       aria-hidden="true"

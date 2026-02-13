@@ -161,7 +161,7 @@ function TestCheckerHooks() {
               </div>
               <div className="rounded-md bg-background p-4">
                 <p className="text-2xl font-bold text-foreground">
-                  {complianceData.averageComplianceScore}%
+                  {complianceData.avgComplianceScore}%
                 </p>
                 <p className="text-xs text-muted-foreground">Avg Score (7d)</p>
               </div>
@@ -284,7 +284,7 @@ function TestCheckerHooks() {
                     <div className="flex items-start justify-between">
                       <div className="space-y-1">
                         <p className="font-medium text-foreground">
-                          {notification.title}
+                          {notification.type}
                         </p>
                         <p className="text-sm text-muted-foreground">
                           {notification.message}
@@ -391,7 +391,7 @@ function TestCheckerHooks() {
                     className="rounded-md bg-background p-4 flex items-center justify-between"
                   >
                     <div>
-                      <p className="font-medium text-foreground">{audit.shelfId}</p>
+                      <p className="font-medium text-foreground">{audit.shelfInfo.shelfName}</p>
                       <p className="text-sm text-muted-foreground">
                         {format(new Date(audit.publishedAt), "PPp")}
                       </p>

@@ -5,7 +5,7 @@
  * These types extend the base Maker types with checker-specific fields and functionality.
  */
 
-import type { Audit, AuditMode, AuditStatus } from "./maker";
+import type { Audit } from "./maker";
 
 /**
  * Extended audit type with checker-specific fields

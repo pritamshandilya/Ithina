@@ -52,7 +52,7 @@ function CheckerDashboard() {
   const navigate = useNavigate();
 
   // Store selection state
-  const { data: stores, isLoading: storesLoading } = useStores();
+  const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState<string>(
     mockCheckerUser.storeId
   );
@@ -91,7 +91,7 @@ function CheckerDashboard() {
       // Navigate based on notification type
       if (notification.type === "new_audit" || notification.type === "critical_audit") {
         // Navigate to audit review queue (already on this page, could scroll to queue)
-        console.log("Navigate to audit:", notification.relatedId);
+        console.log("Navigate to audit:", notification.auditId);
       } else if (notification.type === "rule_change") {
         // Navigate to Knowledge Center (could be a dedicated route in Phase 2)
         console.log("Navigate to rule changes");

@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 import MainLayout from "@/components/layouts/main";
 
@@ -11,11 +11,5 @@ export const Route = createFileRoute("/maker/_layout")({
 });
 
 function MakerLayout() {
-  return (
-    <MainLayout>
-      <div className="min-h-screen bg-primary">
-        <Outlet />
-      </div>
-    </MainLayout>
-  );
+  return <MainLayout />;
 }

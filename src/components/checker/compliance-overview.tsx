@@ -119,14 +119,6 @@ export function ComplianceOverview({
     return null;
   }
 
-  // Determine average score color variant
-  const avgScoreVariant = 
-    data.avgComplianceScore >= 80 
-      ? "success" 
-      : data.avgComplianceScore >= 50 
-      ? "warning" 
-      : "default";
-
   // Determine if critical audits need attention (pulsing animation)
   const hasCriticalAudits = data.criticalAudits > 0;
 
@@ -173,7 +165,8 @@ export function ComplianceOverview({
           description="Compliance below 50%"
           className="stat-card"
           trend={hasCriticalAudits ? {
-            value: "Needs attention",
+            value: -1,
+            label: "Needs attention",
             isPositive: false,
           } : undefined}
         />

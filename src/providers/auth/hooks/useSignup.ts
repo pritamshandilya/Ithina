@@ -7,12 +7,11 @@ export function useSignup(auth: Auth) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const signup = async (data: Omit<SignupFormData, "confirmPassword">) => {
-    setIsLoading(true);
-    setError(null);
-
+  const signup = async (_data: Omit<SignupFormData, "confirmPassword">) => {
     try {
-      await auth.signup(data);
+      setIsLoading(true);
+      setError(null);
+      auth.startRegister();
       return true;
     } catch (err) {
       const errorMessage =

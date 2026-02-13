@@ -87,7 +87,7 @@ export function useMarkNotificationAsRead() {
       return { previousNotifications };
     },
     // On error, rollback
-    onError: (err, notificationId, context) => {
+    onError: (_err, _notificationId, context) => {
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           notificationsKeys.byUser(mockCheckerUser.id),
@@ -134,7 +134,7 @@ export function useMarkAllNotificationsAsRead() {
 
       return { previousNotifications };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           notificationsKeys.byUser(mockCheckerUser.id),

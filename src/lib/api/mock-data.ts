@@ -3,7 +3,7 @@
  * This file provides realistic mock data that mirrors the structure of real API responses
  */
 
-import type { Audit, AuditStatus, MockUserContext, QuickStats, Shelf } from "@/types/maker";
+import type { Audit, MockUserContext, QuickStats, Shelf } from "@/types/maker";
 import type {
   CheckerAudit,
   ComplianceOverview,
@@ -51,14 +51,6 @@ export const mockUser: MockUserContext = {
  * Generate mock shelf data
  */
 export function generateMockShelves(): Shelf[] {
-  const statuses: AuditStatus[] = [
-    "never-audited",
-    "draft",
-    "pending",
-    "approved",
-    "returned",
-  ];
-
   const shelves: Shelf[] = [];
 
   // Aisle 1
@@ -397,7 +389,7 @@ export function generateMockComplianceOverview(storeId?: string): ComplianceOver
 /**
  * Generate mock pending audits for checker review
  */
-export function generateMockPendingAudits(storeId: string): CheckerAudit[] {
+export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
   const shelves = generateMockShelves();
   const pendingAudits: CheckerAudit[] = [];
   
@@ -576,7 +568,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
 /**
  * Generate mock rule information
  */
-export function generateMockRuleInfo(storeId: string): RuleInfo {
+export function generateMockRuleInfo(_storeId: string): RuleInfo {
   return {
     activeRulesCount: 24,
     lastModifiedDate: randomPastDate(3),
@@ -588,7 +580,7 @@ export function generateMockRuleInfo(storeId: string): RuleInfo {
 /**
  * Generate mock override activity
  */
-export function generateMockOverrideActivity(storeId: string): OverrideActivity {
+export function generateMockOverrideActivity(_storeId: string): OverrideActivity {
   return {
     overridesToday: Math.floor(Math.random() * 3), // 0-2 today
     overridesThisWeek: Math.floor(Math.random() * 8) + 3, // 3-10 this week
@@ -600,7 +592,7 @@ export function generateMockOverrideActivity(storeId: string): OverrideActivity 
 /**
  * Generate mock published audits for event bus status
  */
-export function generateMockPublishedAudits(storeId: string): PublishedAudit[] {
+export function generateMockPublishedAudits(_storeId: string): PublishedAudit[] {
   const shelves = generateMockShelves();
   const published: PublishedAudit[] = [];
   const now = new Date();

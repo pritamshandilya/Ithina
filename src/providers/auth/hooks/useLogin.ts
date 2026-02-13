@@ -7,12 +7,11 @@ export function useLogin(auth: Auth) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const login = async (data: LoginFormData) => {
-    setIsLoading(true);
-    setError(null);
-
+  const login = async (_data: LoginFormData) => {
     try {
-      await auth.login(data.email, data.password, data.rememberMe);
+      setIsLoading(true);
+      setError(null);
+      auth.startLogin();
       return true;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Login failed";

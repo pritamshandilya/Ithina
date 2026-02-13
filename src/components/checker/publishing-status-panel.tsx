@@ -153,7 +153,7 @@ export function PublishingStatusPanel({
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-3">
                       <p className="font-medium text-foreground">
-                        {audit.shelfId}
+                        {audit.shelfInfo.shelfName}
                       </p>
                       <span
                         className={cn(
@@ -182,11 +182,11 @@ export function PublishingStatusPanel({
                     </div>
 
                     {/* Event ID (if published) */}
-                    {audit.status === "published" && audit.eventId && (
+                    {audit.status === "published" && audit.auditId && (
                       <p className="text-xs text-muted-foreground">
                         Event ID:{" "}
                         <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                          {audit.eventId}
+                          {audit.auditId}
                         </code>
                       </p>
                     )}
@@ -202,7 +202,7 @@ export function PublishingStatusPanel({
                         "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                         "transition-colors"
                       )}
-                      aria-label={`Retry publishing for ${audit.shelfId}`}
+                      aria-label={`Retry publishing for ${audit.shelfInfo.shelfName}`}
                     >
                       <RefreshCw className="h-4 w-4" />
                       Retry

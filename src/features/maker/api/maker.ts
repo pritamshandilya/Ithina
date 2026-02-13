@@ -27,7 +27,7 @@ function simulateNetworkDelay(ms = 500): Promise<void> {
  * @param userId - The maker's user ID
  * @returns Promise<Store[]> - Array of store objects
  */
-export async function fetchStores(userId: string): Promise<Store[]> {
+export async function fetchStores(_userId: string): Promise<Store[]> {
   await simulateNetworkDelay(300);
   return generateMockStores();
 }

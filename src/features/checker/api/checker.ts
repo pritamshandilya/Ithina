@@ -39,7 +39,7 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  * @param userId - The checker's user ID
  * @returns Promise resolving to array of stores
  */
-export async function fetchStores(userId: string): Promise<Store[]> {
+export async function fetchStores(_userId: string): Promise<Store[]> {
   await delay(300);
   return generateMockStores();
 }
@@ -74,7 +74,7 @@ export async function fetchPendingAudits(storeId: string): Promise<CheckerAudit[
  * @returns Promise resolving to array of notifications
  */
 export async function fetchNotifications(
-  userId: string,
+  _userId: string,
   storeId?: string
 ): Promise<Notification[]> {
   await delay(300);

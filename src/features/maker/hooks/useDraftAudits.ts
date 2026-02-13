@@ -73,7 +73,7 @@ export function useSaveDraftProgress() {
 
       return { previousDrafts };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, _variables, context) => {
       if (context?.previousDrafts) {
         queryClient.setQueryData(draftAuditsKeys.all, context.previousDrafts);
       }

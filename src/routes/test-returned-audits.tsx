@@ -54,7 +54,7 @@ function TestReturnedAudits() {
           </p>
 
           <ReturnedAuditsSection
-            onResubmit={(auditId, shelfId) => {
+            onViewReport={(auditId, shelfId) => {
               setLastAction({ auditId, shelfId });
               console.log("Re-submit requested:", { auditId, shelfId });
               alert(

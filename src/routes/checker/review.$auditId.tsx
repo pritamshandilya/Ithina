@@ -267,7 +267,9 @@ function AuditReviewWorkspace() {
               <div>
                 <p className="text-xs text-muted-foreground">Submitted</p>
                 <p className="text-sm font-medium text-foreground">
-                  {format(new Date(audit.submittedAt), "MMM d, h:mm a")}
+                  {audit.submittedAt
+                    ? format(new Date(audit.submittedAt), "MMM d, h:mm a")
+                    : "Not submitted"}
                 </p>
               </div>
             </div>

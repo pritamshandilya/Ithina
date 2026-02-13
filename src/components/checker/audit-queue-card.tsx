@@ -168,13 +168,14 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
             {audit.submittedByName}
           </p>
           <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(audit.submittedAt), { addSuffix: true })}
+            {audit.submittedAt
+              ? formatDistanceToNow(new Date(audit.submittedAt), { addSuffix: true })
+              : "Not submitted"}
           </p>
         </div>
         
         {/* Audit Mode Badge */}
         <span
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold shrink-0"
           className={cn(
             "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
             audit.mode === "vision-edge"

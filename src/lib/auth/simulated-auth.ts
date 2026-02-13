@@ -123,9 +123,9 @@ export class SimulatedAuthService {
   static getDashboardRoute(role: UserRole): string {
     switch (role) {
       case "maker":
-        return "/maker-dashboard";
+        return "/maker";
       case "checker":
-        return "/checker-dashboard";
+        return "/checker";
       default:
         return "/";
     }

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Lock, Mail, User, UserPlus, ChevronLeft } from "lucide-react";
+import { ChevronLeft, Lock, Mail, User, UserPlus } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -21,7 +21,6 @@ export const Route = createFileRoute("/signup")({
 
 function SignupPage() {
   const navigate = useNavigate();
-
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -29,7 +28,6 @@ function SignupPage() {
     password: "",
     confirmPassword: "",
   });
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSigningUp, setIsSigningUp] = useState(false);
   const [signupError, setSignupError] = useState<string | null>(null);
@@ -40,176 +38,149 @@ function SignupPage() {
     setSignupError(null);
 
     const result = signupSchema.safeParse(formData);
-
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
       result.error.issues.forEach((issue) => {
-        if (issue.path[0]) {
-          fieldErrors[issue.path[0].toString()] = issue.message;
-        }
+        if (issue.path[0]) fieldErrors[issue.path[0].toString()] = issue.message;
       });
       setErrors(fieldErrors);
       return;
     }
 
     setIsSigningUp(true);
-    // Simulate API delay
     await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Simulate successful signup
     navigate({ to: "/login" });
     setIsSigningUp(false);
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#0a0a0c] flex items-center justify-center p-4">
-      <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]" />
-      <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-600/10 rounded-full blur-[120px]" />
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-primary p-4">
+      <div className="absolute right-[-10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-chart-2/10 blur-[120px]" />
+      <div className="absolute bottom-[-10%] left-[-10%] h-[40%] w-[40%] rounded-full bg-accent/10 blur-[120px]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="w-full max-w-lg z-10"
+        className="z-10 w-full max-w-lg"
       >
-        <Card className="border-white/10 bg-white/[0.03] backdrop-blur-xl text-white shadow-2xl">
-          <CardHeader className="text-center space-y-1">
-            <div className="flex justify-center mb-4">
-              <div className="relative group">
-                <div className="relative">
-                  <img
-                    src="/logo.avif"
-                    alt="Logo"
-                    className="h-12 w-auto relative z-10 transition-all duration-300 group-hover:scale-105"
-                  />
-                  <div
-                    className="absolute inset-0 z-0 opacity-60 blur-xl animate-pulse"
-                    style={{
-                      background:
-                        "radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, rgba(192, 132, 252, 0.2) 40%, transparent 70%)",
-                    }}
-                  />
-                </div>
-              </div>
+        <Card className="border-border bg-card text-card-foreground shadow-2xl backdrop-blur-xl">
+          <CardHeader className="space-y-1 text-center">
+            <div className="mb-4 flex justify-center">
+              <img src="/logo.avif" alt="Logo" className="h-12 w-auto" />
             </div>
-            <CardTitle className="text-3xl font-bold tracking-tight bg-gradient-to-br from-white to-gray-400 bg-clip-text text-transparent">
+            <CardTitle className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               Create an account
             </CardTitle>
-            <CardDescription className="text-gray-400 text-base">
+            <CardDescription className="text-base text-muted-foreground">
               Join us to start managing your planograms effectively
             </CardDescription>
           </CardHeader>
+
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <label htmlFor="firstName" className="text-sm font-medium text-gray-300 ml-1">
+                  <label htmlFor="firstName" className="ml-1 text-sm font-medium text-muted-foreground">
                     First Name
                   </label>
-                  <div className="relative group">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                  <div className="group relative">
+                    <User className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
                     <Input
                       id="firstName"
                       placeholder="John"
                       value={formData.firstName}
-                      onChange={(e) =>
-                        setFormData({ ...formData, firstName: e.target.value })
-                      }
-                      className="pl-10 h-11 bg-white/[0.05] border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all rounded-xl"
+                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                      className="h-11 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
                     />
                   </div>
-                  {errors.firstName && <p className="text-xs text-red-400 ml-1">{errors.firstName}</p>}
+                  {errors.firstName && <p className="ml-1 text-xs text-destructive">{errors.firstName}</p>}
                 </div>
+
                 <div className="space-y-2">
-                  <label htmlFor="lastName" className="text-sm font-medium text-gray-300 ml-1">
+                  <label htmlFor="lastName" className="ml-1 text-sm font-medium text-muted-foreground">
                     Last Name
                   </label>
                   <Input
                     id="lastName"
                     placeholder="Doe"
                     value={formData.lastName}
-                    onChange={(e) =>
-                      setFormData({ ...formData, lastName: e.target.value })
-                    }
-                    className="h-11 bg-white/[0.05] border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all rounded-xl"
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="h-11 rounded-xl border-input bg-background/40 text-foreground placeholder:text-muted-foreground"
                   />
-                  {errors.lastName && <p className="text-xs text-red-400 ml-1">{errors.lastName}</p>}
+                  {errors.lastName && <p className="ml-1 text-xs text-destructive">{errors.lastName}</p>}
                 </div>
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium text-gray-300 ml-1">
+                <label htmlFor="email" className="ml-1 text-sm font-medium text-muted-foreground">
                   Email Address
                 </label>
-                <div className="relative group">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                <div className="group relative">
+                  <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
                   <Input
                     id="email"
                     type="email"
                     placeholder="name@company.com"
                     value={formData.email}
-                    onChange={(e) =>
-                      setFormData({ ...formData, email: e.target.value })
-                    }
-                    className="pl-10 h-11 bg-white/[0.05] border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all rounded-xl"
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="h-11 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
-                {errors.email && <p className="text-xs text-red-400 ml-1">{errors.email}</p>}
+                {errors.email && <p className="ml-1 text-xs text-destructive">{errors.email}</p>}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium text-gray-300 ml-1">
+                <label htmlFor="password" className="ml-1 text-sm font-medium text-muted-foreground">
                   Password
                 </label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                <div className="group relative">
+                  <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
                   <Input
                     id="password"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="********"
                     value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    className="pl-10 h-11 bg-white/[0.05] border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all rounded-xl"
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="h-11 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
-                {errors.password && <p className="text-xs text-red-400 ml-1">{errors.password}</p>}
+                {errors.password && <p className="ml-1 text-xs text-destructive">{errors.password}</p>}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-300 ml-1">
+                <label htmlFor="confirmPassword" className="ml-1 text-sm font-medium text-muted-foreground">
                   Confirm Password
                 </label>
-                <div className="relative group">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500 group-focus-within:text-purple-400 transition-colors" />
+                <div className="group relative">
+                  <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
                   <Input
                     id="confirmPassword"
                     type="password"
-                    placeholder="••••••••"
+                    placeholder="********"
                     value={formData.confirmPassword}
-                    onChange={(e) =>
-                      setFormData({ ...formData, confirmPassword: e.target.value })
-                    }
-                    className="pl-10 h-11 bg-white/[0.05] border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20 transition-all rounded-xl"
+                    onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                    className="h-11 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
                   />
                 </div>
-                {errors.confirmPassword && <p className="text-xs text-red-400 ml-1">{errors.confirmPassword}</p>}
+                {errors.confirmPassword && (
+                  <p className="ml-1 text-xs text-destructive">{errors.confirmPassword}</p>
+                )}
               </div>
 
               {signupError && (
-                <div className="rounded-xl bg-red-400/10 p-3 text-sm text-red-400 border border-red-400/20">
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
                   {signupError}
                 </div>
               )}
 
               <Button
                 type="submit"
-                className="w-full h-12 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl shadow-lg shadow-purple-600/20 transition-all active:scale-[0.98] mt-2"
+                className="mt-2 h-12 w-full rounded-xl bg-accent font-semibold text-accent-foreground transition-all hover:bg-accent/90 active:scale-[0.98]"
                 disabled={isSigningUp}
               >
                 {isSigningUp ? (
-                  <div className="h-5 w-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />
                 ) : (
                   <div className="flex items-center justify-center gap-2">
                     <UserPlus className="h-5 w-5" />
@@ -219,11 +190,13 @@ function SignupPage() {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex flex-col border-t border-white/5 pt-6 pb-8">
-            <p className="text-sm text-gray-500">
+
+          <CardFooter className="flex flex-col border-t border-border/50 pb-8 pt-6">
+            <p className="text-sm text-muted-foreground">
               Already have an account?{" "}
               <button
-                className="text-purple-400 hover:text-purple-300 font-medium transition-colors ml-1"
+                type="button"
+                className="ml-1 font-medium text-accent transition-colors hover:text-accent/80"
                 onClick={() => navigate({ to: "/login" })}
               >
                 Sign in
@@ -231,10 +204,11 @@ function SignupPage() {
             </p>
           </CardFooter>
         </Card>
-        
-        <button 
+
+        <button
+          type="button"
           onClick={() => navigate({ to: "/login" })}
-          className="mt-6 flex items-center gap-2 text-gray-500 hover:text-white transition-colors mx-auto"
+          className="mx-auto mt-6 flex items-center gap-2 text-muted-foreground transition-colors hover:text-foreground"
         >
           <ChevronLeft className="h-4 w-4" />
           <span className="text-sm">Back to login</span>

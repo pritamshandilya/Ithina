@@ -21,7 +21,7 @@ import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
   label: string;
-  to: "/maker" | "/checker";
+  to: "/maker/dashboard" | "/checker/dashboard";
   hash?: string;
   icon: typeof LayoutDashboard;
 };
@@ -43,17 +43,17 @@ export default function Sidenav() {
     return "maker";
   }, [currentUser?.role, location.pathname]);
 
-  const dashboardTo = role === "checker" ? "/checker" : "/maker";
+  const dashboardTo = role === "checker" ? "/checker/dashboard" : "/maker/dashboard";
 
   const makerItems: NavItem[] = [
-    { label: "Shelves", to: "/maker", hash: "assigned-shelves-heading", icon: Rows3 },
-    { label: "My Audits", to: "/maker", hash: "my-audits-heading", icon: ListChecks },
+    { label: "Shelves", to: "/maker/dashboard", hash: "assigned-shelves-heading", icon: Rows3 },
+    { label: "My Audits", to: "/maker/dashboard", hash: "my-audits-heading", icon: ListChecks },
   ];
 
   const checkerItems: NavItem[] = [
-    { label: "Audit Review", to: "/checker", hash: "audit-queue-heading", icon: ShieldCheck },
-    { label: "Shelves", to: "/checker", hash: "audit-queue-heading", icon: Rows3 },
-    { label: "Knowledge Center", to: "/checker", hash: "knowledge-center-heading", icon: Library },
+    { label: "Audit Review", to: "/checker/dashboard", hash: "audit-queue-heading", icon: ShieldCheck },
+    { label: "Shelves", to: "/checker/dashboard", hash: "audit-queue-heading", icon: Rows3 },
+    { label: "Knowledge Center", to: "/checker/dashboard", hash: "knowledge-center-heading", icon: Library },
   ];
 
   const roleItems = role === "checker" ? checkerItems : makerItems;

@@ -114,7 +114,7 @@ function AuditReviewWorkspace() {
       approveAudit.mutate(auditId, {
         onSuccess: () => {
           alert("Audit approved successfully!");
-          navigate({ to: "/checker" });
+          navigate({ to: "/checker/dashboard" });
         },
       });
     }
@@ -138,7 +138,7 @@ function AuditReviewWorkspace() {
       {
         onSuccess: () => {
           alert("Audit returned to maker successfully!");
-          navigate({ to: "/checker" });
+          navigate({ to: "/checker/dashboard" });
         },
       }
     );
@@ -162,7 +162,7 @@ function AuditReviewWorkspace() {
       {
         onSuccess: () => {
           alert("Audit overridden and approved successfully!");
-          navigate({ to: "/checker" });
+          navigate({ to: "/checker/dashboard" });
         },
       }
     );
@@ -172,7 +172,7 @@ function AuditReviewWorkspace() {
    * Handle back navigation
    */
   const handleBack = () => {
-    navigate({ to: "/checker" });
+    navigate({ to: "/checker/dashboard" });
   };
 
   // Loading state

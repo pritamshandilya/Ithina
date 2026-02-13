@@ -36,7 +36,10 @@ function LoginPage() {
 
     try {
       const user = await SimulatedAuthService.login(formData.email, formData.password);
-      const destination = SimulatedAuthService.getDashboardRoute(user.role) as "/maker" | "/checker" | "/";
+      const destination = SimulatedAuthService.getDashboardRoute(user.role) as
+        | "/maker/dashboard"
+        | "/checker/dashboard"
+        | "/";
       navigate({ to: destination });
     } catch {
       setErrors({ general: "Invalid credentials. Please try again." });

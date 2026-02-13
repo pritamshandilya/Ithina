@@ -14,7 +14,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
+import logo from "@/assets/logo.avif";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
@@ -57,11 +59,13 @@ export default function Sidenav() {
   const roleItems = role === "checker" ? checkerItems : makerItems;
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-1">
-          <img src="/logo.avif" alt="Planogram Assistant" className="h-7 w-auto rounded" />
-          <p className="text-sm font-semibold text-sidebar-foreground">Planogram Assistant</p>
+        <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
+          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
+            <img src={logo} alt="Planogram Assistant" className="h-12 w-auto rounded" />
+          </div>
+          <SidebarTrigger className="size-8 rounded-md border border-sidebar-border hover:bg-sidebar-accent group-data-[collapsible=icon]:mx-auto" />
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -72,6 +76,7 @@ export default function Sidenav() {
               <SidebarMenuItem>
                 <SidebarMenuButton
                   asChild
+                  tooltip="Dashboard"
                   isActive={isActiveItem(location.pathname, location.hash, {
                     label: "Dashboard",
                     to: dashboardTo,
@@ -90,7 +95,7 @@ export default function Sidenav() {
 
                 return (
                   <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton asChild isActive={isActive}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
                       <Link to={item.to} hash={item.hash}>
                         <Icon />
                         {item.label}

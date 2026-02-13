@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import logo from "@/assets/logo.avif";
 import { signupSchema } from "@/lib/validation/auth";
 
 export const Route = createFileRoute("/signup")({
@@ -67,7 +68,7 @@ function SignupPage() {
         <Card className="border-border bg-card text-card-foreground shadow-2xl backdrop-blur-xl">
           <CardHeader className="space-y-1 text-center">
             <div className="mb-4 flex justify-center">
-              <img src="/logo.avif" alt="Logo" className="h-12 w-auto" />
+              <img src={logo} alt="Logo" className="h-12 w-auto" />
             </div>
             <CardTitle className="bg-gradient-to-br from-foreground to-muted-foreground bg-clip-text text-3xl font-bold tracking-tight text-transparent">
               Create an account

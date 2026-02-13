@@ -195,6 +195,7 @@ function ShelfManagementPage() {
   };
 
   return (
+    <MainLayout>
       <div className="min-h-screen bg-[#0a0a0c] text-white p-6">
         <div className="mx-auto max-w-[1600px] space-y-6">
           {/* Header Bar */}
@@ -487,5 +488,6 @@ function ShelfManagementPage() {
            </div>
         </div>
       </div>
+    </MainLayout>
   );
 }

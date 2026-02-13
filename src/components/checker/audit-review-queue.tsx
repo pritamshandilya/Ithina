@@ -13,16 +13,16 @@
  * - Empty states
  */
 
-import { useState, useMemo } from "react";
-import { Search } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { LayoutGridIcon, Search, TableIcon } from "lucide-react";
 
+import { AuditQueueCard } from "@/components/checker/audit-queue-card";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { AuditQueueFilter, AuditQueueSort } from "@/features/checker/types";
 import { cn } from "@/lib/utils";
 import type { CheckerAudit } from "@/types/checker";
-import type { AuditQueueFilter, AuditQueueSort } from "@/features/checker/types";
-
-import { AuditQueueCard } from "./audit-queue-card";
 
 export interface AuditReviewQueueProps {
   /**
@@ -94,6 +94,80 @@ const filterOptions: {
   },
 ];
 
+type ViewMode = "table" | "card";
+const CARD_PAGE_SIZE = 9;
+
+const AUDIT_BASE_TABLE_COLUMNS: DataTableColumn<CheckerAudit>[] = [
+  {
+    title: "Aisle",
+    field: "shelfInfo.aisleNumber",
+    sorter: "number",
+    width: 90,
+  },
+  {
+    title: "Bay",
+    field: "shelfInfo.bayNumber",
+    sorter: "number",
+    width: 90,
+  },
+  {
+    title: "Shelf",
+    field: "shelfInfo.shelfName",
+    sorter: "string",
+    minWidth: 200,
+  },
+  {
+    title: "Submitter",
+    field: "submittedByName",
+    sorter: "string",
+    minWidth: 160,
+  },
+  {
+    title: "Mode",
+    field: "mode",
+    sorter: "string",
+    width: 130,
+    formatter: (cell) => {
+      const mode = (cell as { getValue: () => string }).getValue();
+      return mode === "vision-edge" ? "Vision Edge" : "Assist Mode";
+    },
+  },
+  {
+    title: "Compliance",
+    field: "complianceScore",
+    sorter: "number",
+    width: 130,
+    formatter: (cell) => {
+      const score = (cell as { getValue: () => number | undefined }).getValue();
+      if (score == null) return "N/A";
+      const color =
+        score < 50
+          ? "var(--destructive)"
+          : score < 80
+            ? "var(--action-warning)"
+            : "var(--chart-2)";
+      return `<span class="tabular-nums font-semibold" style="color:${color}">${score}%</span>`;
+    },
+  },
+  {
+    title: "Violations",
+    field: "violationCount",
+    sorter: "number",
+    width: 120,
+  },
+  {
+    title: "Submitted",
+    field: "submittedAt",
+    sorter: "datetime",
+    width: 170,
+    formatter: (cell) => {
+      const value = (cell as { getValue: () => string | Date | undefined }).getValue();
+      if (!value) return "N/A";
+      return new Date(value).toLocaleString();
+    },
+  },
+];
+
 /**
  * AuditReviewQueue Component
  * 
@@ -110,6 +184,31 @@ export function AuditReviewQueue({
   const [activeFilter, setActiveFilter] = useState<AuditQueueFilter>("all");
   const [sortBy, setSortBy] = useState<AuditQueueSort>("compliance-asc");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [cardPage, setCardPage] = useState(1);
+
+  const tableColumns = useMemo<DataTableColumn<CheckerAudit>[]>(() => {
+    if (!onAuditClick) return AUDIT_BASE_TABLE_COLUMNS;
+
+    return [
+      ...AUDIT_BASE_TABLE_COLUMNS,
+      {
+        title: "Actions",
+        field: "id",
+        width: 120,
+        headerSort: false,
+        headerFilter: false,
+        hozAlign: "center",
+        formatter: () =>
+          '<button type="button" class="rounded-md border border-border bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">Review</button>',
+        cellClick: (event: unknown, cell: { getData: () => CheckerAudit }) => {
+          (event as { stopPropagation?: () => void }).stopPropagation?.();
+          onAuditClick(cell.getData().id);
+        },
+      },
+    ];
+  }, [onAuditClick]);
 
   // Filter and sort audits
   const filteredAndSortedAudits = useMemo(() => {
@@ -146,6 +245,9 @@ export function AuditReviewQueue({
 
     // Apply sorting
     const sorted = [...filtered];
+    const getSubmittedAtTime = (audit: CheckerAudit) =>
+      audit.submittedAt ? new Date(audit.submittedAt).getTime() : 0;
+
     switch (sortBy) {
       case "compliance-asc":
         sorted.sort((a, b) => (a.complianceScore || 0) - (b.complianceScore || 0));
@@ -154,10 +256,10 @@ export function AuditReviewQueue({
         sorted.sort((a, b) => (b.complianceScore || 0) - (a.complianceScore || 0));
         break;
       case "time-asc":
-        sorted.sort((a, b) => new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime());
+        sorted.sort((a, b) => getSubmittedAtTime(a) - getSubmittedAtTime(b));
         break;
       case "time-desc":
-        sorted.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+        sorted.sort((a, b) => getSubmittedAtTime(b) - getSubmittedAtTime(a));
         break;
       case "violations-desc":
         sorted.sort((a, b) => b.violationCount - a.violationCount);
@@ -169,6 +271,32 @@ export function AuditReviewQueue({
 
     return sorted;
   }, [audits, activeFilter, sortBy, searchQuery]);
+
+  const cardTotalPages = Math.max(1, Math.ceil(filteredAndSortedAudits.length / CARD_PAGE_SIZE));
+
+  const paginatedCardAudits = useMemo(() => {
+    const start = (cardPage - 1) * CARD_PAGE_SIZE;
+    return filteredAndSortedAudits.slice(start, start + CARD_PAGE_SIZE);
+  }, [cardPage, filteredAndSortedAudits]);
+
+  const tableVisibleCount = useMemo(() => {
+    const start = (tablePagination.page - 1) * tablePagination.pageSize;
+    const remaining = filteredAndSortedAudits.length - start;
+    return Math.max(0, Math.min(tablePagination.pageSize, remaining));
+  }, [filteredAndSortedAudits.length, tablePagination.page, tablePagination.pageSize]);
+
+  const visibleCount = viewMode === "table" ? tableVisibleCount : paginatedCardAudits.length;
+
+  useEffect(() => {
+    setCardPage(1);
+    setTablePagination((prev) => ({ ...prev, page: 1 }));
+  }, [activeFilter, searchQuery, sortBy]);
+
+  useEffect(() => {
+    if (cardPage > cardTotalPages) {
+      setCardPage(cardTotalPages);
+    }
+  }, [cardPage, cardTotalPages]);
 
   // Loading state
   if (isLoading) {
@@ -268,22 +396,59 @@ export function AuditReviewQueue({
         </div>
       </div>
 
-      {/* Sort Options */}
-      <div className="flex items-center gap-2 text-sm">
-        <span className="text-muted-foreground">Sort by:</span>
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value as AuditQueueSort)}
-          className="rounded-md border border-border bg-card px-3 py-1.5 text-card-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-          aria-label="Sort audits"
-        >
-          <option value="compliance-asc">Lowest Compliance First</option>
-          <option value="compliance-desc">Highest Compliance First</option>
-          <option value="time-desc">Newest First</option>
-          <option value="time-asc">Oldest First</option>
-          <option value="violations-desc">Most Violations First</option>
-          <option value="violations-asc">Least Violations First</option>
-        </select>
+      {/* Sort and View Options */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Sort by:</span>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as AuditQueueSort)}
+            className="rounded-md border border-border bg-card px-3 py-1.5 text-card-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+            aria-label="Sort audits"
+          >
+            <option value="compliance-asc">Lowest Compliance First</option>
+            <option value="compliance-desc">Highest Compliance First</option>
+            <option value="time-desc">Newest First</option>
+            <option value="time-asc">Oldest First</option>
+            <option value="violations-desc">Most Violations First</option>
+            <option value="violations-asc">Least Violations First</option>
+          </select>
+        </div>
+
+        <div className="flex rounded-lg border border-border p-0.5 bg-card" role="tablist" aria-label="Queue view mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "table"}
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              viewMode === "table"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <TableIcon className="size-4" aria-hidden="true" />
+            Table
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "card"}
+            onClick={() => setViewMode("card")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              viewMode === "card"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <LayoutGridIcon className="size-4" aria-hidden="true" />
+            Cards
+          </button>
+        </div>
       </div>
 
       {/* Audit Cards Grid */}
@@ -303,10 +468,28 @@ export function AuditReviewQueue({
             </button>
           )}
         </div>
+      ) : viewMode === "table" ? (
+        <>
+          <DataTable<CheckerAudit>
+            columns={tableColumns}
+            data={filteredAndSortedAudits}
+            rowIdField="id"
+            initialSort={{ field: "complianceScore", dir: "asc" }}
+            emptyMessage="No audits match the current filters"
+            pageSize={10}
+            pageSizeSelector={[5, 10, 20, 50]}
+            onPaginationChange={setTablePagination}
+            onRowClick={onAuditClick ? (row) => onAuditClick(row.id) : undefined}
+          />
+
+          <p className="text-sm text-muted-foreground text-center">
+            Showing {visibleCount} of {filteredAndSortedAudits.length} audits
+          </p>
+        </>
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredAndSortedAudits.map((audit) => (
+            {paginatedCardAudits.map((audit) => (
               <AuditQueueCard
                 key={audit.id}
                 audit={audit}
@@ -314,10 +497,45 @@ export function AuditReviewQueue({
               />
             ))}
           </div>
-          
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setCardPage((page) => Math.max(1, page - 1))}
+              disabled={cardPage === 1}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                cardPage === 1
+                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                  : "border-border text-foreground hover:bg-accent/40"
+              )}
+            >
+              Previous
+            </button>
+            <span className="text-sm text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
+              <span className="font-semibold text-foreground">{cardTotalPages}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
+              disabled={cardPage === cardTotalPages}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                cardPage === cardTotalPages
+                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                  : "border-border text-foreground hover:bg-accent/40"
+              )}
+            >
+              Next
+            </button>
+          </div>
+
           {/* Result Count */}
           <p className="text-sm text-muted-foreground text-center">
-            Showing {filteredAndSortedAudits.length} of {audits.length} audits
+            Showing {visibleCount} of {filteredAndSortedAudits.length} audits
           </p>
         </>
       )}

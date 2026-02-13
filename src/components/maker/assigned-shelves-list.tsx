@@ -1,11 +1,105 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { formatDistanceToNow } from "date-fns";
+import { LayoutGridIcon, TableIcon } from "lucide-react";
 
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignedShelves } from "@/features/maker/hooks";
 import { cn } from "@/lib/utils";
 import type { AuditStatus, Shelf } from "@/types/maker";
 
 import { ShelfCard } from "./shelf-card";
+
+/** Status labels for table cell display */
+const STATUS_LABELS: Record<AuditStatus, string> = {
+  "never-audited": "Never Audited",
+  draft: "Draft",
+  pending: "Pending Review",
+  approved: "Approved",
+  returned: "Returned",
+};
+
+/** Assigned shelves table column definitions */
+const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
+  {
+    title: "Aisle",
+    field: "aisleNumber",
+    sorter: "number",
+    width: 80,
+    headerSort: true,
+  },
+  {
+    title: "Bay",
+    field: "bayNumber",
+    sorter: "number",
+    width: 80,
+    headerSort: true,
+  },
+  {
+    title: "Shelf Name",
+    field: "shelfName",
+    sorter: "string",
+    minWidth: 160,
+    headerSort: true,
+  },
+  {
+    title: "Last Audit",
+    field: "lastAuditDate",
+    sorter: "datetime",
+    width: 140,
+    headerSort: true,
+    formatter: (cell) => {
+      const val = (cell as { getValue: () => unknown }).getValue();
+      if (val == null) return "—";
+      const date = val instanceof Date ? val : new Date(val as string | number);
+      const data = (cell as { getData: () => Shelf }).getData();
+      if (data.status === "draft") {
+        return `Draft saved ${formatDistanceToNow(date, { addSuffix: true })}`;
+      }
+      return formatDistanceToNow(date, { addSuffix: true });
+    },
+  },
+  {
+    title: "Compliance",
+    field: "complianceScore",
+    sorter: "number",
+    width: 110,
+    headerSort: true,
+    formatter: (cell) => {
+      const val = (cell as { getValue: () => unknown }).getValue();
+      if (val == null || typeof val !== "number") return "—";
+      const color =
+        val >= 90
+          ? "var(--chart-2)"
+          : val >= 75
+            ? "var(--accent)"
+            : "var(--destructive)";
+      return `<span class="tabular-nums font-semibold" style="color:${color}">${val}%</span>`;
+    },
+  },
+  {
+    title: "Status",
+    field: "status",
+    sorter: "string",
+    width: 140,
+    headerSort: true,
+    formatter: (cell) => {
+      const val = (cell as { getValue: () => unknown }).getValue() as AuditStatus;
+      const label = STATUS_LABELS[val] ?? val;
+      const statusClass =
+        val === "approved"
+          ? "status-approved"
+          : val === "pending"
+            ? "status-pending"
+            : val === "returned"
+              ? "status-returned"
+              : val === "draft"
+                ? "status-draft"
+                : "status-never-audited";
+      return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
+    },
+  },
+];
 
 /**
  * Props for the AssignedShelvesList component
@@ -19,6 +113,12 @@ export interface AssignedShelvesListProps {
  * Filter option type
  */
 type FilterOption = "all" | AuditStatus;
+
+/**
+ * View mode: table (default) or card
+ */
+type ViewMode = "table" | "card";
+const CARD_PAGE_SIZE = 9;
 
 /**
  * Filter options configuration
@@ -82,6 +182,9 @@ export function AssignedShelvesList({
 }: AssignedShelvesListProps) {
   const { data: shelves, isLoading, error } = useAssignedShelves();
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
+  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [cardPage, setCardPage] = useState(1);
 
   // Filter shelves based on active filter
   const filteredShelves = useMemo(() => {
@@ -89,6 +192,32 @@ export function AssignedShelvesList({
     if (activeFilter === "all") return shelves;
     return shelves.filter((shelf) => shelf.status === activeFilter);
   }, [shelves, activeFilter]);
+
+  const cardTotalPages = Math.max(1, Math.ceil(filteredShelves.length / CARD_PAGE_SIZE));
+  const paginatedCardShelves = useMemo(() => {
+    const start = (cardPage - 1) * CARD_PAGE_SIZE;
+    return filteredShelves.slice(start, start + CARD_PAGE_SIZE);
+  }, [cardPage, filteredShelves]);
+
+  const tableVisibleCount = useMemo(() => {
+    const start = (tablePagination.page - 1) * tablePagination.pageSize;
+    const remaining = filteredShelves.length - start;
+    return Math.max(0, Math.min(tablePagination.pageSize, remaining));
+  }, [filteredShelves.length, tablePagination.page, tablePagination.pageSize]);
+
+  const visibleShelvesCount =
+    viewMode === "table" ? tableVisibleCount : paginatedCardShelves.length;
+
+  useEffect(() => {
+    setCardPage(1);
+    setTablePagination((prev) => ({ ...prev, page: 1 }));
+  }, [activeFilter]);
+
+  useEffect(() => {
+    if (cardPage > cardTotalPages) {
+      setCardPage(cardTotalPages);
+    }
+  }, [cardPage, cardTotalPages]);
 
   // Loading state
   if (isLoading) {
@@ -182,22 +311,56 @@ export function AssignedShelvesList({
         })}
       </div>
 
-      {/* Filtered Count */}
-      <div className="flex items-center justify-between">
+      {/* Filtered count and view toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Showing{" "}
           <span className="font-semibold text-foreground">
-            {filteredShelves.length}
+            {visibleShelvesCount}
           </span>{" "}
           of{" "}
           <span className="font-semibold text-foreground">
-            {shelves.length}
+            {filteredShelves.length}
           </span>{" "}
           shelves
         </p>
+        <div className="flex rounded-lg border border-border p-0.5 bg-card" role="tablist" aria-label="View mode">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "table"}
+            onClick={() => setViewMode("table")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              viewMode === "table"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <TableIcon className="size-4" aria-hidden="true" />
+            Table
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={viewMode === "card"}
+            onClick={() => setViewMode("card")}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              viewMode === "card"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <LayoutGridIcon className="size-4" aria-hidden="true" />
+            Cards
+          </button>
+        </div>
       </div>
 
-      {/* Shelves Grid */}
+      {/* Shelves: Table or Card view */}
       {filteredShelves.length === 0 ? (
         <div className="rounded-lg bg-card border border-border p-8 text-center">
           <p className="text-muted-foreground">
@@ -207,15 +370,59 @@ export function AssignedShelvesList({
             </span>
           </p>
         </div>
+      ) : viewMode === "table" ? (
+        <DataTable<Shelf>
+          columns={SHELF_TABLE_COLUMNS}
+          data={filteredShelves}
+          rowIdField="id"
+          initialSort={{ field: "aisleNumber", dir: "asc" }}
+          emptyMessage="No shelves match the current filter"
+          pageSize={10}
+          pageSizeSelector={[5, 10, 20, 50]}
+          onPaginationChange={setTablePagination}
+          onRowClick={onShelfClick ? (row) => onShelfClick(row.id) : undefined}
+        />
       ) : (
-        <div className="dashboard-grid">
-          {filteredShelves.map((shelf) => (
-            <ShelfCard
-              key={shelf.id}
-              shelf={shelf}
-              onClick={onShelfClick}
-            />
-          ))}
+        <div className="space-y-4">
+          <div className="dashboard-grid">
+            {paginatedCardShelves.map((shelf) => (
+              <ShelfCard key={shelf.id} shelf={shelf} onClick={onShelfClick} />
+            ))}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setCardPage((page) => Math.max(1, page - 1))}
+              disabled={cardPage === 1}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                cardPage === 1
+                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                  : "border-border text-foreground hover:bg-accent/40"
+              )}
+            >
+              Previous
+            </button>
+            <span className="text-sm text-muted-foreground">
+              Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
+              <span className="font-semibold text-foreground">{cardTotalPages}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
+              disabled={cardPage === cardTotalPages}
+              className={cn(
+                "rounded-md border px-3 py-1.5 text-sm transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                cardPage === cardTotalPages
+                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                  : "border-border text-foreground hover:bg-accent/40"
+              )}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>

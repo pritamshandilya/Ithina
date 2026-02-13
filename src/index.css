@@ -278,6 +278,232 @@
   }
 }
 
+/* ==========================================================================
+   DataTable (Tabulator) – full theme, responsive, matches app UX
+   ========================================================================== */
+
+/* Wrapper: full width, contained height for responsive layout */
+.data-table-wrapper {
+  --tabulator-bg: var(--card);
+  --tabulator-fg: var(--card-foreground);
+  --tabulator-border: var(--border);
+  --tabulator-header-bg: color-mix(in oklch, var(--card) 100%, black 12%);
+  --tabulator-row-even: color-mix(in oklch, var(--card) 100%, white 3%);
+  --tabulator-row-hover: color-mix(in oklch, var(--accent) 12%, var(--card));
+  --tabulator-sort-icon: var(--muted-foreground);
+  --tabulator-sort-active: var(--accent);
+}
+
+.data-table-container {
+  min-height: 240px;
+}
+
+/* Base table: no default white, use theme everywhere */
+.data-table-wrapper .tabulator {
+  background-color: var(--tabulator-bg) !important;
+  border: none;
+  color: var(--tabulator-fg);
+  width: 100% !important;
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper .tabulator-tableholder .tabulator-table {
+  background-color: var(--tabulator-bg) !important;
+  width: 100% !important;
+}
+
+/* Header: distinct background, clear border */
+.data-table-wrapper .tabulator-header {
+  background-color: var(--tabulator-header-bg) !important;
+  border-bottom: 2px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col {
+  background-color: var(--tabulator-header-bg) !important;
+  border-right: 1px solid var(--tabulator-border);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+  width: 6px;
+  margin-right: -3px;
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
+  cursor: col-resize;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 88%, black 12%);
+  color: var(--card-foreground);
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Sort icons: visible and accent when active */
+.data-table-wrapper .tabulator-col .tabulator-col-content .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-icon);
+  border-top-color: var(--tabulator-sort-icon);
+}
+
+.data-table-wrapper .tabulator-col.tabulator-col-sortable:hover .tabulator-arrow,
+.data-table-wrapper .tabulator-col.tabulator-sortable .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-active);
+  border-top-color: var(--tabulator-sort-active);
+}
+
+/* Rows: theme background, alternating and hover */
+.data-table-wrapper .tabulator-row {
+  min-height: 2.75rem;
+  background-color: var(--tabulator-bg) !important;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-row-even) !important;
+}
+
+.data-table-wrapper .tabulator-row:hover {
+  background-color: var(--tabulator-row-hover) !important;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected {
+  background-color: color-mix(in oklch, var(--accent) 18%, var(--card)) !important;
+}
+
+/* Cells: borders, padding, text color */
+.data-table-wrapper .tabulator-cell {
+  background-color: inherit !important;
+  border-right: 1px solid var(--tabulator-border);
+  border-bottom: 1px solid var(--tabulator-border);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen {
+  border-right: 2px solid var(--tabulator-border);
+}
+
+/* Placeholder when no data */
+.data-table-wrapper .tabulator-placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  background-color: var(--tabulator-bg) !important;
+}
+
+/* Scrollbar: themed for dark UI */
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {
+  height: 8px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--card) 100%, black 15%);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background: var(--tabulator-border);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Focus: visible focus ring for keyboard nav */
+.data-table-wrapper .tabulator-row:focus-visible,
+.data-table-wrapper .tabulator-cell:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selectable:hover {
+  cursor: pointer;
+}
+
+/* Responsive collapse (mobile): keep theme in collapsed content */
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse {
+  background-color: var(--tabulator-row-even) !important;
+  border: 1px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse table tr td {
+  color: var(--tabulator-fg);
+  border-color: var(--tabulator-border);
+}
+
+.data-table-wrapper .tabulator-cell .tabulator-responsive-collapse-toggle {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.data-table-wrapper .tabulator .tabulator-footer {
+  border-top: 1px solid var(--tabulator-border);
+  background-color: color-mix(in oklch, var(--card) 96%, black 4%) !important;
+  color: var(--muted-foreground) !important;
+  padding: 0.5rem 0.75rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-footer-contents,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-paginator,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-counter,
+.data-table-wrapper .tabulator .tabulator-footer span,
+.data-table-wrapper .tabulator .tabulator-footer label {
+  background-color: transparent !important;
+  color: var(--muted-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page {
+  border: 1px solid var(--tabulator-border);
+  background: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  border-radius: 0.375rem;
+  min-width: 2rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page.active {
+  background: color-mix(in oklch, var(--accent) 24%, transparent) !important;
+  border-color: color-mix(in oklch, var(--accent) 50%, transparent);
+  color: var(--card-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page:disabled {
+  opacity: 0.5;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size {
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  padding: 0.25rem 0.375rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
 /* Accessibility: Respect user's motion preferences */
 @media (prefers-reduced-motion: reduce) {
   *,

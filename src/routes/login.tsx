@@ -13,7 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { StoreModal } from "@/components/ui/store-modal";
+import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -26,7 +26,6 @@ function LoginPage() {
     password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showStoreModal, setShowStoreModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -34,21 +33,15 @@ function LoginPage() {
     setErrors({});
     setIsLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    const { email, password } = formData;
-    if (email === "maker@displaydata.com" && password === "password123") {
-      setShowStoreModal(true);
-    } else if (email === "checker@displaydata.com" && password === "password123") {
-      navigate({ to: "/checker" });
-    } else {
+    try {
+      const user = await SimulatedAuthService.login(formData.email, formData.password);
+      const destination = SimulatedAuthService.getDashboardRoute(user.role) as "/maker" | "/checker" | "/";
+      navigate({ to: destination });
+    } catch {
       setErrors({ general: "Invalid credentials. Please try again." });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  };
-
-  const handleStoreSelect = () => {
-    navigate({ to: "/maker" });
   };
 
   return (
@@ -56,20 +49,9 @@ function LoginPage() {
       <div className="absolute left-[-10%] top-[-10%] h-[40%] w-[40%] rounded-full bg-chart-2/10 blur-[120px]" />
       <div className="absolute bottom-[-10%] right-[-10%] h-[40%] w-[40%] rounded-full bg-accent/10 blur-[120px]" />
 
-      <StoreModal
-        isOpen={showStoreModal}
-        onClose={() => setShowStoreModal(false)}
-        onSelect={handleStoreSelect}
-      />
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
-        animate={{
-          opacity: showStoreModal ? 0 : 1,
-          y: showStoreModal ? -20 : 0,
-          scale: showStoreModal ? 0.95 : 1,
-          pointerEvents: showStoreModal ? "none" : "auto",
-        }}
+        animate={{ opacity: 1, y: 0, scale: 1, pointerEvents: "auto" }}
         transition={{ duration: 0.4, ease: "easeInOut" }}
         className="z-10 w-full max-w-md"
       >
@@ -101,7 +83,6 @@ function LoginPage() {
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     className="h-12 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
-                    disabled={showStoreModal}
                   />
                 </div>
               </div>
@@ -119,7 +100,6 @@ function LoginPage() {
                     value={formData.password}
                     onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="h-12 rounded-xl border-input bg-background/40 pl-10 text-foreground placeholder:text-muted-foreground"
-                    disabled={showStoreModal}
                   />
                 </div>
               </div>
@@ -137,7 +117,7 @@ function LoginPage() {
               <Button
                 type="submit"
                 className="h-12 w-full rounded-xl bg-accent font-semibold text-accent-foreground transition-all hover:bg-accent/90 active:scale-[0.98]"
-                disabled={isLoading || showStoreModal}
+                disabled={isLoading}
               >
                 {isLoading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-foreground/30 border-t-foreground" />

@@ -13,10 +13,14 @@ function RouteComponent() {
         Planogram Assistant Wireframe
       </h1>
       <div className="flex items-center gap-3">
-        <Button asChild>
+        <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
           <Link to="/login">Login</Link>
         </Button>
-        <Button asChild variant="outline">
+        <Button
+          asChild
+          variant="outline"
+          className="border-border bg-card text-card-foreground hover:bg-accent/40 hover:text-accent-foreground"
+        >
           <Link to="/signup">Sign Up</Link>
         </Button>
       </div>

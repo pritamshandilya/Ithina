@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import {
@@ -8,6 +9,8 @@ import {
   ReturnedAuditsSection,
   DraftAuditsSection,
 } from "@/components/maker";
+import { useStores } from "@/features/maker/hooks";
+import { mockUser } from "@/lib/api/mock-data";
 
 /**
  * Maker Dashboard Route
@@ -32,6 +35,10 @@ export const Route = createFileRoute("/maker/")({
 
 function MakerDashboard() {
   const navigate = useNavigate();
+  const { data: stores } = useStores();
+  const [selectedStoreId, setSelectedStoreId] = useState(
+    () => mockUser.storeId
+  );
 
   /**
    * Handler for starting a new audit
@@ -46,7 +53,11 @@ function MakerDashboard() {
       {/* Main container with max width for readability */}
       <div className="mx-auto max-w-7xl space-y-6">
         {/* 1. Header Context Bar */}
-        <HeaderContextBar />
+        <HeaderContextBar
+          stores={stores ?? []}
+          selectedStoreId={selectedStoreId}
+          onStoreChange={setSelectedStoreId}
+        />
 
         {/* 2. Primary Action Section */}
         <PrimaryActionSection onClick={handleStartAudit} />

@@ -1,9 +1,11 @@
-import { UserIcon, MapPinIcon, CalendarIcon, WifiIcon, WifiOffIcon } from "lucide-react";
+import { CalendarIcon, MapPinIcon, WifiIcon, WifiOffIcon } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
+import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
 import { cn } from "@/lib/utils";
 import { mockUser } from "@/lib/api/mock-data";
+import type { Store } from "@/types/checker";
 
 /**
  * Props for the HeaderContextBar component
@@ -15,6 +17,18 @@ export interface HeaderContextBarProps {
    * @default true
    */
   showSyncStatus?: boolean;
+  /**
+   * Stores available to the maker (when set, shows store dropdown instead of static store name)
+   */
+  stores?: Store[];
+  /**
+   * Currently selected store ID
+   */
+  selectedStoreId?: string;
+  /**
+   * Callback when store selection changes
+   */
+  onStoreChange?: (storeId: string) => void;
 }
 
 /**
@@ -58,6 +72,9 @@ function getInitials(firstName: string, lastName: string): string {
 export function HeaderContextBar({
   className,
   showSyncStatus = true,
+  stores = [],
+  selectedStoreId,
+  onStoreChange,
 }: HeaderContextBarProps) {
   // TODO: Replace with real auth context in future iteration
   // const { userInfo } = useAuth();
@@ -66,6 +83,11 @@ export function HeaderContextBar({
   const initials = getInitials(userInfo.firstName, userInfo.lastName);
   const fullName = `${userInfo.firstName} ${userInfo.lastName}`;
   const currentDate = formatCurrentDate();
+
+  const showStoreDropdown =
+    stores.length > 0 &&
+    selectedStoreId != null &&
+    typeof onStoreChange === "function";
 
   // Mock sync status - will be replaced with real offline detection
   const isOnline = true;
@@ -104,19 +126,31 @@ export function HeaderContextBar({
 
       <Separator orientation="vertical" className="hidden h-10 md:block" />
 
-      {/* Store Location */}
-      <div className="flex items-center gap-2 min-w-0">
-        <MapPinIcon
-          className="size-4 shrink-0 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <div className="min-w-0">
+      {/* Store selector or static store */}
+      {showStoreDropdown ? (
+        <div className="flex flex-col gap-1 min-w-0">
           <p className="text-xs text-muted-foreground">Store</p>
-          <p className="text-sm font-medium text-card-foreground truncate">
-            {userInfo.storeName}
-          </p>
+          <StoreSelectorDropdown
+            stores={stores}
+            selectedStoreId={selectedStoreId}
+            onStoreChange={onStoreChange}
+            className="min-w-[180px] sm:min-w-[200px]"
+          />
         </div>
-      </div>
+      ) : (
+        <div className="flex items-center gap-2 min-w-0">
+          <MapPinIcon
+            className="size-4 shrink-0 text-muted-foreground"
+            aria-hidden="true"
+          />
+          <div className="min-w-0">
+            <p className="text-xs text-muted-foreground">Store</p>
+            <p className="text-sm font-medium text-card-foreground truncate">
+              {userInfo.storeName}
+            </p>
+          </div>
+        </div>
+      )}
 
       <Separator orientation="vertical" className="hidden h-10 md:block" />
 

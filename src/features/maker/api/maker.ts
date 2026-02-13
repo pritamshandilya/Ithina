@@ -7,16 +7,29 @@ import {
   generateMockAudits,
   generateMockQuickStats,
   generateMockShelves,
+  generateMockStores,
   getReturnedAudits,
   getDraftAudits,
 } from "@/lib/api/mock-data";
 import type { Audit, QuickStats, Shelf } from "@/types/maker";
+import type { Store } from "@/types/checker";
 
 /**
  * Simulates network delay for realistic API behavior
  */
 function simulateNetworkDelay(ms = 500): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Fetch list of stores assigned to the maker (a maker can belong to more than one store)
+ *
+ * @param userId - The maker's user ID
+ * @returns Promise<Store[]> - Array of store objects
+ */
+export async function fetchStores(userId: string): Promise<Store[]> {
+  await simulateNetworkDelay(300);
+  return generateMockStores();
 }
 
 /**

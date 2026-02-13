@@ -17,3 +17,4 @@ export {
   useDeleteDraft,
   draftAuditsKeys,
 } from "./useDraftAudits";
+export { useStores, storesKeys } from "./useStores";

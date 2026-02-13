@@ -33,6 +33,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as CheckerIndexRouteImport } from './routes/checker/index'
 import { Route as MakerDashboardRouteImport } from './routes/maker/dashboard'
+import { Route as MakerAuditReviewRouteImport } from './routes/maker/audit-review'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
 import { Route as CheckerDashboardRouteImport } from './routes/checker/dashboard'
 import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
@@ -160,6 +161,11 @@ const MakerDashboardRoute = MakerDashboardRouteImport.update({
   path: '/maker/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerAuditReviewRoute = MakerAuditReviewRouteImport.update({
+  id: '/maker/audit-review',
+  path: '/maker/audit-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakerLayoutRoute = MakerLayoutRouteImport.update({
   id: '/maker/_layout',
   path: '/maker',
@@ -211,6 +217,7 @@ export interface FileRoutesByFullPath {
   '/checker': typeof CheckerLayoutRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/maker': typeof MakerLayoutRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/checker': typeof CheckerIndexRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/maker': typeof MakerIndexRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
@@ -272,6 +280,7 @@ export interface FileRoutesById {
   '/checker/_layout': typeof CheckerLayoutRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/maker/_layout': typeof MakerLayoutRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/checker'
     | '/checker/dashboard'
     | '/maker'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/checker/'
     | '/maker/'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/checker'
     | '/checker/dashboard'
     | '/maker'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/checker/review/$auditId'
     | '/maker/audit/new'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/checker/_layout'
     | '/checker/dashboard'
     | '/maker/_layout'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/checker/'
     | '/maker/'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   CheckerLayoutRoute: typeof CheckerLayoutRoute
   CheckerDashboardRoute: typeof CheckerDashboardRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
+  MakerAuditReviewRoute: typeof MakerAuditReviewRoute
   MakerDashboardRoute: typeof MakerDashboardRoute
   CheckerIndexRoute: typeof CheckerIndexRoute
   MakerIndexRoute: typeof MakerIndexRoute
@@ -574,6 +587,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maker/audit-review': {
+      id: '/maker/audit-review'
+      path: '/maker/audit-review'
+      fullPath: '/maker/audit-review'
+      preLoaderRoute: typeof MakerAuditReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker/_layout': {
       id: '/maker/_layout'
       path: '/maker'
@@ -637,6 +657,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckerLayoutRoute: CheckerLayoutRoute,
   CheckerDashboardRoute: CheckerDashboardRoute,
   MakerLayoutRoute: MakerLayoutRoute,
+  MakerAuditReviewRoute: MakerAuditReviewRoute,
   MakerDashboardRoute: MakerDashboardRoute,
   CheckerIndexRoute: CheckerIndexRoute,
   MakerIndexRoute: MakerIndexRoute,

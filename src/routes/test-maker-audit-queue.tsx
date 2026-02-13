@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AuditReviewQueue } from "@/components/maker";
+import MainLayout from "@/components/layouts/main";
 
 export const Route = createFileRoute("/test-maker-audit-queue")({
   component: TestMakerAuditQueue,
@@ -7,6 +8,7 @@ export const Route = createFileRoute("/test-maker-audit-queue")({
 
 function TestMakerAuditQueue() {
   return (
+    <MainLayout>
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div>
@@ -26,5 +28,6 @@ function TestMakerAuditQueue() {
         </div>
       </div>
     </div>
+    </MainLayout>
   );
 }

@@ -15,6 +15,7 @@ import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-a
 import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
 import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
 import { Route as TestOverridePublishingRouteImport } from './routes/test-override-publishing'
+import { Route as TestMakerAuditQueueRouteImport } from './routes/test-maker-audit-queue'
 import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDraftAuditsRouteImport } from './routes/test-draft-audits'
@@ -67,6 +68,11 @@ const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
 const TestOverridePublishingRoute = TestOverridePublishingRouteImport.update({
   id: '/test-override-publishing',
   path: '/test-override-publishing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestMakerAuditQueueRoute = TestMakerAuditQueueRouteImport.update({
+  id: '/test-maker-audit-queue',
+  path: '/test-maker-audit-queue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
@@ -195,6 +201,7 @@ export interface FileRoutesByFullPath {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -225,6 +232,7 @@ export interface FileRoutesByTo {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -254,6 +262,7 @@ export interface FileRoutesById {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -286,6 +295,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -316,6 +326,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -344,6 +355,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -375,6 +387,7 @@ export interface RootRouteChildren {
   TestDraftAuditsRoute: typeof TestDraftAuditsRoute
   TestHeaderRoute: typeof TestHeaderRoute
   TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
+  TestMakerAuditQueueRoute: typeof TestMakerAuditQueueRoute
   TestOverridePublishingRoute: typeof TestOverridePublishingRoute
   TestPrimaryActionRoute: typeof TestPrimaryActionRoute
   TestQuickStatsRoute: typeof TestQuickStatsRoute
@@ -433,6 +446,13 @@ declare module '@tanstack/react-router' {
       path: '/test-override-publishing'
       fullPath: '/test-override-publishing'
       preLoaderRoute: typeof TestOverridePublishingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-maker-audit-queue': {
+      id: '/test-maker-audit-queue'
+      path: '/test-maker-audit-queue'
+      fullPath: '/test-maker-audit-queue'
+      preLoaderRoute: typeof TestMakerAuditQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-knowledge-center': {
@@ -607,6 +627,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestDraftAuditsRoute: TestDraftAuditsRoute,
   TestHeaderRoute: TestHeaderRoute,
   TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
+  TestMakerAuditQueueRoute: TestMakerAuditQueueRoute,
   TestOverridePublishingRoute: TestOverridePublishingRoute,
   TestPrimaryActionRoute: TestPrimaryActionRoute,
   TestQuickStatsRoute: TestQuickStatsRoute,

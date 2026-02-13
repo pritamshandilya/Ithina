@@ -35,3 +35,10 @@ bun.lock
 
 *.md
 *.tanstack
+# documentation
+/docs
+
+*.md
+*.tanstack
+# documentation
+/docs

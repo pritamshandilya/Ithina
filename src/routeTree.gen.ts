@@ -26,6 +26,8 @@ import { Route as TestCheckerHeaderRouteImport } from './routes/test-checker-hea
 import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
 import { Route as TestAuditReviewQueueRouteImport } from './routes/test-audit-review-queue'
 import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as CheckerIndexRouteImport } from './routes/checker/index'
@@ -120,6 +122,16 @@ const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
   path: '/test-audit-mode-selector',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -158,6 +170,8 @@ const CheckerReviewAuditIdRoute = CheckerReviewAuditIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
@@ -184,6 +198,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
@@ -209,6 +225,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/login': typeof LoginRoute
+  '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
   '/test-checker-foundation': typeof TestCheckerFoundationRoute
@@ -237,6 +255,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/login'
+    | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
@@ -263,6 +283,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/login'
+    | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
@@ -287,6 +309,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/login'
+    | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
     | '/test-checker-foundation'
@@ -314,6 +338,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LoginRoute: typeof LoginRoute
+  SignupRoute: typeof SignupRoute
   TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
   TestAuditReviewQueueRoute: typeof TestAuditReviewQueueRoute
   TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
@@ -460,6 +486,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TestAuditModeSelectorRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -514,6 +554,8 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LoginRoute: LoginRoute,
+  SignupRoute: SignupRoute,
   TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
   TestAuditReviewQueueRoute: TestAuditReviewQueueRoute,
   TestCheckerFoundationRoute: TestCheckerFoundationRoute,

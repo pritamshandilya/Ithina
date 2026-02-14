@@ -323,6 +323,7 @@ export function RuleBuilderModal({
         <Button
           onClick={handleSubmit}
           disabled={isRetired || createRule.isPending || updateRule.isPending}
+          className="bg-chart-2 text-white hover:opacity-90"
         >
           {createRule.isPending || updateRule.isPending ? "Saving…" : isEdit ? "Save" : "Create Rule"}
         </Button>

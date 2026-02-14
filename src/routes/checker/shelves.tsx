@@ -265,7 +265,7 @@ function CheckerShelvesPage() {
 
               <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild>
-                  <Button>
+                  <Button className="bg-chart-2 text-white hover:opacity-90">
                     <Plus className="size-4 mr-2" />
                     New Shelf
                   </Button>
@@ -356,9 +356,13 @@ function CheckerShelvesPage() {
                     <SheetFooter className="p-6 border-t border-border bg-muted/30">
                       <div className="flex w-full justify-between items-center gap-4">
                         <SheetClose asChild>
-                          <Button variant="ghost">Discard</Button>
+                          <Button variant="outline">Discard</Button>
                         </SheetClose>
-                        <Button onClick={handleCreateSubmit} disabled={isCreating}>
+                        <Button
+                          onClick={handleCreateSubmit}
+                          disabled={isCreating}
+                          className="bg-chart-2 text-white hover:opacity-90"
+                        >
                           {isCreating ? "Creating..." : "Create Shelf"}
                         </Button>
                       </div>

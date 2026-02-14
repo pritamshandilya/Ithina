@@ -63,11 +63,11 @@ function getStatusIcon(status: PublishedAudit["status"]) {
 function getStatusColor(status: PublishedAudit["status"]) {
   switch (status) {
     case "published":
-      return "text-[var(--checker-success)] bg-[var(--checker-success)]/10";
+      return "text-chart-2 bg-chart-2/10";
     case "failed":
       return "text-destructive bg-destructive/10";
     case "pending":
-      return "text-[var(--checker-neutral)] bg-[var(--checker-neutral)]/10";
+      return "text-muted-foreground bg-muted/10";
     default:
       return "text-muted-foreground bg-muted";
   }
@@ -89,7 +89,7 @@ export function PublishingStatusPanel({
     <div className={cn("space-y-4", className)}>
       {/* Section Header */}
       <div className="flex items-center gap-3">
-        <div className="rounded-lg bg-[var(--checker-primary)] p-2">
+        <div className="rounded-lg bg-accent p-2">
           <Send className="h-5 w-5 text-white" aria-hidden="true" />
         </div>
         <div>
@@ -233,7 +233,7 @@ export function PublishingStatusPanel({
                 {audits.filter((a) => a.status === "pending").length > 0 && (
                   <>
                     {" • "}
-                    <strong className="text-[var(--checker-neutral)]">
+                    <strong className="text-muted-foreground">
                       {audits.filter((a) => a.status === "pending").length}
                     </strong>{" "}
                     pending
@@ -249,7 +249,7 @@ export function PublishingStatusPanel({
       )}
 
       {/* Integration Info */}
-      <div className="rounded-lg border border-[var(--checker-primary)]/30 bg-[var(--checker-primary)]/5 p-4">
+      <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
         <p className="text-sm text-muted-foreground">
           <strong className="text-foreground">ROL Event Bus:</strong> Approved
           audits are automatically published to the event bus for downstream

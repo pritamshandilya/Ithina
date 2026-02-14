@@ -99,7 +99,7 @@ export function KnowledgeCenterSection({
       title: "Manage Versions",
       description: "View history and rollback changes",
       icon: GitBranchIcon,
-      colorClass: "bg-[var(--action-warning)]",
+      colorClass: "bg-action-warning",
       action: goToKnowledgeCenter,
     },
     {

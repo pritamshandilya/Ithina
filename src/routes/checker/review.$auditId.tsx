@@ -43,9 +43,9 @@ export const Route = createFileRoute("/checker/review/$auditId")({
 function getSeverityClass(severity: Violation["severity"]): string {
   switch (severity) {
     case "critical":
-      return "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-[var(--checker-critical)]/10 text-[var(--checker-critical)] border border-[var(--checker-critical)]/30";
+      return "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-action-critical/10 text-action-critical border border-action-critical/30";
     case "warning":
-      return "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-[var(--checker-warning)]/10 text-[var(--checker-warning)] border border-[var(--checker-warning)]/30";
+      return "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-action-warning/10 text-action-warning border border-action-warning/30";
     case "info":
       return "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium bg-muted/50 text-muted-foreground border border-border";
     default:
@@ -54,9 +54,9 @@ function getSeverityClass(severity: Violation["severity"]): string {
 }
 
 function getComplianceColor(score: number): string {
-  if (score >= 80) return "text-[var(--checker-success)]";
-  if (score >= 50) return "text-[var(--checker-warning)]";
-  return "text-[var(--checker-critical)]";
+  if (score >= 80) return "text-chart-2";
+  if (score >= 50) return "text-action-warning";
+  return "text-action-critical";
 }
 
 const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
@@ -310,7 +310,7 @@ function AuditReviewWorkspace() {
               />
             ) : (
               <div className="rounded-lg border border-border bg-card p-12 text-center">
-                <CheckCircle className="mx-auto h-12 w-12 text-[var(--checker-success)]" />
+                <CheckCircle className="mx-auto h-12 w-12 text-chart-2" />
                 <p className="mt-4 text-sm font-medium text-foreground">No violations found</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   This audit passed all compliance checks

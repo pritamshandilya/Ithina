@@ -300,7 +300,10 @@ export function ComplianceRulesTab() {
             Create and manage rules that define audit compliance logic
           </p>
         </div>
-        <Button onClick={handleCreateRule}>
+        <Button
+          onClick={handleCreateRule}
+          className="bg-chart-2 text-white hover:opacity-90"
+        >
           <Plus className="size-4" />
           Create Rule
         </Button>
@@ -445,7 +448,10 @@ export function ComplianceRulesTab() {
             </button>
           )}
           {!searchQuery.trim() && (
-            <Button onClick={handleCreateRule}>
+            <Button
+              onClick={handleCreateRule}
+              className="bg-chart-2 text-white hover:opacity-90"
+            >
               <Plus className="size-4" />
               Create Rule
             </Button>

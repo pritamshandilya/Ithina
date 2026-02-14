@@ -32,6 +32,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  /* Semantic action colors (reference :root vars) */
+  --color-action-success: var(--chart-2);
+  --color-action-warning: var(--action-warning);
+  --color-action-critical: var(--destructive);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -87,7 +91,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
-  
+
+  /* Unified semantic colors (light mode) */
+  --action-primary: var(--accent);
+  --action-warning: oklch(0.72 0.16 65); /* Orange for warnings/overrides */
+  --action-critical: var(--destructive);
+  --action-success: var(--chart-2);
+
   /* Maker-specific semantic colors */
   --maker-primary: var(--accent); /* Purple for maker actions */
   --maker-pending: var(--chart-1); /* Purple accent for pending */

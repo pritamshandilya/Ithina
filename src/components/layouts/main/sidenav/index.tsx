@@ -21,7 +21,7 @@ import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
   label: string;
-  to: "/maker/dashboard" | "/checker/dashboard" | "/maker/audit-review" | "/checker/knowledge-center";
+  to: "/maker/dashboard" | "/maker/shelves" | "/maker/audit-review" | "/checker/dashboard" | "/checker/knowledge-center";
   hash?: string;
   icon: typeof LayoutDashboard;
 };
@@ -46,8 +46,8 @@ export default function Sidenav() {
   const dashboardTo = role === "checker" ? "/checker/dashboard" : "/maker/dashboard";
 
   const makerItems: NavItem[] = [
-    { label: "Shelves", to: "/maker/dashboard", hash: "assigned-shelves-heading", icon: Rows3 },
-    { label: "My Audits", to: "/maker/dashboard", hash: "my-audits-heading", icon: ListChecks },
+    { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
+    { label: "My Audits", to: "/maker/audit-review", icon: ListChecks },
   ];
 
   const checkerItems: NavItem[] = [

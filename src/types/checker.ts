@@ -297,3 +297,89 @@ export interface MockCheckerContext {
    */
   assignedStoreIds: string[];
 }
+
+export type RuleType =
+  | "Facings"
+  | "Spacing"
+  | "Product Position"
+  | "Margin"
+  | "OOS"
+  | "Labeling";
+
+export type RuleSeverity = "Low" | "Medium" | "High";
+
+export type RuleStatus = "Draft" | "Active" | "Retired";
+
+export type RuleVersionStatus = "Draft" | "Active" | "Archived" | "Retired";
+
+export interface RuleVersion {
+  id: string;
+  ruleId: string;
+  version: number;
+  status: RuleVersionStatus;
+  shelfType: string;
+  expectedValue: string;
+  tolerance?: number;
+  severity: RuleSeverity;
+  effectiveDate?: Date;
+  createdDate: Date;
+  createdBy: string;
+  changeSummary?: string;
+}
+
+export interface ComplianceRule {
+  ruleId: string;
+  ruleName: string;
+  ruleType: RuleType;
+  shelfType: string;
+  expectedValue: string;
+  tolerance?: number;
+  severity: RuleSeverity;
+  status: RuleStatus;
+  currentVersion: number;
+  createdBy: string;
+  createdDate: Date;
+  lastUpdated: Date;
+  versions: RuleVersion[];
+  linkedDocumentIds: string[];
+}
+
+export interface ReferenceDocument {
+  id: string;
+  name: string;
+  uploadedDate: Date;
+  uploadedBy: string;
+  linkedRuleIds: string[];
+}
+
+export interface RuleValidationResult {
+  valid: boolean;
+  errors: string[];
+}
+
+export interface RuleFilters {
+  shelfType?: string;
+  severity?: RuleSeverity;
+  status?: RuleStatus;
+}
+
+export interface CreateRuleInput {
+  ruleName: string;
+  ruleType: RuleType;
+  shelfType: string;
+  expectedValue: string;
+  tolerance?: number;
+  severity: RuleSeverity;
+  createdBy: string;
+}
+
+export interface UpdateRuleInput {
+  ruleName: string;
+  ruleType: RuleType;
+  shelfType: string;
+  expectedValue: string;
+  tolerance?: number;
+  severity: RuleSeverity;
+  updatedBy: string;
+  changeSummary?: string;
+}

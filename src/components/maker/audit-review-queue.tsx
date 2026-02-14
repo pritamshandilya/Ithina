@@ -1,14 +1,15 @@
-
 import { useMemo, useState } from "react";
 import { LayoutGridIcon, Search, TableIcon, AlertTriangle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
-import { useDraftAudits, useReturnedAudits } from "@/features/maker/hooks";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { StatusBadge } from "@/components/shared";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAssignedShelves, useDraftAudits, useReturnedAudits } from "@/features/maker/hooks";
 import { cn } from "@/lib/utils";
 import type { Audit, AuditStatus } from "@/types/maker";
-import { Button } from "@/components/ui/button";
 
 export interface AuditReviewQueueProps {
   className?: string;
@@ -17,17 +18,38 @@ export interface AuditReviewQueueProps {
 
 type FilterType = "all" | "returned" | "draft";
 
-// Helper to get shelf display name
-const getShelfName = (audit: Audit) => {
-  // In a real app, we might need to fetch shelf details or have them included in the audit object
-  // For now, using the shelfId as a placeholder or assuming it's available
-  return `Shelf ${audit.shelfId}`; 
-  // TODO: Update mock data or type to include shelf info like 'aisle', 'bay', etc.
+const STATUS_LABELS: Record<AuditStatus, string> = {
+  "never-audited": "Never Audited",
+  draft: "Draft",
+  pending: "Pending Review",
+  approved: "Approved",
+  returned: "Returned",
 };
+
+function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[]) {
+  const shelf = shelves?.find((s) => s.id === audit.shelfId);
+  return shelf?.shelfName ?? `Shelf ${audit.shelfId.replace("shelf-", "")}`;
+}
+
+function getStatusClass(status: AuditStatus): string {
+  switch (status) {
+    case "approved":
+      return "status-approved";
+    case "pending":
+      return "status-pending";
+    case "returned":
+      return "status-warning";
+    case "draft":
+      return "status-draft";
+    default:
+      return "status-never-audited";
+  }
+}
 
 export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps) {
   const { data: draftAudits, isLoading: isDraftsLoading } = useDraftAudits();
   const { data: returnedAudits, isLoading: isReturnedLoading } = useReturnedAudits();
+  const { data: shelves } = useAssignedShelves();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -44,29 +66,112 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   const filteredAudits = useMemo(() => {
     let result = allAudits;
 
-    // Filter by type
     if (activeFilter === "returned") {
       result = result.filter((a) => a.status === "returned");
     } else if (activeFilter === "draft") {
       result = result.filter((a) => a.status === "draft");
     }
 
-    // Filter by search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      result = result.filter((a) => 
-        a.shelfId.toLowerCase().includes(query) || 
-        a.id.toLowerCase().includes(query)
+      result = result.filter(
+        (a) =>
+          a.shelfId.toLowerCase().includes(query) ||
+          a.id.toLowerCase().includes(query)
       );
     }
 
-    // Sort by date (newest first)
     return result.sort((a, b) => {
       const dateA = new Date(a.submittedAt || a.draftSavedAt || 0).getTime();
       const dateB = new Date(b.submittedAt || b.draftSavedAt || 0).getTime();
       return dateB - dateA;
     });
   }, [allAudits, activeFilter, searchQuery]);
+
+  const tableColumns: DataTableColumn<Audit>[] = useMemo(
+    () => [
+      {
+        title: "Shelf",
+        field: "shelfId",
+        sorter: "string",
+        headerSort: true,
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
+          const name = getShelfName(audit, shelves);
+          return `<span class="font-medium text-foreground">${name}</span>`;
+        },
+      },
+      {
+        title: "Status",
+        field: "status",
+        sorter: "string",
+        headerSort: true,
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
+          const label = STATUS_LABELS[audit.status] ?? audit.status;
+          const statusClass = getStatusClass(audit.status);
+          return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
+        },
+      },
+      {
+        title: "Date",
+        field: "submittedAt",
+        sorter: "datetime",
+        headerSort: true,
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
+          const date = audit.submittedAt || audit.draftSavedAt;
+          if (!date) return "—";
+          return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(new Date(date), { addSuffix: true })}</span>`;
+        },
+      },
+      {
+        title: "Compliance",
+        field: "complianceScore",
+        sorter: "number",
+        headerSort: true,
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
+          if (audit.complianceScore == null) return "—";
+          const color =
+            audit.complianceScore >= 90
+              ? "var(--chart-2)"
+              : audit.complianceScore >= 75
+                ? "var(--accent)"
+                : "var(--destructive)";
+          return `<span class="tabular-nums font-semibold" style="color:${color}">${audit.complianceScore}%</span>`;
+        },
+      },
+      {
+        title: "Actions",
+        field: "id",
+        width: 120,
+        headerSort: false,
+        headerFilter: false,
+        hozAlign: "center",
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
+          const isReturned = audit.status === "returned";
+          const label = isReturned ? "Fix Issues" : "Resume";
+          const btnClass =
+            "rounded-md border px-2.5 py-1 text-xs font-medium " +
+            (isReturned
+              ? "border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20"
+              : "border-accent bg-accent text-accent-foreground hover:opacity-90");
+          return `<button type="button" class="${btnClass}">${label}</button>`;
+        },
+        cellClick: (
+          event: unknown,
+          cell: { getData: () => Audit }
+        ) => {
+          (event as { stopPropagation?: () => void }).stopPropagation?.();
+          const audit = cell.getData();
+          onAction?.(audit.id, audit.status === "returned" ? "fix" : "resume");
+        },
+      },
+    ],
+    [shelves, onAction]
+  );
 
   if (isLoading) {
     return (
@@ -88,77 +193,102 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   return (
     <div className={cn("space-y-6", className)}>
       <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
-        {/* Fitlers */}
-        <div className="flex gap-2">
-          <FilterButton 
-            label="All Needs Attention" 
-            count={allAudits.length} 
-            isActive={activeFilter === "all"} 
-            onClick={() => setActiveFilter("all")} 
+        {/* Filters */}
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+          <FilterButton
+            label="All Needs Attention"
+            count={allAudits.length}
+            isActive={activeFilter === "all"}
+            onClick={() => setActiveFilter("all")}
           />
-          <FilterButton 
-            label="Returned" 
-            count={(returnedAudits || []).length} 
-            isActive={activeFilter === "returned"} 
-            onClick={() => setActiveFilter("returned")} 
-            variant="returned"
+          <FilterButton
+            label="Returned"
+            count={(returnedAudits || []).length}
+            isActive={activeFilter === "returned"}
+            onClick={() => setActiveFilter("returned")}
           />
-          <FilterButton 
-            label="Drafts" 
-            count={(draftAudits || []).length} 
-            isActive={activeFilter === "draft"} 
-            onClick={() => setActiveFilter("draft")} 
-            variant="draft"
+          <FilterButton
+            label="Drafts"
+            count={(draftAudits || []).length}
+            isActive={activeFilter === "draft"}
+            onClick={() => setActiveFilter("draft")}
           />
         </div>
 
-        {/* Search and View Toggle */}
         <div className="flex gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <Input 
-              placeholder="Search..." 
+            <Input
+              placeholder="Search by shelf or audit ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-9"
             />
           </div>
-          <div className="flex border border-border rounded-lg bg-card p-0.5">
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-8 w-8 rounded-md", viewMode === "table" && "bg-accent text-accent-foreground")}
+          <div
+            className="flex rounded-lg border border-border p-0.5 bg-card"
+            role="tablist"
+            aria-label="View mode"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "table"}
               onClick={() => setViewMode("table")}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                viewMode === "table"
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
             >
-              <TableIcon className="size-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn("h-8 w-8 rounded-md", viewMode === "card" && "bg-accent text-accent-foreground")}
+              <TableIcon className="size-4" aria-hidden="true" />
+              Table
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "card"}
               onClick={() => setViewMode("card")}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                viewMode === "card"
+                  ? "bg-accent text-accent-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+              )}
             >
-              <LayoutGridIcon className="size-4" />
-            </Button>
+              <LayoutGridIcon className="size-4" aria-hidden="true" />
+              Cards
+            </button>
           </div>
         </div>
       </div>
 
       {filteredAudits.length === 0 ? (
-        <div className="text-center py-12 border-2 border-dashed border-border rounded-lg bg-card/50">
-          <p className="text-muted-foreground">No audits found matching your criteria.</p>
+        <div className="rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">
+            No audits found matching your criteria.
+          </p>
         </div>
+      ) : viewMode === "table" ? (
+        <DataTable
+          columns={tableColumns}
+          data={filteredAudits}
+          rowIdField="id"
+          initialSort={{ field: "submittedAt", dir: "desc" }}
+          emptyMessage="No audits match the current filter"
+          pageSize={10}
+          pageSizeSelector={[5, 10, 20, 50]}
+        />
       ) : (
-        <div className={cn(
-          viewMode === "card" 
-            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" 
-            : "space-y-2"
-        )}>
+        <div className="dashboard-grid">
           {filteredAudits.map((audit) => (
-            <AuditCard 
-              key={audit.id} 
-              audit={audit} 
-              viewMode={viewMode}
+            <AuditCard
+              key={audit.id}
+              audit={audit}
+              shelves={shelves}
               onAction={onAction}
             />
           ))}
@@ -168,187 +298,129 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   );
 }
 
-// Sub-components
-
-function FilterButton({ 
-  label, 
-  count, 
-  isActive, 
+function FilterButton({
+  label,
+  count,
+  isActive,
   onClick,
-  variant = "default" 
-}: { 
-  label: string; 
-  count: number; 
-  isActive: boolean; 
+}: {
+  label: string;
+  count: number;
+  isActive: boolean;
   onClick: () => void;
-  variant?: "default" | "returned" | "draft";
 }) {
-  /* 
-    Updated High-Contrast Active States:
-    - Default: Solid ACCENT (Purple) background for clear "selected" state.
-    - Returned: Solid destructive background.
-    - Draft: Solid secondary/accent background.
-  */
-  const variantStyles = {
-    default: "border-accent bg-accent text-accent-foreground shadow-md shadow-accent/25",
-    returned: "border-destructive bg-destructive text-destructive-foreground shadow-md shadow-destructive/25",
-    draft: "border-orange-500 bg-orange-500 text-white shadow-md shadow-orange-500/20",
-  };
-
-  const activeClass = isActive 
-    ? variantStyles[variant]
-    : "border-transparent bg-secondary/50 text-muted-foreground hover:bg-secondary hover:text-foreground";
-
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border",
-        isActive ? "scale-105" : "hover:scale-102",
-        activeClass
+        "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0",
+        "border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        isActive
+          ? "bg-accent text-accent-foreground border-accent shadow-sm"
+          : "bg-card text-muted-foreground border-border hover:bg-accent/50 hover:text-accent-foreground"
       )}
+      aria-pressed={isActive}
     >
       {label}
-      <span className={cn(
-        "px-1.5 py-0.5 rounded-full text-[10px] font-bold",
-        isActive 
-          ? "bg-black/20 text-current" 
-          : "bg-background/20 text-current group-hover:bg-background/30"
-      )}>
-        {count}
-      </span>
+      <span className="ml-2 text-xs opacity-75">({count})</span>
     </button>
   );
 }
 
-
-
-
-function AuditCard({ 
-  audit, 
-  viewMode, 
-  onAction 
-}: { 
-  audit: Audit; 
-  viewMode: "card" | "table";
+function AuditCard({
+  audit,
+  shelves,
+  onAction,
+}: {
+  audit: Audit;
+  shelves?: { id: string; shelfName: string }[];
   onAction?: (auditId: string, action: "resume" | "fix") => void;
 }) {
   const isReturned = audit.status === "returned";
   const date = audit.submittedAt || audit.draftSavedAt;
-  
-  const content = (
-    <>
-      <div className="flex justify-between items-start gap-4">
-        <div>
-          <h3 className="font-semibold text-lg">{getShelfName(audit)}</h3>
-          <p className="text-sm text-muted-foreground flex items-center gap-1 mt-1">
-            <Clock className="size-3" />
-            {date ? formatDistanceToNow(new Date(date), { addSuffix: true }) : "Unknown date"}
+
+  return (
+    <div className="rounded-lg bg-card border border-border p-4 space-y-3 transition-all">
+      {/* Header with shelf name and status */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="text-base font-semibold text-card-foreground">
+            {getShelfName(audit, shelves)}
+          </h3>
+          <p className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+            <Clock className="size-3.5 shrink-0" />
+            {date
+              ? formatDistanceToNow(new Date(date), { addSuffix: true })
+              : "Unknown date"}
           </p>
         </div>
-        <StatusBadge status={audit.status} />
+        <StatusBadge status={audit.status} size="sm" />
       </div>
 
+      {/* Rejection reason (returned audits) */}
       {isReturned && audit.rejectionReason && (
-        <div className="mt-3 bg-destructive/10 border border-destructive/20 rounded-md p-3 text-sm text-destructive-foreground">
-          <p className="font-medium flex items-center gap-2">
-            <AlertTriangle className="size-4" />
+        <div className="rounded-md border border-border bg-muted/50 p-3 text-sm">
+          <p className="font-medium flex items-center gap-2 text-foreground">
+            <AlertTriangle className="size-4 shrink-0" />
             Correction Needed
           </p>
-          <p className="mt-1 opacity-90 line-clamp-2">{audit.rejectionReason}</p>
+          <p className="mt-1 text-muted-foreground line-clamp-2">
+            {audit.rejectionReason}
+          </p>
         </div>
       )}
 
+      {/* Draft progress */}
       {audit.status === "draft" && (
-         <div className="mt-3">
-            <div className="flex justify-between text-xs mb-1">
-              <span>Progress</span>
-              <span>{audit.draftProgress || 0}%</span>
-            </div>
-            <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-500" 
-                style={{ width: `${audit.draftProgress || 0}%` }}
-              />
-            </div>
-         </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-xs text-muted-foreground">
+            <span>Progress</span>
+            <span className="font-medium text-accent">{audit.draftProgress ?? 0}%</span>
+          </div>
+          <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full bg-accent transition-all duration-300"
+              style={{ width: `${audit.draftProgress ?? 0}%` }}
+              role="progressbar"
+              aria-valuenow={audit.draftProgress ?? 0}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            />
+          </div>
+        </div>
       )}
 
-      <div className="mt-4 pt-4 border-t border-border flex justify-end">
-        <Button 
-          variant={isReturned ? "destructive" : "default"}
+      {/* Compliance score (if available) */}
+      {audit.complianceScore !== undefined && (
+        <div className="pt-2 border-t border-border flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Compliance</span>
+          <span
+            className="text-lg font-bold tabular-nums"
+            style={{
+              color:
+                audit.complianceScore >= 90
+                  ? "var(--chart-2)"
+                  : audit.complianceScore >= 75
+                    ? "var(--accent)"
+                    : "var(--destructive)",
+            }}
+          >
+            {audit.complianceScore}%
+          </span>
+        </div>
+      )}
+
+      {/* Action */}
+      <div className="pt-2 border-t border-border">
+        <Button
+          variant={isReturned ? "outline" : "default"}
           size="sm"
-          className="w-full sm:w-auto"
+          className="w-full"
           onClick={() => onAction?.(audit.id, isReturned ? "fix" : "resume")}
         >
           {isReturned ? "Fix Issues" : "Resume Audit"}
         </Button>
       </div>
-    </>
-  );
-
-  if (viewMode === "table") {
-    // Determine status color for table row left border or indicator
-    const borderClass = isReturned ? "border-l-4 border-l-destructive" : "border-l-4 border-l-primary/50";
-    
-    return (
-      <div className={cn("flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors", borderClass)}>
-        <div className="flex items-center gap-4">
-           <div>
-            <p className="font-medium">{getShelfName(audit)}</p>
-            <p className="text-xs text-muted-foreground">
-              {date ? formatDistanceToNow(new Date(date), { addSuffix: true }) : ""}
-            </p>
-           </div>
-           {isReturned && (
-             <span className="text-xs text-destructive bg-destructive/10 px-2 py-0.5 rounded max-w-[200px] truncate hidden sm:inline-block">
-               {audit.rejectionReason}
-             </span>
-           )}
-        </div>
-        
-        <div className="flex items-center gap-3">
-          <StatusBadge status={audit.status} />
-          <Button 
-            size="sm" 
-            variant={isReturned ? "destructive" : "outline"}
-            onClick={() => onAction?.(audit.id, isReturned ? "fix" : "resume")}
-          >
-            {isReturned ? "Fix" : "Resume"}
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className={cn(
-      "p-5 rounded-lg border bg-card hover:shadow-md transition-all flex flex-col",
-      isReturned ? "border-destructive/50 ring-1 ring-destructive/20" : "border-border"
-    )}>
-      {content}
     </div>
-  );
-}
-
-function StatusBadge({ status }: { status: AuditStatus }) {
-  if (status === "returned") {
-    return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-destructive/15 text-destructive">
-        Returned
-      </span>
-    );
-  }
-  if (status === "draft") {
-    return (
-      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-primary/10 text-primary-foreground text-foreground">
-        Draft
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold bg-secondary text-secondary-foreground">
-      {status}
-    </span>
   );
 }

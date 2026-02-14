@@ -47,8 +47,7 @@ export default function Sidenav() {
 
   const makerItems: NavItem[] = [
     { label: "Shelves", to: "/maker/dashboard", hash: "assigned-shelves-heading", icon: Rows3 },
-    { label: "My Audits", to: "/maker/dashboard", hash: "my-audits-heading", icon: ListChecks },
-    { label: "Audit Review", to: "/maker/audit-review", icon: ShieldCheck },
+    { label: "My Audits", to: "/maker/audit-review", icon: ListChecks },
   ];
 
   const checkerItems: NavItem[] = [

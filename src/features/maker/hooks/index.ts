@@ -18,3 +18,4 @@ export {
   draftAuditsKeys,
 } from "./useDraftAudits";
 export { useStores, storesKeys } from "./useStores";
+export { useCreateShelf } from "./useCreateShelf";

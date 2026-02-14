@@ -34,3 +34,4 @@ export {
   DraftAuditsSection,
   type DraftAuditsSectionProps,
 } from "./draft-audits-section";
+export { ShelfSelectionFlow } from "./shelf-selection-flow";

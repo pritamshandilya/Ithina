@@ -27,6 +27,10 @@ type NavItem = {
 };
 
 function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
+  // Audit Review: active on /checker/audit-review and /checker/review/:id
+  if (item.to === "/checker/audit-review") {
+    return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
+  }
   const sameBase = pathname === item.to || pathname.startsWith(`${item.to}/`);
   if (!sameBase) return false;
   if (!item.hash) return hash.length === 0;

@@ -53,6 +53,43 @@ export async function fetchAssignedShelves(): Promise<Shelf[]> {
 }
 
 /**
+ * Create a new shelf with metadata
+ *
+ * @param shelfData - Metadata for the new shelf (aisle, bay, name, description)
+ * @returns Promise<Shelf> - The created shelf object
+ *
+ * @example
+ * ```ts
+ * const newShelf = await createShelf({
+ *   aisleNumber: 1,
+ *   bayNumber: 2,
+ *   shelfName: 'New Shelf',
+ *   description: 'Description'
+ * });
+ * ```
+ */
+export async function createShelf(shelfData: {
+  aisleNumber: number;
+  bayNumber: number;
+  shelfName: string;
+  description?: string;
+}): Promise<Shelf> {
+  await simulateNetworkDelay(600);
+
+  // In production, this would be:
+  // const response = await api.post('/maker/shelves', shelfData);
+  // return response.data;
+
+  // Mock response
+  return {
+    id: `shelf-new-${Date.now()}`,
+    ...shelfData,
+    status: "never-audited",
+    assignedTo: "user-001",
+  };
+}
+
+/**
  * Fetch quick statistics for the dashboard
  * 
  * @returns Promise<QuickStats> - Statistics object

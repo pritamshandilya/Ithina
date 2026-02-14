@@ -324,7 +324,7 @@
 
 .data-table-wrapper .tabulator-header .tabulator-col {
   background-color: var(--tabulator-header-bg) !important;
-  border-right: 1px solid var(--tabulator-border);
+  border-right: 1px dotted var(--tabulator-border);
 }
 
 .data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
@@ -389,10 +389,10 @@
   background-color: color-mix(in oklch, var(--accent) 18%, var(--card)) !important;
 }
 
-/* Cells: borders, padding, text color */
+/* Cells: dotted column lines, solid row lines, padding, text color */
 .data-table-wrapper .tabulator-cell {
   background-color: inherit !important;
-  border-right: 1px solid var(--tabulator-border);
+  border-right: 1px dotted var(--tabulator-border);
   border-bottom: 1px solid var(--tabulator-border);
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
@@ -400,7 +400,7 @@
 }
 
 .data-table-wrapper .tabulator-cell.tabulator-frozen {
-  border-right: 2px solid var(--tabulator-border);
+  border-right: 2px dotted var(--tabulator-border);
 }
 
 /* Placeholder when no data */
@@ -528,4 +528,17 @@
 
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* Native select: match app color scheme (trigger + options where supported) */
+select[data-slot="select"],
+select.select-themed {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+select[data-slot="select"] option,
+select.select-themed option {
+  background-color: var(--card);
+  color: var(--card-foreground);
 }

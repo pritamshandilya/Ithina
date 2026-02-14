@@ -1,0 +1,235 @@
+import { useState, useMemo } from "react";
+import { Search, Plus, ArrowRight, Check } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAssignedShelves } from "@/features/maker/hooks";
+import { cn } from "@/lib/utils";
+import type { Shelf } from "@/types/maker";
+
+interface ShelfSelectionFlowProps {
+  onShelfSelect: (shelf: Shelf) => void;
+  onShelfCreate: (shelfData: Omit<Shelf, "id" | "status" | "assignedTo">) => void;
+}
+
+export function ShelfSelectionFlow({
+  onShelfSelect,
+  onShelfCreate,
+}: ShelfSelectionFlowProps) {
+  const [activeTab, setActiveTab] = useState<"select" | "create">("select");
+  const [searchQuery, setSearchQuery] = useState("");
+  const { data: shelves, isLoading } = useAssignedShelves();
+
+  // Create Mode State
+  const [formData, setFormData] = useState({
+    aisleNumber: "",
+    bayNumber: "",
+    shelfName: "",
+    description: "",
+  });
+
+  const filteredShelves = useMemo(() => {
+    if (!shelves) return [];
+    if (!searchQuery) return shelves;
+
+    const lowerQuery = searchQuery.toLowerCase();
+    return shelves.filter(
+      (shelf) =>
+        shelf.shelfName.toLowerCase().includes(lowerQuery) ||
+        `aisle ${shelf.aisleNumber}`.toLowerCase().includes(lowerQuery) ||
+        `bay ${shelf.bayNumber}`.toLowerCase().includes(lowerQuery) ||
+        `${shelf.aisleNumber}-${shelf.bayNumber}`.includes(lowerQuery)
+    );
+  }, [shelves, searchQuery]);
+
+  const handleCreateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onShelfCreate({
+      aisleNumber: parseInt(formData.aisleNumber),
+      bayNumber: parseInt(formData.bayNumber),
+      shelfName: formData.shelfName,
+      description: formData.description,
+    });
+  };
+
+  const isFormValid =
+    formData.aisleNumber && formData.bayNumber && formData.shelfName;
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center space-y-2">
+        <h2 className="text-2xl font-bold text-foreground">
+          Which shelf are you auditing?
+        </h2>
+        <p className="text-muted-foreground">
+          Select an existing shelf or create a new one if it's not listed.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex p-1 bg-primary/30 rounded-xl max-w-sm mx-auto">
+        <button
+          onClick={() => setActiveTab("select")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all",
+            activeTab === "select"
+              ? "bg-card text-card-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Search className="size-4" />
+          Select Existing
+        </button>
+        <button
+          onClick={() => setActiveTab("create")}
+          className={cn(
+            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all",
+            activeTab === "create"
+              ? "bg-card text-card-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Plus className="size-4" />
+          Create New
+        </button>
+      </div>
+
+      {activeTab === "select" ? (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by aisle, bay or shelf name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-12 bg-card/50"
+            />
+          </div>
+
+          <div className="max-h-[400px] overflow-y-auto pr-2 space-y-2 scrollbar-thin">
+            {isLoading ? (
+              <div className="py-8 text-center text-muted-foreground">
+                Loading shelves...
+              </div>
+            ) : filteredShelves.length > 0 ? (
+              filteredShelves.map((shelf) => (
+                <button
+                  key={shelf.id}
+                  onClick={() => onShelfSelect(shelf)}
+                  className="w-full flex items-center justify-between p-4 rounded-xl border border-border bg-card/50 hover:bg-accent hover:border-accent transition-all group"
+                >
+                  <div className="text-left">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                        Aisle {shelf.aisleNumber}
+                      </span>
+                      <span className="size-1 rounded-full bg-muted-foreground/30" />
+                      <span className="text-xs font-bold uppercase tracking-wider text-accent">
+                        Bay {shelf.bayNumber}
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-card-foreground mt-0.5">
+                      {shelf.shelfName}
+                    </h4>
+                  </div>
+                  <ArrowRight className="size-5 text-muted-foreground group-hover:text-accent group-hover:translate-x-1 transition-all" />
+                </button>
+              ))
+            ) : (
+              <div className="py-12 text-center space-y-3">
+                <div className="size-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto text-muted-foreground">
+                  <Search className="size-6" />
+                </div>
+                <div>
+                  <p className="text-foreground font-medium">No shelves found</p>
+                  <p className="text-sm text-muted-foreground">
+                    Try searching for something else or create a new shelf.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveTab("create")}
+                  className="mt-2"
+                >
+                  Create New Shelf
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <form
+          onSubmit={handleCreateSubmit}
+          className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="aisleNumber">Aisle Number</Label>
+              <Input
+                id="aisleNumber"
+                type="number"
+                placeholder="e.g. 12"
+                value={formData.aisleNumber}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, aisleNumber: e.target.value }))
+                }
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="bayNumber">Bay Number</Label>
+              <Input
+                id="bayNumber"
+                type="number"
+                placeholder="e.g. 4"
+                value={formData.bayNumber}
+                onChange={(e) =>
+                  setFormData((prev) => ({ ...prev, bayNumber: e.target.value }))
+                }
+                required
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="shelfName">Shelf Name</Label>
+            <Input
+              id="shelfName"
+              placeholder="e.g. Beverages - Soft Drinks"
+              value={formData.shelfName}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, shelfName: e.target.value }))
+              }
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Description (Optional)</Label>
+            <textarea
+              id="description"
+              rows={3}
+              placeholder="Brief description of products on this shelf..."
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, description: e.target.value }))
+              }
+            />
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full h-12 text-base font-semibold"
+            disabled={!isFormValid}
+          >
+            Create Shelf & Continue
+            <Check className="ml-2 size-5" />
+          </Button>
+        </form>
+      )}
+    </div>
+  );
+}

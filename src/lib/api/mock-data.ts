@@ -194,6 +194,8 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(1),
       complianceScore: 87,
       assignedTo: mockUser.id,
+      elevation: "Eye Level",
+      notes: "Daily delivery at 6am.",
     },
     {
       id: "shelf-014",
@@ -204,6 +206,8 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(2),
       complianceScore: 94,
       assignedTo: mockUser.id,
+      elevation: "Middle",
+      notes: "Keep fresh.",
     },
     {
       id: "shelf-015",
@@ -212,8 +216,62 @@ export function generateMockShelves(): Shelf[] {
       shelfName: "Bakery - Cakes",
       status: "never-audited",
       assignedTo: mockUser.id,
+      elevation: "Bottom",
+      notes: "Check temperature log.",
     }
   );
+
+  // Add more shelves to match the screenshot variety
+   shelves.push(
+    {
+      id: "shelf-016",
+      aisleNumber: 1,
+      bayNumber: 1,
+      shelfName: "Main Entrance Display A",
+      status: "approved",
+      lastAuditDate: randomPastDate(2),
+      complianceScore: 98,
+      assignedTo: mockUser.id,
+      elevation: "Eye Level",
+      notes: "Primary promotional shelf for seasonal items.",
+    },
+    {
+      id: "shelf-017",
+      aisleNumber: 4,
+      bayNumber: 12,
+      shelfName: "Category: Beverages - Cold Storage",
+      status: "pending",
+      lastAuditDate: randomPastDate(5),
+      complianceScore: 85,
+      assignedTo: mockUser.id,
+      elevation: "Bottom",
+      notes: "Heavy stock area for soft drinks.",
+    },
+    {
+      id: "shelf-018",
+      aisleNumber: 7,
+      bayNumber: 4,
+      shelfName: "Premium Wine Gallery 03",
+      status: "approved",
+      lastAuditDate: new Date(), // Today
+      complianceScore: 100,
+      assignedTo: mockUser.id,
+      elevation: "Top",
+      notes: "Climate controlled section for vintage wines.",
+    },
+    {
+      id: "shelf-019",
+      aisleNumber: 10,
+      bayNumber: 8,
+      shelfName: "Snack Aisle - Bulk Section",
+      status: "returned",
+      lastAuditDate: randomPastDate(10),
+      complianceScore: 60,
+      assignedTo: mockUser.id,
+      elevation: "Middle",
+      notes: "High turnover area for family packs.",
+    }
+   );
 
   return shelves;
 }

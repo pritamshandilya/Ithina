@@ -32,6 +32,8 @@ export interface Shelf {
   lastAuditDate?: Date;
   complianceScore?: number; // 0-100, only present if audited
   assignedTo?: string; // User ID of assigned worker
+  elevation?: "Bottom" | "Middle" | "Top" | "Eye Level";
+  notes?: string;
 }
 
 /**

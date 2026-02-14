@@ -20,22 +20,14 @@ import {
 } from "@/components/ui/sheet";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useAssignedShelves, useCreateShelf, useStores } from "@/features/maker/hooks";
-import type { AuditStatus, Shelf } from "@/types/maker";
+import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
+import type { Shelf } from "@/types/maker";
 
 export const Route = createFileRoute("/maker/shelves")({
   component: ShelfManagementPage,
 });
-
-/** Status labels for table cell display */
-const STATUS_LABELS: Record<AuditStatus, string> = {
-  "never-audited": "Never Audited",
-  draft: "Draft",
-  pending: "Pending Review",
-  approved: "Approved",
-  returned: "Returned",
-};
 
 /**
  * Column definitions for the shelf management table
@@ -48,17 +40,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     headerSort: true,
     formatter: (cell: { getData: () => Shelf }) => {
       const shelf = cell.getData();
-      const statusClass =
-        shelf.status === "approved"
-          ? "status-approved"
-          : shelf.status === "pending"
-            ? "status-pending"
-            : shelf.status === "returned"
-              ? "status-returned"
-              : shelf.status === "draft"
-                ? "status-draft"
-                : "status-never-audited";
-      const label = STATUS_LABELS[shelf.status] ?? shelf.status;
+      const statusClass = getAuditStatusClass(shelf.status);
+      const label = AUDIT_STATUS_LABELS[shelf.status] ?? shelf.status;
 
       return `
         <div class="flex flex-col gap-1 py-1">
@@ -123,8 +106,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     field: "actions",
     formatter: () => {
       return `
-        <button class="p-1.5 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-accent-foreground">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+        <button type="button" class="p-1.5 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-accent-foreground" aria-label="More actions">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
         </button>
       `;
     },
@@ -229,19 +212,20 @@ function ShelfManagementPage() {
 
           {/* Header Bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
-            <div>
+            <header className="space-y-1">
               <h1 className="text-2xl font-bold text-foreground">Shelf Management</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Create and manage shelves with aisle, bay, and elevation metadata
               </p>
-            </div>
+            </header>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
                 <Input
-                  className="pl-9 bg-background border-border h-10"
+                  className="pl-9 h-10"
                   placeholder="Quick search shelves..."
+                  aria-label="Search shelves"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -434,38 +418,26 @@ function ShelfManagementPage() {
                   ))}
                 </div>
                 <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                     disabled={currentPage === 1}
-                    className={cn(
-                      "rounded-md border px-3 py-1.5 text-sm transition-all",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      currentPage === 1
-                        ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
-                        : "border-border text-foreground hover:bg-accent/40"
-                    )}
                   >
                     Previous
-                  </button>
+                  </Button>
                   <span className="text-sm text-muted-foreground">
                     Page <span className="font-semibold text-foreground">{currentPage}</span> of{" "}
                     <span className="font-semibold text-foreground">{totalPages}</span>
                   </span>
-                  <button
-                    type="button"
+                  <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                     disabled={currentPage === totalPages}
-                    className={cn(
-                      "rounded-md border px-3 py-1.5 text-sm transition-all",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      currentPage === totalPages
-                        ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
-                        : "border-border text-foreground hover:bg-accent/40"
-                    )}
                   >
                     Next
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}

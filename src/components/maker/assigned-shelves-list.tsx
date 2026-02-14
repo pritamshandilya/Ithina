@@ -5,19 +5,11 @@ import { LayoutGridIcon, TableIcon } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignedShelves } from "@/features/maker/hooks";
+import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { AuditStatus, Shelf } from "@/types/maker";
 
 import { ShelfCard } from "./shelf-card";
-
-/** Status labels for table cell display */
-const STATUS_LABELS: Record<AuditStatus, string> = {
-  "never-audited": "Never Audited",
-  draft: "Draft",
-  pending: "Pending Review",
-  approved: "Approved",
-  returned: "Returned",
-};
 
 /** Assigned shelves table column definitions */
 const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
@@ -85,17 +77,8 @@ const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
     headerSort: true,
     formatter: (cell) => {
       const val = (cell as { getValue: () => unknown }).getValue() as AuditStatus;
-      const label = STATUS_LABELS[val] ?? val;
-      const statusClass =
-        val === "approved"
-          ? "status-approved"
-          : val === "pending"
-            ? "status-pending"
-            : val === "returned"
-              ? "status-returned"
-              : val === "draft"
-                ? "status-draft"
-                : "status-never-audited";
+      const label = AUDIT_STATUS_LABELS[val] ?? val;
+      const statusClass = getAuditStatusClass(val);
       return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
     },
   },

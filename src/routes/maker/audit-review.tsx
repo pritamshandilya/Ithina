@@ -33,12 +33,12 @@ function MakerAuditReviewPage() {
             onStoreChange={setSelectedStoreId}
           />
 
-          <div className="flex flex-col gap-2">
+          <header className="space-y-1">
             <h1 className="text-2xl font-bold text-foreground">My Audits</h1>
             <p className="text-sm text-muted-foreground">
               Manage your draft audits and correct returned submissions.
             </p>
-          </div>
+          </header>
 
           <div className="rounded-lg border border-border bg-card shadow-sm p-6">
             <AuditReviewQueue onAction={handleAction} />

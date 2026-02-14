@@ -66,8 +66,8 @@ const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
     minWidth: 180,
     sorter: "string",
     headerSort: true,
-    formatter: (cell: { getData: () => Violation }) => {
-      const v = cell.getData();
+    formatter: (cell: unknown) => {
+      const v = (cell as { getData: () => Violation }).getData();
       return `
         <div class="flex flex-col gap-0.5 py-1">
           <span class="font-medium text-foreground">${v.ruleName}</span>

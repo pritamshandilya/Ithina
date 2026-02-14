@@ -4,11 +4,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import MainLayout from "@/components/layouts/main";
 import {
   AssignedShelvesList,
-  DraftAuditsSection,
   HeaderContextBar,
+  MyAuditsSection,
   PrimaryActionSection,
   QuickStatsPanel,
-  ReturnedAuditsSection,
 } from "@/components/maker";
 import { useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
@@ -49,15 +48,12 @@ function MakerDashboard() {
               </p>
             </div>
 
-            <DraftAuditsSection
+            <MyAuditsSection
               onResume={(auditId, shelfId) => {
-                console.log("Resume draft requested:", { auditId, shelfId });
+                navigate({ to: "/maker/audit/new" });
               }}
-            />
-
-            <ReturnedAuditsSection
               onViewReport={(auditId, shelfId) => {
-                console.log("View report requested:", { auditId, shelfId });
+                navigate({ to: "/maker/audit-review" });
               }}
             />
           </section>

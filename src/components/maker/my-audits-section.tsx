@@ -1,61 +1,62 @@
 /**
- * Audit Review Queue Component
+ * My Audits Section Component
  *
- * Tabular display of draft and returned audits for the Maker "My Audits" page.
+ * Tabular display of draft and returned audits for the Maker dashboard.
  * Uses shared DataTable with dotted column lines, status badges, and action buttons.
- * Matches the pattern used in MyAuditsSection, AssignedShelvesList, and Compliance Rules.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { FileEdit, AlertCircle, Search } from "lucide-react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useDraftAudits, useReturnedAudits } from "@/features/maker/hooks";
+import {
+  useAssignedShelves,
+  useDraftAudits,
+  useReturnedAudits,
+  useDeleteDraft,
+} from "@/features/maker/hooks";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";
 
-export interface AuditReviewQueueProps {
+export interface MyAuditsSectionProps {
+  onResume?: (auditId: string, shelfId: string) => void;
+  onViewReport?: (auditId: string, shelfId: string) => void;
   className?: string;
-  onAction?: (auditId: string, action: "resume" | "fix") => void;
 }
-
-type FilterType = "all" | "returned" | "draft";
 
 function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[]) {
   const shelf = shelves?.find((s) => s.id === audit.shelfId);
   return shelf?.shelfName ?? `Shelf ${audit.shelfId.replace("shelf-", "")}`;
 }
 
-export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps) {
-  const { data: draftAudits, isLoading: isDraftsLoading } = useDraftAudits();
-  const { data: returnedAudits, isLoading: isReturnedLoading } = useReturnedAudits();
+export function MyAuditsSection({
+  onResume,
+  onViewReport,
+  className,
+}: MyAuditsSectionProps) {
+  const { data: draftAudits = [], isLoading: isDraftsLoading } = useDraftAudits();
+  const { data: returnedAudits = [], isLoading: isReturnedLoading } = useReturnedAudits();
   const { data: shelves } = useAssignedShelves();
+  const deleteDraftMutation = useDeleteDraft();
 
-  const [activeFilter, setActiveFilter] = useState<FilterType>("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "draft" | "returned">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
   const isLoading = isDraftsLoading || isReturnedLoading;
 
   const allAudits = useMemo(() => {
-    const drafts = draftAudits || [];
-    const returned = returnedAudits || [];
-    return [...drafts, ...returned];
+    return [...(draftAudits || []), ...(returnedAudits || [])];
   }, [draftAudits, returnedAudits]);
 
   const filteredAudits = useMemo(() => {
     let result = allAudits;
-
-    if (activeFilter === "returned") {
-      result = result.filter((a) => a.status === "returned");
-    } else if (activeFilter === "draft") {
-      result = result.filter((a) => a.status === "draft");
-    }
-
+    if (activeFilter === "draft") result = result.filter((a) => a.status === "draft");
+    else if (activeFilter === "returned") result = result.filter((a) => a.status === "returned");
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -65,7 +66,6 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
           getShelfName(a, shelves).toLowerCase().includes(query)
       );
     }
-
     return result.sort((a, b) => {
       const dateA = new Date(a.submittedAt || a.draftSavedAt || 0).getTime();
       const dateB = new Date(b.submittedAt || b.draftSavedAt || 0).getTime();
@@ -77,13 +77,16 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
     setTablePagination((p) => ({ ...p, page: 1 }));
   }, [activeFilter, searchQuery]);
 
-  const tableVisibleCount = Math.max(
-    0,
-    Math.min(
-      tablePagination.pageSize,
-      filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
-    )
-  );
+  const handleAction = (audit: Audit, action: "resume" | "fix" | "delete") => {
+    if (action === "delete") {
+      if (window.confirm("Are you sure you want to delete this draft? This cannot be undone.")) {
+        deleteDraftMutation.mutate(audit.id);
+      }
+      return;
+    }
+    if (action === "resume") onResume?.(audit.id, audit.shelfId);
+    else onViewReport?.(audit.id, audit.shelfId);
+  };
 
   const tableColumns: DataTableColumn<Audit>[] = useMemo(
     () => [
@@ -93,9 +96,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         minWidth: 140,
         sorter: "string",
         headerSort: true,
-        headerFilter: false,
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           const name = getShelfName(audit, shelves);
           return `<span class="font-medium text-foreground">${name}</span>`;
         },
@@ -107,8 +109,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         sorter: "string",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           const label = AUDIT_STATUS_LABELS[audit.status] ?? audit.status;
           const statusClass = getAuditStatusClass(audit.status);
           return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
@@ -121,8 +123,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         sorter: "number",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           if (audit.status === "draft" && audit.draftProgress != null) {
             return `<span class="text-sm font-medium text-accent">${audit.draftProgress}%</span>`;
           }
@@ -145,8 +147,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         sorter: "datetime",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           const date = audit.submittedAt || audit.draftSavedAt;
           if (!date) return "—";
           return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(new Date(date), { addSuffix: true })}</span>`;
@@ -157,8 +159,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         field: "mode",
         width: 110,
         headerFilter: false,
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           const mode = audit.mode === "vision-edge" ? "Vision Edge" : "Assist Mode";
           return `<span class="text-sm text-muted-foreground">${mode}</span>`;
         },
@@ -170,14 +172,19 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         headerSort: false,
         headerFilter: false,
         hozAlign: "center",
-        formatter: (cell: unknown) => {
-          const audit = (cell as { getData: () => Audit }).getData();
+        formatter: (cell: { getData: () => Audit }) => {
+          const audit = cell.getData();
           const isReturned = audit.status === "returned";
-          const label = isReturned ? "Fix Issues" : "Resume";
-          const btnClass = isReturned
+          const isDraft = audit.status === "draft";
+          const primaryLabel = isReturned ? "View Report" : "Resume";
+          const primaryClass = isReturned
             ? "rounded-md border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 text-xs font-medium"
             : "rounded-md bg-chart-2 text-white hover:opacity-90 px-2.5 py-1 text-xs font-medium";
-          return `<button type="button" class="${btnClass}" data-action="${isReturned ? "fix" : "resume"}">${label}</button>`;
+          let html = `<button type="button" class="${primaryClass}" data-action="${isReturned ? "fix" : "resume"}">${primaryLabel}</button>`;
+          if (isDraft) {
+            html += ` <button type="button" class="p-1.5 hover:bg-destructive/20 rounded text-muted-foreground hover:text-destructive ml-1" data-action="delete" aria-label="Delete draft"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`;
+          }
+          return html;
         },
         cellClick: (event: unknown, cell: { getData: () => Audit }) => {
           (event as { stopPropagation?: () => void }).stopPropagation?.();
@@ -185,11 +192,12 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
           const btn = target?.closest?.("[data-action]");
           if (!btn) return;
           const audit = cell.getData();
-          onAction?.(audit.id, audit.status === "returned" ? "fix" : "resume");
+          const action = btn.getAttribute("data-action") as "resume" | "fix" | "delete";
+          handleAction(audit, action);
         },
       },
     ],
-    [shelves, onAction]
+    [shelves, onResume, onViewReport, deleteDraftMutation]
   );
 
   if (isLoading) {
@@ -200,6 +208,32 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
       </div>
     );
   }
+
+  if (filteredAudits.length === 0) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        <div className="rounded-lg border border-border bg-card p-12 text-center">
+          <FileEdit className="mx-auto h-12 w-12 text-muted-foreground" />
+          <p className="mt-4 text-lg font-semibold text-foreground">No audits to show</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {activeFilter === "all"
+              ? "You have no draft or returned audits. Start a new audit to get started."
+              : activeFilter === "draft"
+                ? "No draft audits in progress."
+                : "No returned audits requiring attention."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const tableVisibleCount = Math.max(
+    0,
+    Math.min(
+      tablePagination.pageSize,
+      filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
+    )
+  );
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -218,11 +252,20 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
                   ? "border-accent bg-accent text-accent-foreground shadow-sm"
                   : "border-border bg-card text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
               )}
-              aria-pressed={activeFilter === filter}
             >
-              {filter === "all" && "All Needs Attention"}
-              {filter === "draft" && `Drafts (${(draftAudits || []).length})`}
-              {filter === "returned" && `Returned (${(returnedAudits || []).length})`}
+              {filter === "all" && "All"}
+              {filter === "draft" && (
+                <>
+                  <FileEdit className="size-4" />
+                  Draft
+                </>
+              )}
+              {filter === "returned" && (
+                <>
+                  <AlertCircle className="size-4" />
+                  Returned
+                </>
+              )}
             </button>
           ))}
         </div>
@@ -240,34 +283,26 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
       </div>
 
       {/* Table */}
-      {filteredAudits.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card p-12 text-center">
-          <p className="text-muted-foreground">No audits found matching your criteria.</p>
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
-              <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
-            </p>
-          </div>
-          <div className="rounded-lg border border-border bg-card overflow-hidden">
-            <DataTable<Audit>
-              columns={tableColumns}
-              data={filteredAudits}
-              rowIdField="id"
-              initialSort={{ field: "submittedAt", dir: "desc" }}
-              emptyMessage="No audits match the current filter"
-              pageSize={10}
-              pageSizeSelector={[5, 10, 20, 50]}
-              headerFilters={false}
-              onPaginationChange={setTablePagination}
-            />
-          </div>
-        </>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">
+          Showing{" "}
+          <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
+          <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
+        </p>
+      </div>
+      <div className="rounded-lg border border-border bg-card overflow-hidden">
+        <DataTable<Audit>
+          columns={tableColumns}
+          data={filteredAudits}
+          rowIdField="id"
+          initialSort={{ field: "submittedAt", dir: "desc" }}
+          emptyMessage="No audits match the current filter"
+          pageSize={10}
+          pageSizeSelector={[5, 10, 20]}
+          headerFilters={false}
+          onPaginationChange={setTablePagination}
+        />
+      </div>
     </div>
   );
 }

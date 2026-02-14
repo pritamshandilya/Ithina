@@ -21,7 +21,7 @@ import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
   label: string;
-  to: "/maker/dashboard" | "/checker/dashboard" | "/maker/shelves";
+  to: "/maker/dashboard" | "/checker/dashboard" | "/checker/knowledge-center";
   hash?: string;
   icon: typeof LayoutDashboard;
 };
@@ -53,7 +53,7 @@ export default function Sidenav() {
   const checkerItems: NavItem[] = [
     { label: "Audit Review", to: "/checker/dashboard", hash: "audit-queue-heading", icon: ShieldCheck },
     { label: "Shelves", to: "/checker/dashboard", hash: "audit-queue-heading", icon: Rows3 },
-    { label: "Knowledge Center", to: "/checker/dashboard", hash: "knowledge-center-heading", icon: Library },
+    { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
   ];
 
   const roleItems = role === "checker" ? checkerItems : makerItems;

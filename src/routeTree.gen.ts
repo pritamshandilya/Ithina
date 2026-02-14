@@ -34,6 +34,7 @@ import { Route as CheckerIndexRouteImport } from './routes/checker/index'
 import { Route as MakerShelvesRouteImport } from './routes/maker/shelves'
 import { Route as MakerDashboardRouteImport } from './routes/maker/dashboard'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
+import { Route as CheckerKnowledgeCenterRouteImport } from './routes/checker/knowledge-center'
 import { Route as CheckerDashboardRouteImport } from './routes/checker/dashboard'
 import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
 import { Route as MakerAuditNewRouteImport } from './routes/maker/audit/new'
@@ -165,6 +166,11 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
   path: '/maker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckerKnowledgeCenterRoute = CheckerKnowledgeCenterRouteImport.update({
+  id: '/checker/knowledge-center',
+  path: '/checker/knowledge-center',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckerDashboardRoute = CheckerDashboardRouteImport.update({
   id: '/checker/dashboard',
   path: '/checker/dashboard',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker': typeof CheckerLayoutRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
+  '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker': typeof MakerLayoutRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
@@ -240,6 +247,7 @@ export interface FileRoutesByTo {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker': typeof CheckerIndexRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
+  '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker': typeof MakerIndexRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/_layout': typeof CheckerLayoutRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
+  '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker/_layout': typeof MakerLayoutRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
@@ -303,6 +312,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker'
     | '/checker/dashboard'
+    | '/checker/knowledge-center'
     | '/maker'
     | '/maker/dashboard'
     | '/maker/shelves'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker'
     | '/checker/dashboard'
+    | '/checker/knowledge-center'
     | '/maker'
     | '/maker/dashboard'
     | '/maker/shelves'
@@ -363,6 +374,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker/_layout'
     | '/checker/dashboard'
+    | '/checker/knowledge-center'
     | '/maker/_layout'
     | '/maker/dashboard'
     | '/maker/shelves'
@@ -395,6 +407,7 @@ export interface RootRouteChildren {
   TestShelvesListRoute: typeof TestShelvesListRoute
   CheckerLayoutRoute: typeof CheckerLayoutRoute
   CheckerDashboardRoute: typeof CheckerDashboardRoute
+  CheckerKnowledgeCenterRoute: typeof CheckerKnowledgeCenterRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
   MakerDashboardRoute: typeof MakerDashboardRoute
   MakerShelvesRoute: typeof MakerShelvesRoute
@@ -581,6 +594,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checker/knowledge-center': {
+      id: '/checker/knowledge-center'
+      path: '/checker/knowledge-center'
+      fullPath: '/checker/knowledge-center'
+      preLoaderRoute: typeof CheckerKnowledgeCenterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checker/dashboard': {
       id: '/checker/dashboard'
       path: '/checker/dashboard'
@@ -635,6 +655,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestShelvesListRoute: TestShelvesListRoute,
   CheckerLayoutRoute: CheckerLayoutRoute,
   CheckerDashboardRoute: CheckerDashboardRoute,
+  CheckerKnowledgeCenterRoute: CheckerKnowledgeCenterRoute,
   MakerLayoutRoute: MakerLayoutRoute,
   MakerDashboardRoute: MakerDashboardRoute,
   MakerShelvesRoute: MakerShelvesRoute,

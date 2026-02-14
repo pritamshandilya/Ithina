@@ -316,6 +316,4 @@ export async function deleteDraft(auditId: string): Promise<void> {
   
   // In production, this would be:
   // await api.delete(`/maker/audits/${auditId}/draft`);
-  
-  console.log("Draft deleted:", auditId);
 }

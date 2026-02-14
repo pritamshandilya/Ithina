@@ -15,6 +15,7 @@ import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-a
 import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
 import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
 import { Route as TestOverridePublishingRouteImport } from './routes/test-override-publishing'
+import { Route as TestMakerAuditQueueRouteImport } from './routes/test-maker-audit-queue'
 import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
 import { Route as TestHeaderRouteImport } from './routes/test-header'
 import { Route as TestDraftAuditsRouteImport } from './routes/test-draft-audits'
@@ -33,6 +34,7 @@ import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as CheckerIndexRouteImport } from './routes/checker/index'
 import { Route as MakerShelvesRouteImport } from './routes/maker/shelves'
 import { Route as MakerDashboardRouteImport } from './routes/maker/dashboard'
+import { Route as MakerAuditReviewRouteImport } from './routes/maker/audit-review'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
 import { Route as CheckerKnowledgeCenterRouteImport } from './routes/checker/knowledge-center'
 import { Route as CheckerDashboardRouteImport } from './routes/checker/dashboard'
@@ -69,6 +71,11 @@ const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
 const TestOverridePublishingRoute = TestOverridePublishingRouteImport.update({
   id: '/test-override-publishing',
   path: '/test-override-publishing',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TestMakerAuditQueueRoute = TestMakerAuditQueueRouteImport.update({
+  id: '/test-maker-audit-queue',
+  path: '/test-maker-audit-queue',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
@@ -161,6 +168,11 @@ const MakerDashboardRoute = MakerDashboardRouteImport.update({
   path: '/maker/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerAuditReviewRoute = MakerAuditReviewRouteImport.update({
+  id: '/maker/audit-review',
+  path: '/maker/audit-review',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakerLayoutRoute = MakerLayoutRouteImport.update({
   id: '/maker/_layout',
   path: '/maker',
@@ -207,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -217,6 +230,7 @@ export interface FileRoutesByFullPath {
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker': typeof MakerLayoutRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
   '/checker/': typeof CheckerIndexRoute
@@ -239,6 +253,7 @@ export interface FileRoutesByTo {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -249,6 +264,7 @@ export interface FileRoutesByTo {
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker': typeof MakerIndexRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
@@ -270,6 +286,7 @@ export interface FileRoutesById {
   '/test-draft-audits': typeof TestDraftAuditsRoute
   '/test-header': typeof TestHeaderRoute
   '/test-knowledge-center': typeof TestKnowledgeCenterRoute
+  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
   '/test-override-publishing': typeof TestOverridePublishingRoute
   '/test-primary-action': typeof TestPrimaryActionRoute
   '/test-quick-stats': typeof TestQuickStatsRoute
@@ -280,6 +297,7 @@ export interface FileRoutesById {
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
   '/maker/_layout': typeof MakerLayoutRoute
+  '/maker/audit-review': typeof MakerAuditReviewRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/shelves': typeof MakerShelvesRoute
   '/checker/': typeof CheckerIndexRoute
@@ -304,6 +322,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -314,6 +333,7 @@ export interface FileRouteTypes {
     | '/checker/dashboard'
     | '/checker/knowledge-center'
     | '/maker'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/maker/shelves'
     | '/checker/'
@@ -336,6 +356,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -346,6 +367,7 @@ export interface FileRouteTypes {
     | '/checker/dashboard'
     | '/checker/knowledge-center'
     | '/maker'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/maker/shelves'
     | '/checker/review/$auditId'
@@ -366,6 +388,7 @@ export interface FileRouteTypes {
     | '/test-draft-audits'
     | '/test-header'
     | '/test-knowledge-center'
+    | '/test-maker-audit-queue'
     | '/test-override-publishing'
     | '/test-primary-action'
     | '/test-quick-stats'
@@ -376,6 +399,7 @@ export interface FileRouteTypes {
     | '/checker/dashboard'
     | '/checker/knowledge-center'
     | '/maker/_layout'
+    | '/maker/audit-review'
     | '/maker/dashboard'
     | '/maker/shelves'
     | '/checker/'
@@ -399,6 +423,7 @@ export interface RootRouteChildren {
   TestDraftAuditsRoute: typeof TestDraftAuditsRoute
   TestHeaderRoute: typeof TestHeaderRoute
   TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
+  TestMakerAuditQueueRoute: typeof TestMakerAuditQueueRoute
   TestOverridePublishingRoute: typeof TestOverridePublishingRoute
   TestPrimaryActionRoute: typeof TestPrimaryActionRoute
   TestQuickStatsRoute: typeof TestQuickStatsRoute
@@ -409,6 +434,7 @@ export interface RootRouteChildren {
   CheckerDashboardRoute: typeof CheckerDashboardRoute
   CheckerKnowledgeCenterRoute: typeof CheckerKnowledgeCenterRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
+  MakerAuditReviewRoute: typeof MakerAuditReviewRoute
   MakerDashboardRoute: typeof MakerDashboardRoute
   MakerShelvesRoute: typeof MakerShelvesRoute
   CheckerIndexRoute: typeof CheckerIndexRoute
@@ -459,6 +485,13 @@ declare module '@tanstack/react-router' {
       path: '/test-override-publishing'
       fullPath: '/test-override-publishing'
       preLoaderRoute: typeof TestOverridePublishingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/test-maker-audit-queue': {
+      id: '/test-maker-audit-queue'
+      path: '/test-maker-audit-queue'
+      fullPath: '/test-maker-audit-queue'
+      preLoaderRoute: typeof TestMakerAuditQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/test-knowledge-center': {
@@ -587,6 +620,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maker/audit-review': {
+      id: '/maker/audit-review'
+      path: '/maker/audit-review'
+      fullPath: '/maker/audit-review'
+      preLoaderRoute: typeof MakerAuditReviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker/_layout': {
       id: '/maker/_layout'
       path: '/maker'
@@ -647,6 +687,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestDraftAuditsRoute: TestDraftAuditsRoute,
   TestHeaderRoute: TestHeaderRoute,
   TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
+  TestMakerAuditQueueRoute: TestMakerAuditQueueRoute,
   TestOverridePublishingRoute: TestOverridePublishingRoute,
   TestPrimaryActionRoute: TestPrimaryActionRoute,
   TestQuickStatsRoute: TestQuickStatsRoute,
@@ -657,6 +698,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckerDashboardRoute: CheckerDashboardRoute,
   CheckerKnowledgeCenterRoute: CheckerKnowledgeCenterRoute,
   MakerLayoutRoute: MakerLayoutRoute,
+  MakerAuditReviewRoute: MakerAuditReviewRoute,
   MakerDashboardRoute: MakerDashboardRoute,
   MakerShelvesRoute: MakerShelvesRoute,
   CheckerIndexRoute: CheckerIndexRoute,

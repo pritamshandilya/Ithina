@@ -32,3 +32,16 @@ export {
   useAuditViolations,
   auditDetailKeys,
 } from "./useAuditDetail";
+export {
+  knowledgeCenterKeys,
+  useActivateComplianceRule,
+  useCloneRetiredRule,
+  useComplianceRules,
+  useCreateComplianceRule,
+  useReferenceDocuments,
+  useRetireComplianceRule,
+  useRuleVersions,
+  useUpdateComplianceRule,
+  useUploadReferenceDocument,
+  useValidateRuleActivation,
+} from "./useKnowledgeCenter";

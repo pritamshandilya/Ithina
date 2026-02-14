@@ -28,6 +28,7 @@
  * ```
  */
 
+import { useNavigate } from "@tanstack/react-router";
 import {
   BookOpenIcon,
   PlusCircleIcon,
@@ -69,30 +70,12 @@ export function KnowledgeCenterSection({
   storeId,
   className = "",
 }: KnowledgeCenterSectionProps) {
+  const navigate = useNavigate();
   const { data: ruleInfo, isLoading, error } = useRuleInfo(storeId);
 
-  // Action handlers (placeholders for Phase 2 navigation)
-  const handleViewRules = () => {
-    console.log("Navigate to: /checker/rules/view");
-    alert("View Rules page will be implemented in Phase 2");
-  };
+  const goToKnowledgeCenter = () => navigate({ to: "/checker/knowledge-center" });
 
-  const handleCreateRule = () => {
-    console.log("Navigate to: /checker/rules/create");
-    alert("Create Rule page will be implemented in Phase 2");
-  };
-
-  const handleManageVersions = () => {
-    console.log("Navigate to: /checker/rules/versions");
-    alert("Manage Versions page will be implemented in Phase 2");
-  };
-
-  const handleRetireRule = () => {
-    console.log("Navigate to: /checker/rules/retire");
-    alert("Retire Rule page will be implemented in Phase 2");
-  };
-
-  // Action cards configuration
+  // Action cards configuration - navigate to Knowledge Center
   const actionCards: ActionCard[] = [
     {
       id: "view-rules",
@@ -100,7 +83,7 @@ export function KnowledgeCenterSection({
       description: "Browse all active compliance rules",
       icon: BookOpenIcon,
       colorClass: "bg-accent",
-      action: handleViewRules,
+      action: goToKnowledgeCenter,
       isPrimary: true,
     },
     {
@@ -109,7 +92,7 @@ export function KnowledgeCenterSection({
       description: "Define a new compliance rule",
       icon: PlusCircleIcon,
       colorClass: "bg-chart-2",
-      action: handleCreateRule,
+      action: goToKnowledgeCenter,
     },
     {
       id: "manage-versions",
@@ -117,7 +100,7 @@ export function KnowledgeCenterSection({
       description: "View history and rollback changes",
       icon: GitBranchIcon,
       colorClass: "bg-[var(--action-warning)]",
-      action: handleManageVersions,
+      action: goToKnowledgeCenter,
     },
     {
       id: "retire-rule",
@@ -125,7 +108,7 @@ export function KnowledgeCenterSection({
       description: "Archive outdated rules",
       icon: ArchiveIcon,
       colorClass: "bg-muted",
-      action: handleRetireRule,
+      action: goToKnowledgeCenter,
     },
   ];
 

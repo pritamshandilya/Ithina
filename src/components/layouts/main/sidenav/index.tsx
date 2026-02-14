@@ -1,5 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Library, ListChecks, Rows3, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, Library, ListChecks, Rows3, ShieldCheck, FileSignature } from "lucide-react";
 import { useMemo } from "react";
 
 import SidenavFooter from "./footer";
@@ -21,7 +21,7 @@ import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
   label: string;
-  to: "/maker/dashboard" | "/maker/shelves" | "/maker/audit-review" | "/checker/dashboard" | "/checker/audit-review" | "/checker/shelves" | "/checker/knowledge-center";
+  to: "/maker/dashboard" | "/maker/shelves" | "/maker/audit-review" | "/maker/manual-audits" | "/checker/dashboard" | "/checker/audit-review" | "/checker/shelves" | "/checker/knowledge-center";
   hash?: string;
   icon: typeof LayoutDashboard;
 };
@@ -56,6 +56,7 @@ export default function Sidenav() {
   const makerItems: NavItem[] = [
     { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
     { label: "My Audits", to: "/maker/audit-review", icon: ListChecks },
+    { label: "Approvals", to: "/maker/manual-audits", icon: FileSignature },
   ];
 
   const checkerItems: NavItem[] = [

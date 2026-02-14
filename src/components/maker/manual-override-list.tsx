@@ -1,13 +1,12 @@
 /**
- * Audit Review Queue Component
+ * Approval Status List Component
  *
- * Tabular display of all audits including drafts, pending, approved, and returned.
- * Uses shared DataTable with dotted column lines, status badges, and action buttons.
- * Matches the pattern used in MyAuditsSection, AssignedShelvesList, and Compliance Rules.
+ * Displays all submitted audits and their approval status for Makers.
+ * Allows tracking of pending, approved, and returned audits.
  */
 
 import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { Search, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -18,19 +17,19 @@ import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker"
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";
 
-export interface AuditReviewQueueProps {
+export interface ApprovalStatusListProps {
   className?: string;
   onAction?: (auditId: string, action: "resume" | "fix") => void;
 }
 
-type FilterType = "all" | "returned" | "draft" | "pending" | "approved";
+type FilterType = "all" | "pending" | "approved" | "returned";
 
 function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[]) {
   const shelf = shelves?.find((s) => s.id === audit.shelfId);
   return shelf?.shelfName ?? `Shelf ${audit.shelfId.replace("shelf-", "")}`;
 }
 
-export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps) {
+export function ApprovalStatusList({ className, onAction }: ApprovalStatusListProps) {
   const { data: allAudits, isLoading } = useMakerAudits();
   const { data: shelves } = useAssignedShelves();
 
@@ -38,8 +37,13 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
+  // Filter only submitted audits (exclude drafts)
+  const submittedAudits = useMemo(() => {
+    return (allAudits || []).filter(a => a.status !== "draft" && a.status !== "never-audited");
+  }, [allAudits]);
+
   const filteredAudits = useMemo(() => {
-    let result = allAudits || [];
+    let result = submittedAudits;
 
     if (activeFilter !== "all") {
       result = result.filter((a) => a.status === activeFilter);
@@ -60,7 +64,7 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
       const dateB = new Date(b.submittedAt || b.draftSavedAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [allAudits, activeFilter, searchQuery, shelves]);
+  }, [submittedAudits, activeFilter, searchQuery, shelves]);
 
   useEffect(() => {
     setTablePagination((p) => ({ ...p, page: 1 }));
@@ -104,17 +108,14 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         },
       },
       {
-        title: "Progress / Score",
-        field: "draftProgress",
+        title: "Compliance Score",
+        field: "complianceScore",
         width: 140,
         sorter: "number",
         headerSort: true,
         headerFilter: false,
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
-          if (audit.status === "draft" && audit.draftProgress != null) {
-            return `<span class="text-sm font-medium text-accent">${audit.draftProgress}%</span>`;
-          }
           if (audit.complianceScore != null) {
             const color =
               audit.complianceScore >= 90
@@ -124,11 +125,11 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
                   : "text-destructive";
             return `<span class="tabular-nums font-semibold ${color}">${audit.complianceScore}%</span>`;
           }
-          return "—";
+          return `<span class="text-xs text-muted-foreground">Pending</span>`;
         },
       },
       {
-        title: "Date",
+        title: "Submitted",
         field: "submittedAt",
         width: 140,
         sorter: "datetime",
@@ -136,7 +137,7 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         headerFilter: false,
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
-          const date = audit.submittedAt || audit.draftSavedAt;
+          const date = audit.submittedAt;
           if (!date) return "—";
           return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(new Date(date), { addSuffix: true })}</span>`;
         },
@@ -149,8 +150,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
           const isManual = audit.mode === "assist-mode";
-          const modeLabel = isManual ? "Manual Override" : "Vision Edge (AI)";
-          const modeClass = isManual ? "text-amber-600 dark:text-amber-400 font-medium" : "text-muted-foreground";
+          const modeLabel = isManual ? "Manual Entry" : "Vision Edge";
+          const modeClass = isManual ? "text-amber-600 dark:text-amber-400 font-medium" : "text-blue-600 dark:text-blue-400";
           return `<span class="text-sm ${modeClass}">${modeLabel}</span>`;
         },
       },
@@ -164,15 +165,11 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
           const isReturned = audit.status === "returned";
-          const isDraft = audit.status === "draft";
           
-          if (!isReturned && !isDraft) return `<span class="text-xs text-muted-foreground">—</span>`;
+          if (!isReturned) return `<span class="text-xs text-muted-foreground">—</span>`;
 
-          const label = isReturned ? "Fix Issues" : "Resume";
-          const btnClass = isReturned
-            ? "rounded-md border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 text-xs font-medium transition-colors"
-            : "rounded-md bg-chart-2 text-white hover:opacity-90 px-2.5 py-1 text-xs font-medium transition-opacity";
-          return `<button type="button" class="${btnClass}" data-action="${isReturned ? "fix" : "resume"}">${label}</button>`;
+          const btnClass = "rounded-md border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 text-xs font-medium transition-colors";
+          return `<button type="button" class="${btnClass}" data-action="fix">Fix Issues</button>`;
         },
         cellClick: (event: unknown, cell: { getData: () => Audit }) => {
           (event as { stopPropagation?: () => void }).stopPropagation?.();
@@ -180,8 +177,8 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
           const btn = target?.closest?.("[data-action]");
           if (!btn) return;
           const audit = cell.getData();
-          if (audit.status === "returned" || audit.status === "draft") {
-             onAction?.(audit.id, audit.status === "returned" ? "fix" : "resume");
+          if (audit.status === "returned") {
+             onAction?.(audit.id, "fix");
           }
         },
       },
@@ -199,19 +196,49 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   }
 
   const counts = {
-    all: (allAudits || []).length,
-    draft: (allAudits || []).filter(a => a.status === "draft").length,
-    returned: (allAudits || []).filter(a => a.status === "returned").length,
-    pending: (allAudits || []).filter(a => a.status === "pending").length,
-    approved: (allAudits || []).filter(a => a.status === "approved").length,
+    all: submittedAudits.length,
+    pending: submittedAudits.filter(a => a.status === "pending").length,
+    approved: submittedAudits.filter(a => a.status === "approved").length,
+    returned: submittedAudits.filter(a => a.status === "returned").length,
   };
 
   return (
     <div className={cn("space-y-4", className)}>
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
+             <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2 text-amber-600 dark:text-amber-400">
+               <Clock className="w-6 h-6" />
+             </div>
+             <div>
+               <p className="text-sm text-muted-foreground">Pending Approval</p>
+               <p className="text-2xl font-bold">{counts.pending}</p>
+             </div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
+             <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-2 text-green-600 dark:text-green-400">
+               <CheckCircle className="w-6 h-6" />
+             </div>
+             <div>
+               <p className="text-sm text-muted-foreground">Approved</p>
+               <p className="text-2xl font-bold">{counts.approved}</p>
+             </div>
+        </div>
+        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
+             <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2 text-red-600 dark:text-red-400">
+               <AlertTriangle className="w-6 h-6" />
+             </div>
+             <div>
+               <p className="text-sm text-muted-foreground">Returned</p>
+               <p className="text-2xl font-bold">{counts.returned}</p>
+             </div>
+        </div>
+      </div>
+
       {/* Filters and Search */}
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2 pb-2">
-          {(["all", "draft", "returned", "pending", "approved"] as const).map((filter) => (
+          {(["all", "pending", "approved", "returned"] as const).map((filter) => (
             <button
               key={filter}
               type="button"
@@ -225,11 +252,10 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
               )}
               aria-pressed={activeFilter === filter}
             >
-              {filter === "all" && `All Audits (${counts.all})`}
-              {filter === "draft" && `Drafts (${counts.draft})`}
-              {filter === "returned" && `Returned (${counts.returned})`}
-              {filter === "pending" && `Pending (${counts.pending})`}
-              {filter === "approved" && `Approved (${counts.approved})`}
+              <span className="capitalize">{filter}</span>
+              <span className="ml-1 opacity-60 text-xs">
+                ({filter === 'all' ? counts.all : counts[filter as keyof typeof counts]})
+              </span>
             </button>
           ))}
         </div>
@@ -237,7 +263,7 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
         <div className="relative w-full lg:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
           <Input
-            placeholder="Search by shelf or audit ID..."
+            placeholder="Search audits..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-10 w-full bg-background"
@@ -254,7 +280,7 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
           </div>
           <h3 className="text-lg font-semibold text-foreground">No audits found</h3>
           <p className="text-muted-foreground mt-1">
-            Try adjusting your filters or search query.
+            There are no submitted audits matching your criteria.
           </p>
         </div>
       ) : (
@@ -284,3 +310,6 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
     </div>
   );
 }
+
+// Export with old name for backward compatibility
+export const ManualOverrideList = ApprovalStatusList;

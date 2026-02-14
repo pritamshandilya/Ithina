@@ -529,3 +529,16 @@
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
+
+/* Native select: match app color scheme (trigger + options where supported) */
+select[data-slot="select"],
+select.select-themed {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+select[data-slot="select"] option,
+select.select-themed option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}

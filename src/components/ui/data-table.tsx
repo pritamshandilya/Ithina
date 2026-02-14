@@ -65,6 +65,8 @@ export interface DataTableProps<T = object> {
   movableColumns?: boolean;
   /** Optional pagination state callback for visible-count UI */
   onPaginationChange?: (state: { page: number; pageSize: number }) => void;
+  /** Optional row formatter - receives Tabulator row, can add classes etc. */
+  rowFormatter?: (row: { getData: () => T; getElement: () => HTMLElement }) => void;
 }
 
 /**
@@ -89,6 +91,7 @@ export function DataTable<T extends object>({
   layout = "fitColumns",
   movableColumns = false,
   onPaginationChange,
+  rowFormatter,
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -145,6 +148,10 @@ export function DataTable<T extends object>({
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
 
+    if (rowFormatter) {
+      options.rowFormatter = rowFormatter;
+    }
+
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     return () => {
@@ -164,6 +171,7 @@ export function DataTable<T extends object>({
     layout,
     movableColumns,
     onPaginationChange,
+    rowFormatter,
     data,
   ]);
 

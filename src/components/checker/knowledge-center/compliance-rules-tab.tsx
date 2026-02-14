@@ -3,21 +3,16 @@
  *
  * Knowledge Catalog: View, filter, and manage compliance rules.
  * Rule Builder: Create and edit rules via modal.
+ * Uses shared DataTable (Tabulator) for consistent display.
  */
 
-import { useState } from "react";
-import {
-  Eye,
-  Pencil,
-  Play,
-  Archive,
-  Copy,
-  Plus,
-  Filter,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Plus, Filter, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { RuleStatusBadge } from "@/components/shared";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import {
   useActivateComplianceRule,
   useCloneRetiredRule,
@@ -37,6 +32,39 @@ import { RuleBuilderModal } from "./rule-builder-modal";
 const SEVERITY_OPTIONS: RuleSeverity[] = ["Low", "Medium", "High"];
 const STATUS_OPTIONS: RuleStatus[] = ["Draft", "Active", "Retired"];
 
+type RulesSort =
+  | "lastUpdated-desc"
+  | "lastUpdated-asc"
+  | "ruleName-asc"
+  | "ruleName-desc"
+  | "status-asc"
+  | "version-desc";
+
+/** Badge HTML for status (matches RuleStatusBadge styling) */
+function statusBadgeHtml(status: RuleStatus): string {
+  const config: Record<RuleStatus, string> = {
+    Draft: "bg-muted/80 text-muted-foreground border-border",
+    Active: "bg-chart-2/20 text-chart-2 border-chart-2/30",
+    Retired: "bg-muted/60 text-muted-foreground border-border",
+  };
+  const cls = config[status];
+  return `<span class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${cls}">${status}</span>`;
+}
+
+/** Actions column HTML with data-action attributes */
+function actionsCellHtml(rule: ComplianceRule): string {
+  const btn = (action: string, label: string, icon: string) =>
+    `<button type="button" data-action="${action}" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="${label}">${icon}</button>`;
+
+  const view = btn("view", "View rule", '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>');
+  const edit = rule.status !== "Retired" ? btn("edit", "Edit rule", '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>') : "";
+  const activate = rule.status === "Draft" ? btn("activate", "Activate rule", '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>') : "";
+  const retire = rule.status === "Active" ? btn("retire", "Retire rule", '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>') : "";
+  const clone = rule.status === "Retired" ? btn("clone", "Clone rule", '<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>') : "";
+
+  return `<div class="flex items-center gap-1">${view}${edit}${activate}${retire}${clone}</div>`;
+}
+
 export function ComplianceRulesTab() {
   const { toast } = useToast();
   const [filters, setFilters] = useState<RuleFilters>({});
@@ -44,32 +72,75 @@ export function ComplianceRulesTab() {
   const [editingRule, setEditingRule] = useState<ComplianceRule | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activateConfirmRuleId, setActivateConfirmRuleId] = useState<string | null>(null);
+  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<RulesSort>("lastUpdated-desc");
 
   const { data: rules, isLoading, error } = useComplianceRules(filters);
+
+  const filteredAndSortedRules = useMemo(() => {
+    if (!rules) return [];
+    let result = [...rules];
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (r) =>
+          r.ruleId.toLowerCase().includes(q) ||
+          r.ruleName.toLowerCase().includes(q) ||
+          r.ruleType.toLowerCase().includes(q) ||
+          r.shelfType.toLowerCase().includes(q)
+      );
+    }
+    switch (sortBy) {
+      case "lastUpdated-desc":
+        result.sort((a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime());
+        break;
+      case "lastUpdated-asc":
+        result.sort((a, b) => new Date(a.lastUpdated).getTime() - new Date(b.lastUpdated).getTime());
+        break;
+      case "ruleName-asc":
+        result.sort((a, b) => a.ruleName.localeCompare(b.ruleName));
+        break;
+      case "ruleName-desc":
+        result.sort((a, b) => b.ruleName.localeCompare(a.ruleName));
+        break;
+      case "status-asc":
+        result.sort((a, b) => a.status.localeCompare(b.status));
+        break;
+      case "version-desc":
+        result.sort((a, b) => b.currentVersion - a.currentVersion);
+        break;
+    }
+    return result;
+  }, [rules, searchQuery, sortBy]);
+
+  useEffect(() => {
+    setTablePagination((p) => ({ ...p, page: 1 }));
+  }, [filters, searchQuery, sortBy]);
   const activateRule = useActivateComplianceRule();
   const retireRule = useRetireComplianceRule();
   const cloneRule = useCloneRetiredRule();
   const validateActivation = useValidateRuleActivation();
 
-  const handleCreateRule = () => {
+  const handleCreateRule = useCallback(() => {
     setEditingRule(null);
     setShowRuleModal(true);
-  };
+  }, []);
 
-  const handleEditRule = (rule: ComplianceRule) => {
+  const handleEditRule = useCallback((rule: ComplianceRule) => {
     if (rule.status === "Retired") return;
     setEditingRule(rule);
     setShowRuleModal(true);
-  };
+  }, []);
 
-  const handleViewRule = (rule: ComplianceRule) => {
+  const handleViewRule = useCallback((rule: ComplianceRule) => {
     setEditingRule(rule);
     setShowRuleModal(true);
-  };
+  }, []);
 
-  const handleActivate = (ruleId: string) => {
+  const handleActivate = useCallback((ruleId: string) => {
     setActivateConfirmRuleId(ruleId);
-  };
+  }, []);
 
   const confirmActivate = () => {
     if (!activateConfirmRuleId) return;
@@ -102,20 +173,23 @@ export function ComplianceRulesTab() {
     });
   };
 
-  const handleRetire = (ruleId: string) => {
-    if (!window.confirm("Are you sure you want to retire this rule? Retired rules cannot be reactivated without cloning.")) return;
-    retireRule.mutate(ruleId, {
-      onSuccess: () => toast({ title: "Rule retired", description: "The rule has been retired." }),
-      onError: (err) =>
-        toast({
-          title: "Retire failed",
-          description: err instanceof Error ? err.message : "Could not retire rule.",
-          variant: "destructive",
-        }),
-    });
-  };
+  const handleRetire = useCallback(
+    (ruleId: string) => {
+      if (!window.confirm("Are you sure you want to retire this rule? Retired rules cannot be reactivated without cloning.")) return;
+      retireRule.mutate(ruleId, {
+        onSuccess: () => toast({ title: "Rule retired", description: "The rule has been retired." }),
+        onError: (err) =>
+          toast({
+            title: "Retire failed",
+            description: err instanceof Error ? err.message : "Could not retire rule.",
+            variant: "destructive",
+          }),
+      });
+    },
+    [retireRule, toast]
+  );
 
-  const handleClone = (ruleId: string) => {
+  const handleClone = useCallback((ruleId: string) => {
     cloneRule.mutate(
       { ruleId, createdBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})` },
       {
@@ -128,7 +202,74 @@ export function ComplianceRulesTab() {
           }),
       }
     );
-  };
+  }, [cloneRule, toast]);
+
+  const tableColumns = useMemo<DataTableColumn<ComplianceRule>[]>(
+    () => [
+      { title: "Rule ID", field: "ruleId", width: 100, headerFilter: false, formatter: (c) => `<span class="font-mono text-xs">${(c as { getValue: () => string }).getValue()}</span>` },
+      { title: "Rule Name", field: "ruleName", minWidth: 180, sorter: "string" },
+      { title: "Type", field: "ruleType", width: 130, headerFilter: false },
+      { title: "Shelf Type", field: "shelfType", width: 110, headerFilter: false },
+      { title: "Severity", field: "severity", width: 90, headerFilter: false },
+      {
+        title: "Status",
+        field: "status",
+        width: 100,
+        headerFilter: false,
+        formatter: (c) => statusBadgeHtml((c as { getValue: () => RuleStatus }).getValue()),
+      },
+      { title: "Version", field: "currentVersion", width: 80, sorter: "number", headerFilter: false },
+      {
+        title: "Last Updated",
+        field: "lastUpdated",
+        width: 120,
+        sorter: "date",
+        headerFilter: false,
+        formatter: (c) => {
+          const val = (c as { getValue: () => Date }).getValue();
+          return val ? format(new Date(val), "MMM d, yyyy") : "";
+        },
+      },
+      {
+        title: "Actions",
+        field: "ruleId",
+        width: 180,
+        headerSort: false,
+        headerFilter: false,
+        formatter: (c) => {
+          const row = (c as { getRow: () => { getData: () => ComplianceRule } }).getRow();
+          return actionsCellHtml(row.getData());
+        },
+        cellClick: (e: MouseEvent, cell: { getData: () => ComplianceRule }) => {
+          const target = (e as unknown as { target: HTMLElement }).target as HTMLElement;
+          const btn = target.closest?.("[data-action]");
+          if (!btn) return;
+          (e as unknown as { stopPropagation?: () => void }).stopPropagation?.();
+          const action = btn.getAttribute("data-action");
+          const rule = cell.getData();
+          if (action === "view") handleViewRule(rule);
+          else if (action === "edit") handleEditRule(rule);
+          else if (action === "activate") handleActivate(rule.ruleId);
+          else if (action === "retire") handleRetire(rule.ruleId);
+          else if (action === "clone") handleClone(rule.ruleId);
+        },
+      },
+    ],
+    [handleViewRule, handleEditRule, handleActivate, handleRetire, handleClone]
+  );
+
+  const rowFormatter = useMemo(
+    () => (row: { getData: () => ComplianceRule; getElement: () => HTMLElement }) => {
+      const data = row.getData();
+      const el = row.getElement();
+      if (data.status === "Active") {
+        el.classList.add("!bg-chart-2/5");
+      } else {
+        el.classList.remove("!bg-chart-2/5");
+      }
+    },
+    []
+  );
 
   return (
     <div className="space-y-6">
@@ -146,26 +287,48 @@ export function ComplianceRulesTab() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <div className="rounded-lg border border-border bg-card/50 p-4">
-        <button
-          type="button"
-          onClick={() => setShowFilters(!showFilters)}
-          className="flex items-center gap-2 text-sm font-medium text-foreground"
-        >
-          <Filter className="size-4" />
-          Filters
-        </button>
+      {/* Search and Filters - audit queue style */}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              type="search"
+              placeholder="Search by rule ID, name, type, or shelf..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+              aria-label="Search rules"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters(!showFilters)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-lg border-2 px-4 py-2 text-sm font-medium transition-all",
+              "focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
+              showFilters
+                ? "border-accent bg-accent/15 text-accent"
+                : "border-border bg-card text-card-foreground hover:border-accent/50"
+            )}
+          >
+            <Filter className="size-4" />
+            Filters
+          </button>
+        </div>
+
         {showFilters && (
           <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">Shelf Type</label>
-              <select
+              <Select
                 value={filters.shelfType ?? ""}
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, shelfType: e.target.value || undefined }))
                 }
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
               >
                 <option value="">All</option>
                 {KNOWLEDGE_SHELF_TYPES.map((t) => (
@@ -173,11 +336,11 @@ export function ComplianceRulesTab() {
                     {t}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">Severity</label>
-              <select
+              <Select
                 value={filters.severity ?? ""}
                 onChange={(e) =>
                   setFilters((f) => ({
@@ -185,7 +348,6 @@ export function ComplianceRulesTab() {
                     severity: (e.target.value || undefined) as RuleSeverity | undefined,
                   }))
                 }
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
               >
                 <option value="">All</option>
                 {SEVERITY_OPTIONS.map((s) => (
@@ -193,11 +355,11 @@ export function ComplianceRulesTab() {
                     {s}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="mb-1 block text-xs text-muted-foreground">Status</label>
-              <select
+              <Select
                 value={filters.status ?? ""}
                 onChange={(e) =>
                   setFilters((f) => ({
@@ -205,7 +367,6 @@ export function ComplianceRulesTab() {
                     status: (e.target.value || undefined) as RuleStatus | undefined,
                   }))
                 }
-                className="h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
               >
                 <option value="">All</option>
                 {STATUS_OPTIONS.map((s) => (
@@ -213,128 +374,88 @@ export function ComplianceRulesTab() {
                     {s}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
         )}
+
+        {/* Sort - same layout as audit review queue */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-muted-foreground">Sort by:</span>
+            <Select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as RulesSort)}
+              aria-label="Sort rules"
+              className="w-auto min-w-[180px]"
+            >
+              <option value="lastUpdated-desc">Newest First</option>
+              <option value="lastUpdated-asc">Oldest First</option>
+              <option value="ruleName-asc">Rule Name A–Z</option>
+              <option value="ruleName-desc">Rule Name Z–A</option>
+              <option value="status-asc">Status</option>
+              <option value="version-desc">Highest Version First</option>
+            </Select>
+          </div>
+        </div>
       </div>
 
-      {/* Rules Table - Custom implementation for Actions column */}
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
-        {isLoading ? (
-          <div className="flex h-48 items-center justify-center text-muted-foreground">
-            Loading rules…
-          </div>
-        ) : error ? (
-          <div className="p-6 text-destructive">
-            Failed to load rules. Please try again.
-          </div>
-        ) : !rules || rules.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-4 p-12 text-center">
-            <p className="text-muted-foreground">
-              No compliance rules defined yet. Create your first rule to begin.
-            </p>
+      {/* Rules Table - DataTable (Tabulator) */}
+      {isLoading ? (
+        <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
+          Loading rules…
+        </div>
+      ) : error ? (
+        <div className="rounded-lg border border-border bg-card p-6 text-destructive">
+          Failed to load rules. Please try again.
+        </div>
+      ) : !filteredAndSortedRules.length ? (
+        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
+          <p className="text-muted-foreground">
+            {searchQuery.trim()
+              ? `No rules found matching "${searchQuery}"`
+              : "No compliance rules defined yet. Create your first rule to begin."}
+          </p>
+          {searchQuery.trim() && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="text-sm underline text-accent hover:text-accent/80"
+            >
+              Clear search
+            </button>
+          )}
+          {!searchQuery.trim() && (
             <Button onClick={handleCreateRule}>
               <Plus className="size-4" />
               Create Rule
             </Button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="px-4 py-3 text-left font-medium">Rule ID</th>
-                  <th className="px-4 py-3 text-left font-medium">Rule Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Type</th>
-                  <th className="px-4 py-3 text-left font-medium">Shelf Type</th>
-                  <th className="px-4 py-3 text-left font-medium">Severity</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Version</th>
-                  <th className="px-4 py-3 text-left font-medium">Last Updated</th>
-                  <th className="px-4 py-3 text-left font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rules.map((r) => (
-                  <tr
-                    key={r.ruleId}
-                    className={cn(
-                      "border-b border-border transition-colors hover:bg-muted/20",
-                      r.status === "Active" && "bg-chart-2/5"
-                    )}
-                  >
-                    <td className="px-4 py-3 font-mono text-xs">{r.ruleId}</td>
-                    <td className="px-4 py-3 font-medium">{r.ruleName}</td>
-                    <td className="px-4 py-3">{r.ruleType}</td>
-                    <td className="px-4 py-3">{r.shelfType}</td>
-                    <td className="px-4 py-3">{r.severity}</td>
-                    <td className="px-4 py-3">
-                      <RuleStatusBadge status={r.status} size="sm" />
-                    </td>
-                    <td className="px-4 py-3">{r.currentVersion}</td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      {format(new Date(r.lastUpdated), "MMM d, yyyy")}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={() => handleViewRule(r)}
-                          aria-label="View rule"
-                        >
-                          <Eye className="size-4" />
-                        </Button>
-                        {r.status !== "Retired" && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleEditRule(r)}
-                            aria-label="Edit rule"
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                        )}
-                        {r.status === "Draft" && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleActivate(r.ruleId)}
-                            aria-label="Activate rule"
-                          >
-                            <Play className="size-4" />
-                          </Button>
-                        )}
-                        {r.status === "Active" && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleRetire(r.ruleId)}
-                            aria-label="Retire rule"
-                          >
-                            <Archive className="size-4" />
-                          </Button>
-                        )}
-                        {r.status === "Retired" && (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleClone(r.ruleId)}
-                            aria-label="Clone rule"
-                          >
-                            <Copy className="size-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      ) : (
+        <>
+          <DataTable<ComplianceRule>
+            columns={tableColumns}
+            data={filteredAndSortedRules}
+            rowIdField="ruleId"
+            initialSort={{ field: "lastUpdated", dir: "desc" }}
+            emptyMessage="No rules match the current filters"
+            pageSize={10}
+            pageSizeSelector={[5, 10, 20, 50]}
+            rowFormatter={rowFormatter}
+            onPaginationChange={setTablePagination}
+            onRowClick={(row) => handleViewRule(row)}
+          />
+          <p className="text-sm text-muted-foreground text-center">
+            Showing{" "}
+            {Math.min(
+              tablePagination.pageSize,
+              Math.max(0, filteredAndSortedRules.length - (tablePagination.page - 1) * tablePagination.pageSize)
+            )}{" "}
+            of {filteredAndSortedRules.length} rules
+          </p>
+        </>
+      )}
 
       {/* Activate Confirmation Modal */}
       {activateConfirmRuleId && (

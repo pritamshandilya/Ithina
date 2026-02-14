@@ -10,6 +10,7 @@ import { useRef, useState } from "react";
 import { Upload, FileText, Link2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   useComplianceRules,
   useReferenceDocuments,
@@ -78,14 +79,14 @@ export function ReferenceDocumentsTab() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {rules && rules.length > 0 && (
-            <select
+            <Select
               multiple
               value={selectedRuleIds}
               onChange={(e) => {
                 const opts = Array.from(e.target.selectedOptions, (o) => o.value);
                 setSelectedRuleIds(opts);
               }}
-              className="hidden h-9 min-w-[200px] rounded-md border border-input bg-transparent px-3 py-1 text-sm sm:block"
+              className="hidden min-w-[200px] sm:block"
               title="Link to rules (optional)"
             />
           )}

@@ -10,6 +10,7 @@ import { HelpCircle, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select } from "@/components/ui/select";
 import { FormField } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
@@ -24,7 +25,6 @@ import {
 } from "@/features/checker/hooks";
 import { KNOWLEDGE_SHELF_TYPES } from "@/features/checker/api/knowledge-center";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import type {
   ComplianceRule,
   CreateRuleInput,
@@ -215,43 +215,35 @@ export function RuleBuilderModal({
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <FormField label="Rule Type" required htmlFor="rule-type">
               <div className="flex items-center gap-2">
-                <select
+                <Select
                   id="rule-type"
                   value={ruleType}
                   onChange={(e) => setRuleType(e.target.value as RuleType)}
                   disabled={isRetired}
-                  className={cn(
-                    "h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  )}
                 >
                   {RULE_TYPES.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
-                </select>
+                </Select>
                 <InlineHelp text="Type of compliance check (e.g. Facings, Spacing, Labeling)" />
               </div>
             </FormField>
 
             <FormField label="Shelf Type" required htmlFor="shelf-type">
-              <select
+              <Select
                 id="shelf-type"
                 value={shelfType}
                 onChange={(e) => setShelfType(e.target.value)}
                 disabled={isRetired}
-                className={cn(
-                  "h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                )}
               >
                 {KNOWLEDGE_SHELF_TYPES.map((t) => (
                   <option key={t} value={t}>
                     {t}
                   </option>
                 ))}
-              </select>
+              </Select>
             </FormField>
           </div>
 
@@ -287,22 +279,18 @@ export function RuleBuilderModal({
           </FormField>
 
           <FormField label="Severity" required htmlFor="severity">
-            <select
+            <Select
               id="severity"
               value={severity}
               onChange={(e) => setSeverity(e.target.value as RuleSeverity)}
               disabled={isRetired}
-              className={cn(
-                "h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              )}
             >
               {SEVERITY_LEVELS.map((s) => (
                 <option key={s} value={s}>
                   {s}
                 </option>
               ))}
-            </select>
+            </Select>
           </FormField>
 
           {isEdit && (

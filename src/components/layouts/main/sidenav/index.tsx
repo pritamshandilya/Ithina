@@ -46,9 +46,8 @@ export default function Sidenav() {
   const dashboardTo = role === "checker" ? "/checker/dashboard" : "/maker/dashboard";
 
   const makerItems: NavItem[] = [
-    { label: "Shelves", to: "/maker/dashboard", hash: "assigned-shelves-heading", icon: Rows3 },
+    { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
     { label: "My Audits", to: "/maker/dashboard", hash: "my-audits-heading", icon: ListChecks },
-    { label: "Shelf Management", to: "/maker/shelves", icon: Rows3 },
   ];
 
   const checkerItems: NavItem[] = [

@@ -53,7 +53,7 @@ export function OverrideActivityPanel({
           <ShieldAlert className="h-5 w-5 text-white" aria-hidden="true" />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-foreground">
+          <h3 id="override-activity-heading" className="text-lg font-semibold text-foreground scroll-mt-24">
             Override Activity
           </h3>
           <p className="text-sm text-muted-foreground">

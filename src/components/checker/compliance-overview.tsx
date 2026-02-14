@@ -130,7 +130,7 @@ export function ComplianceOverview({
           <TrendingUp className="h-6 w-6 text-accent" aria-hidden="true" />
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-foreground">
+          <h2 id="compliance-overview-heading" className="text-2xl font-bold text-foreground scroll-mt-24">
             Compliance Overview
           </h2>
           <p className="text-sm text-muted-foreground mt-1">

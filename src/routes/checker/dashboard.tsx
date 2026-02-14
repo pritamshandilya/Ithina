@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   AuditReviewQueue,
@@ -26,6 +26,7 @@ export const Route = createFileRoute("/checker/dashboard")({
 
 function CheckerDashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
 
@@ -75,6 +76,15 @@ function CheckerDashboard() {
     [navigate]
   );
 
+  // Scroll to hash target when navigating with hash (e.g. sidebar links)
+  useEffect(() => {
+    const hash = location.hash?.slice(1);
+    if (hash) {
+      const el = document.getElementById(hash);
+      el?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [location.hash]);
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
@@ -101,7 +111,7 @@ function CheckerDashboard() {
           <section aria-labelledby="audit-queue-heading">
             <div className="space-y-4">
               <div>
-                <h2 id="audit-queue-heading" className="text-2xl font-bold text-foreground">
+                <h2 id="audit-queue-heading" className="text-2xl font-bold text-foreground scroll-mt-24">
                   Audit Review Queue
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">

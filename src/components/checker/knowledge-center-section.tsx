@@ -121,7 +121,7 @@ export function KnowledgeCenterSection({
             <ActivityIcon className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold text-foreground">
+            <h2 id="knowledge-center-heading" className="text-xl font-semibold text-foreground scroll-mt-24">
               Knowledge Center
             </h2>
             <p className="text-sm text-muted-foreground">

@@ -9,6 +9,7 @@ import {
   fetchRuleVersions,
   retireComplianceRule,
   updateComplianceRule,
+  updateReferenceDocumentLinks,
   uploadReferenceDocument,
   validateRuleForActivation,
 } from "../api/knowledge-center";
@@ -109,6 +110,15 @@ export function useUploadReferenceDocument() {
       uploadedBy: string;
       linkedRuleIds: string[];
     }) => uploadReferenceDocument({ name, uploadedBy, linkedRuleIds }),
+    onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
+  });
+}
+
+export function useUpdateReferenceDocumentLinks() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ documentId, linkedRuleIds }: { documentId: string; linkedRuleIds: string[] }) =>
+      updateReferenceDocumentLinks(documentId, linkedRuleIds),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }

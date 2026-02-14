@@ -503,3 +503,40 @@ export async function uploadReferenceDocument(input: {
 
   return document;
 }
+
+export async function updateReferenceDocumentLinks(
+  documentId: string,
+  linkedRuleIds: string[]
+): Promise<ReferenceDocument> {
+  ensureCheckerAccess();
+  await delay(250);
+
+  const doc = mockDocuments.find((d) => d.id === documentId);
+  if (!doc) throw new Error("Document was not found.");
+
+  const prevRuleIds = new Set(doc.linkedRuleIds);
+  const nextRuleIds = new Set(linkedRuleIds);
+
+  doc.linkedRuleIds = linkedRuleIds;
+
+  prevRuleIds.forEach((ruleId) => {
+    if (!nextRuleIds.has(ruleId)) {
+      const rule = mockRules.find((r) => r.ruleId === ruleId);
+      if (rule) {
+        rule.linkedDocumentIds = rule.linkedDocumentIds.filter((id) => id !== documentId);
+        rule.lastUpdated = new Date();
+      }
+    }
+  });
+  nextRuleIds.forEach((ruleId) => {
+    if (!prevRuleIds.has(ruleId)) {
+      const rule = mockRules.find((r) => r.ruleId === ruleId);
+      if (rule && !rule.linkedDocumentIds.includes(documentId)) {
+        rule.linkedDocumentIds.push(documentId);
+        rule.lastUpdated = new Date();
+      }
+    }
+  });
+
+  return doc;
+}

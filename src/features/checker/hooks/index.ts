@@ -42,6 +42,7 @@ export {
   useRetireComplianceRule,
   useRuleVersions,
   useUpdateComplianceRule,
+  useUpdateReferenceDocumentLinks,
   useUploadReferenceDocument,
   useValidateRuleActivation,
 } from "./useKnowledgeCenter";

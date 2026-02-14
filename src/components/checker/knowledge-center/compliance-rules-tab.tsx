@@ -10,6 +10,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, Filter, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -72,6 +73,8 @@ export function ComplianceRulesTab() {
   const [editingRule, setEditingRule] = useState<ComplianceRule | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [activateConfirmRuleId, setActivateConfirmRuleId] = useState<string | null>(null);
+  const [retireConfirmRuleId, setRetireConfirmRuleId] = useState<string | null>(null);
+  const [cloneConfirmRuleId, setCloneConfirmRuleId] = useState<string | null>(null);
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<RulesSort>("lastUpdated-desc");
@@ -173,36 +176,52 @@ export function ComplianceRulesTab() {
     });
   };
 
-  const handleRetire = useCallback(
-    (ruleId: string) => {
-      if (!window.confirm("Are you sure you want to retire this rule? Retired rules cannot be reactivated without cloning.")) return;
-      retireRule.mutate(ruleId, {
-        onSuccess: () => toast({ title: "Rule retired", description: "The rule has been retired." }),
-        onError: (err) =>
-          toast({
-            title: "Retire failed",
-            description: err instanceof Error ? err.message : "Could not retire rule.",
-            variant: "destructive",
-          }),
-      });
-    },
-    [retireRule, toast]
-  );
+  const handleRetire = useCallback((ruleId: string) => {
+    setRetireConfirmRuleId(ruleId);
+  }, []);
+
+  const confirmRetire = useCallback(() => {
+    if (!retireConfirmRuleId) return;
+    retireRule.mutate(retireConfirmRuleId, {
+      onSuccess: () => {
+        toast({ title: "Rule retired", description: "The rule has been retired." });
+        setRetireConfirmRuleId(null);
+      },
+      onError: (err) => {
+        toast({
+          title: "Retire failed",
+          description: err instanceof Error ? err.message : "Could not retire rule.",
+          variant: "destructive",
+        });
+        setRetireConfirmRuleId(null);
+      },
+    });
+  }, [retireConfirmRuleId, retireRule, toast]);
 
   const handleClone = useCallback((ruleId: string) => {
+    setCloneConfirmRuleId(ruleId);
+  }, []);
+
+  const confirmClone = useCallback(() => {
+    if (!cloneConfirmRuleId) return;
     cloneRule.mutate(
-      { ruleId, createdBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})` },
+      { ruleId: cloneConfirmRuleId, createdBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})` },
       {
-        onSuccess: () => toast({ title: "Rule cloned", description: "A new draft rule has been created." }),
-        onError: (err) =>
+        onSuccess: () => {
+          toast({ title: "Rule cloned", description: "A new draft rule has been created." });
+          setCloneConfirmRuleId(null);
+        },
+        onError: (err) => {
           toast({
             title: "Clone failed",
             description: err instanceof Error ? err.message : "Could not clone rule.",
             variant: "destructive",
-          }),
+          });
+          setCloneConfirmRuleId(null);
+        },
       }
     );
-  }, [cloneRule, toast]);
+  }, [cloneConfirmRuleId, cloneRule, toast]);
 
   const tableColumns = useMemo<DataTableColumn<ComplianceRule>[]>(
     () => [
@@ -458,24 +477,38 @@ export function ComplianceRulesTab() {
       )}
 
       {/* Activate Confirmation Modal */}
-      {activateConfirmRuleId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="max-w-md rounded-lg border border-border bg-card p-6 shadow-lg">
-            <h3 className="text-lg font-semibold">Activate Rule</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Are you sure you want to activate this rule? It will become effective immediately.
-            </p>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setActivateConfirmRuleId(null)}>
-                Cancel
-              </Button>
-              <Button onClick={confirmActivate} disabled={activateRule.isPending}>
-                {activateRule.isPending ? "Activating…" : "Activate"}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmModal
+        isOpen={!!activateConfirmRuleId}
+        onClose={() => setActivateConfirmRuleId(null)}
+        onConfirm={confirmActivate}
+        title="Activate Rule"
+        description="Are you sure you want to activate this rule? It will become effective immediately."
+        confirmLabel="Activate"
+        isLoading={activateRule.isPending}
+      />
+
+      {/* Retire Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!retireConfirmRuleId}
+        onClose={() => setRetireConfirmRuleId(null)}
+        onConfirm={confirmRetire}
+        title="Retire Rule"
+        description="Are you sure you want to retire this rule? Retired rules cannot be reactivated without cloning."
+        confirmLabel="Retire Rule"
+        variant="destructive"
+        isLoading={retireRule.isPending}
+      />
+
+      {/* Clone Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!cloneConfirmRuleId}
+        onClose={() => setCloneConfirmRuleId(null)}
+        onConfirm={confirmClone}
+        title="Clone Rule"
+        description="Create a new draft rule from this retired rule? The new rule will need to be activated separately."
+        confirmLabel="Clone"
+        isLoading={cloneRule.isPending}
+      />
 
       <RuleBuilderModal
         isOpen={showRuleModal}

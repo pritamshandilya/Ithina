@@ -186,22 +186,25 @@ export function RuleBuilderModal({
       onClose={handleClose}
       className="max-w-xl"
     >
-      <Card className="border border-border bg-card relative">
-        <button
-          type="button"
-          onClick={handleClose}
-          className="absolute right-4 top-4 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-          aria-label="Close"
-        >
-          <X className="size-4" />
-        </button>
-        <CardHeader className="px-0 pt-0 pr-10">
-          <CardTitle>{isEdit ? "Edit Rule" : "Create Rule"}</CardTitle>
-          {rule?.ruleId && (
-            <p className="text-sm text-muted-foreground">Rule ID: {rule.ruleId}</p>
-          )}
-        </CardHeader>
-        <CardContent className="space-y-6 px-0">
+      <div className="rounded-lg border border-border bg-card shadow-lg">
+        <Card className="border-0 bg-transparent shadow-none">
+          <div className="relative px-6 pt-6 pr-12">
+            <button
+              type="button"
+              onClick={handleClose}
+              className="absolute right-4 top-4 rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              aria-label="Close"
+            >
+              <X className="size-4" />
+            </button>
+            <CardHeader className="p-0">
+              <CardTitle>{isEdit ? "Edit Rule" : "Create Rule"}</CardTitle>
+              {rule?.ruleId && (
+                <p className="text-sm text-muted-foreground">Rule ID: {rule.ruleId}</p>
+              )}
+            </CardHeader>
+          </div>
+          <CardContent className="space-y-6 px-6 pb-6">
           <FormField label="Rule Name" required error={errors.ruleName} htmlFor="rule-name">
             <Input
               id="rule-name"
@@ -311,9 +314,9 @@ export function RuleBuilderModal({
             </p>
           )}
         </CardContent>
-      </Card>
+        </Card>
 
-      <div className="mt-6 flex justify-end gap-2">
+        <div className="flex justify-end gap-2 border-t border-border px-6 py-4">
         <Button variant="outline" onClick={handleClose} disabled={createRule.isPending || updateRule.isPending}>
           Cancel
         </Button>
@@ -323,6 +326,7 @@ export function RuleBuilderModal({
         >
           {createRule.isPending || updateRule.isPending ? "Saving…" : isEdit ? "Save" : "Create Rule"}
         </Button>
+        </div>
       </div>
     </Modal>
   );

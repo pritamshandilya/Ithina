@@ -159,7 +159,11 @@ export function ReferenceDocumentsTab() {
         ) : (
           <div className="divide-y divide-border">
             {documents.map((doc) => (
-              <DocumentRow key={doc.id} document={doc} />
+              <DocumentRow
+                key={doc.id}
+                document={doc}
+                ruleNames={new Map(rules?.map((r) => [r.ruleId, `${r.ruleId} – ${r.ruleName}`]) ?? [])}
+              />
             ))}
           </div>
         )}
@@ -168,7 +172,16 @@ export function ReferenceDocumentsTab() {
   );
 }
 
-function DocumentRow({ document }: { document: ReferenceDocument }) {
+function DocumentRow({
+  document,
+  ruleNames,
+}: {
+  document: ReferenceDocument;
+  ruleNames: Map<string, string>;
+}) {
+  const linkedLabels = document.linkedRuleIds.map(
+    (id) => ruleNames.get(id) || id
+  );
   return (
     <div className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-start gap-3">
@@ -187,7 +200,7 @@ function DocumentRow({ document }: { document: ReferenceDocument }) {
         {document.linkedRuleIds.length > 0 ? (
           <>
             <Link2 className="size-4 shrink-0" />
-            <span>Linked to {document.linkedRuleIds.join(", ")}</span>
+            <span>Linked to {linkedLabels.join(", ")}</span>
           </>
         ) : (
           <span className="italic">Not linked to any rules</span>

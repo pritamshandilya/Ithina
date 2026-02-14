@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { Link } from "@tanstack/react-router";
 import { Search, Plus, ArrowRight, Check } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -10,12 +11,18 @@ import type { Shelf } from "@/types/maker";
 
 interface ShelfSelectionFlowProps {
   onShelfSelect: (shelf: Shelf) => void;
-  onShelfCreate: (shelfData: Omit<Shelf, "id" | "status" | "assignedTo">) => void;
+  onShelfCreate?: (shelfData: Omit<Shelf, "id" | "status" | "assignedTo">) => void;
+  /** When true, hides the internal heading (use when page header provides context) */
+  compact?: boolean;
+  /** When false, only allows selecting existing shelves (no create option). Requires onShelfCreate to be omitted. */
+  allowCreate?: boolean;
 }
 
 export function ShelfSelectionFlow({
   onShelfSelect,
   onShelfCreate,
+  compact = false,
+  allowCreate = true,
 }: ShelfSelectionFlowProps) {
   const [activeTab, setActiveTab] = useState<"select" | "create">("select");
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,7 +52,7 @@ export function ShelfSelectionFlow({
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onShelfCreate({
+    onShelfCreate?.({
       aisleNumber: parseInt(formData.aisleNumber),
       bayNumber: parseInt(formData.bayNumber),
       shelfName: formData.shelfName,
@@ -58,44 +65,65 @@ export function ShelfSelectionFlow({
 
   return (
     <div className="space-y-6">
-      <div className="text-center space-y-2">
-        <h2 className="text-2xl font-bold text-foreground">
-          Which shelf are you auditing?
-        </h2>
-        <p className="text-muted-foreground">
-          Select an existing shelf or create a new one if it's not listed.
-        </p>
-      </div>
+      {!compact && (
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-foreground">
+            Which shelf are you auditing?
+          </h2>
+          <p className="text-muted-foreground">
+            {allowCreate
+              ? "Select an existing shelf or create a new one if it's not listed."
+              : "Select a shelf to begin your audit."}
+          </p>
+        </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex p-1 bg-primary/30 rounded-xl max-w-sm mx-auto">
-        <button
-          onClick={() => setActiveTab("select")}
+      {/* Tabs - only when allowCreate */}
+      {allowCreate && (
+        <div
           className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all",
-            activeTab === "select"
-              ? "bg-card text-card-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
+            "flex rounded-lg border border-border p-0.5 bg-card max-w-sm",
+            compact && "mx-auto"
           )}
+          role="tablist"
+          aria-label="Shelf selection mode"
         >
-          <Search className="size-4" />
-          Select Existing
-        </button>
-        <button
-          onClick={() => setActiveTab("create")}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-medium rounded-lg transition-all",
-            activeTab === "create"
-              ? "bg-card text-card-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-        >
-          <Plus className="size-4" />
-          Create New
-        </button>
-      </div>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "select"}
+            onClick={() => setActiveTab("select")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-md transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              activeTab === "select"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <Search className="size-4" />
+            Select Existing
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "create"}
+            onClick={() => setActiveTab("create")}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-medium rounded-md transition-all",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              activeTab === "create"
+                ? "bg-accent text-accent-foreground shadow-sm"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+            )}
+          >
+            <Plus className="size-4" />
+            Create New
+          </button>
+        </div>
+      )}
 
-      {activeTab === "select" ? (
+      {(activeTab === "select" || !allowCreate) ? (
         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
@@ -144,22 +172,30 @@ export function ShelfSelectionFlow({
                 <div>
                   <p className="text-foreground font-medium">No shelves found</p>
                   <p className="text-sm text-muted-foreground">
-                    Try searching for something else or create a new shelf.
+                    {allowCreate
+                      ? "Try searching for something else or create a new shelf."
+                      : "Create shelves from the Shelves page to get started."}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setActiveTab("create")}
-                  className="mt-2"
-                >
-                  Create New Shelf
-                </Button>
+                {allowCreate ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setActiveTab("create")}
+                    className="mt-2"
+                  >
+                    Create New Shelf
+                  </Button>
+                ) : (
+                  <Button variant="outline" size="sm" asChild className="mt-2">
+                    <Link to="/maker/shelves">Go to Shelves</Link>
+                  </Button>
+                )}
               </div>
             )}
           </div>
         </div>
-      ) : (
+      ) : allowCreate ? (
         <form
           onSubmit={handleCreateSubmit}
           className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300"
@@ -229,7 +265,7 @@ export function ShelfSelectionFlow({
             <Check className="ml-2 size-5" />
           </Button>
         </form>
-      )}
+      ) : null}
     </div>
   );
 }

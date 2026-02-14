@@ -31,6 +31,10 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
+  // My Audits: active on /maker/audit-review and /maker/audit/new (audit creation flow)
+  if (item.to === "/maker/audit-review") {
+    return pathname === "/maker/audit-review" || pathname.startsWith("/maker/audit/");
+  }
   const sameBase = pathname === item.to || pathname.startsWith(`${item.to}/`);
   if (!sameBase) return false;
   if (!item.hash) return hash.length === 0;

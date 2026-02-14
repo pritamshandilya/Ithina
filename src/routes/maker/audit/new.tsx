@@ -1,10 +1,15 @@
 import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { AuditModeSelector, ShelfSelectionFlow } from "@/components/maker";
 import { ArrowLeft } from "lucide-react";
-import type { AuditMode, Shelf } from "@/types/maker";
-import { useCreateShelf } from "@/features/maker/hooks";
+
+import MainLayout from "@/components/layouts/main";
+import { AuditModeSelector, HeaderContextBar, ShelfSelectionFlow } from "@/components/maker";
+import { Button } from "@/components/ui/button";
+import { Modal } from "@/components/ui/modal";
+import { useStores } from "@/features/maker/hooks";
+import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
+import type { AuditMode, Shelf } from "@/types/maker";
 
 export const Route = createFileRoute("/maker/audit/new")({
   component: AuditCreationPage,
@@ -14,114 +19,111 @@ type AuditStep = "shelf-selection" | "mode-selection";
 
 function AuditCreationPage() {
   const navigate = useNavigate();
+  const { data: stores } = useStores();
+  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const [step, setStep] = useState<AuditStep>("shelf-selection");
   const [selectedShelf, setSelectedShelf] = useState<Shelf | null>(null);
-  const { mutateAsync: createShelf, isPending: isCreating } = useCreateShelf();
+  const [comingSoonModalOpen, setComingSoonModalOpen] = useState(false);
 
   const handleShelfSelect = (shelf: Shelf) => {
     setSelectedShelf(shelf);
     setStep("mode-selection");
   };
 
-  const handleShelfCreate = async (shelfData: Omit<Shelf, "id" | "status" | "assignedTo">) => {
-    try {
-      const newShelf = await createShelf(shelfData);
-      setSelectedShelf(newShelf);
-      setStep("mode-selection");
-    } catch (error) {
-      console.error("Failed to create shelf:", error);
-      alert("Failed to create shelf. Please try again.");
-    }
-  };
-
-  const handleModeSelect = (mode: AuditMode) => {
-    console.log("Starting audit:", { shelfId: selectedShelf?.id, mode });
-    
-    // In Phase 2, this will navigate to the capture screen
-    alert(
-      `Shelf: ${selectedShelf?.shelfName} (Aisle ${selectedShelf?.aisleNumber}, Bay ${selectedShelf?.bayNumber})\n` +
-      `Mode selected: ${mode === "vision-edge" ? "Vision Edge (AI Camera)" : "Assist Mode (Manual Entry)"}\n\n` +
-      "The audit capture screen will be built in Phase 2."
-    );
+  const handleModeSelect = (_mode: AuditMode) => {
+    setComingSoonModalOpen(true);
   };
 
   const handleGoBack = () => {
     if (step === "mode-selection") {
       setStep("shelf-selection");
     } else {
-      navigate({ to: "/maker/dashboard" });
+      navigate({ to: "/maker/audit-review" });
     }
   };
 
   return (
-    <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-5xl space-y-6">
-        {/* Back Button */}
-        <button
-          type="button"
-          onClick={handleGoBack}
-          className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-card hover:text-card-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-          aria-label={step === "mode-selection" ? "Back to shelf selection" : "Go back to dashboard"}
-        >
-          <ArrowLeft className="size-4" />
-          {step === "mode-selection" ? "Change Shelf" : "Back to Dashboard"}
-        </button>
+    <MainLayout>
+      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-5xl space-y-6">
+          <HeaderContextBar
+            stores={stores ?? []}
+            selectedStoreId={selectedStoreId}
+            onStoreChange={setSelectedStoreId}
+          />
 
-        <div className="grid gap-6">
-          {/* Progress Indicator */}
-          <div className="flex items-center gap-4 px-2">
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "flex size-6 items-center justify-center rounded-full text-xs font-bold transition-colors",
-                step === "shelf-selection" 
-                  ? "bg-accent text-accent-foreground" 
-                  : "bg-accent/20 text-accent"
-              )}>
-                1
-              </span>
-              <span className={cn(
-                "text-sm font-medium transition-colors",
-                step === "shelf-selection" ? "text-foreground" : "text-muted-foreground"
-              )}>
-                Shelf Selection
-              </span>
+          {/* Header Bar */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleGoBack}
+                className="shrink-0 text-muted-foreground hover:text-foreground"
+                aria-label={step === "mode-selection" ? "Back to shelf selection" : "Back to My Audits"}
+              >
+                <ArrowLeft className="size-4 mr-1" />
+                Back
+              </Button>
+              <header className="space-y-1">
+                <h1 className="text-2xl font-bold text-foreground">Start New Shelf Audit</h1>
+                <p className="text-sm text-muted-foreground">
+                  {step === "shelf-selection"
+                    ? "Select a shelf to begin your audit"
+                    : "Choose how you want to capture shelf data"}
+                </p>
+              </header>
             </div>
-            <div className="h-px w-8 bg-border" />
-            <div className="flex items-center gap-2">
-              <span className={cn(
-                "flex size-6 items-center justify-center rounded-full text-xs font-bold transition-colors",
-                step === "mode-selection" 
-                  ? "bg-accent text-accent-foreground" 
-                  : "bg-muted text-muted-foreground"
-              )}>
-                2
-              </span>
-              <span className={cn(
-                "text-sm font-medium transition-colors",
-                step === "mode-selection" ? "text-foreground" : "text-muted-foreground"
-              )}>
-                Audit Mode
-              </span>
+
+            {/* Progress Steps */}
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-card/50 px-4 py-2">
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                    step === "shelf-selection" ? "bg-accent text-accent-foreground" : "bg-accent/20 text-accent"
+                  )}
+                >
+                  1
+                </span>
+                <span className={cn("text-sm font-medium", step === "shelf-selection" ? "text-foreground" : "text-muted-foreground")}>
+                  Shelf
+                </span>
+              </div>
+              <div className="h-px w-6 bg-border" />
+              <div className="flex items-center gap-2">
+                <span
+                  className={cn(
+                    "flex size-7 items-center justify-center rounded-full text-xs font-bold transition-colors",
+                    step === "mode-selection" ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  2
+                </span>
+                <span className={cn("text-sm font-medium", step === "mode-selection" ? "text-foreground" : "text-muted-foreground")}>
+                  Mode
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="rounded-xl bg-card/50 p-6 sm:p-8 lg:p-12 backdrop-blur-sm border border-border/50 shadow-xl">
+          {/* Main Content Card */}
+          <div className="rounded-lg border border-border bg-card shadow-sm p-6 sm:p-8">
             {step === "shelf-selection" ? (
-              <ShelfSelectionFlow 
+              <ShelfSelectionFlow
                 onShelfSelect={handleShelfSelect}
-                onShelfCreate={handleShelfCreate}
+                compact
+                allowCreate={false}
               />
             ) : (
-              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="text-center space-y-2">
+              <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="space-y-2">
                   <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent border border-accent/20">
-                    Selected Shelf: {selectedShelf?.shelfName}
+                    {selectedShelf?.shelfName} · Aisle {selectedShelf?.aisleNumber}, Bay {selectedShelf?.bayNumber}
                   </div>
-                  <h2 className="text-2xl font-bold text-foreground">
-                    Choose Your Capture Mode
-                  </h2>
-                  <p className="text-muted-foreground">
-                    Select how you want to record the data for Aisle {selectedShelf?.aisleNumber}, Bay {selectedShelf?.bayNumber}.
+                  <h2 className="text-xl font-bold text-foreground">Choose Your Capture Mode</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Select how you want to record the data for this shelf.
                   </p>
                 </div>
                 <AuditModeSelector onModeSelect={handleModeSelect} />
@@ -129,41 +131,46 @@ function AuditCreationPage() {
             )}
           </div>
 
-          {/* Additional Context */}
-          <div className="rounded-lg border border-border bg-card/30 p-6 backdrop-blur-sm">
-            <h3 className="mb-3 font-semibold text-card-foreground flex items-center gap-2 text-sm uppercase tracking-wider">
-              <span className="size-2 rounded-full bg-accent" />
-              What happens next?
-            </h3>
-            <div className="grid gap-6 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <p className="text-sm font-bold text-card-foreground">
-                  Vision Edge
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Use your device camera to scan the shelf. Our AI will automatically detect products, check facings, and verify price tags in real-time.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <p className="text-sm font-bold text-card-foreground">
-                  Assist Mode
-                </p>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  Manually enter product details through a structured form. Ideal for low-light conditions or when precise manual verification is needed.
-                </p>
+          {/* What happens next - only on shelf selection step */}
+          {step === "shelf-selection" && (
+            <div className="rounded-lg border border-border bg-card p-6">
+              <h3 className="mb-4 font-semibold text-foreground flex items-center gap-2 text-sm uppercase tracking-wider">
+                <span className="size-2 rounded-full bg-accent" />
+                What happens next?
+              </h3>
+              <div className="grid gap-6 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <p className="text-sm font-bold text-foreground">Vision Edge</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Use your device camera to scan the shelf. Our AI will automatically detect products, check facings,
+                    and verify price tags in real-time.
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-bold text-foreground">Assist Mode</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Manually enter product details through a structured form. Ideal for low-light conditions or when
+                    precise manual verification is needed.
+                  </p>
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
-      {/* Loading Overlay for Creation */}
-      {isCreating && (
-        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background/80 backdrop-blur-md animate-in fade-in duration-300">
-          <div className="size-12 rounded-full border-4 border-accent border-t-transparent animate-spin" />
-          <p className="mt-4 font-medium animate-pulse">Creating your new shelf...</p>
+      {/* Coming Soon Modal */}
+      <Modal isOpen={comingSoonModalOpen} onClose={() => setComingSoonModalOpen(false)} className="max-w-md">
+        <div className="rounded-lg border border-border bg-card p-6 shadow-lg">
+          <h3 className="text-lg font-semibold text-foreground">Coming Soon</h3>
+          <p className="mt-2 text-sm text-muted-foreground">
+            This feature is coming soon. We&apos;re working on Vision Edge and Assist Mode capture—stay tuned!
+          </p>
+          <div className="mt-6 flex justify-end">
+            <Button onClick={() => setComingSoonModalOpen(false)}>OK</Button>
+          </div>
         </div>
-      )}
-    </div>
+      </Modal>
+    </MainLayout>
   );
 }

@@ -38,8 +38,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     field: "shelfName",
     sorter: "string",
     headerSort: true,
-    formatter: (cell: { getData: () => Shelf }) => {
-      const shelf = cell.getData();
+    formatter: (cell: unknown) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
       const statusClass = getAuditStatusClass(shelf.status);
       const label = AUDIT_STATUS_LABELS[shelf.status] ?? shelf.status;
 
@@ -58,8 +58,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     field: "aisleNumber",
     sorter: "number",
     headerSort: true,
-    formatter: (cell: { getData: () => Shelf }) => {
-      const shelf = cell.getData();
+    formatter: (cell: unknown) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
       return `
         <div class="flex items-center justify-center h-full">
           <span class="font-mono text-sm bg-accent/20 px-2 py-1 rounded text-accent">
@@ -75,8 +75,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     field: "elevation",
     sorter: "string",
     headerSort: true,
-    formatter: (cell: { getValue: () => unknown }) => {
-      const value = cell.getValue() || "—";
+    formatter: (cell: unknown) => {
+      const value = (cell as { getValue: () => unknown }).getValue() || "—";
       return `<span class="text-sm font-medium text-muted-foreground">${value}</span>`;
     },
   },
@@ -85,8 +85,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     field: "lastAuditDate",
     sorter: "date",
     headerSort: true,
-    formatter: (cell: { getValue: () => unknown }) => {
-      const date = cell.getValue();
+    formatter: (cell: unknown) => {
+      const date = (cell as { getValue: () => unknown }).getValue();
       if (!date) return `<span class="text-muted-foreground text-xs italic">Never</span>`;
       return `<span class="text-sm text-foreground">${format(new Date(date as string | number), "MMM d, yyyy")}</span>`;
     },
@@ -95,8 +95,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     title: "Notes",
     field: "notes",
     sorter: "string",
-    formatter: (cell: { getValue: () => unknown }) => {
-      const value = cell.getValue();
+    formatter: (cell: unknown) => {
+      const value = (cell as { getValue: () => unknown }).getValue();
       if (!value) return "";
       return `<span class="text-sm text-muted-foreground italic truncate block max-w-[200px]" title="${String(value)}">${String(value)}</span>`;
     },

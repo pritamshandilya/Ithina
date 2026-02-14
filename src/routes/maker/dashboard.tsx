@@ -49,10 +49,10 @@ function MakerDashboard() {
             </div>
 
             <MyAuditsSection
-              onResume={(auditId, shelfId) => {
+              onResume={(_auditId, _shelfId) => {
                 navigate({ to: "/maker/audit/new" });
               }}
-              onViewReport={(auditId, shelfId) => {
+              onViewReport={(_auditId, _shelfId) => {
                 navigate({ to: "/maker/audit-review" });
               }}
             />

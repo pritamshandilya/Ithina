@@ -17,7 +17,7 @@ function MakerAuditReviewPage() {
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
-  const handleAction = (auditId: string, action: "resume" | "fix") => {
+  const handleAction = (_auditId: string, action: "resume" | "fix") => {
     if (action === "resume") {
       navigate({ to: "/maker/audit/new" });
     } else {

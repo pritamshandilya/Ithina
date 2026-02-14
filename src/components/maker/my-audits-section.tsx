@@ -96,8 +96,8 @@ export function MyAuditsSection({
         minWidth: 140,
         sorter: "string",
         headerSort: true,
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           const name = getShelfName(audit, shelves);
           return `<span class="font-medium text-foreground">${name}</span>`;
         },
@@ -109,8 +109,8 @@ export function MyAuditsSection({
         sorter: "string",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           const label = AUDIT_STATUS_LABELS[audit.status] ?? audit.status;
           const statusClass = getAuditStatusClass(audit.status);
           return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
@@ -123,8 +123,8 @@ export function MyAuditsSection({
         sorter: "number",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           if (audit.status === "draft" && audit.draftProgress != null) {
             return `<span class="text-sm font-medium text-accent">${audit.draftProgress}%</span>`;
           }
@@ -147,8 +147,8 @@ export function MyAuditsSection({
         sorter: "datetime",
         headerSort: true,
         headerFilter: false,
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           const date = audit.submittedAt || audit.draftSavedAt;
           if (!date) return "—";
           return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(new Date(date), { addSuffix: true })}</span>`;
@@ -159,8 +159,8 @@ export function MyAuditsSection({
         field: "mode",
         width: 110,
         headerFilter: false,
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           const mode = audit.mode === "vision-edge" ? "Vision Edge" : "Assist Mode";
           return `<span class="text-sm text-muted-foreground">${mode}</span>`;
         },
@@ -172,8 +172,8 @@ export function MyAuditsSection({
         headerSort: false,
         headerFilter: false,
         hozAlign: "center",
-        formatter: (cell: { getData: () => Audit }) => {
-          const audit = cell.getData();
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
           const isReturned = audit.status === "returned";
           const isDraft = audit.status === "draft";
           const primaryLabel = isReturned ? "View Report" : "Resume";

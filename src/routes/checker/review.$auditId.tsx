@@ -82,8 +82,8 @@ const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
     minWidth: 140,
     sorter: "string",
     headerSort: true,
-    formatter: (cell: { getValue: () => unknown }) => {
-      const val = cell.getValue();
+    formatter: (cell: unknown) => {
+      const val = (cell as { getValue: () => unknown }).getValue();
       return `<span class="text-sm text-foreground">${val ?? "—"}</span>`;
     },
   },
@@ -93,8 +93,8 @@ const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
     minWidth: 140,
     sorter: "string",
     headerSort: true,
-    formatter: (cell: { getValue: () => unknown }) => {
-      const val = cell.getValue();
+    formatter: (cell: unknown) => {
+      const val = (cell as { getValue: () => unknown }).getValue();
       return `<span class="text-sm text-foreground">${val ?? "—"}</span>`;
     },
   },
@@ -105,8 +105,8 @@ const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
     headerSort: true,
     sorter: "string",
     headerFilter: false,
-    formatter: (cell: { getData: () => Violation }) => {
-      const v = cell.getData();
+    formatter: (cell: unknown) => {
+      const v = (cell as { getData: () => Violation }).getData();
       const cls = getSeverityClass(v.severity);
       return `<span class="${cls}">${v.severity.toUpperCase()}</span>`;
     },

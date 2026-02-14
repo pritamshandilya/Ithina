@@ -311,7 +311,7 @@ export async function saveDraftProgress(auditId: string, progress: number): Prom
  * await deleteDraft('audit-123');
  * ```
  */
-export async function deleteDraft(auditId: string): Promise<void> {
+export async function deleteDraft(_auditId: string): Promise<void> {
   await simulateNetworkDelay(300);
   
   // In production, this would be:

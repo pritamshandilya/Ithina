@@ -11,7 +11,7 @@ import { useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
-import { ShelfRow } from "@/components/planogram";
+import { CategoryFilterTags, ShelfRow } from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -34,14 +34,15 @@ function derivePlanogramStats(payload: PlanogramPayload) {
     (sum, p) => sum + p.facings * (p.depthCount || 1),
     0
   );
-  const categories = new Set(allProducts.map((p) => p.category)).size;
+  const categorySet = new Set(allProducts.map((p) => p.category));
 
   return {
     shelves: fixture.shelfCount,
     skus: uniqueSkus,
     frontFacings,
     totalUnits,
-    categories,
+    categories: categorySet.size,
+    categoryList: [...categorySet],
     removed: 0,
   };
 }
@@ -156,6 +157,14 @@ function PlanogramPreviewPage() {
                   </span>
                 </div>
               )}
+
+              {/* Category filter tags */}
+              <div>
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Categories
+                </p>
+                <CategoryFilterTags categories={stats.categoryList} />
+              </div>
 
               {/* Shelf layout – sorted by verticalPosition descending (top first) */}
               <div className="space-y-6">

@@ -3,14 +3,19 @@
  * Shelves sorted by verticalPosition descending (top shelf first)
  */
 
+import {
+  getCategoryColor as defaultGetCategoryColor,
+  getProductShapeType,
+} from "@/lib/constants/planogram";
+import type { PlanogramShelfDef } from "@/types/planogram";
+
 import { ShelfProduct } from "./shelf-product";
-import type { PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
 
 export interface ShelfRowProps {
   shelf: PlanogramShelfDef;
   /** SKUs marked as high demand */
   highDemandSkus?: string[];
-  /** Map category -> Tailwind bg class (M4) */
+  /** Map category -> Tailwind bg class */
   getCategoryColor?: (category: string) => string;
   className?: string;
 }
@@ -18,7 +23,7 @@ export interface ShelfRowProps {
 export function ShelfRow({
   shelf,
   highDemandSkus = [],
-  getCategoryColor = () => "bg-muted",
+  getCategoryColor = defaultGetCategoryColor,
   className,
 }: ShelfRowProps) {
   const totalFacings = shelf.products.reduce((sum, p) => sum + p.facings, 0);
@@ -46,6 +51,11 @@ export function ShelfRow({
             widthFraction={totalFacings > 0 ? product.facings / totalFacings : 0}
             highDemandSkus={highDemandSkus}
             categoryColor={getCategoryColor(product.category)}
+            shapeClass={
+              getProductShapeType(product.category) === "bottle"
+                ? "rounded-xl"
+                : "rounded-md"
+            }
           />
         ))}
       </div>

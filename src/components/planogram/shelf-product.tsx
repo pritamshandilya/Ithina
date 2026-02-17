@@ -1,7 +1,10 @@
 /**
  * ShelfProduct – single product block in a shelf row
  * Width proportional to facings; displays name, category, facings/depth/units
+ * Category colors and shape (box/bottle) from M4
  */
+
+import { Zap } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import type { PlanogramProduct } from "@/types/planogram";
@@ -10,10 +13,12 @@ export interface ShelfProductProps {
   product: PlanogramProduct;
   /** Width as fraction of total shelf facings (0–1) */
   widthFraction: number;
-  /** SKUs marked as high demand (badge in M4) */
+  /** SKUs marked as high demand */
   highDemandSkus?: string[];
-  /** Category color for block background (M4) */
+  /** Category color for block background (Tailwind bg-* class) */
   categoryColor?: string;
+  /** Shape: "box" = square corners, "bottle" = rounded */
+  shapeClass?: "rounded-md" | "rounded-xl";
   className?: string;
 }
 
@@ -22,6 +27,7 @@ export function ShelfProduct({
   widthFraction,
   highDemandSkus = [],
   categoryColor = "bg-muted",
+  shapeClass = "rounded-md",
   className,
 }: ShelfProductProps) {
   const totalUnits = product.facings * (product.depthCount || 1);
@@ -30,7 +36,8 @@ export function ShelfProduct({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col rounded-md border border-border p-2 transition-colors",
+        "relative flex min-w-0 flex-col border border-border p-2 transition-colors",
+        shapeClass,
         categoryColor,
         isHighDemand && "ring-2 ring-amber-400 ring-offset-2",
         className
@@ -39,7 +46,22 @@ export function ShelfProduct({
       role="article"
       aria-label={`${product.name}, ${product.facings} facings, ${product.depthCount} depth, ${totalUnits} units`}
     >
-      <p className="truncate text-xs font-medium text-foreground" title={product.name}>
+      {isHighDemand && (
+        <span
+          className="absolute right-1 top-1 flex items-center gap-0.5 rounded bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
+          title="High demand product"
+        >
+          <Zap className="size-2.5" aria-hidden />
+          HIGH
+        </span>
+      )}
+      <p
+        className={cn(
+          "truncate text-xs font-medium text-foreground",
+          isHighDemand && "pr-12"
+        )}
+        title={product.name}
+      >
         {product.name}
       </p>
       <p className="truncate text-[10px] text-muted-foreground" title={product.category}>

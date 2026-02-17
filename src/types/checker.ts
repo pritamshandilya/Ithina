@@ -304,7 +304,11 @@ export type RuleType =
   | "Product Position"
   | "Margin"
   | "OOS"
-  | "Labeling";
+  | "Labeling"
+  | "VISUAL"
+  | "SAFETY"
+  | "PROFITABILITY"
+  | "EFFICIENCY";
 
 export type RuleSeverity = "Low" | "Medium" | "High";
 
@@ -342,6 +346,8 @@ export interface ComplianceRule {
   lastUpdated: Date;
   versions: RuleVersion[];
   linkedDocumentIds: string[];
+  /** Optional description from rule set UI */
+  description?: string;
 }
 
 export interface ReferenceDocument {
@@ -371,6 +377,8 @@ export interface CreateRuleInput {
   tolerance?: number;
   severity: RuleSeverity;
   createdBy: string;
+  /** Optional description for rule set UI */
+  description?: string;
 }
 
 export interface UpdateRuleInput {

@@ -203,16 +203,19 @@ function validateRuleValues(
     errors.push("Tolerance cannot be negative.");
   }
 
-  const conflictingRule = mockRules.find(
-    (rule) =>
-      rule.status === "Active" &&
-      rule.ruleType === input.ruleType &&
-      rule.shelfType === input.shelfType &&
-      rule.ruleId !== input.ruleId,
-  );
-
-  if (conflictingRule) {
-    errors.push("An active rule with the same type and shelf type already exists.");
+  const newCategories = ["VISUAL", "SAFETY", "PROFITABILITY", "EFFICIENCY"] as const;
+  const isNewCategory = newCategories.includes(input.ruleType as (typeof newCategories)[number]);
+  if (!isNewCategory) {
+    const conflictingRule = mockRules.find(
+      (rule) =>
+        rule.status === "Active" &&
+        rule.ruleType === input.ruleType &&
+        rule.shelfType === input.shelfType &&
+        rule.ruleId !== input.ruleId,
+    );
+    if (conflictingRule) {
+      errors.push("An active rule with the same type and shelf type already exists.");
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -313,6 +316,7 @@ export async function createComplianceRule(input: CreateRuleInput): Promise<Comp
     lastUpdated: createdDate,
     versions: [firstVersion],
     linkedDocumentIds: [],
+    description: input.description?.trim(),
   };
 
   mockRules.unshift(rule);

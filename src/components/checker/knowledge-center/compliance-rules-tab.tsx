@@ -305,7 +305,7 @@ export function ComplianceRulesTab() {
           className="bg-chart-2 text-white hover:opacity-90"
         >
           <Plus className="size-4" />
-          Create Rule
+          New Rule Set
         </Button>
       </div>
 
@@ -453,7 +453,7 @@ export function ComplianceRulesTab() {
               className="bg-chart-2 text-white hover:opacity-90"
             >
               <Plus className="size-4" />
-              Create Rule
+              New Rule Set
             </Button>
           )}
         </div>

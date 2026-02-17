@@ -168,13 +168,26 @@ export async function fetchAudits(): Promise<Audit[]> {
  */
 export async function fetchShelfById(shelfId: string): Promise<Shelf | null> {
   await simulateNetworkDelay(200);
-  
+
   // In production, this would be:
   // const response = await api.get(`/maker/shelves/${shelfId}`);
   // return response.data;
-  
+
   const shelves = generateMockShelves();
   return shelves.find((shelf) => shelf.id === shelfId) || null;
+}
+
+/**
+ * Get shelf by ID from all sources (mock shelves + planogram-created shelves).
+ * Used for planogram preview and other shelf detail views.
+ */
+export async function getShelfById(shelfId: string): Promise<Shelf | null> {
+  await simulateNetworkDelay(150);
+
+  const mockShelves = generateMockShelves();
+  const planogramShelves = getCreatedPlanogramShelves();
+  const all = [...mockShelves, ...planogramShelves];
+  return all.find((s) => s.id === shelfId) ?? null;
 }
 
 /**

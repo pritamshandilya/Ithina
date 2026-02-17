@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { LayoutGrid, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -40,7 +40,7 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
 const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
 
 const PLANOGRAM_COLUMNS = (
-  onAction: (shelfId: string, action: "new" | "modify" | "delete") => void,
+  onAction: (shelfId: string, action: "new" | "modify" | "delete" | "view") => void,
   ruleSets: ComplianceRuleSetSummary[]
 ): DataTableColumn<PlanogramShelfRow>[] => [
   {
@@ -170,13 +170,23 @@ const PLANOGRAM_COLUMNS = (
   {
     title: "Action",
     field: "id",
-    width: 180,
+    width: 220,
     headerSort: false,
     headerFilter: false,
     hozAlign: "center",
-    formatter: () => {
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const hasPlanogram = !!row.planogramId;
+      const viewBtn = hasPlanogram
+        ? `<button type="button" class="rounded-md border border-chart-2 bg-chart-2/10 px-2.5 py-1 text-xs font-medium text-chart-2 hover:bg-chart-2/20 transition-colors inline-flex items-center gap-1" data-action="view">
+            <span class="sr-only">View</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            View
+          </button>`
+        : "";
       return `
         <div class="flex items-center justify-center gap-1">
+          ${viewBtn}
           <button type="button" class="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground hover:opacity-90 transition-opacity inline-flex items-center gap-1" data-action="new">
             <span class="sr-only">New</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -198,7 +208,7 @@ const PLANOGRAM_COLUMNS = (
       const target = (event as { target?: HTMLElement }).target as HTMLElement;
       const btn = target?.closest?.("[data-action]");
       if (!btn) return;
-      const action = btn.getAttribute("data-action") as "new" | "modify" | "delete";
+      const action = btn.getAttribute("data-action") as "new" | "modify" | "delete" | "view";
       const shelf = cell.getData();
       onAction(shelf.id, action);
     },
@@ -206,6 +216,7 @@ const PLANOGRAM_COLUMNS = (
 ];
 
 function PlanogramAnalysisPage() {
+  const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
   const { data: stores } = useStores();
   const { data: ruleSets } = useComplianceRuleSets();
@@ -259,12 +270,16 @@ function PlanogramAnalysisPage() {
   }, []);
 
   const handlePlanogramAction = useMemo(
-    () => (shelfId: string, action: "new" | "modify" | "delete") => {
+    () => (shelfId: string, action: "new" | "modify" | "delete" | "view") => {
+      if (action === "view") {
+        navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
+        return;
+      }
       // TODO: Wire up to actual flows (new run, modify config, delete)
       void shelfId;
       void action;
     },
-    []
+    [navigate]
   );
 
   const tableColumns = useMemo(

@@ -78,14 +78,14 @@ function AddPlanogramPage() {
             productIds: s.products.map((p) => p.sku),
           })) ?? [],
       };
-      await saveShelfArrangement(
+      const shelf = await saveShelfArrangement(
         shelfName.trim(),
         selectedPlanogramId,
         arrangement,
         selectedStoreId
       );
       await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
-      navigate({ to: "/maker/audits/planogram" });
+      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {

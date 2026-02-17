@@ -3,6 +3,7 @@
  * Currently using mock data - these functions will be replaced with real API calls later
  */
 
+import { getCreatedPlanogramShelves } from "@/features/maker/api/planogram";
 import {
   generateMockAdhocAnalyses,
   generateMockAudits,
@@ -45,12 +46,14 @@ export async function fetchStores(_userId: string): Promise<Store[]> {
  */
 export async function fetchAssignedShelves(): Promise<Shelf[]> {
   await simulateNetworkDelay(300);
-  
+
   // In production, this would be:
   // const response = await api.get('/maker/shelves');
   // return response.data;
-  
-  return generateMockShelves();
+
+  const mockShelves = generateMockShelves();
+  const planogramShelves = getCreatedPlanogramShelves();
+  return [...mockShelves, ...planogramShelves];
 }
 
 /**

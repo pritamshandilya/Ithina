@@ -34,6 +34,10 @@ export interface Shelf {
   assignedTo?: string; // User ID of assigned worker
   elevation?: "Bottom" | "Middle" | "Top" | "Eye Level";
   notes?: string;
+  /** Planogram ID when shelf is created from planogram visual builder */
+  planogramId?: string;
+  /** User's edited arrangement when shelf is from planogram */
+  arrangement?: unknown;
 }
 
 /**

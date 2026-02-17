@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
@@ -17,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  assignedShelvesKeys,
   useAssignedShelves,
   usePlanogramById,
   usePlanogramList,
@@ -33,6 +35,7 @@ export const Route = createFileRoute("/maker/audits/planogram/new")({
 
 function AddPlanogramPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { data: stores } = useStores();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useAssignedShelves();
@@ -81,6 +84,7 @@ function AddPlanogramPage() {
         arrangement,
         selectedStoreId
       );
+      await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
       navigate({ to: "/maker/audits/planogram" });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
@@ -94,6 +98,7 @@ function AddPlanogramPage() {
     selectedStoreId,
     planogramPayload,
     navigate,
+    queryClient,
   ]);
 
   const planogram = planogramPayload?.planogram;

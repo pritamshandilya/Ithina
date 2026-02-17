@@ -9,8 +9,18 @@ import type { Shelf } from "@/types/maker";
 
 const PLANOGRAMS: PlanogramPayload[] = [PLANOGRAM_POC_001, PLANOGRAM_POC_002];
 
+/** In-memory store for planogram-created shelves (wireframe; replace with API in production) */
+const createdPlanogramShelves: Shelf[] = [];
+
 function delay(ms = 300): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Get shelves created via planogram visual builder (for merging with assigned shelves)
+ */
+export function getCreatedPlanogramShelves(): Shelf[] {
+  return [...createdPlanogramShelves];
 }
 
 /**
@@ -69,9 +79,7 @@ export async function saveShelfArrangement(
 ): Promise<Shelf> {
   await delay(500);
 
-  // In production: POST to API, create shelf with planogramId + arrangement
-  void arrangement; // Used when wiring to real persistence in milestone 5
-  return {
+  const shelf: Shelf = {
     id: `shelf-planogram-${Date.now()}`,
     aisleNumber: 1,
     bayNumber: 1,
@@ -79,5 +87,10 @@ export async function saveShelfArrangement(
     description: `Planogram: ${planogramId}`,
     status: "never-audited",
     assignedTo: "user-001",
+    planogramId,
+    arrangement,
   };
+
+  createdPlanogramShelves.push(shelf);
+  return shelf;
 }

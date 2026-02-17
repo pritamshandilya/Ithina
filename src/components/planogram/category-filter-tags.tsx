@@ -1,6 +1,6 @@
 /**
- * CategoryFilterTags – colored pills for each category in the planogram
- * Wireframe: display only; filtering can be Phase 2
+ * CategoryFilterTags – colored pills for filtering planogram by category
+ * Click to toggle; selected categories show full opacity, deselected show dimmed
  */
 
 import { cn } from "@/lib/utils";

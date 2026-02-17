@@ -85,6 +85,10 @@ function PlanogramPreviewPage() {
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  /** Selected categories for filtering – empty set = show all */
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    () => new Set()
+  );
 
   useEffect(() => {
     if (!preview?.planogramPayload.planogram.fixture.shelves) return;
@@ -145,6 +149,7 @@ function PlanogramPreviewPage() {
     setLocalShelves(shelves);
     setRemovedItems(removed);
     setHasChanges(false);
+    setSelectedCategories(new Set());
   }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
 
   const findProduct = useCallback(
@@ -323,15 +328,43 @@ function PlanogramPreviewPage() {
   const highDemandSkus =
     preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
 
-  const shelvesToShow = useMemo(
+  const baseShelves = useMemo(
     () =>
       localShelves.length > 0 ? localShelves : (fixture?.shelves ?? []),
     [localShelves, fixture?.shelves]
   );
 
   const stats = useMemo(
-    () => derivePlanogramStats(shelvesToShow, removedItems),
-    [shelvesToShow, removedItems]
+    () => derivePlanogramStats(baseShelves, removedItems),
+    [baseShelves, removedItems]
+  );
+
+  const shelvesToShow = useMemo(() => {
+    if (selectedCategories.size === 0) return baseShelves;
+    return baseShelves
+      .map((s) => ({
+        ...s,
+        products: s.products.filter((p) => selectedCategories.has(p.category)),
+      }))
+      .filter((s) => s.products.length > 0);
+  }, [baseShelves, selectedCategories]);
+
+  const onToggleCategory = useCallback(
+    (category: string) => {
+      setSelectedCategories((prev) => {
+        const all = stats.categoryList;
+        const next = new Set(prev);
+        if (prev.size === 0) {
+          all.forEach((c) => next.add(c));
+          next.delete(category);
+        } else {
+          if (next.has(category)) next.delete(category);
+          else next.add(category);
+        }
+        return next;
+      });
+    },
+    [stats.categoryList]
   );
 
   const shelfCapacities = useMemo(() => {
@@ -456,26 +489,45 @@ function PlanogramPreviewPage() {
                 <p className="mb-2 text-xs font-medium text-foreground">
                   Categories
                 </p>
-                <CategoryFilterTags categories={stats.categoryList} />
+                <CategoryFilterTags
+                  categories={stats.categoryList}
+                  selected={
+                    selectedCategories.size === 0
+                      ? new Set(stats.categoryList)
+                      : selectedCategories
+                  }
+                  onToggle={onToggleCategory}
+                />
               </div>
 
               {/* Shelf layout – sorted by verticalPosition descending (top first) */}
               <div className="space-y-6">
-                {[...shelvesToShow]
-                  .sort((a, b) => b.verticalPosition - a.verticalPosition)
-                  .map((shelf) => (
-                    <ShelfRow
-                      key={shelf.shelfNumber}
-                      shelf={shelf}
-                      highDemandSkus={highDemandSkus}
-                      editHandlers={{
-                        onEditName,
-                        onEditCategory,
-                        onEditFacingsDepth,
-                        onRemoveProduct,
-                      }}
-                    />
-                  ))}
+                {shelvesToShow.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      No shelves match the selected categories
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Click a category pill above to include it in the view
+                    </p>
+                  </div>
+                ) : (
+                  [...shelvesToShow]
+                    .sort((a, b) => b.verticalPosition - a.verticalPosition)
+                    .map((shelf) => (
+                      <ShelfRow
+                        key={shelf.shelfNumber}
+                        shelf={shelf}
+                        highDemandSkus={highDemandSkus}
+                        editHandlers={{
+                          onEditName,
+                          onEditCategory,
+                          onEditFacingsDepth,
+                          onRemoveProduct,
+                        }}
+                      />
+                    ))
+                )}
               </div>
 
               {/* Product Details + Stocking Rules – side-by-side on large screens */}

@@ -34,6 +34,10 @@ export interface Shelf {
   assignedTo?: string; // User ID of assigned worker
   elevation?: "Bottom" | "Middle" | "Top" | "Eye Level";
   notes?: string;
+  /** Planogram ID when shelf is created from planogram visual builder */
+  planogramId?: string;
+  /** User's edited arrangement when shelf is from planogram */
+  arrangement?: unknown;
 }
 
 /**
@@ -57,6 +61,25 @@ export interface Audit {
 }
 
 /**
+ * Status of an adhoc (one-off) AI analysis
+ */
+export type AdhocAnalysisStatus = "processing" | "completed" | "failed";
+
+/**
+ * Represents an adhoc analysis: upload shelf image, AI analyzes retail space
+ */
+export interface AdhocAnalysis {
+  id: string;
+  name: string;
+  storeId: string;
+  storeName: string;
+  createdAt: Date;
+  status: AdhocAnalysisStatus;
+  complianceScore?: number; // 0-100 when completed
+  errorMessage?: string; // When status is failed
+}
+
+/**
  * Quick statistics for the maker dashboard
  */
 export interface QuickStats {
@@ -76,6 +99,22 @@ export interface MockUserContext {
   role: "maker" | "checker";
   storeId: string;
   storeName: string;
+}
+
+/**
+ * Planogram analysis view of a shelf (extends Shelf with planogram-specific display fields)
+ */
+export interface PlanogramShelfRow extends Shelf {
+  /** Compliance rule set name applied to this shelf */
+  complianceRuleSet?: string;
+  /** Categorization mode (e.g. "By Category", "By Brand") */
+  categorizeBy?: string;
+  /** Last planogram analysis run date */
+  lastRun?: Date;
+  /** Product count from last analysis */
+  productsCount?: number;
+  /** Issue count from last analysis */
+  issuesCount?: number;
 }
 
 /**

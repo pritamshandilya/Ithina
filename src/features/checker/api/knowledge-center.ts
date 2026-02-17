@@ -203,16 +203,19 @@ function validateRuleValues(
     errors.push("Tolerance cannot be negative.");
   }
 
-  const conflictingRule = mockRules.find(
-    (rule) =>
-      rule.status === "Active" &&
-      rule.ruleType === input.ruleType &&
-      rule.shelfType === input.shelfType &&
-      rule.ruleId !== input.ruleId,
-  );
-
-  if (conflictingRule) {
-    errors.push("An active rule with the same type and shelf type already exists.");
+  const newCategories = ["VISUAL", "SAFETY", "PROFITABILITY", "EFFICIENCY"] as const;
+  const isNewCategory = newCategories.includes(input.ruleType as (typeof newCategories)[number]);
+  if (!isNewCategory) {
+    const conflictingRule = mockRules.find(
+      (rule) =>
+        rule.status === "Active" &&
+        rule.ruleType === input.ruleType &&
+        rule.shelfType === input.shelfType &&
+        rule.ruleId !== input.ruleId,
+    );
+    if (conflictingRule) {
+      errors.push("An active rule with the same type and shelf type already exists.");
+    }
   }
 
   return { valid: errors.length === 0, errors };
@@ -229,6 +232,65 @@ export async function fetchComplianceRules(filters?: RuleFilters): Promise<Compl
   if (filters?.status) rules = rules.filter((rule) => rule.status === filters.status);
 
   return rules.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+}
+
+/** Rule set summary for adhoc analysis selection (maker + checker read access) */
+export interface ComplianceRuleSetSummary {
+  id: string;
+  name: string;
+  rulesCount: number;
+  enabledCount: number;
+  description?: string;
+  isDefault?: boolean;
+}
+
+/**
+ * Fetch compliance rule sets for analysis selection.
+ * Available to both maker and checker (read-only).
+ */
+export async function fetchComplianceRuleSetsForAnalysis(): Promise<ComplianceRuleSetSummary[]> {
+  await delay(200);
+
+  const rules = [...mockRules];
+  const seenSetIds = new Set<string>();
+  const sets: ComplianceRuleSetSummary[] = [];
+
+  for (const rule of rules) {
+    if (rule.ruleSetId) {
+      if (seenSetIds.has(rule.ruleSetId)) continue;
+      seenSetIds.add(rule.ruleSetId);
+      const setRules = rules.filter((r) => r.ruleSetId === rule.ruleSetId);
+      const enabledCount = setRules.filter((r) => r.enabled !== false).length;
+      sets.push({
+        id: rule.ruleSetId,
+        name: rule.ruleSetName ?? rule.ruleName,
+        rulesCount: setRules.length,
+        enabledCount,
+        description: rule.description,
+      });
+    } else {
+      sets.push({
+        id: rule.ruleId,
+        name: rule.ruleName,
+        rulesCount: 1,
+        enabledCount: 1,
+        description: rule.description,
+        isDefault: rule.ruleId === "RULE-001",
+      });
+    }
+  }
+
+  // Prepend built-in "Default Rules" set for adhoc analysis
+  const defaultSet: ComplianceRuleSetSummary = {
+    id: "default-rules",
+    name: "Default Rules",
+    rulesCount: 5,
+    enabledCount: 5,
+    description: "Built-in compliance checks",
+    isDefault: true,
+  };
+
+  return [defaultSet, ...sets].sort((a, b) => (a.isDefault ? -1 : b.isDefault ? 1 : a.name.localeCompare(b.name)));
 }
 
 export async function fetchRuleVersions(ruleId?: string): Promise<RuleVersion[]> {
@@ -313,6 +375,10 @@ export async function createComplianceRule(input: CreateRuleInput): Promise<Comp
     lastUpdated: createdDate,
     versions: [firstVersion],
     linkedDocumentIds: [],
+    description: input.description?.trim(),
+    ruleSetId: input.ruleSetId,
+    ruleSetName: input.ruleSetName,
+    enabled: input.enabled ?? true,
   };
 
   mockRules.unshift(rule);

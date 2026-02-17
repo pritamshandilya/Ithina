@@ -13,11 +13,20 @@
  * - Reference Documents (policy grounding)
  */
 
-import { createFileRoute, redirect } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { useCallback, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
+import { CheckerHeader } from "@/components/checker";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import {
+  useMarkAllNotificationsAsRead,
+  useMarkNotificationAsRead,
+  useNotifications,
+  useStores,
+} from "@/features/checker/hooks";
+import { mockCheckerUser } from "@/lib/api/mock-data";
+import type { Notification } from "@/types/checker";
 import { cn } from "@/lib/utils";
 
 import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compliance-rules-tab";
@@ -37,7 +46,34 @@ export const Route = createFileRoute("/checker/knowledge-center")({
 type KnowledgeCenterTab = "rules" | "versions" | "documents";
 
 function KnowledgeCenterPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<KnowledgeCenterTab>("rules");
+  const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+
+  const { data: stores } = useStores();
+  const { data: notifications } = useNotifications(selectedStoreId);
+  const markAsRead = useMarkNotificationAsRead();
+  const markAllAsRead = useMarkAllNotificationsAsRead();
+
+  const handleStoreChange = useCallback((storeId: string) => {
+    setSelectedStoreId(storeId);
+  }, []);
+
+  const handleNotificationClick = useCallback(
+    (notification: Notification) => {
+      if (!notification.read) {
+        markAsRead.mutate(notification.id);
+      }
+      if (
+        (notification.type === "new_audit" || notification.type === "critical_audit") &&
+        notification.auditId
+      ) {
+        navigate({ to: "/checker/review/$auditId", params: { auditId: notification.auditId } });
+      }
+      // rule_change: already on Knowledge Center
+    },
+    [markAsRead, navigate]
+  );
 
   const tabs: { id: KnowledgeCenterTab; label: string }[] = [
     { id: "rules", label: "Compliance Rules" },
@@ -49,6 +85,17 @@ function KnowledgeCenterPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
+          <CheckerHeader
+            user={mockCheckerUser}
+            stores={stores || []}
+            selectedStoreId={selectedStoreId}
+            onStoreChange={handleStoreChange}
+            notifications={notifications || []}
+            onNotificationClick={handleNotificationClick}
+            onMarkAsRead={(id) => markAsRead.mutate(id)}
+            onMarkAllAsRead={() => markAllAsRead.mutate()}
+          />
+
           {/* Page Header */}
           <header className="space-y-1">
             <h1 className="text-2xl font-bold text-foreground">Knowledge Center</h1>

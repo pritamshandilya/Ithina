@@ -39,27 +39,27 @@ export function StockingRulesSection({
       <h3 className="mb-3 text-sm font-semibold text-foreground">Stocking Rules</h3>
       <ul className="space-y-2 text-sm">
         {highDemandProducts.length > 0 && (
-          <li className="flex items-start gap-2">
+          <li className="flex items-start gap-2 min-w-0">
             <Zap className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden />
-            <span>
+            <span className="min-w-0 wrap-break-word">
               <strong className="text-foreground">High demand SKUs:</strong>{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+              <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs break-all">
                 {highDemandProducts.join(", ")}
               </code>
             </span>
           </li>
         )}
-        <li className="flex items-start gap-2">
+        <li className="flex items-start gap-2 min-w-0">
           <Package className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-          <span>
+          <span className="min-w-0 wrap-break-word">
             <strong className="text-foreground">Restock threshold:</strong>{" "}
             {Math.round(restockThreshold * 100)}% of optimal level
           </span>
         </li>
         {notes && (
-          <li className="flex items-start gap-2">
+          <li className="flex items-start gap-2 min-w-0">
             <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
-            <span>
+            <span className="min-w-0 wrap-break-word">
               <strong className="text-foreground">Notes:</strong> {notes}
             </span>
           </li>

@@ -1,12 +1,16 @@
 /**
  * ShelfRow – single shelf with header and proportional product blocks
  * Shelves sorted by verticalPosition descending (top shelf first)
+ * Supports drag-and-drop reordering when editHandlers.onReorderProducts is provided
  */
+
+import { useCallback, useState } from "react";
 
 import {
   getCategoryColor as defaultGetCategoryColor,
   getProductShapeType,
 } from "@/lib/constants/planogram";
+import { cn } from "@/lib/utils";
 import type { PlanogramShelfDef } from "@/types/planogram";
 
 import { ShelfProduct } from "./shelf-product";
@@ -38,6 +42,63 @@ export function ShelfRow({
     0
   );
 
+  const canReorder = !!editHandlers?.onReorderProducts;
+  const [draggedSku, setDraggedSku] = useState<string | null>(null);
+  const [dropTargetSku, setDropTargetSku] = useState<string | null>(null);
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent, targetSku: string) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (draggedSku !== targetSku) setDropTargetSku(targetSku);
+    },
+    [draggedSku]
+  );
+
+  const handleDragLeave = useCallback(() => {
+    setDropTargetSku(null);
+  }, []);
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent, targetSku: string) => {
+      e.preventDefault();
+      setDraggedSku(null);
+      setDropTargetSku(null);
+      if (!canReorder) return;
+      const droppedSku = e.dataTransfer.getData("application/shelf-product-sku");
+      const shelfNum = e.dataTransfer.getData("application/shelf-number");
+      if (!droppedSku || shelfNum !== String(shelf.shelfNumber)) return;
+
+      const productIds = shelf.products.map((p) => p.sku);
+      const fromIdx = productIds.indexOf(droppedSku);
+      const toIdx = productIds.indexOf(targetSku);
+      if (fromIdx === -1 || toIdx === -1 || fromIdx === toIdx) return;
+
+      const reordered = [...productIds];
+      const [removed] = reordered.splice(fromIdx, 1);
+      const insertIdx = fromIdx < toIdx ? toIdx - 1 : toIdx;
+      reordered.splice(insertIdx, 0, removed!);
+      editHandlers!.onReorderProducts!(shelf.shelfNumber, reordered);
+    },
+    [canReorder, shelf.shelfNumber, shelf.products, editHandlers]
+  );
+
+  const handleDragStart = useCallback(
+    (e: React.DragEvent, sku: string) => {
+      if (!canReorder) return;
+      setDraggedSku(sku);
+      e.dataTransfer.setData("application/shelf-product-sku", sku);
+      e.dataTransfer.setData("application/shelf-number", String(shelf.shelfNumber));
+      e.dataTransfer.effectAllowed = "move";
+    },
+    [canReorder, shelf.shelfNumber]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedSku(null);
+    setDropTargetSku(null);
+  }, []);
+
   return (
     <section
       className={className}
@@ -52,20 +113,37 @@ export function ShelfRow({
       <div className="flex flex-col gap-0">
         <div className="flex gap-1 overflow-hidden rounded-t-lg border border-b-0 border-border bg-muted/20 p-2">
           {shelf.products.map((product) => (
-          <ShelfProduct
+          <div
             key={product.sku}
-            product={product}
-            shelfNumber={shelf.shelfNumber}
-            widthFraction={totalFacings > 0 ? product.facings / totalFacings : 0}
-            highDemandSkus={highDemandSkus}
-            categoryColor={getCategoryColor(product.category)}
-            shapeClass={
-              getProductShapeType(product.category) === "bottle"
-                ? "rounded-xl"
-                : "rounded-md"
-            }
-            editHandlers={editHandlers}
-          />
+            className={cn(
+              "min-w-0 flex-1 transition-shadow",
+              canReorder && "cursor-grab active:cursor-grabbing",
+              draggedSku === product.sku && "opacity-50",
+              dropTargetSku === product.sku && "ring-2 ring-ring ring-offset-2 ring-offset-background rounded-md"
+            )}
+            aria-label={canReorder ? `Drag to reorder ${product.name}` : undefined}
+            draggable={canReorder}
+            onDragOver={(e) => handleDragOver(e, product.sku)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, product.sku)}
+            onDragStart={(e) => handleDragStart(e, product.sku)}
+            onDragEnd={handleDragEnd}
+            style={canReorder ? { flex: `${product.facings / totalFacings} 1 0%` } : undefined}
+          >
+            <ShelfProduct
+              product={product}
+              shelfNumber={shelf.shelfNumber}
+              widthFraction={totalFacings > 0 ? product.facings / totalFacings : 0}
+              highDemandSkus={highDemandSkus}
+              categoryColor={getCategoryColor(product.category)}
+              shapeClass={
+                getProductShapeType(product.category) === "bottle"
+                  ? "rounded-xl"
+                  : "rounded-md"
+              }
+              editHandlers={editHandlers}
+            />
+          </div>
         ))}
         </div>
         {/* Shelf surface bar */}

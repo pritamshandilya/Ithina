@@ -259,6 +259,23 @@ function PlanogramPreviewPage() {
     []
   );
 
+  const onReorderProducts = useCallback(
+    (shelfNumber: number, productIds: string[]) => {
+      setLocalShelves((prev) =>
+        prev.map((s) => {
+          if (s.shelfNumber !== shelfNumber) return s;
+          const bySku = new Map(s.products.map((p) => [p.sku, p]));
+          const reordered = productIds
+            .map((id) => bySku.get(id))
+            .filter((p): p is PlanogramProduct => p != null);
+          return { ...s, products: reordered };
+        })
+      );
+      setHasChanges(true);
+    },
+    []
+  );
+
   const handleSave = useCallback(async () => {
     if (!preview || !hasChanges || !shelfId) return;
     setIsSaving(true);
@@ -445,9 +462,7 @@ function PlanogramPreviewPage() {
           )}
 
           {preview && !isLoading && (
-            <div className="flex flex-col gap-6 lg:flex-row">
-              {/* Main content – stacks on small screens */}
-              <div className="min-w-0 flex-1 space-y-6">
+            <div className="space-y-6">
               {/* Summary stats */}
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
@@ -479,7 +494,7 @@ function PlanogramPreviewPage() {
                     {fixture.units} · {fixture.type}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove
+                    Click name to edit · X to remove · Drag to reorder
                   </span>
                 </div>
               )}
@@ -500,57 +515,62 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              {/* Shelf layout – sorted by verticalPosition descending (top first) */}
-              <div className="space-y-6">
-                {shelvesToShow.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      No shelves match the selected categories
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Click a category pill above to include it in the view
-                    </p>
-                  </div>
-                ) : (
-                  [...shelvesToShow]
-                    .sort((a, b) => b.verticalPosition - a.verticalPosition)
-                    .map((shelf) => (
-                      <ShelfRow
-                        key={shelf.shelfNumber}
-                        shelf={shelf}
-                        highDemandSkus={highDemandSkus}
+              {/* Shelves + Removed Items – side-by-side; sidebar height capped to shelf section */}
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1 space-y-6">
+                  {shelvesToShow.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        No shelves match the selected categories
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Click a category pill above to include it in the view
+                      </p>
+                    </div>
+                  ) : (
+                    [...shelvesToShow]
+                      .sort((a, b) => b.verticalPosition - a.verticalPosition)
+                      .map((shelf) => (
+                        <ShelfRow
+                          key={shelf.shelfNumber}
+                          shelf={shelf}
+                          highDemandSkus={highDemandSkus}
                         editHandlers={{
                           onEditName,
                           onEditCategory,
                           onEditFacingsDepth,
                           onRemoveProduct,
+                          onReorderProducts:
+                            selectedCategories.size === 0 ? onReorderProducts : undefined,
                         }}
-                      />
-                    ))
-                )}
+                        />
+                      ))
+                  )}
+                </div>
+                <RemovedItemsSidebar
+                  removedItems={removedItems}
+                  shelves={shelvesToShow}
+                  shelfCapacities={shelfCapacities}
+                  onRestore={onRestoreProduct}
+                />
               </div>
 
-              {/* Product Details + Stocking Rules – side-by-side on large screens */}
-              <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-                <ProductDetailsTable
-                  shelves={shelvesToShow}
-                  highDemandSkus={highDemandSkus}
-                />
-                <div className="rounded-lg border border-border bg-card/80 p-4">
+              {/* Product Details + Stocking Rules – full width below shelves */}
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+                <div className="min-w-0 overflow-x-auto">
+                  <div className="min-w-[1100px]">
+                    <ProductDetailsTable
+                      shelves={shelvesToShow}
+                      highDemandSkus={highDemandSkus}
+                    />
+                  </div>
+                </div>
+                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
                     stockingRules={preview.planogramPayload.stockingRules}
                   />
                 </div>
               </div>
-              </div>
-
-              {/* Removed Items sidebar – right side on large screens */}
-              <RemovedItemsSidebar
-                removedItems={removedItems}
-                shelves={shelvesToShow}
-                shelfCapacities={shelfCapacities}
-                onRestore={onRestoreProduct}
-              />
             </div>
           )}
 

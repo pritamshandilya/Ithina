@@ -86,7 +86,7 @@ export function ProductDetailsTable({
         const row = (cell as { getData: () => ProductDetailsRow }).getData();
         const colorClass = getCategoryColor(row.category);
         return `
-          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass} border border-border text-foreground">
+          <span class="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colorClass} border border-border text-slate-900 dark:text-foreground">
             ${row.category}
           </span>
         `;
@@ -164,6 +164,7 @@ export function ProductDetailsTable({
         emptyMessage="No products"
         initialSort={{ field: "shelfNumber", dir: "asc" }}
         pageSize={10}
+        layout="fitData"
       />
     </div>
   );

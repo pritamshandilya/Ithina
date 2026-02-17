@@ -11,4 +11,6 @@ export interface PlanogramEditHandlers {
     updates: { facings?: number; depthCount?: number }
   ) => void;
   onRemoveProduct: (shelfNumber: number, sku: string) => void;
+  /** Reorder products within a shelf – productIds in new order */
+  onReorderProducts?: (shelfNumber: number, productIds: string[]) => void;
 }

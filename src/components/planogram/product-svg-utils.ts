@@ -18,7 +18,6 @@ import {
   CoffeeBagSVG,
   EnergyDrinkCanSVG,
   FirstAidSVG,
-  LargeBottleSVG,
   RazorPackSVG,
 } from "./product-svgs";
 

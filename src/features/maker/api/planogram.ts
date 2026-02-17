@@ -75,7 +75,7 @@ export async function saveShelfArrangement(
   shelfName: string,
   planogramId: string,
   arrangement: PlanogramArrangement,
-  storeId: string
+  _storeId: string
 ): Promise<Shelf> {
   await delay(500);
 

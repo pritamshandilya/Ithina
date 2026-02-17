@@ -187,7 +187,7 @@ function RuleSelectorDropdown({
                 >
                   <Checkbox
                     checked={selectedIds.includes(r.ruleId)}
-                    onCheckedChange={(checked) =>
+                    onCheckedChange={(checked: boolean | "indeterminate") =>
                       handleToggle(r.ruleId, checked === true)
                     }
                   />

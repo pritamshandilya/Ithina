@@ -14,6 +14,7 @@ import { HeaderContextBar } from "@/components/maker";
 import {
   CategoryFilterTags,
   ProductDetailsTable,
+  RemovedItemsSidebar,
   ShelfRow,
   StockingRulesSection,
 } from "@/components/planogram";
@@ -126,7 +127,9 @@ function PlanogramPreviewPage() {
           )}
 
           {preview && stats && !isLoading && (
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6 lg:flex-row">
+              {/* Main content – stacks on small screens */}
+              <div className="min-w-0 flex-1 space-y-6">
               {/* Summary stats */}
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
@@ -200,6 +203,10 @@ function PlanogramPreviewPage() {
                   />
                 </div>
               </div>
+              </div>
+
+              {/* Removed Items sidebar – right side on large screens */}
+              <RemovedItemsSidebar removedItems={[]} />
             </div>
           )}
 

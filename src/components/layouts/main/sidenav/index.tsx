@@ -155,7 +155,7 @@ export default function Sidenav() {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={location.pathname === "/maker/audits/planogram"}
+                          isActive={location.pathname.startsWith("/maker/audits/planogram")}
                         >
                           <Link to="/maker/audits/planogram">
                             <LayoutGrid />
@@ -166,7 +166,7 @@ export default function Sidenav() {
                       <SidebarMenuSubItem>
                         <SidebarMenuSubButton
                           asChild
-                          isActive={location.pathname === "/maker/audits/adhoc"}
+                          isActive={location.pathname.startsWith("/maker/audits/adhoc")}
                         >
                           <Link to="/maker/audits/adhoc">
                             <Zap />

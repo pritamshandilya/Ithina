@@ -1,6 +1,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
+
+import { useToast } from "@/hooks/use-toast";
 import { useCallback, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/maker/audits/planogram/new")({
 function AddPlanogramPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: stores } = useStores();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useAssignedShelves();
@@ -85,6 +88,7 @@ function AddPlanogramPage() {
         selectedStoreId
       );
       await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+      toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
       navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
@@ -99,6 +103,7 @@ function AddPlanogramPage() {
     planogramPayload,
     navigate,
     queryClient,
+    toast,
   ]);
 
   const planogram = planogramPayload?.planogram;

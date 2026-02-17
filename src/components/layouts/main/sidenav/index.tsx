@@ -3,10 +3,12 @@ import {
   ChevronDown,
   FileSignature,
   LayoutDashboard,
+  LayoutGrid,
   Library,
   ListChecks,
   Rows3,
   ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
@@ -26,6 +28,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import logo from "@/assets/logo.avif";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
@@ -59,6 +62,7 @@ function isMyAuditsActive(pathname: string): boolean {
 export default function Sidenav() {
   const location = useLocation();
   const currentUser = SimulatedAuthService.getCurrentUser();
+  const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
 
   const role = useMemo(() => {
     if (currentUser?.role) return currentUser.role;
@@ -127,12 +131,19 @@ export default function Sidenav() {
                   <SidebarMenuButton
                     isActive={isMyAuditsActive(location.pathname)}
                     tooltip="My Audits"
-                    onClick={() => setMyAuditsExpanded((e) => !e)}
+                    onClick={() => {
+                      if (sidebarState === "collapsed") {
+                        setSidebarOpen(true);
+                        setMyAuditsExpanded(true);
+                      } else {
+                        setMyAuditsExpanded((e) => !e);
+                      }
+                    }}
                     className="cursor-pointer"
                     asChild={false}
                   >
                     <span className="flex w-full items-center gap-2">
-                      <ListChecks />
+                      <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
                       <span className="flex-1 truncate">My Audits</span>
                       <ChevronDown
                         className={`size-4 shrink-0 transition-transform ${myAuditsExpanded ? "rotate-180" : ""}`}
@@ -146,7 +157,10 @@ export default function Sidenav() {
                           asChild
                           isActive={location.pathname === "/maker/audits/planogram"}
                         >
-                          <Link to="/maker/audits/planogram">Planogram based analysis</Link>
+                          <Link to="/maker/audits/planogram">
+                            <LayoutGrid />
+                            Planogram based analysis
+                          </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                       <SidebarMenuSubItem>
@@ -154,7 +168,10 @@ export default function Sidenav() {
                           asChild
                           isActive={location.pathname === "/maker/audits/adhoc"}
                         >
-                          <Link to="/maker/audits/adhoc">Adhoc Analysis</Link>
+                          <Link to="/maker/audits/adhoc">
+                            <Zap />
+                            Adhoc Analysis
+                          </Link>
                         </SidebarMenuSubButton>
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>

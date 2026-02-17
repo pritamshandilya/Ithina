@@ -38,8 +38,7 @@ type RulesSort =
   | "lastUpdated-asc"
   | "ruleName-asc"
   | "ruleName-desc"
-  | "status-asc"
-  | "version-desc";
+  | "status-asc";
 
 /** Badge HTML for status (matches RuleStatusBadge styling) */
 function statusBadgeHtml(status: RuleStatus): string {
@@ -180,9 +179,6 @@ export function ComplianceRulesTab() {
         break;
       case "status-asc":
         grouped.sort((a, b) => a.status.localeCompare(b.status));
-        break;
-      case "version-desc":
-        grouped.sort((a, b) => (b.primaryRule.currentVersion ?? 0) - (a.primaryRule.currentVersion ?? 0));
         break;
     }
     return grouped;
@@ -491,7 +487,6 @@ export function ComplianceRulesTab() {
               <option value="ruleName-asc">Rule Name A–Z</option>
               <option value="ruleName-desc">Rule Name Z–A</option>
               <option value="status-asc">Status</option>
-              <option value="version-desc">Highest Version First</option>
             </Select>
           </div>
         </div>

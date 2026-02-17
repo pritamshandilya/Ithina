@@ -11,7 +11,12 @@ import { useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
-import { CategoryFilterTags, ShelfRow } from "@/components/planogram";
+import {
+  CategoryFilterTags,
+  ProductDetailsTable,
+  ShelfRow,
+  StockingRulesSection,
+} from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -179,6 +184,21 @@ function PlanogramPreviewPage() {
                       }
                     />
                   ))}
+              </div>
+
+              {/* Product Details + Stocking Rules – side-by-side on large screens */}
+              <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+                <ProductDetailsTable
+                  shelves={fixture?.shelves ?? []}
+                  highDemandSkus={
+                    preview.planogramPayload.stockingRules?.highDemandProducts ?? []
+                  }
+                />
+                <div className="rounded-lg border border-border bg-card/80 p-4">
+                  <StockingRulesSection
+                    stockingRules={preview.planogramPayload.stockingRules}
+                  />
+                </div>
               </div>
             </div>
           )}

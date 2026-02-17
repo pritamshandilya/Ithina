@@ -1,6 +1,7 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, Library, ListChecks, Rows3, ShieldCheck, FileSignature } from "lucide-react";
-import { useMemo } from "react";
+import { LayoutDashboard, Library, ListChecks, Rows3, ShieldCheck, FileSignature, FileBarChart, ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 
 import SidenavFooter from "./footer";
 import {
@@ -14,6 +15,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import logo from "@/assets/logo.avif";
@@ -21,9 +25,10 @@ import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 type NavItem = {
   label: string;
-  to: "/maker/dashboard" | "/maker/shelves" | "/maker/audit-review" | "/maker/manual-audits" | "/checker/dashboard" | "/checker/audit-review" | "/checker/shelves" | "/checker/knowledge-center";
+  to?: string;
   hash?: string;
   icon: typeof LayoutDashboard;
+  items?: { label: string; to: string }[];
 };
 
 function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
@@ -35,6 +40,7 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/maker/audit-review") {
     return pathname === "/maker/audit-review" || pathname.startsWith("/maker/audit/");
   }
+  if (!item.to) return false;
   const sameBase = pathname === item.to || pathname.startsWith(`${item.to}/`);
   if (!sameBase) return false;
   if (!item.hash) return hash.length === 0;
@@ -63,9 +69,20 @@ export default function Sidenav() {
     { label: "Audit Review", to: "/checker/audit-review", icon: ShieldCheck },
     { label: "Shelves", to: "/checker/shelves", icon: Rows3 },
     { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
+    {
+      label: "Reports",
+      icon: FileBarChart,
+      items: [
+        { label: "Store Level", to: "/checker/reports/store-level" },
+        { label: "Shelf Level", to: "/checker/reports/shelf-level" },
+        { label: "Adhoc Report", to: "/checker/reports/adhoc" },
+      ],
+    },
   ];
 
   const roleItems = role === "checker" ? checkerItems : makerItems;
+
+  const [reportsOpen, setReportsOpen] = useState(true);
 
   return (
     <Sidebar collapsible="icon">
@@ -98,14 +115,43 @@ export default function Sidenav() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              {roleItems.map((item) => {
+              {roleItems.map((item: NavItem) => {
                 const Icon = item.icon;
                 const isActive = isActiveItem(location.pathname, location.hash, item);
+
+                if (item.items) {
+                  return (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton
+                        tooltip={item.label}
+                        onClick={() => setReportsOpen(!reportsOpen)}
+                      >
+                        <Icon />
+                        <span>{item.label}</span>
+                        <ChevronRight className={cn(
+                          "ml-auto transition-transform duration-200",
+                          reportsOpen && "rotate-90"
+                        )} />
+                      </SidebarMenuButton>
+                      {reportsOpen && (
+                        <SidebarMenuSub>
+                          {item.items.map((subItem: { label: string; to: string }) => (
+                            <SidebarMenuSubItem key={subItem.label}>
+                              <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
+                                <Link to={subItem.to as any}>{subItem.label}</Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      )}
+                    </SidebarMenuItem>
+                  );
+                }
 
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link to={item.to} hash={item.hash}>
+                      <Link to={item.to as any} hash={item.hash}>
                         <Icon />
                         {item.label}
                       </Link>

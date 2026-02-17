@@ -43,6 +43,9 @@ export {
   AuditReviewQueue,
   type AuditReviewQueueProps,
 } from "./audit-review-queue";
+export * from "./manual-override-list";
+export { ShelfActions } from "./shelf-actions";
+export { PlanogramPreview } from "./planogram-preview";
 export {
   SelectRuleSetModal,
   type SelectRuleSetModalProps,

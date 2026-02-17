@@ -1,12 +1,12 @@
 /**
  * Rule Versions Tab
  *
- * View version history per rule with actions (view, edit, activate, retire, clone).
+ * View version history per rule with actions (edit, activate, retire, clone).
  * Uses shared DataTable (Tabulator) - same format as compliance rules.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Eye, Pencil, Play, Archive, Copy } from "lucide-react";
+import { Search, Pencil, Play, Archive, Copy } from "lucide-react";
 
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -27,7 +27,6 @@ import type {
   ComplianceRule,
   RuleVersion,
   RuleVersionStatus,
-  RuleStatus,
 } from "@/types/checker";
 
 import { RuleBuilderModal } from "./rule-builder-modal";
@@ -54,35 +53,6 @@ export interface VersionDisplayRow {
   version: RuleVersion;
   ruleName: string;
   rule: ComplianceRule | null;
-}
-
-function versionToComplianceRule(version: RuleVersion, rule: ComplianceRule | null): ComplianceRule {
-  const statusMap: Record<RuleVersionStatus, RuleStatus> = {
-    Draft: "Draft",
-    Active: "Active",
-    Archived: "Retired",
-    Retired: "Retired",
-  };
-  return {
-    ruleId: version.ruleId,
-    ruleName: rule?.ruleName ?? version.ruleId,
-    ruleType: rule?.ruleType ?? "Facings",
-    shelfType: version.shelfType,
-    expectedValue: version.expectedValue,
-    tolerance: version.tolerance,
-    severity: version.severity,
-    status: statusMap[version.status],
-    currentVersion: version.version,
-    createdBy: version.createdBy,
-    createdDate: new Date(version.createdDate),
-    lastUpdated: new Date(version.createdDate),
-    versions: rule?.versions ?? [version],
-    linkedDocumentIds: rule?.linkedDocumentIds ?? [],
-    description: rule?.description,
-    ruleSetId: rule?.ruleSetId,
-    ruleSetName: rule?.ruleSetName,
-    enabled: rule?.enabled,
-  };
 }
 
 /** Actions cell: "..." button that opens dropdown */
@@ -193,12 +163,6 @@ export function RuleVersionsTab() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [actionsMenu]);
-
-  const handleViewRule = useCallback((row: VersionDisplayRow) => {
-    const ruleForView = versionToComplianceRule(row.version, row.rule);
-    setEditingRule(ruleForView);
-    setShowRuleModal(true);
-  }, []);
 
   const handleEditRule = useCallback((row: VersionDisplayRow) => {
     if (!row.rule || row.rule.status === "Retired") return;
@@ -418,7 +382,7 @@ export function RuleVersionsTab() {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Rule Versions</h2>
         <p className="text-sm text-muted-foreground">
-          View version history, compare changes, and manage rules (view, edit, activate, retire, clone)
+          View version history, compare changes, and manage rules (edit, activate, retire, clone)
         </p>
       </div>
 
@@ -527,7 +491,6 @@ export function RuleVersionsTab() {
             pageSizeSelector={[5, 10, 20, 50]}
             rowFormatter={rowFormatter}
             onPaginationChange={setTablePagination}
-            onRowClick={(row) => handleViewRule(row)}
           />
           <p className="text-sm text-muted-foreground text-center">
             Showing{" "}
@@ -594,17 +557,6 @@ export function RuleVersionsTab() {
             top: actionsMenu.anchor.y,
           }}
         >
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
-            onClick={() => {
-              handleViewRule(actionsMenu.row);
-              setActionsMenu(null);
-            }}
-          >
-            <Eye className="size-4 text-muted-foreground" />
-            View version
-          </button>
           {actionsMenu.row.rule && actionsMenu.row.rule.status !== "Retired" && (
             <button
               type="button"

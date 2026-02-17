@@ -222,7 +222,7 @@ export function generateMockShelves(): Shelf[] {
   );
 
   // Add more shelves to match the screenshot variety
-   shelves.push(
+  shelves.push(
     {
       id: "shelf-016",
       aisleNumber: 1,
@@ -271,7 +271,7 @@ export function generateMockShelves(): Shelf[] {
       elevation: "Middle",
       notes: "High turnover area for family packs.",
     }
-   );
+  );
 
   return shelves;
 }
@@ -438,18 +438,27 @@ export function generateMockStores(): Store[] {
       name: "Store #1234 - Downtown",
       address: "123 Main St, Downtown",
       pendingAuditCount: 8,
+      region: "Central",
+      created: "Oct 12, 2023",
+      status: "Active",
     },
     {
       id: "store-5678",
       name: "Store #5678 - Westside",
       address: "456 West Ave, Westside",
       pendingAuditCount: 5,
+      region: "West",
+      created: "Nov 05, 2023",
+      status: "Active",
     },
     {
       id: "store-9012",
       name: "Store #9012 - Eastgate",
       address: "789 East Blvd, Eastgate",
       pendingAuditCount: 12,
+      region: "East",
+      created: "Dec 01, 2023",
+      status: "Active",
     },
   ];
 }
@@ -460,7 +469,7 @@ export function generateMockStores(): Store[] {
 export function generateMockComplianceOverview(storeId?: string): ComplianceOverview {
   // Base numbers, adjust based on store if needed
   const basePending = storeId === "store-9012" ? 12 : storeId === "store-5678" ? 5 : 8;
-  
+
   return {
     totalPendingAudits: basePending,
     criticalAudits: Math.floor(basePending * 0.2), // ~20% critical
@@ -476,10 +485,10 @@ export function generateMockComplianceOverview(storeId?: string): ComplianceOver
 export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
   const shelves = generateMockShelves();
   const pendingAudits: CheckerAudit[] = [];
-  
+
   const makerNames = ["John Doe", "Jane Smith", "Mike Johnson", "Emily Davis", "Sarah Wilson", "David Brown"];
   const ruleVersions = ["v2.3.1", "v2.3.0", "v2.2.5"];
-  
+
   // Expanded shelf names for more diverse mock data
   const additionalShelves = [
     { aisle: 4, bay: 1, name: "Dairy - Milk & Cream" },
@@ -491,21 +500,21 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
     { aisle: 6, bay: 2, name: "Bakery - Pastries" },
     { aisle: 7, bay: 1, name: "Canned Goods - Vegetables" },
   ];
-  
+
   // Filter to pending status shelves
   const pendingShelves = shelves.filter((shelf) => shelf.status === "pending");
-  
+
   pendingShelves.forEach((shelf, index) => {
     if (!shelf.lastAuditDate) return;
-    
+
     // Determine audit mode
     const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
-    
+
     // Only Vision Edge has AI-generated compliance scores
     // Assist Mode requires manual checker review first
     let complianceScore: number | undefined;
     let violationCount = 0;
-    
+
     if (mode === "vision-edge" && shelf.complianceScore) {
       // Generate varying compliance scores including critical ones
       complianceScore = shelf.complianceScore;
@@ -519,9 +528,9 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       violationCount = Math.ceil((100 - complianceScore) / 10);
     }
     // Assist Mode: no compliance score until checker reviews
-    
+
     const publishingStatus: PublishingStatus = "pending";
-    
+
     const checkerAudit: CheckerAudit = {
       id: `audit-${shelf.id}`,
       shelfId: shelf.id,
@@ -540,25 +549,25 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
         shelfName: shelf.shelfName,
       },
     };
-    
+
     pendingAudits.push(checkerAudit);
   });
-  
+
   // Add additional mock audits to fill the queue
   additionalShelves.forEach((shelf, index) => {
     // Determine audit mode
     const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
-    
+
     // Only Vision Edge has AI-generated compliance scores
     let complianceScore: number | undefined;
     let violationCount = 0;
-    
+
     if (mode === "vision-edge") {
       complianceScore = randomScore(45, 95);
       violationCount = Math.ceil((100 - complianceScore) / 10);
     }
     // Assist Mode: no compliance score until checker reviews
-    
+
     const checkerAudit: CheckerAudit = {
       id: `audit-extra-${index}`,
       shelfId: `shelf-extra-${index}`,
@@ -577,10 +586,10 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
         shelfName: shelf.name,
       },
     };
-    
+
     pendingAudits.push(checkerAudit);
   });
-  
+
   // Sort by compliance score (lowest first - default sort)
   return pendingAudits.sort((a, b) => (a.complianceScore || 0) - (b.complianceScore || 0));
 }
@@ -591,7 +600,7 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
 export function generateMockNotifications(storeId: string): Notification[] {
   const notifications: Notification[] = [];
   const now = new Date();
-  
+
   // New audit notification
   notifications.push({
     id: "notif-001",
@@ -602,7 +611,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
     auditId: "audit-shelf-002",
     storeId,
   });
-  
+
   // Critical audit notification
   notifications.push({
     id: "notif-002",
@@ -613,7 +622,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
     auditId: "audit-shelf-004",
     storeId,
   });
-  
+
   // Rule change notification
   notifications.push({
     id: "notif-003",
@@ -623,7 +632,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
     read: true,
     storeId,
   });
-  
+
   // Another new audit
   notifications.push({
     id: "notif-004",
@@ -634,7 +643,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
     auditId: "audit-shelf-007",
     storeId,
   });
-  
+
   // Critical audit
   notifications.push({
     id: "notif-005",
@@ -645,7 +654,7 @@ export function generateMockNotifications(storeId: string): Notification[] {
     auditId: "audit-shelf-010",
     storeId,
   });
-  
+
   return notifications;
 }
 
@@ -680,14 +689,14 @@ export function generateMockPublishedAudits(_storeId: string): PublishedAudit[] 
   const shelves = generateMockShelves();
   const published: PublishedAudit[] = [];
   const now = new Date();
-  
+
   // Get some approved shelves
   const approvedShelves = shelves.filter((shelf) => shelf.status === "approved").slice(0, 5);
-  
+
   approvedShelves.forEach((shelf, index) => {
     const statuses: PublishingStatus[] = ["published", "published", "published", "failed", "pending"];
     const status = statuses[index % statuses.length];
-    
+
     published.push({
       auditId: `audit-${shelf.id}`,
       shelfInfo: {
@@ -700,7 +709,7 @@ export function generateMockPublishedAudits(_storeId: string): PublishedAudit[] 
       errorMessage: status === "failed" ? "Event bus connection timeout" : undefined,
     });
   });
-  
+
   return published;
 }
 
@@ -710,7 +719,7 @@ export function generateMockPublishedAudits(_storeId: string): PublishedAudit[] 
 export function generateMockViolations(audit: CheckerAudit): Violation[] {
   const violations: Violation[] = [];
   const violationCount = audit.violationCount;
-  
+
   const ruleTemplates = [
     {
       ruleName: "Product Spacing Requirements",
@@ -769,7 +778,7 @@ export function generateMockViolations(audit: CheckerAudit): Violation[] {
       actual: "Visible dust accumulation",
     },
   ];
-  
+
   for (let i = 0; i < Math.min(violationCount, ruleTemplates.length); i++) {
     const template = ruleTemplates[i];
     violations.push({
@@ -778,6 +787,6 @@ export function generateMockViolations(audit: CheckerAudit): Violation[] {
       overridden: false,
     });
   }
-  
+
   return violations;
 }

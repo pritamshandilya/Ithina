@@ -9,6 +9,7 @@ import {
   Library,
   ListChecks,
   Rows3,
+  Settings,
   ShieldCheck,
   Zap,
 } from "lucide-react";
@@ -105,6 +106,7 @@ export default function Sidenav() {
         { label: "Adhoc Report", to: "/checker/reports/adhoc" },
       ],
     },
+    { label: "Store Settings", to: "/checker/store-settings", icon: Settings },
   ];
 
   const roleItems = role === "checker" ? checkerItems : makerItems;

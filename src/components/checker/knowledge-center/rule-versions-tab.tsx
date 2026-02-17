@@ -1,22 +1,36 @@
 /**
  * Rule Versions Tab
  *
- * View version history per rule in a tabular format.
- * Uses shared DataTable (Tabulator) - same format as audit review queue.
+ * View version history per rule with actions (view, edit, activate, retire, clone).
+ * Uses shared DataTable (Tabulator) - same format as compliance rules.
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Search, Eye, Pencil, Play, Archive, Copy } from "lucide-react";
 
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
+  useActivateComplianceRule,
+  useCloneRetiredRule,
   useComplianceRules,
+  useRetireComplianceRule,
   useRuleVersions,
+  useValidateRuleActivation,
 } from "@/features/checker/hooks";
+import { useToast } from "@/hooks/use-toast";
+import { mockCheckerUser } from "@/lib/api/mock-data";
 import { format } from "date-fns";
-import type { RuleVersion, RuleVersionStatus } from "@/types/checker";
+import type {
+  ComplianceRule,
+  RuleVersion,
+  RuleVersionStatus,
+  RuleStatus,
+} from "@/types/checker";
+
+import { RuleBuilderModal } from "./rule-builder-modal";
 
 const VERSION_STATUS_OPTIONS: RuleVersionStatus[] = ["Draft", "Active", "Archived", "Retired"];
 
@@ -34,118 +48,368 @@ function versionStatusBadgeHtml(status: RuleVersionStatus): string {
   return `<span class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-xs font-medium ${cls}">${status}</span>`;
 }
 
+/** Display row: version + rule metadata for actions */
+export interface VersionDisplayRow {
+  id: string;
+  version: RuleVersion;
+  ruleName: string;
+  rule: ComplianceRule | null;
+}
+
+function versionToComplianceRule(version: RuleVersion, rule: ComplianceRule | null): ComplianceRule {
+  const statusMap: Record<RuleVersionStatus, RuleStatus> = {
+    Draft: "Draft",
+    Active: "Active",
+    Archived: "Retired",
+    Retired: "Retired",
+  };
+  return {
+    ruleId: version.ruleId,
+    ruleName: rule?.ruleName ?? version.ruleId,
+    ruleType: rule?.ruleType ?? "Facings",
+    shelfType: version.shelfType,
+    expectedValue: version.expectedValue,
+    tolerance: version.tolerance,
+    severity: version.severity,
+    status: statusMap[version.status],
+    currentVersion: version.version,
+    createdBy: version.createdBy,
+    createdDate: new Date(version.createdDate),
+    lastUpdated: new Date(version.createdDate),
+    versions: rule?.versions ?? [version],
+    linkedDocumentIds: rule?.linkedDocumentIds ?? [],
+    description: rule?.description,
+    ruleSetId: rule?.ruleSetId,
+    ruleSetName: rule?.ruleSetName,
+    enabled: rule?.enabled,
+  };
+}
+
+/** Actions cell: "..." button that opens dropdown */
+function actionsCellHtml(): string {
+  return `
+    <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
+      <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    </button>
+  `;
+}
+
 export function RuleVersionsTab() {
+  const { toast } = useToast();
   const [selectedRuleId, setSelectedRuleId] = useState<string | undefined>();
   const [versionFilter, setVersionFilter] = useState<RuleVersionStatus | "">("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<VersionsSort>("createdDate-desc");
+  const [showRuleModal, setShowRuleModal] = useState(false);
+  const [editingRule, setEditingRule] = useState<ComplianceRule | null>(null);
+  const [activateConfirmRuleId, setActivateConfirmRuleId] = useState<string | null>(null);
+  const [retireConfirmRuleId, setRetireConfirmRuleId] = useState<string | null>(null);
+  const [cloneConfirmRuleId, setCloneConfirmRuleId] = useState<string | null>(null);
+  const [actionsMenu, setActionsMenu] = useState<{
+    row: VersionDisplayRow;
+    anchor: { x: number; y: number };
+  } | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   const { data: rules } = useComplianceRules();
   const { data: versions, isLoading, error } = useRuleVersions(selectedRuleId);
+  const activateRule = useActivateComplianceRule();
+  const retireRule = useRetireComplianceRule();
+  const cloneRule = useCloneRetiredRule();
+  const validateActivation = useValidateRuleActivation();
 
-  const filteredVersions = useMemo(() => {
-    let result = (versions ?? []).filter((v) => !versionFilter || v.status === versionFilter);
+  const ruleMap = useMemo(() => {
+    const m = new Map<string, ComplianceRule>();
+    rules?.forEach((r) => m.set(r.ruleId, r));
+    return m;
+  }, [rules]);
+
+  const displayRows = useMemo(() => {
+    const vers = versions ?? [];
+    return vers.map((v) => ({
+      id: v.id,
+      version: v,
+      ruleName: ruleMap.get(v.ruleId)?.ruleName ?? v.ruleId,
+      rule: ruleMap.get(v.ruleId) ?? null,
+    }));
+  }, [versions, ruleMap]);
+
+  const filteredRows = useMemo(() => {
+    let result = displayRows.filter(
+      (r) => !versionFilter || r.version.status === versionFilter
+    );
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       result = result.filter(
-        (v) =>
-          v.ruleId.toLowerCase().includes(q) ||
-          (v.changeSummary?.toLowerCase().includes(q) ?? false) ||
-          v.expectedValue.toLowerCase().includes(q) ||
-          v.shelfType.toLowerCase().includes(q)
+        (r) =>
+          r.version.ruleId.toLowerCase().includes(q) ||
+          r.ruleName.toLowerCase().includes(q) ||
+          (r.version.changeSummary?.toLowerCase().includes(q) ?? false) ||
+          r.version.expectedValue.toLowerCase().includes(q) ||
+          r.version.shelfType.toLowerCase().includes(q)
       );
     }
     switch (sortBy) {
       case "createdDate-desc":
-        result.sort((a, b) => new Date(b.createdDate).getTime() - new Date(a.createdDate).getTime());
+        result.sort(
+          (a, b) =>
+            new Date(b.version.createdDate).getTime() -
+            new Date(a.version.createdDate).getTime()
+        );
         break;
       case "createdDate-asc":
-        result.sort((a, b) => new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime());
+        result.sort(
+          (a, b) =>
+            new Date(a.version.createdDate).getTime() -
+            new Date(b.version.createdDate).getTime()
+        );
         break;
       case "ruleId-asc":
-        result.sort((a, b) => a.ruleId.localeCompare(b.ruleId));
+        result.sort((a, b) => a.version.ruleId.localeCompare(b.version.ruleId));
         break;
       case "version-desc":
-        result.sort((a, b) => b.version - a.version);
+        result.sort((a, b) => b.version.version - a.version.version);
         break;
     }
     return result;
-  }, [versions, versionFilter, searchQuery, sortBy]);
+  }, [displayRows, versionFilter, searchQuery, sortBy]);
 
   useEffect(() => {
-    setTablePagination((p) => ({ ...p, page: 1 }));
+    const t = setTimeout(() => setTablePagination((p) => ({ ...p, page: 1 })), 0);
+    return () => clearTimeout(t);
   }, [selectedRuleId, versionFilter, searchQuery, sortBy]);
 
-  const tableColumns = useMemo<DataTableColumn<RuleVersion>[]>(
+  useEffect(() => {
+    if (!actionsMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(target)) {
+        const tableEl = document.querySelector(".data-table-wrapper");
+        if (tableEl?.contains(target)) return;
+        setActionsMenu(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsMenu]);
+
+  const handleViewRule = useCallback((row: VersionDisplayRow) => {
+    const ruleForView = versionToComplianceRule(row.version, row.rule);
+    setEditingRule(ruleForView);
+    setShowRuleModal(true);
+  }, []);
+
+  const handleEditRule = useCallback((row: VersionDisplayRow) => {
+    if (!row.rule || row.rule.status === "Retired") return;
+    setEditingRule(row.rule);
+    setShowRuleModal(true);
+  }, []);
+
+  const handleActivate = useCallback((ruleId: string) => {
+    setActivateConfirmRuleId(ruleId);
+  }, []);
+
+  const confirmActivate = useCallback(() => {
+    if (!activateConfirmRuleId) return;
+    validateActivation.mutate(activateConfirmRuleId, {
+      onSuccess: (result) => {
+        if (!result.valid) {
+          toast({
+            title: "Validation failed",
+            description: result.errors.join(" "),
+            variant: "destructive",
+          });
+          setActivateConfirmRuleId(null);
+          return;
+        }
+        activateRule.mutate(activateConfirmRuleId, {
+          onSuccess: () => {
+            toast({ title: "Rule activated", description: "The rule is now active." });
+            setActivateConfirmRuleId(null);
+          },
+          onError: (err) => {
+            toast({
+              title: "Activation failed",
+              description: err instanceof Error ? err.message : "Could not activate rule.",
+              variant: "destructive",
+            });
+            setActivateConfirmRuleId(null);
+          },
+        });
+      },
+    });
+  }, [activateConfirmRuleId, validateActivation, activateRule, toast]);
+
+  const handleRetire = useCallback((ruleId: string) => {
+    setRetireConfirmRuleId(ruleId);
+  }, []);
+
+  const confirmRetire = useCallback(() => {
+    if (!retireConfirmRuleId) return;
+    retireRule.mutate(retireConfirmRuleId, {
+      onSuccess: () => {
+        toast({ title: "Rule retired", description: "The rule has been retired." });
+        setRetireConfirmRuleId(null);
+      },
+      onError: (err) => {
+        toast({
+          title: "Retire failed",
+          description: err instanceof Error ? err.message : "Could not retire rule.",
+          variant: "destructive",
+        });
+        setRetireConfirmRuleId(null);
+      },
+    });
+  }, [retireConfirmRuleId, retireRule, toast]);
+
+  const handleClone = useCallback((ruleId: string) => {
+    setCloneConfirmRuleId(ruleId);
+  }, []);
+
+  const confirmClone = useCallback(() => {
+    if (!cloneConfirmRuleId) return;
+    cloneRule.mutate(
+      {
+        ruleId: cloneConfirmRuleId,
+        createdBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`,
+      },
+      {
+        onSuccess: () => {
+          toast({ title: "Rule cloned", description: "A new draft rule has been created." });
+          setCloneConfirmRuleId(null);
+        },
+        onError: (err) => {
+          toast({
+            title: "Clone failed",
+            description: err instanceof Error ? err.message : "Could not clone rule.",
+            variant: "destructive",
+          });
+          setCloneConfirmRuleId(null);
+        },
+      }
+    );
+  }, [cloneConfirmRuleId, cloneRule, toast]);
+
+  const tableColumns = useMemo<DataTableColumn<VersionDisplayRow>[]>(
     () => [
       {
         title: "Rule ID",
-        field: "ruleId",
+        field: "version.ruleId",
         width: 100,
         headerFilter: false,
-        formatter: (c) => `<span class="font-mono text-xs">${(c as { getValue: () => string }).getValue()}</span>`,
+        formatter: (c) => {
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          return `<span class="font-mono text-xs">${row.version.ruleId}</span>`;
+        },
+      },
+      {
+        title: "Rule Name",
+        field: "ruleName",
+        minWidth: 180,
+        headerFilter: false,
+        formatter: (c) => {
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          return `<span class="font-medium text-foreground">${row.ruleName.replace(/</g, "&lt;")}</span>`;
+        },
       },
       {
         title: "Version",
-        field: "version",
-        width: 90,
+        field: "version.version",
+        width: 80,
         sorter: "number",
         headerFilter: false,
       },
       {
         title: "Status",
-        field: "status",
+        field: "version.status",
         width: 100,
         headerFilter: false,
-        formatter: (c) => versionStatusBadgeHtml((c as { getValue: () => RuleVersionStatus }).getValue()),
+        formatter: (c) =>
+          versionStatusBadgeHtml(
+            (c as { getData: () => VersionDisplayRow }).getData().version.status
+          ),
       },
-      { title: "Shelf Type", field: "shelfType", width: 110, headerFilter: false },
-      { title: "Expected Value", field: "expectedValue", minWidth: 160 },
       {
-        title: "Tolerance",
-        field: "tolerance",
-        width: 90,
+        title: "Threshold",
+        field: "version.expectedValue",
+        minWidth: 140,
         headerFilter: false,
         formatter: (c) => {
-          const v = (c as { getValue: () => number | undefined }).getValue();
-          return v != null ? String(v) : "—";
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          return row.version.expectedValue || "—";
         },
       },
-      { title: "Severity", field: "severity", width: 90, headerFilter: false },
       {
         title: "Created",
-        field: "createdDate",
+        field: "version.createdDate",
         width: 120,
         sorter: "date",
         headerFilter: false,
         formatter: (c) => {
-          const val = (c as { getValue: () => Date }).getValue();
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          const val = row.version.createdDate;
           return val ? format(new Date(val), "MMM d, yyyy") : "";
         },
       },
       {
         title: "Effective",
-        field: "effectiveDate",
+        field: "version.effectiveDate",
         width: 120,
         sorter: "date",
         headerFilter: false,
         formatter: (c) => {
-          const val = (c as { getValue: () => Date | undefined }).getValue();
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          const val = row.version.effectiveDate;
           return val ? format(new Date(val), "MMM d, yyyy") : "—";
         },
       },
-      { title: "Created By", field: "createdBy", width: 180, headerFilter: false },
       {
         title: "Change Summary",
-        field: "changeSummary",
-        minWidth: 180,
+        field: "version.changeSummary",
+        minWidth: 160,
         formatter: (c) => {
-          const val = (c as { getValue: () => string | undefined }).getValue();
-          return val ? `<span class="text-muted-foreground">${String(val).replace(/</g, "&lt;")}</span>` : "—";
+          const row = (c as { getData: () => VersionDisplayRow }).getData();
+          const val = row.version.changeSummary;
+          return val
+            ? `<span class="text-muted-foreground">${String(val).replace(/</g, "&lt;")}</span>`
+            : "—";
+        },
+      },
+      {
+        title: "Actions",
+        field: "id",
+        width: 60,
+        headerSort: false,
+        headerFilter: false,
+        formatter: () => actionsCellHtml(),
+        cellClick: (e: MouseEvent, cell: { getData: () => VersionDisplayRow }) => {
+          const target = (e as unknown as { target: HTMLElement }).target as HTMLElement;
+          const btn = target.closest?.("[data-action]");
+          if (!btn) return;
+          (e as unknown as { stopPropagation?: () => void }).stopPropagation?.();
+          const action = btn.getAttribute("data-action");
+          const row = cell.getData();
+          if (action === "open-menu") {
+            const rect = (btn as HTMLElement).getBoundingClientRect();
+            setActionsMenu({ row, anchor: { x: rect.left, y: rect.bottom + 4 } });
+          }
         },
       },
     ],
+    []
+  );
+
+  const rowFormatter = useMemo(
+    () => (row: { getData: () => VersionDisplayRow; getElement: () => HTMLElement }) => {
+      const data = row.getData();
+      const el = row.getElement();
+      if (data.version.status === "Active") {
+        el.classList.add("!bg-chart-2/5");
+      } else {
+        el.classList.remove("!bg-chart-2/5");
+      }
+    },
     []
   );
 
@@ -154,11 +418,11 @@ export function RuleVersionsTab() {
       <div>
         <h2 className="text-lg font-semibold text-foreground">Rule Versions</h2>
         <p className="text-sm text-muted-foreground">
-          View version history and effective dates for each rule
+          View version history, compare changes, and manage rules (view, edit, activate, retire, clone)
         </p>
       </div>
 
-      {/* Search, Filters, Sort - audit queue style */}
+      {/* Search, Filters, Sort */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-4">
           <div className="relative flex-1 min-w-[200px]">
@@ -168,7 +432,7 @@ export function RuleVersionsTab() {
             />
             <Input
               type="search"
-              placeholder="Search by rule ID, expected value, shelf type..."
+              placeholder="Search by rule ID, rule name, threshold..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -232,7 +496,7 @@ export function RuleVersionsTab() {
         <div className="rounded-lg border border-border bg-card p-6 text-destructive">
           Failed to load versions. Please try again.
         </div>
-      ) : !filteredVersions.length ? (
+      ) : !filteredRows.length ? (
         <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
           <p className="text-muted-foreground">
             {searchQuery.trim()
@@ -253,25 +517,156 @@ export function RuleVersionsTab() {
         </div>
       ) : (
         <>
-          <DataTable<RuleVersion>
+          <DataTable<VersionDisplayRow>
             columns={tableColumns}
-            data={filteredVersions}
+            data={filteredRows}
             rowIdField="id"
-            initialSort={{ field: "createdDate", dir: "desc" }}
+            initialSort={{ field: "version.createdDate", dir: "desc" }}
             emptyMessage="No versions match the current filters"
             pageSize={10}
             pageSizeSelector={[5, 10, 20, 50]}
+            rowFormatter={rowFormatter}
             onPaginationChange={setTablePagination}
+            onRowClick={(row) => handleViewRule(row)}
           />
           <p className="text-sm text-muted-foreground text-center">
             Showing{" "}
             {Math.min(
               tablePagination.pageSize,
-              Math.max(0, filteredVersions.length - (tablePagination.page - 1) * tablePagination.pageSize)
+              Math.max(0, filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize)
             )}{" "}
-            of {filteredVersions.length} versions
+            of {filteredRows.length} versions
           </p>
         </>
+      )}
+
+      {/* Activate Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!activateConfirmRuleId}
+        onClose={() => setActivateConfirmRuleId(null)}
+        onConfirm={confirmActivate}
+        title="Activate Rule"
+        description="Are you sure you want to activate this rule? It will become effective immediately."
+        confirmLabel="Activate"
+        isLoading={activateRule.isPending}
+      />
+
+      {/* Retire Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!retireConfirmRuleId}
+        onClose={() => setRetireConfirmRuleId(null)}
+        onConfirm={confirmRetire}
+        title="Retire Rule"
+        description="Are you sure you want to retire this rule? Retired rules cannot be reactivated without cloning."
+        confirmLabel="Retire Rule"
+        variant="destructive"
+        isLoading={retireRule.isPending}
+      />
+
+      {/* Clone Confirmation Modal */}
+      <ConfirmModal
+        isOpen={!!cloneConfirmRuleId}
+        onClose={() => setCloneConfirmRuleId(null)}
+        onConfirm={confirmClone}
+        title="Clone Rule"
+        description="Create a new draft rule from this retired rule? The new rule will need to be activated separately."
+        confirmLabel="Clone"
+        isLoading={cloneRule.isPending}
+      />
+
+      <RuleBuilderModal
+        isOpen={showRuleModal}
+        onClose={() => {
+          setShowRuleModal(false);
+          setEditingRule(null);
+        }}
+        rule={editingRule}
+        createdBy={`${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`}
+      />
+
+      {/* Actions dropdown */}
+      {actionsMenu && (
+        <div
+          ref={actionsMenuRef}
+          className="fixed z-50 min-w-40 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
+          style={{
+            left: actionsMenu.anchor.x,
+            top: actionsMenu.anchor.y,
+          }}
+        >
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+            onClick={() => {
+              handleViewRule(actionsMenu.row);
+              setActionsMenu(null);
+            }}
+          >
+            <Eye className="size-4 text-muted-foreground" />
+            View version
+          </button>
+          {actionsMenu.row.rule && actionsMenu.row.rule.status !== "Retired" && (
+            <button
+              type="button"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+              onClick={() => {
+                handleEditRule(actionsMenu.row);
+                setActionsMenu(null);
+              }}
+            >
+              <Pencil className="size-4 text-muted-foreground" />
+              Edit rule
+            </button>
+          )}
+          {actionsMenu.row.rule?.status === "Draft" && (
+            <>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+                onClick={() => {
+                  handleActivate(actionsMenu.row.version.ruleId);
+                  setActionsMenu(null);
+                }}
+              >
+                <Play className="size-4 text-muted-foreground" />
+                Activate rule
+              </button>
+            </>
+          )}
+          {actionsMenu.row.rule?.status === "Active" && (
+            <>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+                onClick={() => {
+                  handleRetire(actionsMenu.row.version.ruleId);
+                  setActionsMenu(null);
+                }}
+              >
+                <Archive className="size-4 text-muted-foreground" />
+                Retire rule
+              </button>
+            </>
+          )}
+          {actionsMenu.row.rule?.status === "Retired" && (
+            <>
+              <div className="-mx-1 my-1 h-px bg-border" />
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+                onClick={() => {
+                  handleClone(actionsMenu.row.version.ruleId);
+                  setActionsMenu(null);
+                }}
+              >
+                <Copy className="size-4 text-muted-foreground" />
+                Clone rule
+              </button>
+            </>
+          )}
+        </div>
       )}
     </div>
   );

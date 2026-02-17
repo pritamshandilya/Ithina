@@ -34,7 +34,7 @@ import { RuleBuilderModal } from "./rule-builder-modal";
 
 const VERSION_STATUS_OPTIONS: RuleVersionStatus[] = ["Draft", "Active", "Archived", "Retired"];
 
-type VersionsSort = "createdDate-desc" | "createdDate-asc" | "ruleId-asc" | "version-desc";
+type VersionsSort = "createdDate-desc" | "createdDate-asc" | "ruleId-asc" | "status-asc";
 
 /** Badge HTML for version status */
 function versionStatusBadgeHtml(status: RuleVersionStatus): string {
@@ -168,8 +168,8 @@ export function RuleVersionsTab() {
       case "ruleId-asc":
         result.sort((a, b) => a.version.ruleId.localeCompare(b.version.ruleId));
         break;
-      case "version-desc":
-        result.sort((a, b) => b.version.version - a.version.version);
+      case "status-asc":
+        result.sort((a, b) => a.version.status.localeCompare(b.version.status));
         break;
     }
     return result;
@@ -481,8 +481,8 @@ export function RuleVersionsTab() {
           >
             <option value="createdDate-desc">Newest First</option>
             <option value="createdDate-asc">Oldest First</option>
-            <option value="ruleId-asc">Rule ID A–Z</option>
-            <option value="version-desc">Highest Version First</option>
+            <option value="ruleId-asc">Rule ID</option>
+            <option value="status-asc">Status</option>
           </Select>
         </div>
       </div>

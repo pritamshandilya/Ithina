@@ -4,6 +4,7 @@
  */
 
 import {
+  generateMockAdhocAnalyses,
   generateMockAudits,
   generateMockQuickStats,
   generateMockShelves,
@@ -11,7 +12,7 @@ import {
   getReturnedAudits,
   getDraftAudits,
 } from "@/lib/api/mock-data";
-import type { Audit, QuickStats, Shelf } from "@/types/maker";
+import type { AdhocAnalysis, Audit, QuickStats, Shelf } from "@/types/maker";
 import type { Store } from "@/types/checker";
 
 /**
@@ -316,4 +317,20 @@ export async function deleteDraft(_auditId: string): Promise<void> {
   
   // In production, this would be:
   // await api.delete(`/maker/audits/${auditId}/draft`);
+}
+
+/**
+ * Fetch adhoc analyses for the maker (one-off shelf image uploads + AI analysis)
+ *
+ * @param storeId - Optional store ID to filter by
+ * @returns Promise<AdhocAnalysis[]> - Array of adhoc analysis records
+ */
+export async function fetchAdhocAnalyses(storeId?: string): Promise<AdhocAnalysis[]> {
+  await simulateNetworkDelay(300);
+
+  // In production, this would be:
+  // const response = await api.get('/maker/adhoc-analyses', { params: { storeId } });
+  // return response.data;
+
+  return generateMockAdhocAnalyses(storeId);
 }

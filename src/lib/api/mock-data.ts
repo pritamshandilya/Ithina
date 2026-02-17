@@ -3,7 +3,7 @@
  * This file provides realistic mock data that mirrors the structure of real API responses
  */
 
-import type { Audit, MockUserContext, QuickStats, Shelf } from "@/types/maker";
+import type { AdhocAnalysis, Audit, MockUserContext, QuickStats, Shelf } from "@/types/maker";
 import type {
   CheckerAudit,
   ComplianceOverview,
@@ -381,6 +381,32 @@ export function getReturnedAudits(): Audit[] {
 export function getDraftAudits(): Audit[] {
   const audits = generateMockAudits();
   return audits.filter((audit) => audit.status === "draft");
+}
+
+/**
+ * Generate mock adhoc analyses (one-off shelf image uploads + AI analysis)
+ */
+export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
+  const stores = generateMockStores();
+  const targetStore = storeId ? stores.find((s) => s.id === storeId) ?? stores[0] : stores[0];
+  const names = [
+    "Aisle 3 Beverages Snapshot",
+    "Snacks Bay Quick Check",
+    "Dairy Section Overview",
+    "Frozen Foods Audit",
+    "Bakery End Cap",
+  ];
+  const statuses: AdhocAnalysis["status"][] = ["completed", "completed", "processing", "completed", "failed"];
+  return names.map((name, i) => ({
+    id: `adhoc-${targetStore.id}-${i + 1}`,
+    name,
+    storeId: targetStore.id,
+    storeName: targetStore.name,
+    createdAt: randomPastDate(7),
+    status: statuses[i],
+    complianceScore: statuses[i] === "completed" ? randomScore(72, 98) : undefined,
+    errorMessage: statuses[i] === "failed" ? "Image quality too low for analysis" : undefined,
+  }));
 }
 
 // ============================================================================

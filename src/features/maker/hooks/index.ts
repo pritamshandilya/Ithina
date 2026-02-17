@@ -20,3 +20,4 @@ export {
 export { useStores, storesKeys } from "./useStores";
 export { useCreateShelf } from "./useCreateShelf";
 export { useMakerAudits, makerAuditsKeys } from "./useMakerAudits";
+export { useAdhocAnalyses, adhocAnalysesKeys } from "./useAdhocAnalyses";

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -12,7 +12,7 @@ import { useAdhocAnalyses, useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
 import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
 
-export const Route = createFileRoute("/maker/audits/adhoc")({
+export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
 });
 
@@ -133,11 +133,6 @@ function AdhocAnalysisPage() {
     )
   );
 
-
-  const handleNewAdhoc = () => {
-    // TODO: Open upload flow / modal
-  };
-
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
@@ -155,12 +150,11 @@ function AdhocAnalysisPage() {
                 Upload a shelf image and let AI analyze your retail space.
               </p>
             </div>
-            <Button
-              onClick={handleNewAdhoc}
-              className="bg-chart-2 text-white hover:opacity-90 shrink-0"
-            >
-              <Plus className="size-4" aria-hidden />
-              New Adhoc Analysis
+            <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
+              <Link to="/maker/audits/adhoc/new">
+                <Plus className="size-4" aria-hidden />
+                New Adhoc Analysis
+              </Link>
             </Button>
           </header>
 
@@ -180,12 +174,11 @@ function AdhocAnalysisPage() {
                   Start by creating a new adhoc analysis. Upload a shelf image and let AI analyze
                   your retail space.
                 </p>
-                <Button
-                  onClick={handleNewAdhoc}
-                  className="mt-6 bg-chart-2 text-white hover:opacity-90"
-                >
-                  <Plus className="size-4" aria-hidden />
-                  New Adhoc Analysis
+                <Button asChild className="mt-6 bg-chart-2 text-white hover:opacity-90">
+                  <Link to="/maker/audits/adhoc/new">
+                    <Plus className="size-4" aria-hidden />
+                    New Adhoc Analysis
+                  </Link>
                 </Button>
               </div>
             ) : (

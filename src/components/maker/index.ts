@@ -43,4 +43,8 @@ export {
   AuditReviewQueue,
   type AuditReviewQueueProps,
 } from "./audit-review-queue";
+export {
+  SelectRuleSetModal,
+  type SelectRuleSetModalProps,
+} from "./select-rule-set-modal";
 export * from "./manual-override-list";

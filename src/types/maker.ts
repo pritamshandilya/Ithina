@@ -98,6 +98,22 @@ export interface MockUserContext {
 }
 
 /**
+ * Planogram analysis view of a shelf (extends Shelf with planogram-specific display fields)
+ */
+export interface PlanogramShelfRow extends Shelf {
+  /** Compliance rule set name applied to this shelf */
+  complianceRuleSet?: string;
+  /** Categorization mode (e.g. "By Category", "By Brand") */
+  categorizeBy?: string;
+  /** Last planogram analysis run date */
+  lastRun?: Date;
+  /** Product count from last analysis */
+  productsCount?: number;
+  /** Issue count from last analysis */
+  issuesCount?: number;
+}
+
+/**
  * Sync status for offline mode
  */
 export interface SyncStatus {

@@ -38,7 +38,7 @@ function AuditCreationPage() {
     if (step === "mode-selection") {
       setStep("shelf-selection");
     } else {
-      navigate({ to: "/maker/audit-review" });
+      navigate({ to: "/maker/audits/planogram" });
     }
   };
 

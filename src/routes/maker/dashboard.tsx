@@ -53,7 +53,7 @@ function MakerDashboard() {
                 navigate({ to: "/maker/audit/new" });
               }}
               onViewReport={(_auditId, _shelfId) => {
-                navigate({ to: "/maker/audit-review" });
+                navigate({ to: "/maker/audits/planogram" });
               }}
             />
           </section>

@@ -79,4 +79,11 @@ export interface PlanogramSummary {
 export interface PlanogramArrangement {
   planogramId: string;
   shelfOrder: { shelfId: string; productIds: string[] }[];
+  /** SKUs removed from the planogram (moved to Removed Items) */
+  removedProductIds?: string[];
+  /** Product-level edits: sku -> { name?, category?, facings?, depthCount? } */
+  productEdits?: Record<
+    string,
+    { name?: string; category?: string; facings?: number; depthCount?: number }
+  >;
 }

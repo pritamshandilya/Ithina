@@ -1,4 +1,5 @@
 export { CategoryFilterTags, type CategoryFilterTagsProps } from "./category-filter-tags";
+export { InlineEdit, type InlineEditProps } from "./inline-edit";
 export {
   RemovedItemsSidebar,
   type RemovedItemsSidebarProps,

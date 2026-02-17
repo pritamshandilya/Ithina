@@ -94,3 +94,26 @@ export async function saveShelfArrangement(
   createdPlanogramShelves.push(shelf);
   return shelf;
 }
+
+/**
+ * Update an existing shelf's arrangement (product order, removed items, product edits)
+ *
+ * @param shelfId - Shelf to update
+ * @param arrangement - Updated arrangement
+ * @returns Promise<Shelf | null> - Updated shelf or null if not found
+ */
+export async function updateShelfArrangement(
+  shelfId: string,
+  arrangement: PlanogramArrangement
+): Promise<Shelf | null> {
+  await delay(400);
+
+  const idx = createdPlanogramShelves.findIndex((s) => s.id === shelfId);
+  if (idx < 0) return null;
+
+  createdPlanogramShelves[idx] = {
+    ...createdPlanogramShelves[idx],
+    arrangement,
+  };
+  return createdPlanogramShelves[idx];
+}

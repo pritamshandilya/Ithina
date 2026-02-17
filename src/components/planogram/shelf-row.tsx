@@ -10,6 +10,9 @@ import {
 import type { PlanogramShelfDef } from "@/types/planogram";
 
 import { ShelfProduct } from "./shelf-product";
+import type { PlanogramEditHandlers } from "./types";
+
+export type { PlanogramEditHandlers as ShelfRowEditHandlers } from "./types";
 
 export interface ShelfRowProps {
   shelf: PlanogramShelfDef;
@@ -17,6 +20,8 @@ export interface ShelfRowProps {
   highDemandSkus?: string[];
   /** Map category -> Tailwind bg class */
   getCategoryColor?: (category: string) => string;
+  /** Edit handlers (when provided, product cards become editable) */
+  editHandlers?: PlanogramEditHandlers;
   className?: string;
 }
 
@@ -24,6 +29,7 @@ export function ShelfRow({
   shelf,
   highDemandSkus = [],
   getCategoryColor = defaultGetCategoryColor,
+  editHandlers,
   className,
 }: ShelfRowProps) {
   const totalFacings = shelf.products.reduce((sum, p) => sum + p.facings, 0);
@@ -48,6 +54,7 @@ export function ShelfRow({
           <ShelfProduct
             key={product.sku}
             product={product}
+            shelfNumber={shelf.shelfNumber}
             widthFraction={totalFacings > 0 ? product.facings / totalFacings : 0}
             highDemandSkus={highDemandSkus}
             categoryColor={getCategoryColor(product.category)}
@@ -56,6 +63,7 @@ export function ShelfRow({
                 ? "rounded-xl"
                 : "rounded-md"
             }
+            editHandlers={editHandlers}
           />
         ))}
       </div>

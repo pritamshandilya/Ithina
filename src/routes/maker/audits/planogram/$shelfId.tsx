@@ -2,12 +2,14 @@
  * Planogram Preview Route
  *
  * Visual preview of a saved planogram shelf.
+ * Editable: product name, category, facings/depth; remove products.
  * Access at: /maker/audits/planogram/:shelfId
  */
 
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Info } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowLeft, Check, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
@@ -21,19 +23,29 @@ import {
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePlanogramShelfPreview, useStores } from "@/features/maker/hooks";
+import { updateShelfArrangement } from "@/features/maker/api/planogram";
+import {
+  planogramShelfPreviewKeys,
+  usePlanogramShelfPreview,
+  useStores,
+} from "@/features/maker/hooks";
+import { useToast } from "@/hooks/use-toast";
 import { mockUser } from "@/lib/api/mock-data";
-import type { PlanogramPayload } from "@/types/planogram";
+import type {
+  PlanogramArrangement,
+  PlanogramProduct,
+  PlanogramShelfDef,
+} from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/$shelfId")({
   component: PlanogramPreviewPage,
 });
 
-function derivePlanogramStats(payload: PlanogramPayload) {
-  const { planogram } = payload;
-  const fixture = planogram.fixture;
-  const allProducts = fixture.shelves.flatMap((s) => s.products);
-
+function derivePlanogramStats(
+  shelves: PlanogramShelfDef[],
+  removedItems: PlanogramProduct[]
+) {
+  const allProducts = shelves.flatMap((s) => s.products);
   const uniqueSkus = new Set(allProducts.map((p) => p.sku)).size;
   const frontFacings = allProducts.reduce((sum, p) => sum + p.facings, 0);
   const totalUnits = allProducts.reduce(
@@ -43,31 +55,269 @@ function derivePlanogramStats(payload: PlanogramPayload) {
   const categorySet = new Set(allProducts.map((p) => p.category));
 
   return {
-    shelves: fixture.shelfCount,
+    shelves: shelves.length,
     skus: uniqueSkus,
     frontFacings,
     totalUnits,
     categories: categorySet.size,
     categoryList: [...categorySet],
-    removed: 0,
+    removed: removedItems.length,
   };
+}
+
+function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
+  return shelves.map((s) => ({
+    ...s,
+    products: s.products.map((p) => ({ ...p })),
+  }));
 }
 
 function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
 
-  const stats = useMemo(() => {
-    if (!preview) return null;
-    return derivePlanogramStats(preview.planogramPayload);
-  }, [preview]);
+  const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
+  const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!preview?.planogramPayload.planogram.fixture.shelves) return;
+    const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
+    const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
+
+    let shelves = deepCopyShelves(fixtureShelves);
+    const removed: PlanogramProduct[] = [];
+
+    if (arrangement?.productEdits) {
+      shelves = shelves.map((s) => ({
+        ...s,
+        products: s.products.map((p) => {
+          const edits = arrangement.productEdits![p.sku];
+          if (!edits) return p;
+          return {
+            ...p,
+            ...(edits.name != null && { name: edits.name }),
+            ...(edits.category != null && { category: edits.category }),
+            ...(edits.facings != null && { facings: edits.facings }),
+            ...(edits.depthCount != null && { depthCount: edits.depthCount }),
+          };
+        }),
+      }));
+    }
+
+    if (arrangement?.removedProductIds?.length) {
+      const removedSet = new Set(arrangement.removedProductIds);
+      for (const shelf of shelves) {
+        for (const p of shelf.products) {
+          if (removedSet.has(p.sku)) removed.push(p);
+        }
+      }
+      shelves = shelves.map((s) => ({
+        ...s,
+        products: s.products.filter((p) => !removedSet.has(p.sku)),
+      }));
+    }
+
+    if (arrangement?.shelfOrder?.length) {
+      const orderMap = new Map(
+        arrangement.shelfOrder.map((o) => [
+          o.shelfId.replace("shelf-", ""),
+          o.productIds,
+        ])
+      );
+      shelves = shelves.map((s) => {
+        const productIds = orderMap.get(String(s.shelfNumber));
+        if (!productIds?.length) return s;
+        const bySku = new Map(s.products.map((p) => [p.sku, p]));
+        const ordered = productIds
+          .map((id) => bySku.get(id))
+          .filter((p): p is PlanogramProduct => p != null);
+        return { ...s, products: ordered.length ? ordered : s.products };
+      });
+    }
+
+    setLocalShelves(shelves);
+    setRemovedItems(removed);
+    setHasChanges(false);
+  }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+
+  const findProduct = useCallback(
+    (shelfNumber: number, sku: string) => {
+      const shelf = localShelves.find((s) => s.shelfNumber === shelfNumber);
+      return shelf?.products.find((p) => p.sku === sku);
+    },
+    [localShelves]
+  );
+
+  const onEditName = useCallback(
+    (shelfNumber: number, sku: string, newName: string) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) =>
+                  p.sku === sku ? { ...p, name: newName } : p
+                ),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
+
+  const onEditCategory = useCallback(
+    (shelfNumber: number, sku: string, newCategory: string) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) =>
+                  p.sku === sku ? { ...p, category: newCategory } : p
+                ),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
+
+  const onEditFacingsDepth = useCallback(
+    (
+      shelfNumber: number,
+      sku: string,
+      updates: { facings?: number; depthCount?: number }
+    ) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) => {
+                  if (p.sku !== sku) return p;
+                  const facings = updates.facings ?? p.facings;
+                  const depthCount = updates.depthCount ?? p.depthCount;
+                  return { ...p, facings, depthCount };
+                }),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
+
+  const onRemoveProduct = useCallback(
+    (shelfNumber: number, sku: string) => {
+      const product = findProduct(shelfNumber, sku);
+      if (!product) return;
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.filter((p) => p.sku !== sku),
+              }
+            : s
+        )
+      );
+      setRemovedItems((prev) => [...prev, product]);
+      setHasChanges(true);
+    },
+    [findProduct]
+  );
+
+  const handleSave = useCallback(async () => {
+    if (!preview || !hasChanges || !shelfId) return;
+    setIsSaving(true);
+    try {
+      const originalShelves =
+        preview.planogramPayload.planogram.fixture.shelves;
+      const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
+      for (const shelf of localShelves) {
+        for (const p of shelf.products) {
+          const orig = originalShelves
+            .flatMap((s) => s.products)
+            .find((op) => op.sku === p.sku);
+          if (!orig) continue;
+          const edits: { name?: string; category?: string; facings?: number; depthCount?: number } = {};
+          if (p.name !== orig.name) edits.name = p.name;
+          if (p.category !== orig.category) edits.category = p.category;
+          if (p.facings !== orig.facings) edits.facings = p.facings;
+          if (p.depthCount !== orig.depthCount) edits.depthCount = p.depthCount;
+          if (Object.keys(edits).length > 0) productEdits[p.sku] = edits;
+        }
+      }
+      const arrangement: PlanogramArrangement = {
+        planogramId: preview.planogramPayload.planogram.id,
+        shelfOrder: localShelves.map((s) => ({
+          shelfId: `shelf-${s.shelfNumber}`,
+          productIds: s.products.map((p) => p.sku),
+        })),
+        removedProductIds: removedItems.map((p) => p.sku),
+        productEdits: Object.keys(productEdits).length > 0 ? productEdits : undefined,
+      };
+      const updated = await updateShelfArrangement(shelfId, arrangement);
+      if (updated) {
+        await queryClient.invalidateQueries({
+          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
+        });
+        toast({ title: "Changes saved", description: "Your planogram edits have been saved." });
+        setHasChanges(false);
+      } else {
+        toast({
+          title: "Save failed",
+          description: "Could not update shelf. It may not exist.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    preview,
+    hasChanges,
+    shelfId,
+    localShelves,
+    removedItems,
+    queryClient,
+    toast,
+  ]);
 
   const planogram = preview?.planogramPayload.planogram;
   const metadata = preview?.planogramPayload.metadata;
   const fixture = planogram?.fixture;
+  const highDemandSkus =
+    preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
+
+  const shelvesToShow = useMemo(
+    () =>
+      localShelves.length > 0 ? localShelves : (fixture?.shelves ?? []),
+    [localShelves, fixture?.shelves]
+  );
+
+  const stats = useMemo(
+    () => derivePlanogramStats(shelvesToShow, removedItems),
+    [shelvesToShow, removedItems]
+  );
 
   return (
     <MainLayout>
@@ -79,7 +329,7 @@ function PlanogramPreviewPage() {
             onStoreChange={setSelectedStoreId}
           />
 
-          <header className="flex items-center gap-4">
+          <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/maker/audits/planogram">
                 <ArrowLeft className="size-4" aria-hidden />
@@ -105,6 +355,16 @@ function PlanogramPreviewPage() {
                 <h1 className="text-2xl font-bold text-foreground">Planogram not found</h1>
               )}
             </div>
+            {hasChanges && (
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-chart-2 text-white hover:opacity-90"
+              >
+                <Check className="size-4" aria-hidden />
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            )}
           </header>
 
           {isLoading && (
@@ -126,7 +386,7 @@ function PlanogramPreviewPage() {
             </div>
           )}
 
-          {preview && stats && !isLoading && (
+          {preview && !isLoading && (
             <div className="flex flex-col gap-6 lg:flex-row">
               {/* Main content – stacks on small screens */}
               <div className="min-w-0 flex-1 space-y-6">
@@ -176,15 +436,19 @@ function PlanogramPreviewPage() {
 
               {/* Shelf layout – sorted by verticalPosition descending (top first) */}
               <div className="space-y-6">
-                {[...(fixture?.shelves ?? [])]
+                {[...shelvesToShow]
                   .sort((a, b) => b.verticalPosition - a.verticalPosition)
                   .map((shelf) => (
                     <ShelfRow
                       key={shelf.shelfNumber}
                       shelf={shelf}
-                      highDemandSkus={
-                        preview.planogramPayload.stockingRules?.highDemandProducts ?? []
-                      }
+                      highDemandSkus={highDemandSkus}
+                      editHandlers={{
+                        onEditName,
+                        onEditCategory,
+                        onEditFacingsDepth,
+                        onRemoveProduct,
+                      }}
                     />
                   ))}
               </div>
@@ -192,10 +456,8 @@ function PlanogramPreviewPage() {
               {/* Product Details + Stocking Rules – side-by-side on large screens */}
               <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
                 <ProductDetailsTable
-                  shelves={fixture?.shelves ?? []}
-                  highDemandSkus={
-                    preview.planogramPayload.stockingRules?.highDemandProducts ?? []
-                  }
+                  shelves={shelvesToShow}
+                  highDemandSkus={highDemandSkus}
                 />
                 <div className="rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
@@ -206,7 +468,7 @@ function PlanogramPreviewPage() {
               </div>
 
               {/* Removed Items sidebar – right side on large screens */}
-              <RemovedItemsSidebar removedItems={[]} />
+              <RemovedItemsSidebar removedItems={removedItems} />
             </div>
           )}
 

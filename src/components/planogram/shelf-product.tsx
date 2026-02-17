@@ -9,8 +9,11 @@ import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PlanogramProduct } from "@/types/planogram";
 
+import type { PlanogramEditHandlers } from "./types";
+
 export interface ShelfProductProps {
   product: PlanogramProduct;
+  shelfNumber: number;
   /** Width as fraction of total shelf facings (0–1) */
   widthFraction: number;
   /** SKUs marked as high demand */
@@ -19,15 +22,19 @@ export interface ShelfProductProps {
   categoryColor?: string;
   /** Shape: "box" = square corners, "bottle" = rounded */
   shapeClass?: "rounded-md" | "rounded-xl";
+  /** Edit handlers (M2: wire to InlineEdit) */
+  editHandlers?: PlanogramEditHandlers;
   className?: string;
 }
 
 export function ShelfProduct({
   product,
+  shelfNumber,
   widthFraction,
   highDemandSkus = [],
   categoryColor = "bg-muted",
   shapeClass = "rounded-md",
+  editHandlers: _editHandlers,
   className,
 }: ShelfProductProps) {
   const totalUnits = product.facings * (product.depthCount || 1);

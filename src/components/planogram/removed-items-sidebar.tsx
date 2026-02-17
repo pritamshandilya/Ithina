@@ -1,15 +1,15 @@
 /**
  * RemovedItemsSidebar – right-side or collapsible panel for removed products
- * Wireframe: empty state only; no remove/restore logic (Phase 2)
  */
 
 import { PackageX } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import type { PlanogramProduct } from "@/types/planogram";
 
 export interface RemovedItemsSidebarProps {
-  /** Removed items (wireframe: always empty) */
-  removedItems?: unknown[];
+  /** Removed products (moved from shelf) */
+  removedItems?: PlanogramProduct[];
   /** Whether the sidebar is collapsed */
   collapsed?: boolean;
   /** Toggle collapse (optional) */
@@ -59,10 +59,17 @@ export function RemovedItemsSidebar({
         <div className="flex-1 overflow-auto p-3">
           {hasItems ? (
             <ul className="space-y-2">
-              {/* Phase 2: render removed items */}
-              {removedItems.map((item, i) => (
-                <li key={i} className="text-sm text-muted-foreground">
-                  {String(item)}
+              {removedItems.map((item) => (
+                <li
+                  key={item.sku}
+                  className="rounded border border-border bg-muted/30 px-2 py-1.5 text-xs"
+                >
+                  <p className="font-medium text-foreground truncate" title={item.name}>
+                    {item.name}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {item.category} · {item.sku}
+                  </p>
                 </li>
               ))}
             </ul>

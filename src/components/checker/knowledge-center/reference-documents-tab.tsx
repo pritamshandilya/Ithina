@@ -9,10 +9,11 @@
  * will be stored and linked to those rules for audit traceability.
  */
 
-import { useMemo, useRef, useState } from "react";
-import { Upload, FileText, Link2, Search, Pencil } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, FileText, Link2, Pencil, Search, Upload } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   useComplianceRules,
@@ -24,6 +25,184 @@ import { useToast } from "@/hooks/use-toast";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { format } from "date-fns";
 import type { ReferenceDocument } from "@/types/checker";
+
+/** Rule option for selector */
+interface RuleOption {
+  ruleId: string;
+  ruleName: string;
+}
+
+/**
+ * Scalable rule selector: dropdown with search and scrollable list.
+ * Handles hundreds of rules without cluttering the UI.
+ */
+function RuleSelectorDropdown({
+  rules,
+  selectedIds,
+  onChange,
+  placeholder = "Select rules to link",
+  triggerClassName,
+}: {
+  rules: RuleOption[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+  placeholder?: string;
+  triggerClassName?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  const filteredRules = useMemo(() => {
+    if (!search.trim()) return rules;
+    const q = search.toLowerCase();
+    return rules.filter(
+      (r) =>
+        r.ruleId.toLowerCase().includes(q) || r.ruleName.toLowerCase().includes(q)
+    );
+  }, [rules, search]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        panelRef.current?.contains(target) ||
+        triggerRef.current?.contains(target)
+      )
+        return;
+      setIsOpen(false);
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleToggle = useCallback(
+    (ruleId: string, checked: boolean) => {
+      if (checked) {
+        onChange([...selectedIds, ruleId]);
+      } else {
+        onChange(selectedIds.filter((id) => id !== ruleId));
+      }
+    },
+    [selectedIds, onChange]
+  );
+
+  const handleSelectAll = useCallback(() => {
+    const ids = filteredRules.map((r) => r.ruleId);
+    const allSelected = ids.every((id) => selectedIds.includes(id));
+    if (allSelected) {
+      onChange(selectedIds.filter((id) => !ids.includes(id)));
+    } else {
+      onChange([...new Set([...selectedIds, ...ids])]);
+    }
+  }, [filteredRules, selectedIds, onChange]);
+
+  const handleClear = useCallback(() => {
+    onChange([]);
+  }, [onChange]);
+
+  const label =
+    selectedIds.length > 0
+      ? `${selectedIds.length} rule(s) selected`
+      : placeholder;
+
+  return (
+    <div className="relative">
+      <button
+        ref={triggerRef}
+        type="button"
+        onClick={() => setIsOpen((o) => !o)}
+        className={
+          triggerClassName ??
+          "flex w-full min-w-[200px] items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+        }
+        aria-haspopup="listbox"
+        aria-expanded={isOpen}
+      >
+        <span className={selectedIds.length > 0 ? "text-foreground" : "text-muted-foreground"}>
+          {label}
+        </span>
+        <ChevronDown
+          className={`size-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {isOpen && (
+        <div
+          ref={panelRef}
+          className="absolute left-0 top-full z-50 mt-1 min-w-[280px] rounded-md border border-border bg-popover shadow-lg"
+        >
+          <div className="border-b border-border p-2">
+            <div className="relative">
+              <Search
+                className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                type="search"
+                placeholder="Search rules..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-8 pl-8 text-sm"
+                autoFocus
+              />
+            </div>
+            <div className="mt-2 flex gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={handleSelectAll}
+              >
+                {filteredRules.every((r) => selectedIds.includes(r.ruleId))
+                  ? "Deselect all"
+                  : "Select all"}
+              </Button>
+              {selectedIds.length > 0 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={handleClear}
+                >
+                  Clear
+                </Button>
+              )}
+            </div>
+          </div>
+          <div className="max-h-60 overflow-y-auto p-1">
+            {filteredRules.length === 0 ? (
+              <p className="px-2 py-4 text-center text-sm text-muted-foreground">
+                No rules match
+              </p>
+            ) : (
+              filteredRules.map((r) => (
+                <label
+                  key={r.ruleId}
+                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
+                >
+                  <Checkbox
+                    checked={selectedIds.includes(r.ruleId)}
+                    onCheckedChange={(checked) =>
+                      handleToggle(r.ruleId, checked === true)
+                    }
+                  />
+                  <span className="truncate">
+                    {r.ruleId} – {r.ruleName}
+                  </span>
+                </label>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ReferenceDocumentsTab() {
   const { toast } = useToast();
@@ -154,36 +333,15 @@ export function ReferenceDocumentsTab() {
             Link new uploads to rules (optional)
           </h3>
           <p className="mb-3 text-xs text-muted-foreground">
-            Select rules below before uploading. The next document you upload will be linked to
+            Select rules before uploading. The next document you upload will be linked to
             these rules for audit traceability.
           </p>
-          <div className="flex flex-wrap gap-2">
-            {rules.map((r) => (
-              <label
-                key={r.ruleId}
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm hover:bg-muted/50"
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedRuleIds.includes(r.ruleId)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setSelectedRuleIds((prev) => [...prev, r.ruleId]);
-                    } else {
-                      setSelectedRuleIds((prev) => prev.filter((id) => id !== r.ruleId));
-                    }
-                  }}
-                  className="rounded"
-                />
-                <span>{r.ruleId} – {r.ruleName}</span>
-              </label>
-            ))}
-          </div>
-          {selectedRuleIds.length > 0 && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              {selectedRuleIds.length} rule(s) selected for next upload
-            </p>
-          )}
+          <RuleSelectorDropdown
+            rules={rules.map((r) => ({ ruleId: r.ruleId, ruleName: r.ruleName }))}
+            selectedIds={selectedRuleIds}
+            onChange={setSelectedRuleIds}
+            placeholder="Select rules for next upload"
+          />
         </div>
       )}
 
@@ -305,27 +463,14 @@ function DocumentRow({
 
       <div className="flex flex-col gap-2 sm:items-end">
         {isEditing ? (
-          <div className="flex flex-wrap gap-2">
-            {rules.map((r) => (
-              <label
-                key={r.ruleId}
-                className="flex cursor-pointer items-center gap-2 rounded-md border border-border px-2 py-1.5 text-xs hover:bg-muted/50"
-              >
-                <input
-                  type="checkbox"
-                  checked={editLinkedRuleIds.includes(r.ruleId)}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      onEditLinkedRuleIdsChange([...editLinkedRuleIds, r.ruleId]);
-                    } else {
-                      onEditLinkedRuleIdsChange(editLinkedRuleIds.filter((id) => id !== r.ruleId));
-                    }
-                  }}
-                  className="rounded"
-                />
-                <span>{r.ruleId}</span>
-              </label>
-            ))}
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <RuleSelectorDropdown
+              rules={rules}
+              selectedIds={editLinkedRuleIds}
+              onChange={onEditLinkedRuleIdsChange}
+              placeholder="Select rules to link"
+              triggerClassName="flex min-w-[180px] items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+            />
             <div className="flex gap-1">
               <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={isSaving}>
                 Cancel

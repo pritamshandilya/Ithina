@@ -19,6 +19,7 @@ export const CATEGORY_COLORS: Record<string, string> = {
   Nectars: "bg-amber-100 dark:bg-amber-900/40",
   Dairy: "bg-blue-100 dark:bg-blue-900/40",
   Milk: "bg-sky-50 dark:bg-sky-950/50",
+  "Energy Drinks": "bg-emerald-100 dark:bg-emerald-900/40",
 };
 
 /** Default for unknown categories */
@@ -47,4 +48,57 @@ const BOTTLE_CATEGORIES = new Set([
 /** Returns shape type for category – wireframe uses CSS border-radius */
 export function getProductShapeType(category: string): ProductShapeType {
   return BOTTLE_CATEGORIES.has(category) ? "bottle" : "box";
+}
+
+/** Hex colors for SVG fill (main body) – darker tones for visibility on light card backgrounds */
+const CATEGORY_FILL: Record<string, string> = {
+  "Aperitif Snacks": "#d97706",
+  Chips: "#ea580c",
+  Snacks: "#ca8a04",
+  "Kids Cereal": "#65a30d",
+  Coffee: "#b45309",
+  "Baby Care": "#db2777",
+  "First Aid": "#e11d48",
+  Grooming: "#7c3aed",
+  Water: "#0284c7",
+  "Sparkling Water": "#0891b2",
+  "Soft Drinks": "#dc2626",
+  Juices: "#c2410c",
+  Nectars: "#d97706",
+  Dairy: "#2563eb",
+  Milk: "#0ea5e9",
+  "Energy Drinks": "#059669",
+};
+
+/** Hex colors for SVG accent (cap, label, stroke) – darker for definition */
+const CATEGORY_ACCENT: Record<string, string> = {
+  "Aperitif Snacks": "#92400e",
+  Chips: "#c2410c",
+  Snacks: "#a16207",
+  "Kids Cereal": "#4d7c0f",
+  Coffee: "#78350f",
+  "Baby Care": "#9d174d",
+  "First Aid": "#b91c1c",
+  Grooming: "#5b21b6",
+  Water: "#0369a1",
+  "Sparkling Water": "#0e7490",
+  "Soft Drinks": "#b91c1c",
+  Juices: "#9a3412",
+  Nectars: "#92400e",
+  Dairy: "#1d4ed8",
+  Milk: "#0284c7",
+  "Energy Drinks": "#047857",
+};
+
+const DEFAULT_FILL = "#6b7280";
+const DEFAULT_ACCENT = "#4b5563";
+
+/** Returns hex color for SVG fill */
+export function getCategoryFill(category: string): string {
+  return CATEGORY_FILL[category] ?? DEFAULT_FILL;
+}
+
+/** Returns hex color for SVG accent */
+export function getCategoryAccent(category: string): string {
+  return CATEGORY_ACCENT[category] ?? DEFAULT_ACCENT;
 }

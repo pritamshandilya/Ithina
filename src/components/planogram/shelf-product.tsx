@@ -1,17 +1,21 @@
 /**
  * ShelfProduct – single product block in a shelf row
- * Width proportional to facings; displays name, category, facings/depth/units
- * Inline edit for name, category, facings/depth when editHandlers provided
+ * SVG-based product shapes with facings/depth layers; inline edit when editHandlers provided
  */
 
 import { X, Zap } from "lucide-react";
 
+import {
+  getCategoryAccent,
+  getCategoryFill,
+} from "@/lib/constants/planogram";
 import { cn } from "@/lib/utils";
 import type { PlanogramProduct } from "@/types/planogram";
 
 import type { PlanogramEditHandlers } from "./types";
 import { InlineEdit } from "./inline-edit";
 import { InlineFacingsDepthEdit } from "./inline-facings-depth-edit";
+import { getProductSVG } from "./product-svg-utils";
 
 export interface ShelfProductProps {
   product: PlanogramProduct;
@@ -42,6 +46,10 @@ export function ShelfProduct({
   const totalUnits = product.facings * (product.depthCount || 1);
   const isHighDemand = highDemandSkus.includes(product.sku);
   const isEditable = !!editHandlers;
+  const depthCount = product.depthCount || 1;
+  const fill = getCategoryFill(product.category);
+  const accent = getCategoryAccent(product.category);
+  const ProductSVG = getProductSVG(product.category);
 
   return (
     <div
@@ -49,7 +57,7 @@ export function ShelfProduct({
         "group relative flex min-w-0 flex-col border border-border p-2 transition-colors",
         shapeClass,
         categoryColor,
-        isHighDemand && "ring-2 ring-amber-400 ring-offset-2",
+        isHighDemand && "ring-[3px] ring-yellow-400/80 ring-offset-1",
         className
       )}
       style={{ flex: `${widthFraction} 1 0%` }}
@@ -64,21 +72,51 @@ export function ShelfProduct({
           title="Remove product"
           aria-label={`Remove ${product.name}`}
         >
-          <X className="size-3 text-muted-foreground hover:text-destructive" aria-hidden />
+          <X className="size-3 text-slate-600 hover:text-destructive dark:text-muted-foreground" aria-hidden />
         </button>
       )}
       {isHighDemand && (
         <span
-          className="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
+          className="absolute left-1 top-1 z-10 flex items-center gap-0.5 rounded bg-amber-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white"
           title="High demand product"
         >
           <Zap className="size-2.5" aria-hidden />
           HIGH
         </span>
       )}
+      {/* SVG product shapes: facings columns × depth layers */}
+      <div className="flex items-end justify-center gap-0.5 py-1">
+        {Array.from({ length: product.facings }, (_, colIdx) => (
+          <div
+            key={colIdx}
+            className="relative flex h-14 flex-1 items-end justify-center"
+          >
+            {Array.from({ length: depthCount }, (_, depthIdx) => {
+              const t = depthCount > 1 ? depthIdx / (depthCount - 1) : 1;
+              const opacity = 0.7 + t * 0.3;
+              const scale = 0.9 + t * 0.06;
+              const translateY = depthIdx * 2;
+              const translateX = depthIdx * 1.5;
+              return (
+                <div
+                  key={depthIdx}
+                  className="absolute bottom-0 left-1/2 h-12 w-6"
+                  style={{
+                    opacity,
+                    transform: `translateX(calc(-50% + ${translateX}px)) translateY(${-translateY}px) scale(${scale})`,
+                    zIndex: depthIdx,
+                  }}
+                >
+                  <ProductSVG fill={fill} accent={accent} />
+                </div>
+              );
+            })}
+          </div>
+        ))}
+      </div>
       <div
         className={cn(
-          "min-w-0 truncate text-xs font-medium text-foreground",
+          "min-w-0 truncate text-xs font-medium text-slate-900 dark:text-foreground",
           isHighDemand && "pl-10",
           isEditable && "pr-8"
         )}
@@ -87,7 +125,7 @@ export function ShelfProduct({
           <InlineEdit
             value={product.name}
             onSave={(v) => editHandlers.onEditName(shelfNumber, product.sku, v)}
-            className="text-left"
+            className="text-left text-inherit"
             aria-label="Edit product name"
           />
         ) : (
@@ -96,7 +134,7 @@ export function ShelfProduct({
       </div>
       <div
         className={cn(
-          "min-w-0 truncate text-[10px] text-muted-foreground",
+          "min-w-0 truncate text-[10px] text-slate-600 dark:text-muted-foreground",
           isHighDemand && "pl-10"
         )}
       >
@@ -104,7 +142,7 @@ export function ShelfProduct({
           <InlineEdit
             value={product.category}
             onSave={(v) => editHandlers.onEditCategory(shelfNumber, product.sku, v)}
-            className="text-left"
+            className="text-left text-inherit"
             aria-label="Edit category"
           />
         ) : (
@@ -118,9 +156,10 @@ export function ShelfProduct({
           onSave={(updates) =>
             editHandlers.onEditFacingsDepth(shelfNumber, product.sku, updates)
           }
+          className="text-slate-600 dark:text-muted-foreground"
         />
       ) : (
-        <p className="mt-1 text-[10px] font-mono text-muted-foreground">
+        <p className="mt-1 text-[10px] font-mono text-slate-600 dark:text-muted-foreground">
           ×{product.facings} D{product.depthCount} ={totalUnits}
         </p>
       )}

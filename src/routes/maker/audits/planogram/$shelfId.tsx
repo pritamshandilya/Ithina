@@ -239,6 +239,21 @@ function PlanogramPreviewPage() {
     [findProduct]
   );
 
+  const onRestoreProduct = useCallback(
+    (shelfNumber: number, product: PlanogramProduct) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? { ...s, products: [...s.products, { ...product }] }
+            : s
+        )
+      );
+      setRemovedItems((prev) => prev.filter((p) => p.sku !== product.sku));
+      setHasChanges(true);
+    },
+    []
+  );
+
   const handleSave = useCallback(async () => {
     if (!preview || !hasChanges || !shelfId) return;
     setIsSaving(true);
@@ -318,6 +333,16 @@ function PlanogramPreviewPage() {
     () => derivePlanogramStats(shelvesToShow, removedItems),
     [shelvesToShow, removedItems]
   );
+
+  const shelfCapacities = useMemo(() => {
+    const orig = fixture?.shelves ?? [];
+    return Object.fromEntries(
+      orig.map((s) => [
+        s.shelfNumber,
+        s.products.reduce((sum, p) => sum + p.facings, 0),
+      ])
+    );
+  }, [fixture?.shelves]);
 
   return (
     <MainLayout>
@@ -428,7 +453,7 @@ function PlanogramPreviewPage() {
 
               {/* Category filter tags */}
               <div>
-                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                <p className="mb-2 text-xs font-medium text-foreground">
                   Categories
                 </p>
                 <CategoryFilterTags categories={stats.categoryList} />
@@ -468,7 +493,12 @@ function PlanogramPreviewPage() {
               </div>
 
               {/* Removed Items sidebar – right side on large screens */}
-              <RemovedItemsSidebar removedItems={removedItems} />
+              <RemovedItemsSidebar
+                removedItems={removedItems}
+                shelves={shelvesToShow}
+                shelfCapacities={shelfCapacities}
+                onRestore={onRestoreProduct}
+              />
             </div>
           )}
 

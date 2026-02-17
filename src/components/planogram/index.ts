@@ -4,6 +4,23 @@ export {
   InlineFacingsDepthEdit,
   type InlineFacingsDepthEditProps,
 } from "./inline-facings-depth-edit";
+export { getProductSVG } from "./product-svg-utils";
+export {
+  BottleSVG,
+  CanSVG,
+  ChipBagSVG,
+  CartonSVG,
+  LargeBottleSVG,
+  AperitifBagSVG,
+  ChipsBagSVG,
+  CoffeeBagSVG,
+  CerealBoxSVG,
+  BabyCareSVG,
+  FirstAidSVG,
+  RazorPackSVG,
+  EnergyDrinkCanSVG,
+  type ProductSVGProps,
+} from "./product-svgs";
 export {
   RemovedItemsSidebar,
   type RemovedItemsSidebarProps,

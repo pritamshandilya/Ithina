@@ -38,7 +38,7 @@ export function CategoryFilterTags({
             type="button"
             onClick={() => onToggle?.(category)}
             className={cn(
-              "rounded-full px-3 py-1 text-xs font-medium transition-opacity",
+              "rounded-full px-3 py-1 text-xs font-medium text-slate-900 transition-opacity dark:text-foreground",
               colorClass,
               "border border-border",
               isSelected ? "opacity-100" : "opacity-50 hover:opacity-75",

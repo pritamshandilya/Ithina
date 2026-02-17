@@ -49,8 +49,9 @@ export function ShelfRow({
           {shelf.products.length} items · {totalFacings} facings · {totalUnits} units
         </span>
       </header>
-      <div className="flex gap-1 overflow-hidden rounded-lg border border-border bg-muted/20 p-2">
-        {shelf.products.map((product) => (
+      <div className="flex flex-col gap-0">
+        <div className="flex gap-1 overflow-hidden rounded-t-lg border border-b-0 border-border bg-muted/20 p-2">
+          {shelf.products.map((product) => (
           <ShelfProduct
             key={product.sku}
             product={product}
@@ -66,6 +67,12 @@ export function ShelfRow({
             editHandlers={editHandlers}
           />
         ))}
+        </div>
+        {/* Shelf surface bar */}
+        <div
+          className="h-2 rounded-b-lg border border-t-0 border-border bg-gradient-to-b from-muted to-muted/60"
+          aria-hidden
+        />
       </div>
     </section>
   );

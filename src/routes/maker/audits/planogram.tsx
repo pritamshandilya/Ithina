@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { LayoutGrid, Plus, Search } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
@@ -9,7 +9,8 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useStores } from "@/features/maker/hooks";
+import { useAssignedShelves, useComplianceRuleSets, useStores } from "@/features/maker/hooks";
+import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
@@ -32,8 +33,11 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
   };
 }
 
+const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
+
 const PLANOGRAM_COLUMNS = (
-  onAction: (shelfId: string, action: "new" | "modify" | "delete") => void
+  onAction: (shelfId: string, action: "new" | "modify" | "delete") => void,
+  ruleSets: ComplianceRuleSetSummary[]
 ): DataTableColumn<PlanogramShelfRow>[] => [
   {
     title: "Shelf",
@@ -61,27 +65,48 @@ const PLANOGRAM_COLUMNS = (
   {
     title: "Compliance",
     field: "complianceRuleSet",
+    width: 160,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const defaultName = ruleSets.find((s) => s.isDefault)?.name ?? "Default Rules";
+      const selected = row.complianceRuleSet ?? defaultName;
+      const sets: { name: string }[] = ruleSets.length > 0 ? ruleSets : [{ name: "Default Rules" }];
+      const options = sets
+        .map((s) => {
+          const sel = s.name === selected ? " selected" : "";
+          return `<option value="${s.name}"${sel}>${s.name}</option>`;
+        })
+        .join("");
+      return `
+        <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="compliance"
+          class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+          ${options}
+        </select>
+      `;
+    },
+  },
+  {
+    title: "Categorize By",
+    field: "categorizeBy",
     width: 140,
     sorter: "string",
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const name = row.complianceRuleSet ?? "Default Rules";
-      return `<span class="text-sm text-muted-foreground">${name}</span>`;
-    },
-  },
-  {
-    title: "Categorize By",
-    field: "categorizeBy",
-    width: 130,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const val = row.categorizeBy ?? "By Category";
-      return `<span class="text-sm text-muted-foreground">${val}</span>`;
+      const selected = row.categorizeBy ?? "By Category";
+      const options = CATEGORIZE_OPTIONS.map(
+        (opt) => `<option value="${opt}"${opt === selected ? " selected" : ""}>${opt}</option>`
+      ).join("");
+      return `
+        <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="categorize"
+          class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+          ${options}
+        </select>
+      `;
     },
   },
   {
@@ -179,9 +204,13 @@ const PLANOGRAM_COLUMNS = (
 function PlanogramAnalysisPage() {
   const { data: shelves, isLoading } = useAssignedShelves();
   const { data: stores } = useStores();
+  const { data: ruleSets } = useComplianceRuleSets();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [complianceOverrides, setComplianceOverrides] = useState<Record<string, string>>({});
+  const [categorizeOverrides, setCategorizeOverrides] = useState<Record<string, string>>({});
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
 
   const planogramRows = useMemo(() => {
     return (shelves ?? []).map(toPlanogramRow);
@@ -200,6 +229,31 @@ function PlanogramAnalysisPage() {
     );
   }, [planogramRows, searchQuery]);
 
+  const rowsWithOverrides = useMemo(() => {
+    return filteredRows.map((r) => ({
+      ...r,
+      complianceRuleSet: complianceOverrides[r.id] ?? r.complianceRuleSet,
+      categorizeBy: categorizeOverrides[r.id] ?? r.categorizeBy,
+    }));
+  }, [filteredRows, complianceOverrides, categorizeOverrides]);
+
+  useEffect(() => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const handleChange = (e: Event) => {
+      const select = (e.target as HTMLElement).closest?.("[data-planogram-dropdown]");
+      if (!select || !(select instanceof HTMLSelectElement)) return;
+      const shelfId = select.getAttribute("data-shelf-id");
+      const field = select.getAttribute("data-field");
+      const value = select.value;
+      if (!shelfId || !field) return;
+      if (field === "compliance") setComplianceOverrides((prev) => ({ ...prev, [shelfId]: value }));
+      if (field === "categorize") setCategorizeOverrides((prev) => ({ ...prev, [shelfId]: value }));
+    };
+    el.addEventListener("change", handleChange);
+    return () => el.removeEventListener("change", handleChange);
+  }, []);
+
   const handlePlanogramAction = useMemo(
     () => (shelfId: string, action: "new" | "modify" | "delete") => {
       // TODO: Wire up to actual flows (new run, modify config, delete)
@@ -209,7 +263,10 @@ function PlanogramAnalysisPage() {
     []
   );
 
-  const tableColumns = useMemo(() => PLANOGRAM_COLUMNS(handlePlanogramAction), [handlePlanogramAction]);
+  const tableColumns = useMemo(
+    () => PLANOGRAM_COLUMNS(handlePlanogramAction, ruleSets ?? []),
+    [handlePlanogramAction, ruleSets]
+  );
 
   return (
     <MainLayout>
@@ -278,17 +335,19 @@ function PlanogramAnalysisPage() {
                   <span className="font-semibold text-foreground">{filteredRows.length}</span>{" "}
                   shelf{filteredRows.length !== 1 ? "s" : ""}
                 </p>
-                <DataTable<PlanogramShelfRow>
-                  columns={tableColumns}
-                  data={filteredRows}
+                <div ref={tableWrapperRef}>
+                  <DataTable<PlanogramShelfRow>
+                    columns={tableColumns}
+                    data={rowsWithOverrides}
                   rowIdField="id"
                   initialSort={{ field: "shelfName", dir: "asc" }}
                   emptyMessage="No shelves match your search"
                   pageSize={10}
                   pageSizeSelector={[5, 10, 20, 50]}
                   headerFilters={false}
-                  onPaginationChange={setTablePagination}
-                />
+                    onPaginationChange={setTablePagination}
+                  />
+                </div>
               </>
             )}
           </div>

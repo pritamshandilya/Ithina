@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
+import { ShelfRow } from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -156,11 +157,19 @@ function PlanogramPreviewPage() {
                 </div>
               )}
 
-              {/* Placeholder for shelf layout (Milestone 3) */}
-              <div className="rounded-xl border border-border bg-card/80 p-6">
-                <p className="text-sm text-muted-foreground">
-                  Shelf layout with product blocks coming in next milestone.
-                </p>
+              {/* Shelf layout – sorted by verticalPosition descending (top first) */}
+              <div className="space-y-6">
+                {[...(fixture?.shelves ?? [])]
+                  .sort((a, b) => b.verticalPosition - a.verticalPosition)
+                  .map((shelf) => (
+                    <ShelfRow
+                      key={shelf.shelfNumber}
+                      shelf={shelf}
+                      highDemandSkus={
+                        preview.planogramPayload.stockingRules?.highDemandProducts ?? []
+                      }
+                    />
+                  ))}
               </div>
             </div>
           )}

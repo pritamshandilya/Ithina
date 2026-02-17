@@ -82,6 +82,7 @@ export function RuleBuilderModal({
   const isRetired = rule?.status === "Retired";
 
   // Create mode: multi-rule state
+  const [ruleSetName, setRuleSetName] = useState("");
   const [rules, setRules] = useState<RuleSetItem[]>(() => [
     createEmptyRule(crypto.randomUUID()),
   ]);
@@ -121,6 +122,7 @@ export function RuleBuilderModal({
   );
 
   const resetForm = () => {
+    setRuleSetName("");
     setRules([createEmptyRule(crypto.randomUUID())]);
     setRuleName("");
     setRuleType("Facings");
@@ -134,6 +136,9 @@ export function RuleBuilderModal({
 
   const validateCreate = (): boolean => {
     const next: Record<string, string> = {};
+    if (!ruleSetName.trim()) {
+      next.ruleSetName = "Rule set name is required.";
+    }
     const enabledRules = rules.filter((r) => r.enabled);
     if (enabledRules.length === 0) {
       next.rules = "At least one rule must be enabled.";
@@ -157,55 +162,65 @@ export function RuleBuilderModal({
     return Object.keys(next).length === 0;
   };
 
+  /** Persist rules as draft. Used by Save (validated) and Cancel (lenient auto-save).
+   * Saves ALL rules with names (including disabled ones) so the Rules column shows enabled/total correctly. */
+  const saveAsDraft = useCallback(
+    async (lenient: boolean): Promise<boolean> => {
+      const name = ruleSetName.trim() || "Untitled Draft";
+      let rulesToSave = rules.filter((r) => r.name.trim());
+      if (lenient && rulesToSave.length === 0 && rules.length > 0) {
+        rulesToSave = [{ ...rules[0]!, name: rules[0]!.name.trim() || "Untitled" }];
+      }
+      if (rulesToSave.length === 0) return false;
+
+      const ruleSetId = crypto.randomUUID();
+      let successCount = 0;
+      let lastError: Error | null = null;
+
+      for (const r of rulesToSave) {
+        const payload: CreateRuleInput = {
+          ruleName: r.name.trim() || "Untitled",
+          ruleType: r.category,
+          shelfType: "Beverages",
+          expectedValue: r.threshold.trim() || "N/A",
+          severity: "Medium",
+          createdBy,
+          description: r.description.trim() || undefined,
+          ruleSetId,
+          ruleSetName: name,
+          enabled: r.enabled,
+        };
+        try {
+          await createRule.mutateAsync(payload);
+          successCount += 1;
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      }
+
+      if (successCount > 0) {
+        toast({
+          title: "Saved as draft",
+          description: `${successCount} rule(s) saved as Draft.`,
+        });
+        resetForm();
+        onClose();
+      }
+      if (lastError) {
+        toast({
+          title: "Some rules failed",
+          description: lastError.message,
+          variant: "destructive",
+        });
+      }
+      return successCount > 0;
+    },
+    [ruleSetName, rules, createdBy, createRule, onClose, toast]
+  );
+
   const handleSubmitCreate = async () => {
     if (!validateCreate()) return;
-
-    const enabledRules = rules.filter((r) => r.enabled && r.name.trim());
-    if (enabledRules.length === 0) {
-      toast({
-        title: "No rules to save",
-        description: "Add at least one rule with a name.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    let successCount = 0;
-    let lastError: Error | null = null;
-
-    for (const r of enabledRules) {
-      const payload: CreateRuleInput = {
-        ruleName: r.name.trim(),
-        ruleType: r.category,
-        shelfType: "Beverages",
-        expectedValue: r.threshold.trim() || "N/A",
-        severity: "Medium",
-        createdBy,
-        description: r.description.trim() || undefined,
-      };
-      try {
-        await createRule.mutateAsync(payload);
-        successCount += 1;
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-      }
-    }
-
-    if (successCount > 0) {
-      toast({
-        title: "Rule set created",
-        description: `${successCount} rule(s) created as Draft.`,
-      });
-      resetForm();
-      onClose();
-    }
-    if (lastError) {
-      toast({
-        title: "Some rules failed",
-        description: lastError.message,
-        variant: "destructive",
-      });
-    }
+    await saveAsDraft(false);
   };
 
   const handleSubmitEdit = () => {
@@ -244,8 +259,22 @@ export function RuleBuilderModal({
     else handleSubmitCreate();
   };
 
-  const handleClose = () => {
-    if (!createRule.isPending && !updateRule.isPending) {
+  const handleClose = async () => {
+    if (createRule.isPending || updateRule.isPending) return;
+
+    if (isEdit) {
+      resetForm();
+      onClose();
+      return;
+    }
+
+    // Create mode: Cancel = auto-save as draft if there's any content
+    const hasContent =
+      ruleSetName.trim() ||
+      rules.some((r) => r.name.trim() || r.description.trim() || r.threshold.trim());
+    if (hasContent) {
+      await saveAsDraft(true);
+    } else {
       resetForm();
       onClose();
     }
@@ -387,6 +416,19 @@ export function RuleBuilderModal({
           ) : (
             /* Create mode: multi-rule form */
             <div className="space-y-4">
+              <FormField
+                label="Rule Set Name"
+                required
+                error={errors.ruleSetName}
+                htmlFor="rule-set-name"
+              >
+                <Input
+                  id="rule-set-name"
+                  placeholder="e.g. Store Safety & Efficiency Rules"
+                  value={ruleSetName}
+                  onChange={(e) => setRuleSetName(e.target.value)}
+                />
+              </FormField>
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-foreground">
                   Rules ({rules.length})
@@ -492,14 +534,25 @@ export function RuleBuilderModal({
           >
             Cancel
           </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={isRetired || isPending}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Save className="size-4" />
-            {isPending ? "Saving…" : "Save"}
-          </Button>
+          {isEdit ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isRetired || isPending}
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              <Save className="size-4" />
+              {isPending ? "Saving…" : "Save"}
+            </Button>
+          ) : (
+            <Button
+              onClick={handleSubmit}
+              disabled={isRetired || isPending || !ruleSetName.trim()}
+              className="bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              <Save className="size-4" />
+              {isPending ? "Saving…" : "Save"}
+            </Button>
+          )}
         </div>
       </div>
     </Modal>

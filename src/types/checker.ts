@@ -348,6 +348,11 @@ export interface ComplianceRule {
   linkedDocumentIds: string[];
   /** Optional description from rule set UI */
   description?: string;
+  /** Rule set grouping - rules with same ruleSetId belong to same set */
+  ruleSetId?: string;
+  ruleSetName?: string;
+  /** When part of a rule set, whether this rule is enabled (for display) */
+  enabled?: boolean;
 }
 
 export interface ReferenceDocument {
@@ -377,8 +382,12 @@ export interface CreateRuleInput {
   tolerance?: number;
   severity: RuleSeverity;
   createdBy: string;
-  /** Optional description for rule set UI */
+  /** Optional description from rule set UI */
   description?: string;
+  /** Rule set grouping */
+  ruleSetId?: string;
+  ruleSetName?: string;
+  enabled?: boolean;
 }
 
 export interface UpdateRuleInput {

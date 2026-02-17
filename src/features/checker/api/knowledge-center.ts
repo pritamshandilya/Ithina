@@ -317,6 +317,9 @@ export async function createComplianceRule(input: CreateRuleInput): Promise<Comp
     versions: [firstVersion],
     linkedDocumentIds: [],
     description: input.description?.trim(),
+    ruleSetId: input.ruleSetId,
+    ruleSetName: input.ruleSetName,
+    enabled: input.enabled ?? true,
   };
 
   mockRules.unshift(rule);

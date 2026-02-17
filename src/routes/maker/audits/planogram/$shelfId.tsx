@@ -6,19 +6,44 @@
  */
 
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Info } from "lucide-react";
+import { useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
+import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanogramShelfPreview, useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
-import { useState } from "react";
+import type { PlanogramPayload } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/$shelfId")({
   component: PlanogramPreviewPage,
 });
+
+function derivePlanogramStats(payload: PlanogramPayload) {
+  const { planogram } = payload;
+  const fixture = planogram.fixture;
+  const allProducts = fixture.shelves.flatMap((s) => s.products);
+
+  const uniqueSkus = new Set(allProducts.map((p) => p.sku)).size;
+  const frontFacings = allProducts.reduce((sum, p) => sum + p.facings, 0);
+  const totalUnits = allProducts.reduce(
+    (sum, p) => sum + p.facings * (p.depthCount || 1),
+    0
+  );
+  const categories = new Set(allProducts.map((p) => p.category)).size;
+
+  return {
+    shelves: fixture.shelfCount,
+    skus: uniqueSkus,
+    frontFacings,
+    totalUnits,
+    categories,
+    removed: 0,
+  };
+}
 
 function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
@@ -26,6 +51,15 @@ function PlanogramPreviewPage() {
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
+
+  const stats = useMemo(() => {
+    if (!preview) return null;
+    return derivePlanogramStats(preview.planogramPayload);
+  }, [preview]);
+
+  const planogram = preview?.planogramPayload.planogram;
+  const metadata = preview?.planogramPayload.metadata;
+  const fixture = planogram?.fixture;
 
   return (
     <MainLayout>
@@ -55,8 +89,8 @@ function PlanogramPreviewPage() {
                     {preview.shelf.shelfName}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    {preview.planogramPayload.metadata?.location ?? "—"} ·{" "}
-                    {preview.planogramPayload.metadata?.status ?? "active"}
+                    v{planogram?.version ?? "1.0"} {metadata?.location ?? "—"} ·{" "}
+                    {metadata?.status ?? "active"}
                   </p>
                 </>
               ) : (
@@ -84,15 +118,50 @@ function PlanogramPreviewPage() {
             </div>
           )}
 
-          {preview && !isLoading && (
-            <div className="rounded-xl border border-border bg-card/80 p-6">
-              <p className="text-sm text-muted-foreground">
-                Planogram preview with stats and shelf layout coming in next milestones.
-              </p>
-              <p className="mt-2 text-xs text-muted-foreground">
-                {preview.planogramPayload.planogram.fixture.shelfCount} shelves ·{" "}
-                {preview.planogramPayload.metadata?.totalSKUs ?? 0} SKUs
-              </p>
+          {preview && stats && !isLoading && (
+            <div className="space-y-6">
+              {/* Summary stats */}
+              <div
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                role="region"
+                aria-label="Planogram summary metrics"
+              >
+                <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
+                <StatCard title="SKUs" value={stats.skus} className="stat-card" />
+                <StatCard
+                  title="Front Facings"
+                  value={stats.frontFacings}
+                  className="stat-card"
+                />
+                <StatCard
+                  title="Total Units (w/ depth)"
+                  value={stats.totalUnits}
+                  className="stat-card"
+                />
+                <StatCard title="Categories" value={stats.categories} className="stat-card" />
+                <StatCard title="Removed" value={stats.removed} className="stat-card" />
+              </div>
+
+              {/* Fixture banner */}
+              {fixture && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <Info className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <span className="text-sm text-foreground">
+                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
+                    {fixture.units} · {fixture.type}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Click name to edit · X to remove
+                  </span>
+                </div>
+              )}
+
+              {/* Placeholder for shelf layout (Milestone 3) */}
+              <div className="rounded-xl border border-border bg-card/80 p-6">
+                <p className="text-sm text-muted-foreground">
+                  Shelf layout with product blocks coming in next milestone.
+                </p>
+              </div>
             </div>
           )}
 

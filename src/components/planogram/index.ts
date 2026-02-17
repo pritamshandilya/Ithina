@@ -1,6 +1,10 @@
 export { CategoryFilterTags, type CategoryFilterTagsProps } from "./category-filter-tags";
 export { InlineEdit, type InlineEditProps } from "./inline-edit";
 export {
+  InlineFacingsDepthEdit,
+  type InlineFacingsDepthEditProps,
+} from "./inline-facings-depth-edit";
+export {
   RemovedItemsSidebar,
   type RemovedItemsSidebarProps,
 } from "./removed-items-sidebar";

@@ -43,11 +43,13 @@ import { Route as CheckerAuditReviewRouteImport } from './routes/checker/audit-r
 import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
 import { Route as MakerAuditsRouteRouteImport } from './routes/maker/audits/route'
 import { Route as MakerAuditsIndexRouteImport } from './routes/maker/audits/index'
-import { Route as MakerAuditsPlanogramRouteImport } from './routes/maker/audits/planogram'
 import { Route as MakerAuditNewRouteImport } from './routes/maker/audit/new'
 import { Route as CheckerReviewAuditIdRouteImport } from './routes/checker/review.$auditId'
+import { Route as MakerAuditsPlanogramRouteRouteImport } from './routes/maker/audits/planogram/route'
 import { Route as MakerAuditsAdhocRouteRouteImport } from './routes/maker/audits/adhoc/route'
+import { Route as MakerAuditsPlanogramIndexRouteImport } from './routes/maker/audits/planogram/index'
 import { Route as MakerAuditsAdhocIndexRouteImport } from './routes/maker/audits/adhoc/index'
+import { Route as MakerAuditsPlanogramNewRouteImport } from './routes/maker/audits/planogram/new'
 import { Route as MakerAuditsAdhocNewRouteImport } from './routes/maker/audits/adhoc/new'
 
 const TestShelvesListRoute = TestShelvesListRouteImport.update({
@@ -221,11 +223,6 @@ const MakerAuditsIndexRoute = MakerAuditsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => MakerAuditsRouteRoute,
 } as any)
-const MakerAuditsPlanogramRoute = MakerAuditsPlanogramRouteImport.update({
-  id: '/planogram',
-  path: '/planogram',
-  getParentRoute: () => MakerAuditsRouteRoute,
-} as any)
 const MakerAuditNewRoute = MakerAuditNewRouteImport.update({
   id: '/maker/audit/new',
   path: '/maker/audit/new',
@@ -236,15 +233,32 @@ const CheckerReviewAuditIdRoute = CheckerReviewAuditIdRouteImport.update({
   path: '/checker/review/$auditId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerAuditsPlanogramRouteRoute =
+  MakerAuditsPlanogramRouteRouteImport.update({
+    id: '/planogram',
+    path: '/planogram',
+    getParentRoute: () => MakerAuditsRouteRoute,
+  } as any)
 const MakerAuditsAdhocRouteRoute = MakerAuditsAdhocRouteRouteImport.update({
   id: '/adhoc',
   path: '/adhoc',
   getParentRoute: () => MakerAuditsRouteRoute,
 } as any)
+const MakerAuditsPlanogramIndexRoute =
+  MakerAuditsPlanogramIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => MakerAuditsPlanogramRouteRoute,
+  } as any)
 const MakerAuditsAdhocIndexRoute = MakerAuditsAdhocIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MakerAuditsAdhocRouteRoute,
+} as any)
+const MakerAuditsPlanogramNewRoute = MakerAuditsPlanogramNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => MakerAuditsPlanogramRouteRoute,
 } as any)
 const MakerAuditsAdhocNewRoute = MakerAuditsAdhocNewRouteImport.update({
   id: '/new',
@@ -287,12 +301,14 @@ export interface FileRoutesByFullPath {
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
+  '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
-  '/maker/audits/planogram': typeof MakerAuditsPlanogramRoute
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
+  '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
   '/maker/audits/adhoc/': typeof MakerAuditsAdhocIndexRoute
+  '/maker/audits/planogram/': typeof MakerAuditsPlanogramIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -327,10 +343,11 @@ export interface FileRoutesByTo {
   '/maker/shelves': typeof MakerShelvesRoute
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
-  '/maker/audits/planogram': typeof MakerAuditsPlanogramRoute
   '/maker/audits': typeof MakerAuditsIndexRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
+  '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocIndexRoute
+  '/maker/audits/planogram': typeof MakerAuditsPlanogramIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -368,12 +385,14 @@ export interface FileRoutesById {
   '/checker/': typeof CheckerIndexRoute
   '/maker/': typeof MakerIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
+  '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/maker/audit/new': typeof MakerAuditNewRoute
-  '/maker/audits/planogram': typeof MakerAuditsPlanogramRoute
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
+  '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
   '/maker/audits/adhoc/': typeof MakerAuditsAdhocIndexRoute
+  '/maker/audits/planogram/': typeof MakerAuditsPlanogramIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -412,12 +431,14 @@ export interface FileRouteTypes {
     | '/checker/'
     | '/maker/'
     | '/maker/audits/adhoc'
+    | '/maker/audits/planogram'
     | '/checker/review/$auditId'
     | '/maker/audit/new'
-    | '/maker/audits/planogram'
     | '/maker/audits/'
     | '/maker/audits/adhoc/new'
+    | '/maker/audits/planogram/new'
     | '/maker/audits/adhoc/'
+    | '/maker/audits/planogram/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -452,10 +473,11 @@ export interface FileRouteTypes {
     | '/maker/shelves'
     | '/checker/review/$auditId'
     | '/maker/audit/new'
-    | '/maker/audits/planogram'
     | '/maker/audits'
     | '/maker/audits/adhoc/new'
+    | '/maker/audits/planogram/new'
     | '/maker/audits/adhoc'
+    | '/maker/audits/planogram'
   id:
     | '__root__'
     | '/'
@@ -492,12 +514,14 @@ export interface FileRouteTypes {
     | '/checker/'
     | '/maker/'
     | '/maker/audits/adhoc'
+    | '/maker/audits/planogram'
     | '/checker/review/$auditId'
     | '/maker/audit/new'
-    | '/maker/audits/planogram'
     | '/maker/audits/'
     | '/maker/audits/adhoc/new'
+    | '/maker/audits/planogram/new'
     | '/maker/audits/adhoc/'
+    | '/maker/audits/planogram/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -778,13 +802,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerAuditsIndexRouteImport
       parentRoute: typeof MakerAuditsRouteRoute
     }
-    '/maker/audits/planogram': {
-      id: '/maker/audits/planogram'
-      path: '/planogram'
-      fullPath: '/maker/audits/planogram'
-      preLoaderRoute: typeof MakerAuditsPlanogramRouteImport
-      parentRoute: typeof MakerAuditsRouteRoute
-    }
     '/maker/audit/new': {
       id: '/maker/audit/new'
       path: '/maker/audit/new'
@@ -799,6 +816,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerReviewAuditIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maker/audits/planogram': {
+      id: '/maker/audits/planogram'
+      path: '/planogram'
+      fullPath: '/maker/audits/planogram'
+      preLoaderRoute: typeof MakerAuditsPlanogramRouteRouteImport
+      parentRoute: typeof MakerAuditsRouteRoute
+    }
     '/maker/audits/adhoc': {
       id: '/maker/audits/adhoc'
       path: '/adhoc'
@@ -806,12 +830,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerAuditsAdhocRouteRouteImport
       parentRoute: typeof MakerAuditsRouteRoute
     }
+    '/maker/audits/planogram/': {
+      id: '/maker/audits/planogram/'
+      path: '/'
+      fullPath: '/maker/audits/planogram/'
+      preLoaderRoute: typeof MakerAuditsPlanogramIndexRouteImport
+      parentRoute: typeof MakerAuditsPlanogramRouteRoute
+    }
     '/maker/audits/adhoc/': {
       id: '/maker/audits/adhoc/'
       path: '/'
       fullPath: '/maker/audits/adhoc/'
       preLoaderRoute: typeof MakerAuditsAdhocIndexRouteImport
       parentRoute: typeof MakerAuditsAdhocRouteRoute
+    }
+    '/maker/audits/planogram/new': {
+      id: '/maker/audits/planogram/new'
+      path: '/new'
+      fullPath: '/maker/audits/planogram/new'
+      preLoaderRoute: typeof MakerAuditsPlanogramNewRouteImport
+      parentRoute: typeof MakerAuditsPlanogramRouteRoute
     }
     '/maker/audits/adhoc/new': {
       id: '/maker/audits/adhoc/new'
@@ -838,15 +876,31 @@ const MakerAuditsAdhocRouteRouteWithChildren =
     MakerAuditsAdhocRouteRouteChildren,
   )
 
+interface MakerAuditsPlanogramRouteRouteChildren {
+  MakerAuditsPlanogramNewRoute: typeof MakerAuditsPlanogramNewRoute
+  MakerAuditsPlanogramIndexRoute: typeof MakerAuditsPlanogramIndexRoute
+}
+
+const MakerAuditsPlanogramRouteRouteChildren: MakerAuditsPlanogramRouteRouteChildren =
+  {
+    MakerAuditsPlanogramNewRoute: MakerAuditsPlanogramNewRoute,
+    MakerAuditsPlanogramIndexRoute: MakerAuditsPlanogramIndexRoute,
+  }
+
+const MakerAuditsPlanogramRouteRouteWithChildren =
+  MakerAuditsPlanogramRouteRoute._addFileChildren(
+    MakerAuditsPlanogramRouteRouteChildren,
+  )
+
 interface MakerAuditsRouteRouteChildren {
   MakerAuditsAdhocRouteRoute: typeof MakerAuditsAdhocRouteRouteWithChildren
-  MakerAuditsPlanogramRoute: typeof MakerAuditsPlanogramRoute
+  MakerAuditsPlanogramRouteRoute: typeof MakerAuditsPlanogramRouteRouteWithChildren
   MakerAuditsIndexRoute: typeof MakerAuditsIndexRoute
 }
 
 const MakerAuditsRouteRouteChildren: MakerAuditsRouteRouteChildren = {
   MakerAuditsAdhocRouteRoute: MakerAuditsAdhocRouteRouteWithChildren,
-  MakerAuditsPlanogramRoute: MakerAuditsPlanogramRoute,
+  MakerAuditsPlanogramRouteRoute: MakerAuditsPlanogramRouteRouteWithChildren,
   MakerAuditsIndexRoute: MakerAuditsIndexRoute,
 }
 

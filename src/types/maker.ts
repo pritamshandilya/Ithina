@@ -16,8 +16,10 @@ export type AuditStatus =
  * Audit mode selection for data capture
  */
 export type AuditMode =
-  | "vision-edge" // AI-powered camera detection
-  | "assist-mode"; // Manual structured entry
+  | "planogram-based" // Compare shelf against planogram
+  | "adhoc" // Upload image for AI analysis
+  | "vision-edge" // @deprecated Legacy - use planogram-based
+  | "assist-mode"; // @deprecated Legacy - use adhoc
 
 /**
  * Represents a physical shelf in the store

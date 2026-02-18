@@ -16,6 +16,7 @@ import {
   useReturnAudit,
   useOverrideAndApprove,
 } from "@/features/checker/hooks";
+import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -124,26 +125,37 @@ function AuditReviewWorkspace() {
   const returnAudit = useReturnAudit("store-1234");
   const overrideAndApprove = useOverrideAndApprove("store-1234");
 
+  const { toast } = useToast();
+  const [showApproveDialog, setShowApproveDialog] = useState(false);
   const [showReturnDialog, setShowReturnDialog] = useState(false);
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
   const [returnReason, setReturnReason] = useState("");
   const [overrideReason, setOverrideReason] = useState("");
 
-  const handleApprove = () => {
-    if (window.confirm("Are you sure you want to approve this audit?")) {
-      approveAudit.mutate(auditId, {
-        onSuccess: () => {
-          navigate({ to: "/checker/audit-review" });
-        },
-      });
-    }
+  const handleApprove = () => setShowApproveDialog(true);
+
+  const confirmApprove = () => {
+    approveAudit.mutate(auditId, {
+      onSuccess: () => {
+        setShowApproveDialog(false);
+        toast({
+          title: "Audit approved",
+          description: "The audit has been approved successfully.",
+        });
+        navigate({ to: "/checker/audit-review" });
+      },
+    });
   };
 
   const handleReturn = () => setShowReturnDialog(true);
 
   const confirmReturn = () => {
     if (!returnReason.trim()) {
-      window.alert("Please provide a reason for returning this audit.");
+      toast({
+        variant: "destructive",
+        title: "Reason required",
+        description: "Please provide a reason for returning this audit.",
+      });
       return;
     }
     returnAudit.mutate(
@@ -152,6 +164,10 @@ function AuditReviewWorkspace() {
         onSuccess: () => {
           setShowReturnDialog(false);
           setReturnReason("");
+          toast({
+            title: "Audit returned",
+            description: "The audit has been returned to the maker.",
+          });
           navigate({ to: "/checker/audit-review" });
         },
       }
@@ -162,7 +178,11 @@ function AuditReviewWorkspace() {
 
   const confirmOverride = () => {
     if (!overrideReason.trim()) {
-      window.alert("Please provide a reason for overriding the AI decision.");
+      toast({
+        variant: "destructive",
+        title: "Reason required",
+        description: "Please provide a reason for overriding the AI decision.",
+      });
       return;
     }
     overrideAndApprove.mutate(
@@ -171,6 +191,10 @@ function AuditReviewWorkspace() {
         onSuccess: () => {
           setShowOverrideDialog(false);
           setOverrideReason("");
+          toast({
+            title: "Audit approved",
+            description: "The audit has been approved with override.",
+          });
           navigate({ to: "/checker/audit-review" });
         },
       }
@@ -272,7 +296,7 @@ function AuditReviewWorkspace() {
                 <div>
                   <p className="text-xs text-muted-foreground">Audit Mode</p>
                   <p className="text-sm font-medium text-foreground">
-                    {audit.mode === "vision-edge" ? "Vision Edge" : "Assist Mode"}
+                    {audit.mode === "planogram-based" || audit.mode === "vision-edge" ? "Planogram Based" : "Adhoc Analysis"}
                   </p>
                 </div>
               </div>
@@ -351,6 +375,28 @@ function AuditReviewWorkspace() {
           </div>
         </div>
       </div>
+
+      {/* Approve Dialog */}
+      <Modal isOpen={showApproveDialog} onClose={() => setShowApproveDialog(false)}>
+        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+          <h3 className="text-lg font-semibold text-foreground">Approve Audit</h3>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to approve this audit? This will mark it as compliant and complete the review.
+          </p>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => setShowApproveDialog(false)} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApprove}
+              disabled={approveAudit.isPending}
+              className="flex-1 bg-chart-2 text-white hover:bg-chart-2/90"
+            >
+              {approveAudit.isPending ? "Approving..." : "Confirm Approve"}
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Return Dialog */}
       <Modal isOpen={showReturnDialog} onClose={() => setShowReturnDialog(false)}>

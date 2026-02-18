@@ -275,7 +275,11 @@ function PlanogramAnalysisPage() {
         navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
         return;
       }
-      // TODO: Wire up to actual flows (new run, modify config, delete)
+      if (action === "new") {
+        navigate({ to: "/maker/audits/planogram/run/$shelfId", params: { shelfId } });
+        return;
+      }
+      // TODO: Wire up modify, delete
       void shelfId;
       void action;
     },

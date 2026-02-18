@@ -5,23 +5,11 @@ import { renderToString } from "react-dom/server";
 import { Plus, Search, LayoutGrid, List } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar, ShelfCard, ShelfActions, PlanogramPreview } from "@/components/maker";
+import { HeaderContextBar, ShelfCard, ShelfActions } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { useAssignedShelves, useCreateShelf, useStores } from "@/features/maker/hooks";
+import { useAssignedShelves, useStores } from "@/features/maker/hooks";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
@@ -125,21 +113,11 @@ function ShelfManagementPage() {
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const [searchQuery, setSearchQuery] = useState("");
-  const { mutate: createShelf, isPending: isCreating } = useCreateShelf();
   const navigate = useNavigate();
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [currentPage, setCurrentPage] = useState(1);
   const GRID_PAGE_SIZE = 9;
-
-  // Form State
-  const [formData, setFormData] = useState({
-    shelfName: "",
-    aisleNumber: "",
-    bayNumber: "",
-    planogramId: "",
-  });
 
   const filteredShelves =
     shelves?.filter((shelf) => {
@@ -176,29 +154,6 @@ function ShelfManagementPage() {
     (currentPage - 1) * GRID_PAGE_SIZE,
     currentPage * GRID_PAGE_SIZE
   );
-
-  const handleCreateSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createShelf({
-      shelfName: formData.shelfName,
-      aisleNumber: parseInt(formData.aisleNumber) || 0,
-      bayNumber: parseInt(formData.bayNumber) || 0,
-      description: formData.planogramId ? `Planogram: ${formData.planogramId}` : undefined,
-    },
-      {
-        onSuccess: (newShelf) => {
-          setIsSheetOpen(false);
-          setFormData({
-            shelfName: "",
-            aisleNumber: "",
-            bayNumber: "",
-            planogramId: "",
-          });
-          navigate({ to: "/checker/shelves/$shelfId/edit", params: { shelfId: newShelf.id } });
-        },
-      }
-    );
-  };
 
   return (
     <MainLayout>

@@ -4,7 +4,7 @@
  * Main section of the Checker Dashboard displaying pending audits.
  * 
  * Features:
- * - Filter tabs (All, Critical, Needs Attention, Good, Vision, Assist)
+ * - Filter tabs (All, Critical, Needs Attention, Good, Planogram Based, Adhoc Analysis)
  * - Sort options (Compliance, Time, Violations)
  * - Search by shelf ID or submitter name
  * - Grid of AuditQueueCard components
@@ -83,14 +83,14 @@ const filterOptions: {
     count: (audits) => audits.filter((a) => (a.complianceScore || 0) >= 80).length,
   },
   {
-    value: "vision",
-    label: "Vision Edge",
-    count: (audits) => audits.filter((a) => a.mode === "vision-edge").length,
+    value: "planogram",
+    label: "Planogram Based",
+    count: (audits) => audits.filter((a) => a.mode === "planogram-based" || a.mode === "vision-edge").length,
   },
   {
-    value: "assist",
-    label: "Assist Mode",
-    count: (audits) => audits.filter((a) => a.mode === "assist-mode").length,
+    value: "adhoc",
+    label: "Adhoc Analysis",
+    count: (audits) => audits.filter((a) => a.mode === "adhoc" || a.mode === "assist-mode").length,
   },
 ];
 
@@ -126,10 +126,11 @@ const AUDIT_BASE_TABLE_COLUMNS: DataTableColumn<CheckerAudit>[] = [
     title: "Mode",
     field: "mode",
     sorter: "string",
-    width: 130,
+    width: 150,
     formatter: (cell) => {
       const mode = (cell as { getValue: () => string }).getValue();
-      return mode === "vision-edge" ? "Vision Edge" : "Assist Mode";
+      const label = mode === "planogram-based" || mode === "vision-edge" ? "Planogram Based" : "Adhoc Analysis";
+      return label;
     },
   },
   {
@@ -227,10 +228,10 @@ export function AuditReviewQueue({
       });
     } else if (activeFilter === "good") {
       filtered = filtered.filter((a) => (a.complianceScore || 0) >= 80);
-    } else if (activeFilter === "vision") {
-      filtered = filtered.filter((a) => a.mode === "vision-edge");
-    } else if (activeFilter === "assist") {
-      filtered = filtered.filter((a) => a.mode === "assist-mode");
+    } else if (activeFilter === "planogram") {
+      filtered = filtered.filter((a) => a.mode === "planogram-based" || a.mode === "vision-edge");
+    } else if (activeFilter === "adhoc") {
+      filtered = filtered.filter((a) => a.mode === "adhoc" || a.mode === "assist-mode");
     }
 
     // Search filter

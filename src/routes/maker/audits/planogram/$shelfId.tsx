@@ -161,17 +161,6 @@ function PlanogramPreviewPage() {
     );
   }, [preview?.planogramPayload.planogram.fixture.shelves]);
 
-  const originalShelfAssignment = useMemo(() => {
-    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
-    const map: Record<string, number> = {};
-    for (const shelf of orig) {
-      for (const p of shelf.products) {
-        map[p.sku] = shelf.shelfNumber;
-      }
-    }
-    return map;
-  }, [preview?.planogramPayload.planogram.fixture.shelves]);
-
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
       const shelf = localShelves.find((s) => s.shelfNumber === shelfNumber);
@@ -504,7 +493,7 @@ function PlanogramPreviewPage() {
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-6xl space-y-6">
+        <div className="mx-auto max-w-7xl space-y-6">
           <HeaderContextBar
             stores={stores ?? []}
             selectedStoreId={selectedStoreId}

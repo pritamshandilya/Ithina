@@ -31,15 +31,17 @@ function ShelfLevelReport() {
 
     return (
         <MainLayout>
-            <div className="min-h-screen bg-primary">
-                <ReportPage
-                    title="Shelf Level Report"
-                    subtitle="Downtown Flagship — Detailed analysis per shelf"
-                    stats={stats}
-                    tableTitle="Shelf Summary (Latest Run)"
-                    tableColumns={columns}
-                    tableData={SHELF_LEVEL_MOCK_DATA}
-                />
+            <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+                <div className="mx-auto max-w-7xl">
+                    <ReportPage
+                        title="Shelf Level Report"
+                        subtitle="Downtown Flagship — Detailed analysis per shelf"
+                        stats={stats}
+                        tableTitle="Shelf Summary (Latest Run)"
+                        tableColumns={columns}
+                        tableData={SHELF_LEVEL_MOCK_DATA}
+                    />
+                </div>
             </div>
         </MainLayout>
     );

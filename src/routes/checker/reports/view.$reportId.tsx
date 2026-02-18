@@ -38,7 +38,8 @@ function DetailedReportPage() {
 
     return (
         <MainLayout>
-            <div className="flex flex-col gap-6 p-6 min-h-screen bg-[#070b14] text-slate-200 font-sans">
+            <div className="min-h-screen bg-[#070b14] text-slate-200 font-sans p-4 sm:p-6 lg:p-8">
+                <div className="mx-auto max-w-7xl flex flex-col gap-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-6">
@@ -313,6 +314,7 @@ function DetailedReportPage() {
                         <p className="text-slate-500 text-sm font-bold uppercase tracking-widest">Details for {activeTab} will appear in Phase 2</p>
                     </div>
                 )}
+                </div>
             </div>
         </MainLayout>
     );

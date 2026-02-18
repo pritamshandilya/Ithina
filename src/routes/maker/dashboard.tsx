@@ -21,10 +21,6 @@ function MakerDashboard() {
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
-  const handleStartAudit = () => {
-    navigate({ to: "/maker/audit/new" });
-  };
-
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
@@ -35,7 +31,7 @@ function MakerDashboard() {
             onStoreChange={setSelectedStoreId}
           />
 
-          <PrimaryActionSection onClick={handleStartAudit} />
+          <PrimaryActionSection />
           <QuickStatsPanel />
 
           <section aria-labelledby="my-audits-heading" className="space-y-4">
@@ -50,7 +46,7 @@ function MakerDashboard() {
 
             <MyAuditsSection
               onResume={(_auditId, _shelfId) => {
-                navigate({ to: "/maker/audit/new" });
+                navigate({ to: "/maker/audits/planogram" });
               }}
               onViewReport={(_auditId, _shelfId) => {
                 navigate({ to: "/maker/audits/planogram" });

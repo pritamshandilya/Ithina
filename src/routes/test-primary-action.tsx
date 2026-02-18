@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 
 import { PrimaryActionSection } from "@/components/maker";
 
@@ -12,8 +11,6 @@ export const Route = createFileRoute("/test-primary-action")({
 });
 
 function TestPrimaryAction() {
-  const [clickCount, setClickCount] = useState(0);
-
   return (
     <div className="min-h-screen bg-primary p-8">
       <div className="mx-auto max-w-7xl space-y-12">
@@ -33,25 +30,9 @@ function TestPrimaryAction() {
             Default Configuration
           </h2>
           <p className="text-sm text-muted-foreground">
-            Navigates to /maker/audit/new route when clicked
+            Dropdown with Planogram Based Analysis and Adhoc Analysis options
           </p>
           <PrimaryActionSection />
-        </section>
-
-        {/* With Custom Click Handler */}
-        <section className="space-y-4">
-          <h2 className="text-2xl font-semibold text-foreground">
-            With Custom Click Handler
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Click count: <span className="font-bold text-foreground">{clickCount}</span>
-          </p>
-          <PrimaryActionSection
-            onClick={() => {
-              setClickCount((prev) => prev + 1);
-              alert(`Button clicked ${clickCount + 1} times!`);
-            }}
-          />
         </section>
 
         {/* Disabled State */}
@@ -144,8 +125,9 @@ function TestPrimaryAction() {
                 Interaction:
               </h3>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
-                <li>Default: Navigates to /maker/audit/new</li>
-                <li>Custom: Supports onClick prop override</li>
+                <li>Dropdown with Planogram Based Analysis and Adhoc Analysis</li>
+                <li>Planogram: navigates to /maker/audits/planogram</li>
+                <li>Adhoc: navigates to /maker/audits/adhoc/new</li>
                 <li>Keyboard accessible (Tab to focus, Enter to activate)</li>
                 <li>Focus visible with ring indicator</li>
                 <li>Disabled state prevents interaction</li>
@@ -192,7 +174,7 @@ function TestPrimaryAction() {
             {/* Example 1 */}
             <div className="rounded-lg bg-muted p-4">
               <p className="text-xs font-semibold text-card-foreground mb-2">
-                Basic usage (default navigation):
+                Basic usage (dropdown with audit mode options):
               </p>
               <pre className="text-xs text-muted-foreground overflow-x-auto">
                 <code>{`import { PrimaryActionSection } from "@/components/maker";
@@ -208,28 +190,6 @@ function Dashboard() {
             </div>
 
             {/* Example 2 */}
-            <div className="rounded-lg bg-muted p-4">
-              <p className="text-xs font-semibold text-card-foreground mb-2">
-                With custom click handler:
-              </p>
-              <pre className="text-xs text-muted-foreground overflow-x-auto">
-                <code>{`import { PrimaryActionSection } from "@/components/maker";
-
-function Dashboard() {
-  const handleStartAudit = () => {
-    // Custom logic before navigation
-    console.log("Starting audit...");
-    // Then navigate manually if needed
-  };
-
-  return (
-    <PrimaryActionSection onClick={handleStartAudit} />
-  );
-}`}</code>
-              </pre>
-            </div>
-
-            {/* Example 3 */}
             <div className="rounded-lg bg-muted p-4">
               <p className="text-xs font-semibold text-card-foreground mb-2">
                 Conditionally disabled:

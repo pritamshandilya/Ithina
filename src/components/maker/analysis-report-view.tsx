@@ -89,9 +89,9 @@ export function AnalysisReportView({
             </Button>
           </div>
         </div>
-        <div className="flex-1 min-h-[280px] overflow-hidden bg-muted/30">
+        <div className="flex-1 min-h-0 overflow-hidden bg-muted/30">
           {imagePreview ? (
-            <div className="aspect-video w-full overflow-hidden">
+            <div className="aspect-video w-full overflow-hidden min-h-0">
               <img
                 src={imagePreview}
                 alt="Shelf analysis"
@@ -132,7 +132,7 @@ export function AnalysisReportView({
       </section>
 
       {/* Right: Analysis Report */}
-      <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-0 h-full">
+      <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-0">
         <div className="border-b border-border px-4 py-3 flex items-center gap-2 shrink-0">
           <BarChart3 className="size-4 text-muted-foreground" aria-hidden />
           <h2 className="text-sm font-semibold text-foreground">Analysis Report</h2>

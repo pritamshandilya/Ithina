@@ -1,0 +1,258 @@
+{
+  "planogram": {
+    "id": "PLN-SHELF-POC-001",
+    "name": "Mixed Grocery & Personal Care Shelf",
+    "version": "1.0",
+    "createdDate": "2026-02-15",
+    "fixture": {
+      "type": "wall_shelving",
+      "width": 1200,
+      "height": 2000,
+      "depth": 400,
+      "units": "mm",
+      "shelfCount": 4,
+      "shelves": [
+        {
+          "shelfNumber": 1,
+          "name": "Top Shelf - Aperitif & Bakery Snacks",
+          "verticalPosition": 1500,
+          "height": 350,
+          "products": [
+            {
+              "sku": "IM-LC-ROQ",
+              "brand": "Intermarché",
+              "name": "Les Créations Mini Crêpes Roquefort",
+              "category": "Aperitif Snacks",
+              "xPosition": 0,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 120,
+              "height": 180,
+              "depth": 80,
+              "optimalStock": 6,
+              "currentStock": 6
+            },
+            {
+              "sku": "IM-LC-CHED",
+              "brand": "Intermarché",
+              "name": "Les Créations Mini Crêpes Cheddar",
+              "category": "Aperitif Snacks",
+              "xPosition": 360,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 120,
+              "height": 180,
+              "depth": 80,
+              "optimalStock": 6,
+              "currentStock": 6
+            },
+            {
+              "sku": "IM-LC-PESTO",
+              "brand": "Intermarché",
+              "name": "Les Créations Mini Crêpes Pesto",
+              "category": "Aperitif Snacks",
+              "xPosition": 720,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 120,
+              "height": 180,
+              "depth": 80,
+              "optimalStock": 6,
+              "currentStock": 6
+            }
+          ]
+        },
+        {
+          "shelfNumber": 2,
+          "name": "Second Shelf - Chips & Savory Snacks",
+          "verticalPosition": 1050,
+          "height": 350,
+          "products": [
+            {
+              "sku": "CROKY-SNP",
+              "brand": "Croky",
+              "name": "à l’Ancienne Salt & Pepper Chips 200g",
+              "category": "Chips",
+              "xPosition": 0,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 180,
+              "height": 280,
+              "depth": 120,
+              "optimalStock": 6,
+              "currentStock": 6
+            },
+            {
+              "sku": "LORENZ-CURLY",
+              "brand": "Lorenz",
+              "name": "Curly Peanut Classic",
+              "category": "Snacks",
+              "xPosition": 540,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 180,
+              "height": 260,
+              "depth": 120,
+              "optimalStock": 6,
+              "currentStock": 6
+            },
+            {
+              "sku": "PRING-SV",
+              "brand": "Pringles",
+              "name": "Salt & Vinegar",
+              "category": "Chips",
+              "xPosition": 900,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 80,
+              "height": 240,
+              "depth": 80,
+              "optimalStock": 4,
+              "currentStock": 4
+            }
+          ]
+        },
+        {
+          "shelfNumber": 3,
+          "name": "Third Shelf - Kids Food & Coffee",
+          "verticalPosition": 600,
+          "height": 350,
+          "products": [
+            {
+              "sku": "OLV-CRUNCHY",
+              "brand": "Olvarit",
+              "name": "Little Wonders Crunchy Stars Cacao",
+              "category": "Kids Cereal",
+              "xPosition": 0,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 140,
+              "height": 220,
+              "depth": 90,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "OLV-MUESLI",
+              "brand": "Olvarit",
+              "name": "Little Wonders Mini Muesli Mixed Cereal & Fruit",
+              "category": "Kids Cereal",
+              "xPosition": 280,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 140,
+              "height": 220,
+              "depth": 90,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "LAV-CREMA",
+              "brand": "Lavazza",
+              "name": "Crema e Gusto Classico Ground Coffee 250g",
+              "category": "Coffee",
+              "xPosition": 560,
+              "facings": 3,
+              "depthCount": 2,
+              "width": 120,
+              "height": 200,
+              "depth": 70,
+              "optimalStock": 6,
+              "currentStock": 6
+            }
+          ]
+        },
+        {
+          "shelfNumber": 4,
+          "name": "Bottom Shelf - Personal Care & Grooming",
+          "verticalPosition": 0,
+          "height": 350,
+          "products": [
+            {
+              "sku": "POM-GEL",
+              "brand": "Pommette Bio",
+              "name": "Gel Lavant",
+              "category": "Baby Care",
+              "xPosition": 0,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 90,
+              "height": 220,
+              "depth": 70,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "POM-EAU",
+              "brand": "Pommette Bio",
+              "name": "Eau Nettoyante",
+              "category": "Baby Care",
+              "xPosition": 200,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 90,
+              "height": 220,
+              "depth": 70,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "LAB-PANS",
+              "brand": "Labell",
+              "name": "20 Pansements Kids",
+              "category": "First Aid",
+              "xPosition": 400,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 80,
+              "height": 140,
+              "depth": 40,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "LAB-RAZOR",
+              "brand": "Labell Men",
+              "name": "System 3 Blades Razor",
+              "category": "Grooming",
+              "xPosition": 600,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 100,
+              "height": 200,
+              "depth": 40,
+              "optimalStock": 4,
+              "currentStock": 4
+            },
+            {
+              "sku": "LAB-REFILL",
+              "brand": "Labell Men",
+              "name": "System 3 Blades Refill x4",
+              "category": "Grooming",
+              "xPosition": 820,
+              "facings": 2,
+              "depthCount": 2,
+              "width": 100,
+              "height": 160,
+              "depth": 40,
+              "optimalStock": 4,
+              "currentStock": 4
+            }
+          ]
+        }
+      ]
+    },
+    "stockingRules": {
+      "highDemandProducts": ["PRING-SV", "LAV-CREMA"],
+      "restockThreshold": 0.3,
+      "notes": "Restock when inventory falls below 30% of optimal level"
+    },
+    "metadata": {
+      "location": "POC Demo Store",
+      "lastUpdated": "2026-02-15",
+      "status": "active",
+      "totalSKUs": 13,
+      "totalProducts": 64
+    }
+  }
+}

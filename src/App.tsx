@@ -6,9 +6,11 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import { routeTree } from "./routeTree.gen";
 
 const queryClient = new QueryClient();
+const normalizedBasePath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
 
 const router = createRouter({
   routeTree,
+  basepath: normalizedBasePath,
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultPreloadStaleTime: 0,

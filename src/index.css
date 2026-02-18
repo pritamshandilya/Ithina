@@ -32,6 +32,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  /* Semantic action colors (reference :root vars) */
+  --color-action-success: var(--chart-2);
+  --color-action-warning: var(--action-warning);
+  --color-action-critical: var(--destructive);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
@@ -46,8 +50,8 @@
   --radius: 0.625rem;
   
   /* Figma Design Colors */
-  /* #0f172a - Primary/Highlight */
-  /* #1e1c41 - Card 1 */
+  /* #0f172a - Background/Primary */
+  /* #1d2a3d - Card (Updated) */
   /* #262427 - Card 2 */
   /* #0e273d - Card 3 */
   /* #0e2930 - Card 4 */
@@ -55,13 +59,13 @@
   /* #10b982 - Success (Green) */
   /* #ef4444 - Destructive (Red) */
   
-  --background: oklch(0.145 0.025 264.5); /* #0f172a */
+  --background: oklch(0.18 0.03 255); /* #0f172a - Main app background */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.19 0.04 278); /* #1e1c41 */
+  --card: oklch(0.21 0.03 245); /* #1d2a3d */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.17 0.015 264.5); /* Slightly lighter than background */
+  --popover: oklch(0.19 0.025 255); /* Slightly lighter than background */
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.145 0.025 264.5); /* #0f172a */
+  --primary: oklch(0.18 0.03 255); /* #0f172a - Same as background */
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.18 0.02 255); /* #262427 */
   --secondary-foreground: oklch(0.985 0 0);
@@ -72,7 +76,7 @@
   --destructive: oklch(0.62 0.23 25); /* #ef4444 - Red for destructive actions */
   --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.25 0.02 264.5);
-  --input: oklch(0.22 0.02 264.5);
+  --input: oklch(0.35 0.04 264.5); /* Lighter border for better visibility */
   --ring: oklch(0.72 0.17 285); /* Purple accent for focus rings */
   --chart-1: oklch(0.72 0.17 285); /* #a78bfa - Purple */
   --chart-2: oklch(0.68 0.17 165); /* #10b982 - Green */
@@ -87,6 +91,19 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
+
+  /* Unified semantic colors (light mode) */
+  --action-primary: var(--accent);
+  --action-warning: oklch(0.72 0.16 65); /* Orange for warnings/overrides */
+  --action-critical: var(--destructive);
+  --action-success: var(--chart-2);
+
+  /* Maker-specific semantic colors */
+  --maker-primary: var(--accent); /* Purple for maker actions */
+  --maker-pending: var(--chart-1); /* Purple accent for pending */
+  --maker-approved: var(--chart-2); /* Green for approved */
+  --maker-returned: var(--destructive); /* Red for returned/rejected */
+  --maker-never-audited: var(--muted); /* Gray for never audited */
 }
 
 .dark {
@@ -122,6 +139,33 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.25 0.02 264.5);
   --sidebar-ring: oklch(0.72 0.17 285);
+  
+  /* Unified semantic colors (used by both Maker and Checker) */
+  /* Status Colors */
+  --status-pending: var(--chart-1); /* Purple accent for pending/in-progress */
+  --status-approved: var(--chart-2); /* Green for approved/success */
+  --status-rejected: var(--destructive); /* Red for returned/rejected/critical */
+  --status-neutral: var(--muted); /* Gray for inactive/never-audited/neutral */
+  
+  /* Action Colors */
+  --action-primary: var(--accent); /* Purple for primary actions */
+  --action-warning: oklch(0.72 0.16 65); /* #f59e0b - Orange for warnings/overrides */
+  --action-critical: var(--destructive); /* Red for critical issues */
+  --action-success: var(--chart-2); /* Green for success states */
+  
+  /* Legacy aliases for backward compatibility (will be removed) */
+  --maker-primary: var(--action-primary);
+  --maker-pending: var(--status-pending);
+  --maker-approved: var(--status-approved);
+  --maker-returned: var(--status-rejected);
+  --maker-never-audited: var(--status-neutral);
+  
+  --checker-primary: var(--action-primary);
+  --checker-critical: var(--action-critical);
+  --checker-warning: var(--action-warning);
+  --checker-success: var(--action-success);
+  --checker-neutral: var(--status-neutral);
+  --checker-override: var(--action-warning);
 }
 
 @layer base {
@@ -139,4 +183,397 @@
       cursor: pointer;
     }
   }
+
+  /* Universal scrollbar styling – dark theme, applies to all scrollable elements */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) color-mix(in oklch, var(--card) 100%, black 15%);
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: color-mix(in oklch, var(--card) 100%, black 15%);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+@layer components {
+  /* Dashboard Layouts */
+  .dashboard-grid {
+    @apply grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3;
+  }
+
+  /* Card Components */
+  .stat-card {
+    @apply bg-card text-card-foreground border border-border rounded-lg p-6 shadow-sm;
+  }
+
+  /* Unified Card Styles (used by both Maker and Checker) */
+  .stat-card-success {
+    border-color: color-mix(in oklch, var(--status-approved) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-approved) 5%, var(--card));
+  }
+
+  .stat-card-warning {
+    border-color: color-mix(in oklch, var(--action-warning) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-warning) 5%, var(--card));
+  }
+
+  .stat-card-critical {
+    border-color: color-mix(in oklch, var(--action-critical) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-critical) 5%, var(--card));
+  }
+
+  .stat-card-accent {
+    border-color: color-mix(in oklch, var(--action-primary) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-primary) 5%, var(--card));
+  }
+
+  /* Interactive Card Styles */
+  .card-interactive {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .card-interactive:hover {
+    border-color: var(--accent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  .shelf-card-interactive {
+    background-color: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .shelf-card-interactive:hover {
+    border-color: var(--accent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  }
+
+  /* Unified Status Badge Styles */
+  .status-pending {
+    background-color: color-mix(in oklch, var(--status-pending) 20%, transparent);
+    color: var(--status-pending);
+    border: 1px solid color-mix(in oklch, var(--status-pending) 50%, transparent);
+  }
+
+  .status-approved {
+    background-color: color-mix(in oklch, var(--status-approved) 20%, transparent);
+    color: var(--status-approved);
+    border: 1px solid color-mix(in oklch, var(--status-approved) 50%, transparent);
+  }
+
+  .status-returned,
+  .status-rejected,
+  .status-critical {
+    background-color: color-mix(in oklch, var(--status-rejected) 20%, transparent);
+    color: var(--status-rejected);
+    border: 1px solid color-mix(in oklch, var(--status-rejected) 50%, transparent);
+  }
+
+  .status-never-audited,
+  .status-neutral,
+  .status-inactive {
+    background-color: color-mix(in oklch, var(--status-neutral) 20%, transparent);
+    color: var(--muted-foreground);
+    border: 1px solid color-mix(in oklch, var(--status-neutral) 50%, transparent);
+  }
+
+  .status-warning {
+    background-color: color-mix(in oklch, var(--action-warning) 20%, transparent);
+    color: var(--action-warning);
+    border: 1px solid color-mix(in oklch, var(--action-warning) 50%, transparent);
+  }
+
+  .status-draft {
+    background-color: color-mix(in oklch, var(--accent) 15%, transparent);
+    color: var(--accent);
+    border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
+  }
+}
+
+/* ==========================================================================
+   DataTable (Tabulator) – full theme, responsive, matches app UX
+   ========================================================================== */
+
+/* Wrapper: full width, contained height for responsive layout */
+.data-table-wrapper {
+  --tabulator-bg: var(--card);
+  --tabulator-fg: var(--card-foreground);
+  --tabulator-border: var(--border);
+  --tabulator-header-bg: color-mix(in oklch, var(--card) 100%, black 12%);
+  --tabulator-row-even: color-mix(in oklch, var(--card) 100%, white 3%);
+  --tabulator-row-hover: color-mix(in oklch, var(--accent) 12%, var(--card));
+  --tabulator-sort-icon: var(--muted-foreground);
+  --tabulator-sort-active: var(--accent);
+}
+
+.data-table-container {
+  min-height: 240px;
+}
+
+/* Base table: no default white, use theme everywhere */
+.data-table-wrapper .tabulator {
+  background-color: var(--tabulator-bg) !important;
+  border: none;
+  color: var(--tabulator-fg);
+  width: 100% !important;
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper .tabulator-tableholder .tabulator-table {
+  background-color: var(--tabulator-bg) !important;
+  width: 100% !important;
+}
+
+/* Header: distinct background, clear border */
+.data-table-wrapper .tabulator-header {
+  background-color: var(--tabulator-header-bg) !important;
+  border-bottom: 2px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col {
+  background-color: var(--tabulator-header-bg) !important;
+  border-right: 1px dotted var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+  width: 6px;
+  margin-right: -3px;
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
+  cursor: col-resize;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 88%, black 12%);
+  color: var(--card-foreground);
+  font-size: 0.75rem;
+  padding: 0.375rem 0.5rem;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+/* Sort icons: visible and accent when active */
+.data-table-wrapper .tabulator-col .tabulator-col-content .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-icon);
+  border-top-color: var(--tabulator-sort-icon);
+}
+
+.data-table-wrapper .tabulator-col.tabulator-col-sortable:hover .tabulator-arrow,
+.data-table-wrapper .tabulator-col.tabulator-sortable .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-active);
+  border-top-color: var(--tabulator-sort-active);
+}
+
+/* Rows: theme background, alternating and hover */
+.data-table-wrapper .tabulator-row {
+  min-height: 2.75rem;
+  background-color: var(--tabulator-bg) !important;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-row-even) !important;
+}
+
+.data-table-wrapper .tabulator-row:hover {
+  background-color: var(--tabulator-row-hover) !important;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected {
+  background-color: color-mix(in oklch, var(--accent) 18%, var(--card)) !important;
+}
+
+/* Cells: dotted column lines, solid row lines, padding, text color */
+.data-table-wrapper .tabulator-cell {
+  background-color: inherit !important;
+  border-right: 1px dotted var(--tabulator-border) !important;
+  border-bottom: 1px solid var(--tabulator-border);
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen {
+  border-right: 2px dotted var(--tabulator-border) !important;
+}
+
+/* Placeholder when no data */
+.data-table-wrapper .tabulator-placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  background-color: var(--tabulator-bg) !important;
+}
+
+/* Scrollbar: themed for dark UI */
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {
+  height: 8px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--card) 100%, black 15%);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background: var(--tabulator-border);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+/* Focus: visible focus ring for keyboard nav */
+.data-table-wrapper .tabulator-row:focus-visible,
+.data-table-wrapper .tabulator-cell:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selectable:hover {
+  cursor: pointer;
+}
+
+/* Responsive collapse (mobile): keep theme in collapsed content */
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse {
+  background-color: var(--tabulator-row-even) !important;
+  border: 1px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse table tr td {
+  color: var(--tabulator-fg);
+  border-color: var(--tabulator-border);
+}
+
+.data-table-wrapper .tabulator-cell .tabulator-responsive-collapse-toggle {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.data-table-wrapper .tabulator .tabulator-footer {
+  border-top: 1px solid var(--tabulator-border);
+  background-color: color-mix(in oklch, var(--card) 96%, black 4%) !important;
+  color: var(--muted-foreground) !important;
+  padding: 0.5rem 0.75rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-footer-contents,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-paginator,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-counter,
+.data-table-wrapper .tabulator .tabulator-footer span,
+.data-table-wrapper .tabulator .tabulator-footer label {
+  background-color: transparent !important;
+  color: var(--muted-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page {
+  border: 1px solid var(--tabulator-border);
+  background: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  border-radius: 0.375rem;
+  min-width: 2rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page.active {
+  background: color-mix(in oklch, var(--accent) 24%, transparent) !important;
+  border-color: color-mix(in oklch, var(--accent) 50%, transparent);
+  color: var(--card-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page:disabled {
+  opacity: 0.5;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size {
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  padding: 0.25rem 0.375rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
+/* Accessibility: Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom animations for checker dashboard */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* Native select: match app color scheme (trigger + options where supported) */
+select[data-slot="select"],
+select.select-themed {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+select[data-slot="select"] option,
+select.select-themed option {
+  background-color: var(--card);
+  color: var(--card-foreground);
 }

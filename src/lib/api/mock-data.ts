@@ -290,7 +290,7 @@ export function generateMockAudits(): Audit[] {
         id: `audit-${shelf.id}`,
         shelfId: shelf.id,
         submittedBy: mockUser.id,
-        mode: Math.random() > 0.5 ? "vision-edge" : "assist-mode",
+        mode: Math.random() > 0.5 ? "planogram-based" : "adhoc",
         status: shelf.status,
         complianceScore: shelf.complianceScore,
       };

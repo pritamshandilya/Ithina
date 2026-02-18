@@ -1,9 +1,8 @@
-
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import MainLayout from "@/components/layouts/main";
-import { ManualOverrideList, HeaderContextBar } from "@/components/maker";
+import { ManualOverrideList, HeaderContextBar, type ApprovalAction } from "@/components/maker";
 import { useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
 
@@ -12,8 +11,27 @@ export const Route = createFileRoute("/maker/manual-audits")({
 });
 
 function MakerManualAuditsPage() {
+  const navigate = useNavigate();
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+
+  const handleAction = (auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => {
+    const isPlanogram = mode === "planogram-based" || mode === "vision-edge";
+
+    if (action === "fix") {
+      if (isPlanogram) {
+        navigate({ to: "/maker/audits/planogram/run/$shelfId", params: { shelfId } });
+      } else {
+        navigate({ to: "/maker/audits/adhoc/new" });
+      }
+    } else if (action === "view-report" || action === "view-details") {
+      if (isPlanogram) {
+        navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
+      } else {
+        navigate({ to: "/maker/audits/adhoc" });
+      }
+    }
+  };
 
   return (
     <MainLayout>
@@ -36,12 +54,7 @@ function MakerManualAuditsPage() {
           </div>
 
           <div className="rounded-lg border border-border bg-card shadow-sm p-6">
-            <ManualOverrideList 
-                onAction={(id, action) => {
-                    console.log("Action on audit:", id, action);
-                    // Add navigation logic if needed, e.g. to fix issues
-                }} 
-            />
+            <ManualOverrideList onAction={handleAction} />
           </div>
         </div>
       </div>

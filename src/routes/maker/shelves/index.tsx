@@ -267,14 +267,14 @@ function ShelfManagementPage() {
                 </button>
               </div>
 
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button className="bg-chart-2 text-white hover:opacity-90">
+              {/* <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild> */}
+                  <Button onClick={() => navigate({ to: "/maker/audits/planogram/new" })} className="bg-chart-2 text-white hover:opacity-90">
                     <Plus className="size-4 mr-2" />
                     New Shelf
                   </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-md p-0">
+                {/* </SheetTrigger> */}
+                {/* <SheetContent className="w-full sm:max-w-md p-0">
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-6 pb-2 space-y-1">
                       <div className="flex items-center gap-2 text-accent mb-2">
@@ -367,8 +367,8 @@ function ShelfManagementPage() {
                       </div>
                     </SheetFooter>
                   </div>
-                </SheetContent>
-              </Sheet>
+                </SheetContent> */}
+              {/* </Sheet> */}
             </div>
           </div>
 

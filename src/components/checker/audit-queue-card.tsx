@@ -7,7 +7,7 @@
  * Features:
  * - Shelf identification
  * - Submitter info with avatar
- * - Audit mode badge
+ * - Audit mode badge (Planogram Based / Adhoc Analysis)
  * - Large, color-coded compliance score
  * - Violation count
  * - Rule version used
@@ -126,8 +126,8 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
           </p>
         </div>
         
-        {/* Compliance Score Badge - Only for Vision Edge */}
-        {audit.mode === "vision-edge" && complianceScore !== undefined ? (
+        {/* Compliance Score Badge - Shown when AI analysis has run */}
+        {audit.complianceScore !== undefined ? (
           <div 
             className="flex flex-col items-center justify-center rounded-lg px-4 py-2 shrink-0"
             style={{ 
@@ -178,20 +178,20 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
         <span
           className={cn(
             "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-            audit.mode === "vision-edge"
+            (audit.mode === "planogram-based" || audit.mode === "vision-edge")
               ? "bg-accent/20 text-accent border border-accent/40"
               : "bg-muted/20 text-muted-foreground border border-muted/40"
           )}
         >
-          {audit.mode === "vision-edge" ? (
+          {(audit.mode === "planogram-based" || audit.mode === "vision-edge") ? (
             <>
               <Camera className="size-3" aria-hidden="true" />
-              Vision Edge
+              Planogram Based
             </>
           ) : (
             <>
               <ClipboardList className="size-3" aria-hidden="true" />
-              Assist Mode
+              Adhoc Analysis
             </>
           )}
         </span>

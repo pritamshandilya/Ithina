@@ -17,9 +17,11 @@ import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker"
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";
 
+export type ApprovalAction = "view-report" | "view-details" | "fix" | "resume";
+
 export interface ApprovalStatusListProps {
   className?: string;
-  onAction?: (auditId: string, action: "resume" | "fix") => void;
+  onAction?: (auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => void;
 }
 
 type FilterType = "all" | "pending" | "approved" | "returned";
@@ -27,6 +29,12 @@ type FilterType = "all" | "pending" | "approved" | "returned";
 function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[]) {
   const shelf = shelves?.find((s) => s.id === audit.shelfId);
   return shelf?.shelfName ?? `Shelf ${audit.shelfId.replace("shelf-", "")}`;
+}
+
+function getModeLabel(mode: string): string {
+  if (mode === "planogram-based" || mode === "vision-edge") return "Planogram Based";
+  if (mode === "adhoc" || mode === "assist-mode") return "Adhoc Analysis";
+  return "Planogram Based"; // default for unknown
 }
 
 export function ApprovalStatusList({ className, onAction }: ApprovalStatusListProps) {
@@ -145,31 +153,40 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
       {
         title: "Mode",
         field: "mode",
-        width: 130,
+        width: 150,
         headerFilter: false,
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
-          const isManual = audit.mode === "assist-mode";
-          const modeLabel = isManual ? "Manual Entry" : "Vision Edge";
-          const modeClass = isManual ? "text-amber-600 dark:text-amber-400 font-medium" : "text-blue-600 dark:text-blue-400";
+          const modeLabel = getModeLabel(audit.mode);
+          const isPlanogram = modeLabel === "Planogram Based";
+          const modeClass = isPlanogram ? "text-blue-600 dark:text-blue-400 font-medium" : "text-amber-600 dark:text-amber-400 font-medium";
           return `<span class="text-sm ${modeClass}">${modeLabel}</span>`;
         },
       },
       {
         title: "Actions",
         field: "id",
-        width: 140,
+        width: 180,
         headerSort: false,
         headerFilter: false,
         hozAlign: "center",
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
-          const isReturned = audit.status === "returned";
-          
-          if (!isReturned) return `<span class="text-xs text-muted-foreground">—</span>`;
+          const btnBase = "rounded-md px-2.5 py-1 text-xs font-medium transition-colors inline-flex items-center gap-1";
 
-          const btnClass = "rounded-md border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20 px-2.5 py-1 text-xs font-medium transition-colors";
-          return `<button type="button" class="${btnClass}" data-action="fix">Fix Issues</button>`;
+          if (audit.status === "returned") {
+            const btnClass = `${btnBase} border border-destructive/50 bg-destructive/10 text-destructive hover:bg-destructive/20`;
+            return `<button type="button" class="${btnClass}" data-action="fix">Fix Issues</button>`;
+          }
+          if (audit.status === "approved") {
+            const btnClass = `${btnBase} border border-chart-2/50 bg-chart-2/10 text-chart-2 hover:bg-chart-2/20`;
+            return `<button type="button" class="${btnClass}" data-action="view-report">View Report</button>`;
+          }
+          if (audit.status === "pending") {
+            const btnClass = `${btnBase} border border-accent/50 bg-accent/10 text-accent hover:bg-accent/20`;
+            return `<button type="button" class="${btnClass}" data-action="view-details">View Details</button>`;
+          }
+          return `<span class="text-xs text-muted-foreground">—</span>`;
         },
         cellClick: (event: unknown, cell: { getData: () => Audit }) => {
           (event as { stopPropagation?: () => void }).stopPropagation?.();
@@ -177,8 +194,9 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
           const btn = target?.closest?.("[data-action]");
           if (!btn) return;
           const audit = cell.getData();
-          if (audit.status === "returned") {
-             onAction?.(audit.id, "fix");
+          const action = (btn as HTMLElement).getAttribute("data-action") as ApprovalAction | null;
+          if (action && onAction) {
+            onAction(audit.id, audit.shelfId, action, audit.mode);
           }
         },
       },

@@ -14,8 +14,8 @@ export type AuditQueueFilter =
   | "critical"   // Compliance < 50%
   | "attention"  // Compliance 50-79%
   | "good"       // Compliance 80-100%
-  | "vision"     // Vision Edge mode only
-  | "assist";    // Assist mode only
+  | "planogram"  // Planogram Based mode only
+  | "adhoc";     // Adhoc Analysis mode only
 
 /**
  * Sort options for the audit review queue

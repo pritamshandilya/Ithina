@@ -290,7 +290,7 @@ export function generateMockAudits(): Audit[] {
         id: `audit-${shelf.id}`,
         shelfId: shelf.id,
         submittedBy: mockUser.id,
-        mode: Math.random() > 0.5 ? "vision-edge" : "assist-mode",
+        mode: Math.random() > 0.5 ? "planogram-based" : "adhoc",
         status: shelf.status,
         complianceScore: shelf.complianceScore,
       };
@@ -508,14 +508,13 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
     if (!shelf.lastAuditDate) return;
 
     // Determine audit mode
-    const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
+    const mode: "planogram-based" | "adhoc" = index % 2 === 0 ? "planogram-based" : "adhoc";
 
-    // Only Vision Edge has AI-generated compliance scores
-    // Assist Mode requires manual checker review first
+    // Both modes have AI-generated compliance scores
     let complianceScore: number | undefined;
     let violationCount = 0;
 
-    if (mode === "vision-edge" && shelf.complianceScore) {
+    if (mode === "planogram-based" && shelf.complianceScore) {
       // Generate varying compliance scores including critical ones
       complianceScore = shelf.complianceScore;
       if (index % 5 === 0) {
@@ -526,8 +525,10 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
         complianceScore = randomScore(60, 79);
       }
       violationCount = Math.ceil((100 - complianceScore) / 10);
+    } else if (mode === "adhoc" && shelf.complianceScore) {
+      complianceScore = shelf.complianceScore;
+      violationCount = Math.ceil((100 - complianceScore) / 10);
     }
-    // Assist Mode: no compliance score until checker reviews
 
     const publishingStatus: PublishingStatus = "pending";
 
@@ -538,7 +539,7 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       submittedAt: shelf.lastAuditDate,
       mode,
       status: "pending",
-      complianceScore, // undefined for assist-mode
+      complianceScore,
       violationCount,
       ruleVersionUsed: ruleVersions[index % ruleVersions.length],
       publishingStatus,
@@ -556,17 +557,16 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
   // Add additional mock audits to fill the queue
   additionalShelves.forEach((shelf, index) => {
     // Determine audit mode
-    const mode: "vision-edge" | "assist-mode" = index % 2 === 0 ? "vision-edge" : "assist-mode";
+    const mode: "planogram-based" | "adhoc" = index % 2 === 0 ? "planogram-based" : "adhoc";
 
-    // Only Vision Edge has AI-generated compliance scores
+    // Both modes have AI-generated compliance scores
     let complianceScore: number | undefined;
     let violationCount = 0;
 
-    if (mode === "vision-edge") {
+    if (mode === "planogram-based" || mode === "adhoc") {
       complianceScore = randomScore(45, 95);
       violationCount = Math.ceil((100 - complianceScore) / 10);
     }
-    // Assist Mode: no compliance score until checker reviews
 
     const checkerAudit: CheckerAudit = {
       id: `audit-extra-${index}`,
@@ -575,7 +575,7 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       submittedAt: randomPastDate(1),
       mode,
       status: "pending",
-      complianceScore, // undefined for assist-mode
+      complianceScore,
       violationCount,
       ruleVersionUsed: ruleVersions[index % ruleVersions.length],
       publishingStatus: "pending",

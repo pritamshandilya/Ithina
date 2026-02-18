@@ -272,7 +272,7 @@ function AuditReviewWorkspace() {
                 <div>
                   <p className="text-xs text-muted-foreground">Audit Mode</p>
                   <p className="text-sm font-medium text-foreground">
-                    {audit.mode === "vision-edge" ? "Vision Edge" : "Assist Mode"}
+                    {audit.mode === "planogram-based" || audit.mode === "vision-edge" ? "Planogram Based" : "Adhoc Analysis"}
                   </p>
                 </div>
               </div>

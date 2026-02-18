@@ -77,7 +77,7 @@ export interface PlanogramSummary {
 
 /** User's edited arrangement (what gets saved) */
 export interface PlanogramArrangement {
-  planogramId: string;
+  planogramId?: string;
   shelfOrder: { shelfId: string; productIds: string[] }[];
   /** SKUs removed from the planogram (moved to Removed Items) */
   removedProductIds?: string[];

@@ -36,7 +36,7 @@ import type {
   PlanogramShelfDef,
 } from "@/types/planogram";
 
-export const Route = createFileRoute("/maker/audits/planogram/$shelfId")({
+export const Route = createFileRoute("/checker/shelf/$shelfId")({
   component: PlanogramPreviewPage,
 });
 
@@ -512,7 +512,7 @@ function PlanogramPreviewPage() {
           />
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/maker/audits/planogram">
+              <Link to="/checker/shelves">
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>

@@ -9,6 +9,13 @@ export interface SkuEnrichmentItem {
   weight: number;
 }
 
+/** Issue detail shown when hovering over an issue badge in the SKU list */
+export interface SkuIssueDetail {
+  type: string;
+  description: string;
+  reason: string;
+}
+
 export type PipelineStepId =
   | "detection"
   | "rows"

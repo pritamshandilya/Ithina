@@ -18,8 +18,12 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import type { SkuEnrichmentItem } from "@/features/maker/analysis";
+import type {
+  SkuEnrichmentItem,
+  SkuIssueDetail,
+} from "@/features/maker/analysis";
 
 export type AnalysisReportTab = "sku-list" | "compliance" | "strategy";
 
@@ -32,6 +36,8 @@ export interface AnalysisReportViewProps {
   skuQuantities?: Record<string, number>;
   /** Optional: issue count per SKU (id -> count). Falls back to 0 if missing */
   skuIssues?: Record<string, number>;
+  /** Optional: issue details per SKU (id -> details). Shown in hover tooltip */
+  skuIssueDetails?: Record<string, SkuIssueDetail[]>;
   /** Callback when user wants to upload a new image */
   onUploadImage?: () => void;
   /** Callback when user resets */
@@ -43,6 +49,7 @@ export function AnalysisReportView({
   skuItems,
   skuQuantities = {},
   skuIssues = {},
+  skuIssueDetails = {},
   onUploadImage,
   onReset,
 }: AnalysisReportViewProps) {
@@ -180,6 +187,7 @@ export function AnalysisReportView({
               skuItems={skuItems}
               skuQuantities={skuQuantities}
               skuIssues={skuIssues}
+              skuIssueDetails={skuIssueDetails}
             />
           )}
           {activeTab === "compliance" && <ComplianceTab />}
@@ -190,14 +198,29 @@ export function AnalysisReportView({
   );
 }
 
+/** Mock issue details for SKUs with issues when skuIssueDetails not provided */
+function getMockIssueDetails(
+  productName: string
+): SkuIssueDetail[] {
+  return [
+    {
+      type: "LOW MARGIN PRIME",
+      description: `${productName} should be at eye level`,
+      reason: "High margin items generate more revenue when placed at eye level",
+    },
+  ];
+}
+
 function SkuListTab({
   skuItems,
   skuQuantities,
   skuIssues,
+  skuIssueDetails,
 }: {
   skuItems: SkuEnrichmentItem[];
   skuQuantities: Record<string, number>;
   skuIssues: Record<string, number>;
+  skuIssueDetails: Record<string, SkuIssueDetail[]>;
 }) {
   return (
     <div className="space-y-4">
@@ -238,11 +261,43 @@ function SkuListTab({
                   <td className="py-2.5 px-2">
                     {issues === 0 ? (
                       <Check className="size-4 text-chart-2" aria-hidden />
-                    ) : (
-                      <span className="inline-flex items-center rounded-full bg-destructive/20 text-destructive px-2 py-0.5 text-xs font-medium">
-                        {issues} issue{issues !== 1 ? "s" : ""}
-                      </span>
-                    )}
+                    ) : (() => {
+                      const details =
+                        skuIssueDetails[item.id] ??
+                        getMockIssueDetails(item.productName);
+                      const issueBadge = (
+                        <span className="inline-flex items-center rounded-full bg-destructive/20 text-destructive px-2 py-0.5 text-xs font-medium cursor-help">
+                          {issues} issue{issues !== 1 ? "s" : ""}
+                        </span>
+                      );
+                      return details.length > 0 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>{issueBadge}</TooltipTrigger>
+                          <TooltipContent
+                            side="bottom"
+                            align="start"
+                            sideOffset={4}
+                            className="max-w-[280px] p-3 space-y-2"
+                          >
+                            {details.map((d, i) => (
+                              <div key={i} className="space-y-1">
+                                <p className="text-xs font-bold uppercase text-destructive">
+                                  {d.type}
+                                </p>
+                                <p className="text-sm text-foreground">
+                                  {d.description}
+                                </p>
+                                <p className="text-xs text-muted-foreground italic">
+                                  Why: {d.reason}
+                                </p>
+                              </div>
+                            ))}
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        issueBadge
+                      );
+                    })()}
                   </td>
                 </tr>
               );

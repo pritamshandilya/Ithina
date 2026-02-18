@@ -172,12 +172,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div
-          className={cn(
-            "mx-auto space-y-8",
-            analysisComplete && showReport ? "max-w-7xl" : "max-w-5xl"
-          )}
-        >
+        <div className="mx-auto max-w-7xl space-y-8">
           <HeaderContextBar
             stores={stores ?? []}
             selectedStoreId={selectedStoreId}

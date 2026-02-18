@@ -31,8 +31,9 @@ function StoreLevelReport() {
 
     return (
         <MainLayout>
-            <div className="min-h-screen bg-primary">
-                <ReportPage
+            <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+                <div className="mx-auto max-w-7xl">
+                    <ReportPage
                     title="Store Level Report"
                     subtitle="Downtown Flagship — Consolidated from latest analysis per shelf"
                     stats={stats}
@@ -40,6 +41,7 @@ function StoreLevelReport() {
                     tableColumns={columns}
                     tableData={STORE_LEVEL_MOCK_DATA}
                 />
+                </div>
             </div>
         </MainLayout>
     );

@@ -133,7 +133,8 @@ export default function EditShelfPage() {
 
     return (
         <MainLayout>
-            <div className="flex flex-col min-h-screen bg-[#0a0f1d] text-slate-100 p-8 font-sans w-full selection:bg-accent/30">
+            <div className="min-h-screen bg-[#0a0f1d] text-slate-100 font-sans p-4 sm:p-6 lg:p-8 selection:bg-accent/30">
+                <div className="mx-auto max-w-7xl flex flex-col">
                 {/* Header Section */}
                 <div className="flex items-center justify-between mb-8">
                     <div className="flex flex-col gap-1">
@@ -316,6 +317,7 @@ export default function EditShelfPage() {
                     ...acc,
                     ...l.products.map(p => ({ ...p, shelfNumber: l.shelfNumber }))
                 ], [])} />
+                </div>
             </div>
         </MainLayout>
     );

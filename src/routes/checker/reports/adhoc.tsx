@@ -65,15 +65,17 @@ function AdhocReport() {
 
     return (
         <MainLayout>
-            <div className="min-h-screen bg-primary">
-                <ReportPage
-                    title="Adhoc Report"
-                    subtitle="Downtown Flagship — Adhoc analyses not linked to any shelf"
-                    stats={stats}
-                    tableTitle="Adhoc Analyses"
-                    tableColumns={columns}
-                    tableData={ADHOC_REPORT_MOCK_DATA}
-                />
+            <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+                <div className="mx-auto max-w-7xl">
+                    <ReportPage
+                        title="Adhoc Report"
+                        subtitle="Downtown Flagship — Adhoc analyses not linked to any shelf"
+                        stats={stats}
+                        tableTitle="Adhoc Analyses"
+                        tableColumns={columns}
+                        tableData={ADHOC_REPORT_MOCK_DATA}
+                    />
+                </div>
             </div>
         </MainLayout>
     );

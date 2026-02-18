@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
+import { renderToString } from "react-dom/server";
 import { Plus, Search, LayoutGrid, List } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { CheckerHeader } from "@/components/checker";
-import { ShelfCard } from "@/components/maker";
+import { HeaderContextBar, ShelfCard, ShelfActions, PlanogramPreview } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import {
   Sheet,
   SheetClose,
@@ -20,15 +21,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { useAssignedShelves, useCreateShelf } from "@/features/maker/hooks";
-import { useStores } from "@/features/checker/hooks";
+import { useAssignedShelves, useCreateShelf, useStores } from "@/features/maker/hooks";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
-import { mockCheckerUser } from "@/lib/api/mock-data";
+import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 import type { Shelf } from "@/types/maker";
 
 export const Route = createFileRoute("/checker/shelves")({
-  component: CheckerShelvesPage,
+  component: ShelfManagementPage,
 });
 
 const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
@@ -41,6 +41,7 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
       const shelf = (cell as { getData: () => Shelf }).getData();
       const statusClass = getAuditStatusClass(shelf.status);
       const label = AUDIT_STATUS_LABELS[shelf.status] ?? shelf.status;
+
       return `
         <div class="flex flex-col gap-1 py-1">
           <span class="font-medium text-foreground">${shelf.shelfName}</span>
@@ -68,16 +69,16 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     },
     headerHozAlign: "center",
   },
-  {
-    title: "Elevation",
-    field: "elevation",
-    sorter: "string",
-    headerSort: true,
-    formatter: (cell: unknown) => {
-      const value = (cell as { getValue: () => unknown }).getValue() || "—";
-      return `<span class="text-sm font-medium text-muted-foreground">${value}</span>`;
-    },
-  },
+  // {
+  //   title: "Elevation",
+  //   field: "elevation",
+  //   sorter: "string",
+  //   headerSort: true,
+  //   formatter: (cell: unknown) => {
+  //     const value = (cell as { getValue: () => unknown }).getValue() || "—";
+  //     return `<span class="text-sm font-medium text-muted-foreground">${value}</span>`;
+  //   },
+  // },
   {
     title: "Last Modified",
     field: "lastAuditDate",
@@ -89,51 +90,55 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
       return `<span class="text-sm text-foreground">${format(new Date(date as string | number), "MMM d, yyyy")}</span>`;
     },
   },
-  {
-    title: "Notes",
-    field: "notes",
-    sorter: "string",
-    formatter: (cell: unknown) => {
-      const value = (cell as { getValue: () => unknown }).getValue();
-      if (!value) return "";
-      return `<span class="text-sm text-muted-foreground italic truncate block max-w-[200px]" title="${String(value)}">${String(value)}</span>`;
-    },
-  },
+  // {
+  //   title: "Notes",
+  //   field: "notes",
+  //   sorter: "string",
+  //   formatter: (cell: unknown) => {
+  //     const value = (cell as { getValue: () => unknown }).getValue();
+  //     if (!value) return "";
+  //     return `<span class="text-sm text-muted-foreground italic truncate block max-w-[200px]" title="${String(value)}">${String(value)}</span>`;
+  //   },
+  // },
   {
     title: "Actions",
     field: "actions",
     formatter: () => {
-      return `
-        <button type="button" class="p-1.5 hover:bg-accent rounded transition-colors text-muted-foreground hover:text-accent-foreground" aria-label="More actions">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-        </button>
-      `;
+      // const wrapper = document.createElement("div");
+      // wrapper.className = "flex items-center justify-center h-full w-full";
+      
+      // const root = createRoot(wrapper);
+      // root.render(<ShelfActions />);
+      
+      // return wrapper;
+      return renderToString(<ShelfActions />);
     },
-    width: 80,
+    width: 140,
     headerSort: false,
     headerHozAlign: "center",
     hozAlign: "center",
   },
 ];
 
-function CheckerShelvesPage() {
+function ShelfManagementPage() {
   const { data: shelves, isLoading } = useAssignedShelves();
   const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const [searchQuery, setSearchQuery] = useState("");
   const { mutate: createShelf, isPending: isCreating } = useCreateShelf();
+  const navigate = useNavigate();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [currentPage, setCurrentPage] = useState(1);
   const GRID_PAGE_SIZE = 9;
 
+  // Form State
   const [formData, setFormData] = useState({
     shelfName: "",
     aisleNumber: "",
     bayNumber: "",
-    elevation: "",
-    notes: "",
+    planogramId: "",
   });
 
   const filteredShelves =
@@ -159,11 +164,13 @@ function CheckerShelvesPage() {
         )
       : 0;
 
+  // Reset pagination when search changes
   useEffect(() => {
     setTablePagination((p) => ({ ...p, page: 1 }));
     setCurrentPage(1);
   }, [searchQuery]);
 
+  // Pagination Logic for Grid
   const totalPages = Math.ceil(filteredShelves.length / GRID_PAGE_SIZE);
   const paginatedGridShelves = filteredShelves.slice(
     (currentPage - 1) * GRID_PAGE_SIZE,
@@ -172,25 +179,22 @@ function CheckerShelvesPage() {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createShelf(
+    createShelf({
+      shelfName: formData.shelfName,
+      aisleNumber: parseInt(formData.aisleNumber) || 0,
+      bayNumber: parseInt(formData.bayNumber) || 0,
+      description: formData.planogramId ? `Planogram: ${formData.planogramId}` : undefined,
+    },
       {
-        shelfName: formData.shelfName,
-        aisleNumber: parseInt(formData.aisleNumber) || 0,
-        bayNumber: parseInt(formData.bayNumber) || 0,
-        description: [formData.elevation && `Elevation: ${formData.elevation}`, formData.notes]
-          .filter(Boolean)
-          .join(". ") || undefined,
-      },
-      {
-        onSuccess: () => {
+        onSuccess: (newShelf) => {
           setIsSheetOpen(false);
           setFormData({
             shelfName: "",
             aisleNumber: "",
             bayNumber: "",
-            elevation: "",
-            notes: "",
+            planogramId: "",
           });
+          navigate({ to: "/checker/shelves/$shelfId/edit", params: { shelfId: newShelf.id } });
         },
       }
     );
@@ -200,14 +204,13 @@ function CheckerShelvesPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <CheckerHeader
-            user={mockCheckerUser}
+          <HeaderContextBar
             stores={stores ?? []}
             selectedStoreId={selectedStoreId}
             onStoreChange={setSelectedStoreId}
-            notifications={[]}
           />
 
+          {/* Header Bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
             <header className="space-y-1">
               <h1 className="text-2xl font-bold text-foreground">Shelf Management</h1>
@@ -228,6 +231,7 @@ function CheckerShelvesPage() {
                 />
               </div>
 
+              {/* View Toggle */}
               <div className="flex rounded-lg border border-border p-0.5 bg-card" role="tablist" aria-label="View mode">
                 <button
                   type="button"
@@ -240,7 +244,7 @@ function CheckerShelvesPage() {
                     viewMode === "table"
                       ? "bg-accent text-accent-foreground shadow-sm"
                       : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                  )}
+                    )}
                 >
                   <List className="size-4" aria-hidden="true" />
                   Table
@@ -263,14 +267,14 @@ function CheckerShelvesPage() {
                 </button>
               </div>
 
-              <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-                <SheetTrigger asChild>
-                  <Button className="bg-chart-2 text-white hover:opacity-90">
+              {/* <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+                <SheetTrigger asChild> */}
+                  <Button onClick={() => navigate({ to: "/checker/shelf/new" })} className="bg-chart-2 text-white hover:opacity-90">
                     <Plus className="size-4 mr-2" />
                     New Shelf
                   </Button>
-                </SheetTrigger>
-                <SheetContent className="w-full sm:max-w-md p-0">
+                {/* </SheetTrigger> */}
+                {/* <SheetContent className="w-full sm:max-w-md p-0">
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-6 pb-2 space-y-1">
                       <div className="flex items-center gap-2 text-accent mb-2">
@@ -327,28 +331,23 @@ function CheckerShelvesPage() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="elevation" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Elevation Level
+                          <Label htmlFor="planogramId" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                            Planogram
                           </Label>
-                          <Input
-                            id="elevation"
-                            placeholder="e.g. Eye Level (Top)"
-                            value={formData.elevation}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, elevation: e.target.value }))}
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label htmlFor="notes" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                            Notes & Observations
-                          </Label>
-                          <textarea
-                            id="notes"
-                            placeholder="Describe the shelf's specific purpose or constraints..."
-                            value={formData.notes}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                            className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 text-foreground resize-none"
-                          />
+                          <Select
+                            id="planogramId"
+                            value={formData.planogramId}
+                            onChange={(e) => setFormData((prev) => ({ ...prev, planogramId: e.target.value }))}
+                          >
+                            <option value="">Select a planogram</option>
+                            <option value="pog-001">POG-001 - Beverages Section</option>
+                            <option value="pog-002">POG-002 - Snacks & Chips</option>
+                            <option value="pog-003">POG-003 - Dairy Products</option>
+                            <option value="pog-004">POG-004 - Frozen Foods</option>
+                            <option value="pog-005">POG-005 - Bakery Items</option>
+                            <option value="pog-006">POG-006 - Personal Care</option>
+                          </Select>
+                          <PlanogramPreview planogramId={formData.planogramId} />
                         </div>
                       </div>
                     </form>
@@ -368,11 +367,12 @@ function CheckerShelvesPage() {
                       </div>
                     </SheetFooter>
                   </div>
-                </SheetContent>
-              </Sheet>
+                </SheetContent> */}
+              {/* </Sheet> */}
             </div>
           </div>
 
+          {/* Content Area */}
           <div className="min-h-[500px] space-y-4">
             {!isLoading && filteredShelves.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3">
@@ -442,6 +442,7 @@ function CheckerShelvesPage() {
             )}
           </div>
 
+          {/* Footer Info */}
           <div className="flex justify-between items-center text-xs text-muted-foreground px-2">
             <p>Last synced: Just now</p>
             <p>{filteredShelves.length} total shelves</p>

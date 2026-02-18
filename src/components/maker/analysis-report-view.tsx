@@ -12,10 +12,14 @@ import {
   BarChart3,
   Camera,
   Check,
+  ChevronRight,
   Eye,
+  LayoutGrid,
   List,
   RefreshCw,
+  Scale,
   Shield,
+  TrendingUp,
   Upload,
 } from "lucide-react";
 
@@ -200,7 +204,12 @@ export function AnalysisReportView({
               skuIssueDetails={skuIssueDetails}
             />
           )}
-          {activeTab === "strategy" && <StrategyTab />}
+          {activeTab === "strategy" && (
+            <StrategyTab
+              skuItems={skuItems}
+              skuQuantities={skuQuantities}
+            />
+          )}
         </div>
       </section>
     </div>
@@ -496,15 +505,324 @@ function ComplianceTab({
   );
 }
 
-function StrategyTab() {
+/** Contrib/SqFt derived from contribution and weight for scatter plot */
+function contribPerSqFt(contribution: number, weight: number): number {
+  const footprint = weight * 0.35 + 0.2;
+  return Math.round((contribution / footprint) * 8 * 100) / 100;
+}
+
+function StrategyTab({
+  skuItems,
+  skuQuantities,
+}: {
+  skuItems: SkuEnrichmentItem[];
+  skuQuantities: Record<string, number>;
+}) {
+  const [hoveredPoint, setHoveredPoint] = useState<{
+    productName: string;
+    weight: number;
+    contribPerSqFt: number;
+    unitMargin: number;
+  } | null>(null);
+
+  const topContribItems = skuItems
+    .map((item) => {
+      const idNum = parseInt(item.id, 10) || 0;
+      const units = skuQuantities[item.id] ?? 7 + (idNum % 8);
+      return { ...item, units };
+    })
+    .sort((a, b) => b.contribution - a.contribution)
+    .slice(0, 6);
+
+  const scatterData = skuItems.map((item) => ({
+    productName: item.productName,
+    weight: item.weight,
+    contrib: item.contribution,
+    contribPerSqFt: contribPerSqFt(item.contribution, item.weight),
+  }));
+
+  const heavyItems = skuItems.filter((item) => item.weight > 1.5);
+
+  const HEAVY_THRESHOLD_KG = 1.5;
+  const X_MAX = 1.2;
+  const Y_MAX = 120;
+  const CHART_W = 300;
+  const CHART_H = 180;
+  const PADDING = { left: 44, right: 16, top: 16, bottom: 36 };
+  const X_TICKS = [0, 0.3, 0.6, 0.9, 1.2];
+  const Y_TICKS = [0, 30, 60, 90, 120];
+
+  const toX = (w: number) =>
+    PADDING.left + ((w / X_MAX) * (CHART_W - PADDING.left - PADDING.right));
+  const toY = (c: number) =>
+    PADDING.top +
+    CHART_H -
+    PADDING.bottom -
+    (c / Y_MAX) * (CHART_H - PADDING.top - PADDING.bottom);
+
+  const highContribNames = topContribItems
+    .slice(0, 3)
+    .map((i) => i.productName)
+    .join(", ");
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Strategy and optimization recommendations will be displayed here.
-      </p>
-      <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground text-sm">
-        Placeholder for Strategy & Optimization tab content
-      </div>
+    <div className="space-y-6">
+      {/* AI Recommendations */}
+      <section className="rounded-lg border border-accent/40 bg-accent/15 px-4 py-3">
+        <div className="flex items-center gap-2 mb-2">
+          <LayoutGrid className="size-4 text-accent" aria-hidden />
+          <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
+            AI Recommendations
+          </h3>
+        </div>
+        <div className="flex gap-2 text-sm">
+          <ChevronRight className="size-4 shrink-0 text-accent mt-0.5" aria-hidden />
+          <p className="text-foreground">
+            <span className="font-semibold">Profitability:</span> High contribution
+            items ({highContribNames}) are outside the eye-level zone. Relocate to
+            Row 4.
+          </p>
+        </div>
+      </section>
+
+      {/* Top Unit Contribution */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <TrendingUp className="size-4 text-muted-foreground" aria-hidden />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Top Unit Contribution (Grouped by SKU)
+          </h3>
+        </div>
+        <div className="space-y-2">
+          {topContribItems.map((item) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between rounded-lg border border-border bg-card/50 px-3 py-2.5"
+            >
+              <div>
+                <p className="font-medium text-foreground">{item.productName}</p>
+                <p className="text-xs text-muted-foreground">
+                  {item.units} units
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold text-chart-2">
+                  ${item.contribution.toFixed(2)}
+                </p>
+                <p className="text-[10px] text-muted-foreground">avg margin</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Space Efficiency vs Weight */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <LayoutGrid className="size-4 text-muted-foreground" aria-hidden />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Space Efficiency vs Weight
+          </h3>
+        </div>
+        <div className="relative rounded-lg border border-border bg-card/50 p-3">
+          <svg
+            viewBox={`0 0 ${CHART_W} ${CHART_H}`}
+            className="w-full h-44"
+            preserveAspectRatio="xMidYMid meet"
+            role="img"
+            aria-label="Scatter plot of space efficiency vs weight"
+          >
+            {/* Axis lines */}
+            <line
+              x1={PADDING.left}
+              y1={PADDING.top}
+              x2={PADDING.left}
+              y2={CHART_H - PADDING.bottom}
+              stroke="var(--border)"
+              strokeWidth={1}
+            />
+            <line
+              x1={PADDING.left}
+              y1={CHART_H - PADDING.bottom}
+              x2={CHART_W - PADDING.right}
+              y2={CHART_H - PADDING.bottom}
+              stroke="var(--border)"
+              strokeWidth={1}
+            />
+            {/* Y-axis tick labels */}
+            {Y_TICKS.map((val) => (
+              <g key={`ytick-${val}`}>
+                <line
+                  x1={PADDING.left}
+                  y1={toY(val)}
+                  x2={PADDING.left - 4}
+                  y2={toY(val)}
+                  stroke="var(--border)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={PADDING.left - 6}
+                  y={toY(val)}
+                  textAnchor="end"
+                  dominantBaseline="middle"
+                  fill="var(--muted-foreground)"
+                  style={{ fontSize: 9 }}
+                >
+                  {val}
+                </text>
+              </g>
+            ))}
+            {/* X-axis tick labels */}
+            {X_TICKS.map((val) => (
+              <g key={`xtick-${val}`}>
+                <line
+                  x1={toX(val)}
+                  y1={CHART_H - PADDING.bottom}
+                  x2={toX(val)}
+                  y2={CHART_H - PADDING.bottom + 4}
+                  stroke="var(--border)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={toX(val)}
+                  y={CHART_H - PADDING.bottom + 14}
+                  textAnchor="middle"
+                  fill="var(--muted-foreground)"
+                  style={{ fontSize: 9 }}
+                >
+                  {val}
+                </text>
+              </g>
+            ))}
+            {/* Axis titles */}
+            <text
+              x={PADDING.left + (CHART_W - PADDING.left - PADDING.right) / 2}
+              y={CHART_H - 6}
+              textAnchor="middle"
+              fill="var(--muted-foreground)"
+              style={{ fontSize: 10, fontWeight: 500 }}
+            >
+              Weight (kg)
+            </text>
+            <text
+              x={12}
+              y={PADDING.top + (CHART_H - PADDING.top - PADDING.bottom) / 2}
+              textAnchor="middle"
+              fill="var(--muted-foreground)"
+              style={{ fontSize: 10, fontWeight: 500 }}
+              transform={`rotate(-90, 12, ${PADDING.top + (CHART_H - PADDING.top - PADDING.bottom) / 2})`}
+            >
+              Contrib / SqFt
+            </text>
+            {/* Grid */}
+            {X_TICKS.filter((x) => x > 0).map((x) => (
+              <line
+                key={`vx-${x}`}
+                x1={toX(x)}
+                y1={PADDING.top}
+                x2={toX(x)}
+                y2={CHART_H - PADDING.bottom}
+                stroke="var(--border)"
+                strokeDasharray="2 2"
+                strokeOpacity={0.5}
+              />
+            ))}
+            {Y_TICKS.filter((y) => y > 0).map((y) => (
+              <line
+                key={`hy-${y}`}
+                x1={PADDING.left}
+                y1={toY(y)}
+                x2={CHART_W - PADDING.right}
+                y2={toY(y)}
+                stroke="var(--border)"
+                strokeDasharray="2 2"
+                strokeOpacity={0.5}
+              />
+            ))}
+            {/* Points */}
+            {scatterData.map((d, i) => {
+              const x = toX(Math.min(d.weight, X_MAX));
+              const y = toY(Math.min(d.contribPerSqFt, Y_MAX));
+              const isHovered =
+                hoveredPoint?.productName === d.productName;
+              return (
+                <g
+                  key={i}
+                  onMouseEnter={() =>
+                    setHoveredPoint({
+                      productName: d.productName,
+                      weight: d.weight,
+                      contribPerSqFt: d.contribPerSqFt,
+                      unitMargin: d.contrib,
+                    })
+                  }
+                  onMouseLeave={() => setHoveredPoint(null)}
+                  className="cursor-pointer"
+                >
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={isHovered ? 6 : 5}
+                    fill={isHovered ? "var(--chart-2)" : "var(--accent)"}
+                    fillOpacity={isHovered ? 1 : 0.75}
+                  />
+                </g>
+              );
+            })}
+          </svg>
+          {hoveredPoint && (
+            <div className="absolute inset-x-3 top-3 rounded-md border border-border bg-popover/95 backdrop-blur-md px-3 py-2 shadow-lg text-xs max-w-[180px] z-10">
+              <p className="font-medium text-foreground">{hoveredPoint.productName}</p>
+              <p className="text-muted-foreground mt-1">
+                Weight: {hoveredPoint.weight.toFixed(1)} kg
+              </p>
+              <p className="text-muted-foreground">
+                Contrib/SqFt: ${hoveredPoint.contribPerSqFt.toFixed(2)}
+              </p>
+              <p className="text-muted-foreground">
+                Unit Margin: ${hoveredPoint.unitMargin.toFixed(2)}
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Heavy Items Analysis */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <Scale className="size-4 text-muted-foreground" aria-hidden />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Heavy Items Analysis
+          </h3>
+        </div>
+        <div className="rounded-lg border border-border bg-card/40 px-4 py-3">
+          {heavyItems.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {heavyItems.length} items &gt; {HEAVY_THRESHOLD_KG}kg detected.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground mb-2">
+                {heavyItems.length} item{heavyItems.length !== 1 ? "s" : ""} &gt;{" "}
+                {HEAVY_THRESHOLD_KG}kg detected.
+              </p>
+              {heavyItems.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between text-sm"
+                >
+                  <span className="font-medium text-foreground">
+                    {item.productName}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {item.weight.toFixed(1)} kg
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   );
 }

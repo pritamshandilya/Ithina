@@ -1,28 +1,18 @@
-/**
- * RemovedItemsSidebar – right-side panel for removed products
- * Supports restoring items to a shelf via dropdown + add button
- */
-
 import { PackageX, Plus } from "lucide-react";
 import { useState } from "react";
-
 import { cn } from "@/lib/utils";
 import { getCategoryFill, getCategoryAccent } from "@/lib/constants/planogram";
 import { getProductSVG } from "./product-svg-utils";
 import type { PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
 
 export interface RemovedItemsSidebarProps {
-  /** Removed products (moved from shelf) */
   removedItems?: PlanogramProduct[];
-  /** Current shelves (for restore target options) */
   shelves?: PlanogramShelfDef[];
-  /** Max facings per shelf (shelfNumber -> capacity) */
   shelfCapacities?: Record<number, number>;
-  /** Restore product to shelf */
   onRestore?: (shelfNumber: number, product: PlanogramProduct) => void;
-  /** Whether the sidebar is collapsed */
+  onRemoveFromShelf?: (sku: string, shelfNumber: number) => void;
+  onMoveFromSidebar?: (sku: string, toShelfNumber: number) => void;
   collapsed?: boolean;
-  /** Toggle collapse (optional) */
   onToggleCollapse?: () => void;
   className?: string;
 }
@@ -32,6 +22,8 @@ interface RemovedItemRowProps {
   shelves: PlanogramShelfDef[];
   shelfCapacities: Record<number, number>;
   onRestore?: (shelfNumber: number, product: PlanogramProduct) => void;
+  onMoveFromSidebar?: (sku: string, toShelfNumber: number) => void;
+  onDragStart?: (e: React.DragEvent, sku: string) => void;
 }
 
 function RemovedItemRow({
@@ -39,6 +31,8 @@ function RemovedItemRow({
   shelves,
   shelfCapacities,
   onRestore,
+  onMoveFromSidebar,
+  onDragStart,
 }: RemovedItemRowProps) {
   const [selectedShelf, setSelectedShelf] = useState<number | "">("");
   const sortedShelves = [...shelves].sort(
@@ -55,10 +49,16 @@ function RemovedItemRow({
     currentFacings(shelfNumber) + item.facings > capacity(shelfNumber);
 
   const handleRestore = () => {
-    if (selectedShelf === "" || !onRestore) return;
+    if (selectedShelf === "") return;
     const shelfNum = Number(selectedShelf);
     if (isFull(shelfNum)) return;
-    onRestore(shelfNum, item);
+
+    if (onMoveFromSidebar) {
+      onMoveFromSidebar(item.sku, shelfNum);
+    } else if (onRestore) {
+      onRestore(shelfNum, item);
+    }
+
     setSelectedShelf("");
   };
 
@@ -67,7 +67,11 @@ function RemovedItemRow({
   const ProductSVG = getProductSVG(item.category);
 
   return (
-    <li className="rounded border border-border bg-muted/30 px-2 py-1.5 text-xs">
+    <li
+      className="rounded border border-border bg-muted/30 px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing"
+      draggable
+      onDragStart={(e) => onDragStart?.(e, item.sku)}
+    >
       <div className="flex items-start gap-2">
         <div className="h-8 w-6 shrink-0">
           <ProductSVG fill={fill} accent={accent} />
@@ -79,7 +83,7 @@ function RemovedItemRow({
           <p className="text-muted-foreground truncate">
             {item.category} · {item.sku}
           </p>
-          {onRestore && (
+          {(onRestore || onMoveFromSidebar) && (
             <div className="mt-2 flex items-center gap-1">
               <select
                 value={selectedShelf}
@@ -100,7 +104,7 @@ function RemovedItemRow({
                       value={s.shelfNumber}
                       disabled={full}
                     >
-                      Shelf {s.shelfNumber}
+                      Shelf {s.shelfNumber}: {s.name}
                       {full ? " (full)" : ""}
                     </option>
                   );
@@ -131,21 +135,47 @@ export function RemovedItemsSidebar({
   shelves = [],
   shelfCapacities = {},
   onRestore,
+  onRemoveFromShelf,
+  onMoveFromSidebar,
   collapsed = false,
   onToggleCollapse,
   className,
 }: RemovedItemsSidebarProps) {
   const hasItems = removedItems.length > 0;
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const sku = e.dataTransfer.getData("application/planogram-product-sku");
+    const fromShelfNumRaw = e.dataTransfer.getData("application/from-shelf-number");
+
+    if (sku && fromShelfNumRaw !== "removed" && onRemoveFromShelf) {
+      onRemoveFromShelf(sku, Number(fromShelfNumRaw));
+    }
+  };
+
+  const handleDragStart = (e: React.DragEvent, sku: string) => {
+    e.dataTransfer.setData("application/planogram-product-sku", sku);
+    e.dataTransfer.setData("application/from-shelf-number", "removed");
+    e.dataTransfer.effectAllowed = "move";
+  };
+
   return (
     <aside
       className={cn(
         "flex flex-col rounded-lg border border-border bg-card/80 transition-all",
         collapsed ? "w-12" : "w-64 min-w-0 shrink-0",
+        !collapsed && "min-h-[200px]",
         className
       )}
       role="region"
       aria-label="Removed items"
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
     >
       <header
         className={cn(
@@ -178,6 +208,8 @@ export function RemovedItemsSidebar({
                   shelves={shelves}
                   shelfCapacities={shelfCapacities}
                   onRestore={onRestore}
+                  onMoveFromSidebar={onMoveFromSidebar}
+                  onDragStart={handleDragStart}
                 />
               ))}
             </ul>
@@ -188,13 +220,13 @@ export function RemovedItemsSidebar({
               </div>
               <p className="text-sm font-medium text-foreground">No removed items</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Hover a product and click X to remove it here.
+                Drag a product here or click X to remove it.
               </p>
             </div>
           )}
           {hasItems && onRestore && (
             <p className="mt-2 text-[10px] text-muted-foreground">
-              Click + to add back to a shelf
+              Drag to shelf or use + to add back
             </p>
           )}
         </div>

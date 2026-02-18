@@ -82,7 +82,7 @@ export function InlineEdit({
       placeholder,
       "aria-label": ariaLabel,
       className: cn(
-        "w-full min-w-0 rounded border border-input bg-background px-1.5 py-0.5 text-inherit text-xs focus:outline-none focus:ring-2 focus:ring-ring",
+        "w-full min-w-0 rounded border border-input bg-background px-1.5 py-0.5 text-inherit text-xs focus:text-white focus:outline-none focus:ring-2 focus:ring-ring",
         className
       ),
     };

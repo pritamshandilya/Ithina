@@ -3,14 +3,13 @@
  *
  * Visual preview of a saved planogram shelf.
  * Editable: product name, category, facings/depth; remove products.
+ * Drag-and-drop: reorder within shelf, move between shelves, restore from removed.
  * Access at: /maker/audits/planogram/:shelfId
  */
-
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Info } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar } from "@/components/maker";
 import {
@@ -46,21 +45,20 @@ function derivePlanogramStats(
   removedItems: PlanogramProduct[]
 ) {
   const allProducts = shelves.flatMap((s) => s.products);
-  const uniqueSkus = new Set(allProducts.map((p) => p.sku)).size;
+  const uniqueSkus = new Set([...allProducts, ...removedItems].map((p) => p.sku)).size;
   const frontFacings = allProducts.reduce((sum, p) => sum + p.facings, 0);
   const totalUnits = allProducts.reduce(
     (sum, p) => sum + p.facings * (p.depthCount || 1),
     0
   );
-  const categorySet = new Set(allProducts.map((p) => p.category));
-
+  const categorySet = new Set([...allProducts, ...removedItems].map((p) => p.category));
   return {
     shelves: shelves.length,
     skus: uniqueSkus,
     frontFacings,
     totalUnits,
     categories: categorySet.size,
-    categoryList: [...categorySet],
+    categoryList: Array.from(categorySet).sort(),
     removed: removedItems.length,
   };
 }
@@ -78,23 +76,24 @@ function PlanogramPreviewPage() {
   const { toast } = useToast();
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
-
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
-
   const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  /** Selected categories for filtering – empty set = show all */
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set()
   );
+
+  const dragRef = useRef<{
+    sku: string;
+    fromShelf: number | "removed";
+  } | null>(null);
 
   useEffect(() => {
     if (!preview?.planogramPayload.planogram.fixture.shelves) return;
     const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
-
     let shelves = deepCopyShelves(fixtureShelves);
     const removed: PlanogramProduct[] = [];
 
@@ -151,6 +150,27 @@ function PlanogramPreviewPage() {
     setHasChanges(false);
     setSelectedCategories(new Set());
   }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+
+  const shelfCapacities = useMemo(() => {
+    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    return Object.fromEntries(
+      orig.map((s) => [
+        s.shelfNumber,
+        s.products.reduce((sum, p) => sum + p.facings, 0),
+      ])
+    );
+  }, [preview?.planogramPayload.planogram.fixture.shelves]);
+
+  const originalShelfAssignment = useMemo(() => {
+    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    const map: Record<string, number> = {};
+    for (const shelf of orig) {
+      for (const p of shelf.products) {
+        map[p.sku] = shelf.shelfNumber;
+      }
+    }
+    return map;
+  }, [preview?.planogramPayload.planogram.fixture.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -276,20 +296,113 @@ function PlanogramPreviewPage() {
     []
   );
 
+  const onMoveProduct = useCallback(
+    (from: number | "removed", to: number, sku: string, targetSku?: string) => {
+      let productToMove: PlanogramProduct | undefined;
+      if (from === "removed") {
+        productToMove = removedItems.find((p) => p.sku === sku);
+      } else {
+        productToMove = localShelves
+          .find((s) => s.shelfNumber === from)
+          ?.products.find((p) => p.sku === sku);
+      }
+      if (!productToMove) return;
+
+      if (from !== to) {
+        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
+        if (targetShelf) {
+          const currentFacings = targetShelf.products.reduce(
+            (sum, p) => sum + p.facings,
+            0
+          );
+          const capacity = shelfCapacities[to] ?? 0;
+          if (currentFacings + productToMove.facings > capacity) {
+            toast({
+              title: "Shelf full",
+              description: `${targetShelf.name} does not have enough space.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
+      setLocalShelves((prev) => {
+        let nextShelves = [...prev];
+        if (from !== "removed") {
+          nextShelves = nextShelves.map((s) =>
+            s.shelfNumber === from
+              ? { ...s, products: s.products.filter((p) => p.sku !== sku) }
+              : s
+          );
+        }
+        return nextShelves.map((s) => {
+          if (s.shelfNumber !== to) return s;
+          const productIds = s.products.map((p) => p.sku);
+          const targetIdx = targetSku ? productIds.indexOf(targetSku) : -1;
+          const newProducts = [...s.products];
+          if (targetIdx !== -1) {
+            newProducts.splice(targetIdx, 0, productToMove!);
+          } else {
+            newProducts.push(productToMove!);
+          }
+          return { ...s, products: newProducts };
+        });
+      });
+
+      if (from === "removed") {
+        setRemovedItems((items) => items.filter((p) => p.sku !== sku));
+      }
+
+      setHasChanges(true);
+    },
+    [localShelves, removedItems, shelfCapacities, toast]
+  );
+
+  const handleDragStart = useCallback(
+    (sku: string, fromShelf: number | "removed") => {
+      dragRef.current = { sku, fromShelf };
+    },
+    []
+  );
+
+  const handleDropOnShelf = useCallback(
+    (toShelfNumber: number, targetSku?: string) => {
+      if (!dragRef.current) return;
+      const { sku, fromShelf } = dragRef.current;
+      dragRef.current = null;
+      onMoveProduct(fromShelf, toShelfNumber, sku, targetSku);
+    },
+    [onMoveProduct]
+  );
+
+  const handleDropOnRemoved = useCallback(() => {
+    if (!dragRef.current) return;
+    const { sku, fromShelf } = dragRef.current;
+    dragRef.current = null;
+    if (fromShelf === "removed") return;
+    onRemoveProduct(fromShelf as number, sku);
+  }, [onRemoveProduct]);
+
   const handleSave = useCallback(async () => {
     if (!preview || !hasChanges || !shelfId) return;
     setIsSaving(true);
     try {
-      const originalShelves =
-        preview.planogramPayload.planogram.fixture.shelves;
+      const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
       const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
+
       for (const shelf of localShelves) {
         for (const p of shelf.products) {
           const orig = originalShelves
             .flatMap((s) => s.products)
             .find((op) => op.sku === p.sku);
           if (!orig) continue;
-          const edits: { name?: string; category?: string; facings?: number; depthCount?: number } = {};
+          const edits: {
+            name?: string;
+            category?: string;
+            facings?: number;
+            depthCount?: number;
+          } = {};
           if (p.name !== orig.name) edits.name = p.name;
           if (p.category !== orig.category) edits.category = p.category;
           if (p.facings !== orig.facings) edits.facings = p.facings;
@@ -297,21 +410,26 @@ function PlanogramPreviewPage() {
           if (Object.keys(edits).length > 0) productEdits[p.sku] = edits;
         }
       }
+
       const arrangement: PlanogramArrangement = {
-        planogramId: preview.planogramPayload.planogram.id,
         shelfOrder: localShelves.map((s) => ({
           shelfId: `shelf-${s.shelfNumber}`,
           productIds: s.products.map((p) => p.sku),
         })),
         removedProductIds: removedItems.map((p) => p.sku),
-        productEdits: Object.keys(productEdits).length > 0 ? productEdits : undefined,
+        productEdits:
+          Object.keys(productEdits).length > 0 ? productEdits : undefined,
       };
+
       const updated = await updateShelfArrangement(shelfId, arrangement);
       if (updated) {
         await queryClient.invalidateQueries({
           queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
         });
-        toast({ title: "Changes saved", description: "Your planogram edits have been saved." });
+        toast({
+          title: "Changes saved",
+          description: "Your planogram edits have been saved.",
+        });
         setHasChanges(false);
       } else {
         toast({
@@ -346,8 +464,7 @@ function PlanogramPreviewPage() {
     preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
 
   const baseShelves = useMemo(
-    () =>
-      localShelves.length > 0 ? localShelves : (fixture?.shelves ?? []),
+    () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
     [localShelves, fixture?.shelves]
   );
 
@@ -384,16 +501,6 @@ function PlanogramPreviewPage() {
     [stats.categoryList]
   );
 
-  const shelfCapacities = useMemo(() => {
-    const orig = fixture?.shelves ?? [];
-    return Object.fromEntries(
-      orig.map((s) => [
-        s.shelfNumber,
-        s.products.reduce((sum, p) => sum + p.facings, 0),
-      ])
-    );
-  }, [fixture?.shelves]);
-
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
@@ -403,7 +510,6 @@ function PlanogramPreviewPage() {
             selectedStoreId={selectedStoreId}
             onStoreChange={setSelectedStoreId}
           />
-
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/maker/audits/planogram">
@@ -415,7 +521,9 @@ function PlanogramPreviewPage() {
               {isLoading ? (
                 <Skeleton className="h-8 w-64" />
               ) : error ? (
-                <h1 className="text-2xl font-bold text-destructive">Error loading planogram</h1>
+                <h1 className="text-2xl font-bold text-destructive">
+                  Error loading planogram
+                </h1>
               ) : preview ? (
                 <>
                   <h1 className="text-2xl font-bold text-foreground truncate">
@@ -427,7 +535,9 @@ function PlanogramPreviewPage() {
                   </p>
                 </>
               ) : (
-                <h1 className="text-2xl font-bold text-foreground">Planogram not found</h1>
+                <h1 className="text-2xl font-bold text-foreground">
+                  Planogram not found
+                </h1>
               )}
             </div>
             {hasChanges && (
@@ -451,7 +561,9 @@ function PlanogramPreviewPage() {
 
           {error && (
             <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center">
-              <p className="text-destructive font-medium">Failed to load planogram</p>
+              <p className="text-destructive font-medium">
+                Failed to load planogram
+              </p>
               <p className="mt-1 text-sm text-muted-foreground">
                 This shelf may not have planogram data, or it could not be loaded.
               </p>
@@ -463,7 +575,6 @@ function PlanogramPreviewPage() {
 
           {preview && !isLoading && (
             <div className="space-y-6">
-              {/* Summary stats */}
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
@@ -481,25 +592,34 @@ function PlanogramPreviewPage() {
                   value={stats.totalUnits}
                   className="stat-card"
                 />
-                <StatCard title="Categories" value={stats.categories} className="stat-card" />
-                <StatCard title="Removed" value={stats.removed} className="stat-card" />
+                <StatCard
+                  title="Categories"
+                  value={stats.categories}
+                  className="stat-card"
+                />
+                <StatCard
+                  title="Removed"
+                  value={stats.removed}
+                  className="stat-card"
+                />
               </div>
 
-              {/* Fixture banner */}
               {fixture && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <Info className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <Info
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
                   <span className="text-sm text-foreground">
                     Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
                     {fixture.units} · {fixture.type}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove · Drag to reorder
+                    Click name to edit · X to remove · Drag to reorder or move between shelves
                   </span>
                 </div>
               )}
 
-              {/* Category filter tags */}
               <div>
                 <p className="mb-2 text-xs font-medium text-foreground">
                   Categories
@@ -515,7 +635,6 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              {/* Shelves + Removed Items – side-by-side; sidebar height capped to shelf section */}
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
                 <div className="min-w-0 flex-1 space-y-6">
                   {shelvesToShow.length === 0 ? (
@@ -535,30 +654,44 @@ function PlanogramPreviewPage() {
                           key={shelf.shelfNumber}
                           shelf={shelf}
                           highDemandSkus={highDemandSkus}
-                        editHandlers={{
-                          onEditName,
-                          onEditCategory,
-                          onEditFacingsDepth,
-                          onRemoveProduct,
-                          onReorderProducts:
-                            selectedCategories.size === 0 ? onReorderProducts : undefined,
-                        }}
+                          editHandlers={{
+                            onEditName,
+                            onEditCategory,
+                            onEditFacingsDepth,
+                            onRemoveProduct,
+                            onMoveProduct,
+                            onReorderProducts:
+                              selectedCategories.size === 0
+                                ? onReorderProducts
+                                : undefined,
+                          }}
+                          dragHandlers={{
+                            onDragStart: handleDragStart,
+                            onDropOnShelf: handleDropOnShelf,
+                            onDropOnRemoved: handleDropOnRemoved,
+                          }}
                         />
                       ))
                   )}
                 </div>
                 <RemovedItemsSidebar
                   removedItems={removedItems}
-                  shelves={shelvesToShow}
+                  shelves={baseShelves}
                   shelfCapacities={shelfCapacities}
+                  originalShelfAssignment={originalShelfAssignment}
                   onRestore={onRestoreProduct}
+                  onRemoveFromShelf={(sku, shelfNumber) =>
+                    onRemoveProduct(shelfNumber, sku)
+                  }
+                  onMoveFromSidebar={(sku, toShelfNumber) =>
+                    onMoveProduct("removed", toShelfNumber, sku)
+                  }
                 />
               </div>
 
-              {/* Product Details + Stocking Rules – full width below shelves */}
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
                 <div className="min-w-0 overflow-x-auto">
-                  <div className="min-w-[1100px]">
+                  <div className="min-w-275">
                     <ProductDetailsTable
                       shelves={shelvesToShow}
                       highDemandSkus={highDemandSkus}

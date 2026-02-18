@@ -55,7 +55,7 @@ export function AnalysisReportView({
   ];
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:max-h-[min(720px,78vh)] lg:overflow-hidden">
+    <div className="grid gap-6 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(600px,calc(100vh-18rem))] lg:overflow-hidden">
       {/* Left: Shelf View */}
       <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-0">
         <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
@@ -173,8 +173,8 @@ export function AnalysisReportView({
           })}
         </nav>
 
-        {/* Tab content */}
-        <div className="flex-1 overflow-auto p-4" role="tabpanel">
+        {/* Tab content - flex-1 min-h-0 ensures scroll works when content overflows */}
+        <div className="flex-1 min-h-0 overflow-auto p-4" role="tabpanel">
           {activeTab === "sku-list" && (
             <SkuListTab
               skuItems={skuItems}

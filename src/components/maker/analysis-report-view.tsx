@@ -8,12 +8,14 @@
 
 import { useState } from "react";
 import {
+  AlertTriangle,
   BarChart3,
   Camera,
   Check,
   Eye,
   List,
   RefreshCw,
+  Shield,
   Upload,
 } from "lucide-react";
 
@@ -190,7 +192,14 @@ export function AnalysisReportView({
               skuIssueDetails={skuIssueDetails}
             />
           )}
-          {activeTab === "compliance" && <ComplianceTab />}
+          {activeTab === "compliance" && (
+            <ComplianceTab
+              skuItems={skuItems}
+              skuQuantities={skuQuantities}
+              skuIssues={skuIssues}
+              skuIssueDetails={skuIssueDetails}
+            />
+          )}
           {activeTab === "strategy" && <StrategyTab />}
         </div>
       </section>
@@ -309,15 +318,180 @@ function SkuListTab({
   );
 }
 
-function ComplianceTab() {
+/** Mock pipeline log entries for System Log */
+const MOCK_SYSTEM_LOG = [
+  { tag: "INIT", message: "Pipeline ready" },
+  { tag: "YOLO", message: "Detected 94 bounding boxes" },
+  { tag: "HOUGH", message: "Identified 5 shelf rows" },
+  { tag: "CLIP", message: "Embeddings matched to database" },
+  { tag: "INPUT", message: "User enrichment applied" },
+  { tag: "GEOM", message: "Spatial mapping finalized" },
+  { tag: "REPORT", message: "Compliance report generated" },
+];
+
+function ComplianceTab({
+  skuItems,
+  skuQuantities,
+  skuIssues,
+  skuIssueDetails,
+}: {
+  skuItems: SkuEnrichmentItem[];
+  skuQuantities: Record<string, number>;
+  skuIssues: Record<string, number>;
+  skuIssueDetails: Record<string, SkuIssueDetail[]>;
+}) {
+  const totalSkus = skuItems.reduce(
+    (sum, item) => sum + (skuQuantities[item.id] ?? 7 + (parseInt(item.id, 10) || 0) % 8),
+    0
+  );
+  const rowsDetected = 5;
+
+  const facingsData = skuItems
+    .slice(0, 8)
+    .map((item) => {
+      const idNum = parseInt(item.id, 10) || 0;
+      const qty = skuQuantities[item.id] ?? 7 + (idNum % 8);
+      return { label: item.productName, count: qty };
+    })
+    .sort((a, b) => b.count - a.count);
+
+  const maxFacing = Math.max(...facingsData.map((d) => d.count), 1);
+
+  const auditIssues = skuItems
+    .filter((item) => {
+      const idNum = parseInt(item.id, 10) || 0;
+      const issues = skuIssues[item.id] ?? (idNum % 5 === 2 ? 1 : 0);
+      return issues > 0;
+    })
+    .map((item) => {
+      const details =
+        skuIssueDetails[item.id] ?? getMockIssueDetails(item.productName);
+      return { sku: item.productName, details };
+    })
+    .flatMap(({ sku, details }) =>
+      details.map((d) => ({ sku, ...d }))
+    );
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">
-        Compliance analysis will be displayed here.
-      </p>
-      <div className="rounded-lg border border-dashed border-border p-8 text-center text-muted-foreground text-sm">
-        Placeholder for Compliance tab content
+    <div className="space-y-6">
+      {/* Summary stats */}
+      <div className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-border bg-card/60 px-4 py-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Total SKUs
+          </p>
+          <p className="mt-0.5 text-2xl font-bold text-foreground">{totalSkus}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-card/60 px-4 py-3">
+          <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+            Rows detected
+          </p>
+          <p className="mt-0.5 text-2xl font-bold text-foreground">
+            {rowsDetected}
+          </p>
+        </div>
       </div>
+
+      {/* Detected Facings */}
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Detected Facings
+        </h3>
+        <div className="space-y-2.5">
+          {facingsData.map(({ label, count }) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="w-32 shrink-0 truncate text-sm text-foreground">
+                {label}
+              </span>
+              <div className="flex-1 min-w-0 h-5 rounded bg-muted/60 overflow-hidden">
+                <div
+                  className="h-full rounded bg-accent/70 transition-all duration-300"
+                  style={{ width: `${(count / maxFacing) * 100}%` }}
+                />
+              </div>
+              <span className="w-8 shrink-0 text-right text-xs font-medium text-muted-foreground">
+                {count}
+              </span>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Compliance Audit */}
+      <section>
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Compliance Audit
+          </h3>
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-accent/50 text-accent hover:bg-accent/10"
+          >
+            <Shield className="size-3.5" aria-hidden />
+            Default
+          </Button>
+        </div>
+        {auditIssues.length > 0 ? (
+          <div className="space-y-2">
+            {auditIssues.map((issue, i) => (
+              <div
+                key={`${issue.sku}-${i}`}
+                className="rounded-lg border border-destructive/40 bg-destructive/5 px-3 py-2.5"
+              >
+                <div className="flex gap-2">
+                  <AlertTriangle
+                    className="size-4 shrink-0 text-action-warning mt-0.5"
+                    aria-hidden
+                  />
+                  <div className="min-w-0 space-y-1">
+                    <p className="text-xs font-bold uppercase text-destructive">
+                      {issue.type}
+                    </p>
+                    <p className="text-sm text-foreground">{issue.description}</p>
+                    <p className="text-xs text-muted-foreground italic">
+                      Why: {issue.reason}
+                    </p>
+                    <p className="text-xs font-semibold text-destructive mt-1">
+                      SKU: {issue.sku}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-lg border border-border bg-card/40 px-4 py-6 text-center">
+            <Check className="mx-auto size-8 text-chart-2" aria-hidden />
+            <p className="mt-2 text-sm font-medium text-foreground">
+              No compliance issues
+            </p>
+            <p className="text-xs text-muted-foreground">
+              All SKUs meet placement guidelines
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* System Log */}
+      <section>
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          System Log
+        </h3>
+        <div className="rounded-lg border border-border bg-muted/20 font-mono text-xs">
+          {MOCK_SYSTEM_LOG.map((entry, i) => (
+            <div
+              key={i}
+              className="flex gap-2 px-3 py-1.5 border-b border-border/60 last:border-0"
+            >
+              <span className="shrink-0 text-chart-2 font-medium">
+                [{entry.tag}]
+              </span>
+              <span className="text-foreground">{entry.message}</span>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }

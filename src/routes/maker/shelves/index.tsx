@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { createRoot } from "react-dom/client";
 import { renderToString } from "react-dom/server";
 import { Plus, Search, LayoutGrid, List } from "lucide-react";
 

@@ -50,4 +50,7 @@ export {
   SelectRuleSetModal,
   type SelectRuleSetModalProps,
 } from "./select-rule-set-modal";
-export * from "./manual-override-list";
+export {
+  SkuDataEnrichmentModal,
+  type SkuDataEnrichmentModalProps,
+} from "./sku-data-enrichment-modal";

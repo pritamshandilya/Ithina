@@ -147,7 +147,7 @@ export default function EditShelfPage() {
                             </h1>
                         </div>
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-11">
-                            v1.0 • POC Demo Store • active
+                            Store #1234 - Downtown • active
                         </p>
                     </div>
                     <Button className="bg-[#1e293b] hover:bg-[#334155] text-slate-200 font-bold px-5 text-xs rounded-lg border border-slate-700 shadow-xl">

@@ -50,9 +50,9 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
-  // My Audits: active on /maker/audits/* and /maker/audit/new (audit creation flow)
+  // My Audits: active on /maker/audits/*
   if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
-    return pathname.startsWith("/maker/audits") || pathname.startsWith("/maker/audit/");
+    return pathname.startsWith("/maker/audits");
   }
   if (!item.to) return false;
   const sameBase = pathname === item.to || pathname.startsWith(`${item.to}/`);
@@ -62,7 +62,7 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
 }
 
 function isMyAuditsActive(pathname: string): boolean {
-  return pathname.startsWith("/maker/audits") || pathname.startsWith("/maker/audit/");
+  return pathname.startsWith("/maker/audits");
 }
 
 export default function Sidenav() {

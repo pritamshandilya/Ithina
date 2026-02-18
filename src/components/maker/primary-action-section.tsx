@@ -1,18 +1,37 @@
-import { Link } from "@tanstack/react-router";
-import { PlusIcon, ClipboardCheckIcon } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { ChevronDownIcon, ClipboardCheckIcon, FileImageIcon, PlusIcon, ScanSearchIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+
+const AUDIT_MODES = [
+  {
+    id: "planogram",
+    label: "Planogram Based Analysis",
+    description: "Compare shelf against planogram",
+    to: "/maker/audits/planogram",
+    icon: FileImageIcon,
+  },
+  {
+    id: "adhoc",
+    label: "Adhoc Analysis",
+    description: "Upload image for AI analysis",
+    to: "/maker/audits/adhoc/new",
+    icon: ScanSearchIcon,
+  },
+] as const;
 
 /**
  * Props for the PrimaryActionSection component
  */
 export interface PrimaryActionSectionProps {
   className?: string;
-  /**
-   * Custom click handler (overrides default navigation)
-   */
-  onClick?: () => void;
   /**
    * Disable the button
    */
@@ -21,43 +40,15 @@ export interface PrimaryActionSectionProps {
 
 /**
  * PrimaryActionSection Component
- * 
+ *
  * Large, visually prominent call-to-action for starting a new shelf audit.
- * This is the primary action on the Maker dashboard, designed to be
- * immediately visible and easy to tap/click.
- * 
- * Features:
- * - Gradient background for visual hierarchy
- * - Large button with generous padding
- * - Icon for visual clarity
- * - Navigates to /maker/audit/new route
- * - Responsive sizing (larger on desktop)
- * - Hover and focus states
- * 
- * @example
- * ```tsx
- * <PrimaryActionSection />
- * 
- * // With custom handler
- * <PrimaryActionSection onClick={() => console.log('clicked')} />
- * 
- * // Disabled state
- * <PrimaryActionSection disabled />
- * ```
+ * Shows a dropdown with Planogram Based Analysis and Adhoc Analysis options.
  */
 export function PrimaryActionSection({
   className,
-  onClick,
   disabled = false,
 }: PrimaryActionSectionProps) {
-  const buttonContent = (
-    <>
-      <PlusIcon className="size-5 md:size-6" aria-hidden="true" />
-      <span className="text-base md:text-lg font-semibold">
-        Start New Shelf Audit
-      </span>
-    </>
-  );
+  const navigate = useNavigate();
 
   return (
     <div
@@ -86,48 +77,55 @@ export function PrimaryActionSection({
         </p>
       </div>
 
-      {/* Primary CTA Button */}
-      {onClick ? (
-        <Button
-          size="lg"
-          className={cn(
-            "h-12 md:h-14 px-6 md:px-8 text-base md:text-lg gap-2 md:gap-3",
-            "shadow-lg hover:shadow-xl transition-all duration-200",
-            "font-semibold"
-          )}
-          style={{
-            backgroundColor: "var(--maker-primary)",
-            color: "var(--accent-foreground)",
-          }}
-          onClick={onClick}
-          disabled={disabled}
-          aria-label="Start new shelf audit"
-        >
-          {buttonContent}
-        </Button>
-      ) : (
-        <Button
-          asChild
-          size="lg"
-          className={cn(
-            "h-12 md:h-14 px-6 md:px-8 text-base md:text-lg gap-2 md:gap-3",
-            "shadow-lg hover:shadow-xl transition-all duration-200",
-            "font-semibold"
-          )}
-          style={{
-            backgroundColor: "var(--maker-primary)",
-            color: "var(--accent-foreground)",
-          }}
-          disabled={disabled}
-          aria-label="Start new shelf audit"
-        >
-          <Link to="/maker/audit/new">{buttonContent}</Link>
-        </Button>
-      )}
+      {/* Primary CTA Dropdown */}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="lg"
+            className={cn(
+              "h-12 md:h-14 px-6 md:px-8 text-base md:text-lg gap-2 md:gap-3",
+              "shadow-lg hover:shadow-xl transition-all duration-200",
+              "font-semibold"
+            )}
+            style={{
+              backgroundColor: "var(--maker-primary)",
+              color: "var(--accent-foreground)",
+            }}
+            disabled={disabled}
+            aria-label="Start new shelf audit"
+          >
+            <PlusIcon className="size-5 md:size-6" aria-hidden="true" />
+            <span className="text-base md:text-lg font-semibold">
+              Start New Shelf Audit
+            </span>
+            <ChevronDownIcon className="size-4 md:size-5 ml-1" aria-hidden="true" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="center" className="min-w-[280px]">
+          {AUDIT_MODES.map((mode) => {
+            const Icon = mode.icon;
+            return (
+              <DropdownMenuItem
+                key={mode.id}
+                onClick={() => navigate({ to: mode.to })}
+                className="flex flex-col items-start gap-0.5 py-3 cursor-pointer"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="size-4 shrink-0" />
+                  <span className="font-medium">{mode.label}</span>
+                </div>
+                <span className="text-xs text-muted-foreground pl-6">
+                  {mode.description}
+                </span>
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       {/* Helper text */}
       <p className="mt-4 text-xs text-muted-foreground">
-        You'll be able to choose between Vision Edge or Assist Mode
+        Choose Planogram Based or Adhoc Analysis
       </p>
     </div>
   );

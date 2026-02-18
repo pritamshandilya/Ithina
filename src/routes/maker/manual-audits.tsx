@@ -15,7 +15,7 @@ function MakerManualAuditsPage() {
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
-  const handleAction = (auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => {
+  const handleAction = (_auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => {
     const isPlanogram = mode === "planogram-based" || mode === "vision-edge";
 
     if (action === "fix") {

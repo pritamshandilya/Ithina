@@ -161,17 +161,6 @@ function PlanogramPreviewPage() {
     );
   }, [preview?.planogramPayload.planogram.fixture.shelves]);
 
-  const originalShelfAssignment = useMemo(() => {
-    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
-    const map: Record<string, number> = {};
-    for (const shelf of orig) {
-      for (const p of shelf.products) {
-        map[p.sku] = shelf.shelfNumber;
-      }
-    }
-    return map;
-  }, [preview?.planogramPayload.planogram.fixture.shelves]);
-
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
       const shelf = localShelves.find((s) => s.shelfNumber === shelfNumber);

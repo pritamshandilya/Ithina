@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
@@ -12,6 +12,7 @@ import {
 
 import MainLayout from "@/components/layouts/main";
 import {
+  AnalysisReportView,
   HeaderContextBar,
   SelectRuleSetModal,
   SkuDataEnrichmentModal,
@@ -35,7 +36,6 @@ const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 function NewAdhocAnalysisPage() {
-  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
@@ -47,6 +47,8 @@ function NewAdhocAnalysisPage() {
   const [selectedRuleSet, setSelectedRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
   const [skuEnrichmentModalOpen, setSkuEnrichmentModalOpen] = useState(false);
   const [enrichmentItems, setEnrichmentItems] = useState<SkuEnrichmentItem[]>([]);
+  const [finalSkuItems, setFinalSkuItems] = useState<SkuEnrichmentItem[]>([]);
+  const [showReport, setShowReport] = useState(false);
   const [isGeneratingStrategy, setIsGeneratingStrategy] = useState(false);
   const enrichmentResolverRef = useRef<((items: SkuEnrichmentItem[]) => void) | null>(null);
   const enrichmentRejectRef = useRef<((reason?: unknown) => void) | null>(null);
@@ -61,8 +63,8 @@ function NewAdhocAnalysisPage() {
   }, []);
 
   const onAnalysisComplete = useCallback(() => {
-    setTimeout(() => navigate({ to: "/maker/audits/adhoc" }), 1500);
-  }, [navigate]);
+    setShowReport(true);
+  }, []);
 
   const {
     isAnalyzing,
@@ -132,6 +134,7 @@ function NewAdhocAnalysisPage() {
 
   const handleGenerateStrategy = useCallback((items: SkuEnrichmentItem[]) => {
     setIsGeneratingStrategy(true);
+    setFinalSkuItems(items);
     setSkuEnrichmentModalOpen(false);
     enrichmentResolverRef.current?.(items);
     enrichmentResolverRef.current = null;
@@ -161,7 +164,12 @@ function NewAdhocAnalysisPage() {
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-5xl space-y-8">
+        <div
+          className={cn(
+            "mx-auto space-y-8",
+            analysisComplete && showReport ? "max-w-7xl" : "max-w-5xl"
+          )}
+        >
           <HeaderContextBar
             stores={stores ?? []}
             selectedStoreId={selectedStoreId}
@@ -262,6 +270,19 @@ function NewAdhocAnalysisPage() {
             </div>
           </section>
 
+          {analysisComplete && showReport ? (
+            <AnalysisReportView
+              imagePreview={imagePreview}
+              skuItems={finalSkuItems}
+              onUploadImage={triggerFileInput}
+              onReset={() => {
+                setImageFile(null);
+                setImagePreview(null);
+                setFinalSkuItems([]);
+                setShowReport(false);
+              }}
+            />
+          ) : (
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Shelf View: Unified upload card */}
             <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
@@ -420,6 +441,7 @@ function NewAdhocAnalysisPage() {
               </div>
             </section>
           </div>
+          )}
         </div>
       </div>
 

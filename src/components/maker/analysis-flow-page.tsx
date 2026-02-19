@@ -16,20 +16,14 @@ import {
 } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import {
-  AnalysisReportView,
-  HeaderContextBar,
-  SelectRuleSetModal,
-  SkuDataEnrichmentModal,
-} from "@/components/maker";
+import { AnalysisReportView, HeaderContextBar } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import {
   useAnalysisPipeline,
-  type SkuEnrichmentItem,
+  MOCK_SKU_ENRICHMENT_ITEMS,
 } from "@/features/maker/analysis";
 import { useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
-import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -51,24 +45,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [ruleSetModalOpen, setRuleSetModalOpen] = useState(false);
-  const [selectedRuleSet, setSelectedRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
-  const [skuEnrichmentModalOpen, setSkuEnrichmentModalOpen] = useState(false);
-  const [enrichmentItems, setEnrichmentItems] = useState<SkuEnrichmentItem[]>([]);
-  const [finalSkuItems, setFinalSkuItems] = useState<SkuEnrichmentItem[]>([]);
   const [showReport, setShowReport] = useState(false);
-  const [isGeneratingStrategy, setIsGeneratingStrategy] = useState(false);
-  const enrichmentResolverRef = useRef<((items: SkuEnrichmentItem[]) => void) | null>(null);
-  const enrichmentRejectRef = useRef<((reason?: unknown) => void) | null>(null);
-
-  const onEnrichmentRequired = useCallback((items: SkuEnrichmentItem[]) => {
-    return new Promise<SkuEnrichmentItem[]>((resolve, reject) => {
-      setEnrichmentItems(items);
-      setSkuEnrichmentModalOpen(true);
-      enrichmentResolverRef.current = resolve;
-      enrichmentRejectRef.current = reject;
-    });
-  }, []);
 
   const onAnalysisComplete = useCallback(() => {
     setShowReport(true);
@@ -79,13 +56,11 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
     currentStep,
     elapsedSeconds,
     analysisComplete,
-    awaitingEnrichment,
     progressPercent,
     currentStepIndex,
     pipelineSteps: PIPELINE_STEPS,
     startAnalysis,
   } = useAnalysisPipeline({
-    onEnrichmentRequired,
     onComplete: onAnalysisComplete,
     stepIntervalMs: 1500,
   });
@@ -132,30 +107,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
 
   const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
-  const handleRunAnalysis = () => setRuleSetModalOpen(true);
-
-  const handleRuleSetConfirm = () => {
-    if (!selectedRuleSet) return;
-    setRuleSetModalOpen(false);
-    startAnalysis();
-  };
-
-  const handleGenerateStrategy = useCallback((items: SkuEnrichmentItem[]) => {
-    setIsGeneratingStrategy(true);
-    setFinalSkuItems(items);
-    setSkuEnrichmentModalOpen(false);
-    enrichmentResolverRef.current?.(items);
-    enrichmentResolverRef.current = null;
-    enrichmentRejectRef.current = null;
-    setIsGeneratingStrategy(false);
-  }, []);
-
-  const handleCloseEnrichmentModal = useCallback(() => {
-    setSkuEnrichmentModalOpen(false);
-    enrichmentRejectRef.current?.();
-    enrichmentResolverRef.current = null;
-    enrichmentRejectRef.current = null;
-  }, []);
+  const handleRunAnalysis = () => startAnalysis();
 
   const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -276,12 +228,11 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
           {analysisComplete && showReport ? (
             <AnalysisReportView
               imagePreview={imagePreview}
-              skuItems={finalSkuItems}
+              skuItems={MOCK_SKU_ENRICHMENT_ITEMS}
               onUploadImage={triggerFileInput}
               onReset={() => {
                 setImageFile(null);
                 setImagePreview(null);
-                setFinalSkuItems([]);
                 setShowReport(false);
               }}
             />
@@ -304,7 +255,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                         Phase 2
                       </span>
                     </Button>
-                    {imageFile && !isAnalyzing && !awaitingEnrichment && (
+                    {imageFile && !isAnalyzing && (
                       <Button
                         size="sm"
                         onClick={handleRunAnalysis}
@@ -436,8 +387,8 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                       </div>
                       <p className="font-medium text-foreground">Ready to analyze</p>
                       <p className="text-sm text-muted-foreground mt-2 max-w-[260px]">
-                        Click &quot;Run Analysis&quot; above, pick a compliance rule set, and
-                        we&apos;ll process your image through the pipeline.
+                        Click &quot;Run Analysis&quot; above and we&apos;ll process your image
+                        through the pipeline.
                       </p>
                     </div>
                   )}
@@ -447,24 +398,6 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
           )}
         </div>
       </div>
-
-      <SelectRuleSetModal
-        isOpen={ruleSetModalOpen}
-        onClose={() => setRuleSetModalOpen(false)}
-        selectedId={selectedRuleSet?.id ?? null}
-        onSelect={setSelectedRuleSet}
-        onConfirm={handleRuleSetConfirm}
-        isRunning={false}
-        autoSelectDefault
-      />
-
-      <SkuDataEnrichmentModal
-        isOpen={skuEnrichmentModalOpen}
-        onClose={handleCloseEnrichmentModal}
-        items={enrichmentItems}
-        onGenerateStrategy={handleGenerateStrategy}
-        isGenerating={isGeneratingStrategy}
-      />
     </MainLayout>
   );
 }

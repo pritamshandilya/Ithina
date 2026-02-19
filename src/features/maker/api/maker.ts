@@ -46,11 +46,11 @@ export async function fetchStores(_userId: string): Promise<Store[]> {
  */
 export async function fetchAssignedShelves(): Promise<Shelf[]> {
   await simulateNetworkDelay(300);
-
+  
   // In production, this would be:
   // const response = await api.get('/maker/shelves');
   // return response.data;
-
+  
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
   return [...mockShelves, ...planogramShelves];
@@ -168,11 +168,11 @@ export async function fetchAudits(): Promise<Audit[]> {
  */
 export async function fetchShelfById(shelfId: string): Promise<Shelf | null> {
   await simulateNetworkDelay(200);
-
+  
   // In production, this would be:
   // const response = await api.get(`/maker/shelves/${shelfId}`);
   // return response.data;
-
+  
   const shelves = generateMockShelves();
   return shelves.find((shelf) => shelf.id === shelfId) || null;
 }

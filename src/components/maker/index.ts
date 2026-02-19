@@ -47,10 +47,9 @@ export * from "./manual-override-list";
 export { ShelfActions } from "./shelf-actions";
 export { PlanogramPreview } from "./planogram-preview";
 export {
-  AnalysisReportView,
-  type AnalysisReportViewProps,
-  type AnalysisReportTab,
-} from "./analysis-report-view";
+  ComplianceResultsView,
+  type ComplianceResultsViewProps,
+} from "./compliance-results-view";
 export {
   AnalysisFlowPage,
   type AnalysisFlowPageProps,

@@ -21,7 +21,7 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
-  Download,
+  FileText,
   Info,
   Lightbulb,
   RefreshCw,
@@ -141,9 +141,15 @@ export function ReportSnippetsView({
               : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
           </p>
         </div>
-        <Button variant="outline" size="sm" disabled className="text-muted-foreground">
-          <Download className="size-4" aria-hidden />
-          Export PDF
+        <Button
+          size="sm"
+          className="btn-accent"
+          onClick={() => {
+            /* TODO: Navigate to full report */
+          }}
+        >
+          <FileText className="size-4" aria-hidden />
+          View Full Report
         </Button>
       </div>
 
@@ -159,11 +165,11 @@ export function ReportSnippetsView({
               <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
                 <ChevronDown className="size-4" aria-hidden />
               </Button>
-              <Button variant="outline" size="sm" onClick={onReplaceImage}>
+              <Button size="sm" onClick={onReplaceImage} className="btn-accent">
                 <Upload className="size-4" aria-hidden />
                 Replace
               </Button>
-              <Button variant="outline" size="sm" onClick={onRetake}>
+              <Button size="sm" onClick={onRetake} className="btn-accent">
                 <Camera className="size-4" aria-hidden />
                 Retake
               </Button>

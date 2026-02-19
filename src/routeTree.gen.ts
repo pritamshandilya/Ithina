@@ -28,6 +28,7 @@ import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker
 import { Route as TestAuditReviewQueueRouteImport } from './routes/test-audit-review-queue'
 import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
@@ -158,6 +159,11 @@ const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -346,6 +352,7 @@ const MakerAuditsPlanogramRunShelfIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
@@ -452,6 +460,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/profile': typeof ProfileRoute
   '/signup': typeof SignupRoute
   '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
   '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
@@ -510,6 +519,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/profile'
     | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
@@ -566,6 +576,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/profile'
     | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
@@ -615,6 +626,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/login'
+    | '/profile'
     | '/signup'
     | '/test-audit-mode-selector'
     | '/test-audit-review-queue'
@@ -672,6 +684,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
+  ProfileRoute: typeof ProfileRoute
   SignupRoute: typeof SignupRoute
   TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
   TestAuditReviewQueueRoute: typeof TestAuditReviewQueueRoute
@@ -845,6 +858,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1177,6 +1197,7 @@ const MakerShelvesRouteWithChildren = MakerShelvesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
+  ProfileRoute: ProfileRoute,
   SignupRoute: SignupRoute,
   TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
   TestAuditReviewQueueRoute: TestAuditReviewQueueRoute,

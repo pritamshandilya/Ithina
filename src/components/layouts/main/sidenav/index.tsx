@@ -8,6 +8,7 @@ import {
   LayoutGrid,
   Library,
   ListChecks,
+  LogOut,
   Rows3,
   Settings,
   ShieldCheck,
@@ -16,6 +17,10 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import SidenavFooter from "./footer";
+import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
+import { useStore } from "@/providers/store";
+import { useStores as useMakerStores } from "@/features/maker/hooks";
+import { useStores as useCheckerStores } from "@/features/checker/hooks";
 import {
   Sidebar,
   SidebarContent,
@@ -36,6 +41,7 @@ import {
 import logo from "@/assets/logo.avif";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/auth";
 
 type NavItem = {
   label: string;
@@ -69,6 +75,8 @@ export default function Sidenav() {
   const location = useLocation();
   const currentUser = SimulatedAuthService.getCurrentUser();
   const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
+  const { selectedStore, setSelectedStore } = useStore();
+  const { startLogout } = useAuth();
 
   const role = useMemo(() => {
     if (currentUser?.role) return currentUser.role;
@@ -113,6 +121,25 @@ export default function Sidenav() {
 
   const [reportsOpen, setReportsOpen] = useState(true);
 
+  const { data: makerStores } = useMakerStores();
+  const { data: checkerStores } = useCheckerStores();
+
+  const stores = role === "checker" ? checkerStores : makerStores;
+
+  useEffect(() => {
+    if (stores && stores.length > 0 && !selectedStore) {
+      setSelectedStore(stores[0]);
+    }
+  }, [stores, selectedStore, setSelectedStore]);
+
+  const handleStoreChange = (storeId: string) => {
+    if (!stores) return;
+    const store = stores.find((s) => s.id === storeId);
+    if (store) {
+      setSelectedStore(store);
+    }
+  };
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -124,6 +151,21 @@ export default function Sidenav() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent className="px-2 pb-2">
+            <div className="flex flex-col gap-2">
+              <span className="text-[10px] font-medium uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
+                Active Store
+              </span>
+              <StoreSelectorDropdown
+                stores={stores ?? []}
+                selectedStoreId={selectedStore?.id ?? ""}
+                onStoreChange={handleStoreChange}
+                className="w-full justify-start group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:mx-auto"
+              />
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
         <SidebarGroup>
           <SidebarGroupLabel>{role === "checker" ? "Checker" : "Maker"}</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -240,6 +282,23 @@ export default function Sidenav() {
                   </SidebarMenuItem>
                 );
               })}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarGroup className="mt-auto">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={startLogout}
+                  tooltip="Logout"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <LogOut className="size-4" />
+                  <span>Logout</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

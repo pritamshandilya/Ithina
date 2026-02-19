@@ -3,18 +3,17 @@ import { useCallback, useState } from "react";
 
 import {
   AuditReviewQueue,
-  CheckerHeader,
 } from "@/components/checker";
 import MainLayout from "@/components/layouts/main";
 import {
-  useMarkAllNotificationsAsRead,
-  useMarkNotificationAsRead,
-  useNotifications,
+  // useMarkNotificationAsRead,
+  // useNotifications,
   usePendingAudits,
-  useStores,
+  // useStores,
 } from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-import type { Notification } from "@/types/checker";
+// import type { Notification } from "@/types/checker";
+// import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/checker/audit-review")({
   component: CheckerAuditReviewPage,
@@ -22,33 +21,28 @@ export const Route = createFileRoute("/checker/audit-review")({
 
 function CheckerAuditReviewPage() {
   const navigate = useNavigate();
-  const { data: stores } = useStores();
+  // const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
 
   const { data: audits, isLoading: auditsLoading, error: auditsError } =
     usePendingAudits(selectedStoreId);
-  const { data: notifications } = useNotifications(selectedStoreId);
+  // const { data: notifications } = useNotifications(selectedStoreId);
 
-  const markAsRead = useMarkNotificationAsRead();
-  const markAllAsRead = useMarkAllNotificationsAsRead();
+  // const markAsRead = useMarkNotificationAsRead();
 
-  const handleStoreChange = useCallback((storeId: string) => {
-    setSelectedStoreId(storeId);
-  }, []);
-
-  const handleNotificationClick = useCallback(
-    (notification: Notification) => {
-      if (!notification.read) {
-        markAsRead.mutate(notification.id);
-      }
-      if (notification.type === "new_audit" || notification.type === "critical_audit") {
-        navigate({ to: "/checker/review/$auditId", params: { auditId: notification.auditId } });
-      } else if (notification.type === "rule_change") {
-        navigate({ to: "/checker/knowledge-center" });
-      }
-    },
-    [markAsRead, navigate]
-  );
+  // const handleNotificationClick = useCallback(
+  //   (notification: Notification) => {
+  //     if (!notification.read) {
+  //       markAsRead.mutate(notification.id);
+  //     }
+  //     if (notification.type === "new_audit" || notification.type === "critical_audit") {
+  //       navigate({ to: "/checker/review/$auditId", params: { auditId: notification.auditId } });
+  //     } else if (notification.type === "rule_change") {
+  //       navigate({ to: "/checker/knowledge-center" });
+  //     }
+  //   },
+  //   [markAsRead, navigate]
+  // );
 
   const handleAuditClick = useCallback(
     (auditId: string) => {
@@ -61,16 +55,6 @@ function CheckerAuditReviewPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <CheckerHeader
-            user={mockCheckerUser}
-            stores={stores || []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={handleStoreChange}
-            notifications={notifications || []}
-            onNotificationClick={handleNotificationClick}
-            onMarkAsRead={(id) => markAsRead.mutate(id)}
-            onMarkAllAsRead={() => markAllAsRead.mutate()}
-          />
 
           <header className="space-y-1">
             <h1 className="text-2xl font-bold text-foreground">Audit Review</h1>

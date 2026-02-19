@@ -1,16 +1,12 @@
-import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 
 import MainLayout from "@/components/layouts/main";
 import {
   AssignedShelvesList,
-  HeaderContextBar,
   MyAuditsSection,
   PrimaryActionSection,
   QuickStatsPanel,
 } from "@/components/maker";
-import { useStores } from "@/features/maker/hooks";
-import { mockUser } from "@/lib/api/mock-data";
 
 export const Route = createFileRoute("/maker/dashboard")({
   component: MakerDashboard,
@@ -18,19 +14,11 @@ export const Route = createFileRoute("/maker/dashboard")({
 
 function MakerDashboard() {
   const navigate = useNavigate();
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
-
           <PrimaryActionSection />
           <QuickStatsPanel />
 

@@ -247,7 +247,7 @@ function AddPlanogramPage() {
                           Shelves
                         </p>
                         <p className="text-lg font-semibold tabular-nums text-foreground">
-                          {fixture.shelfCount}
+                          {fixture.shelves.length}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -272,7 +272,7 @@ function AddPlanogramPage() {
                           Location
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {metadata?.location ?? "—"}
+                          {metadata?.location ?? planogram.physicalLocation.bay}
                         </p>
                       </div>
                     </div>

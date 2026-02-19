@@ -3,7 +3,6 @@ import MainLayout from "@/components/layouts/main";
 import { MetricCard } from "@/components/maker/shelf-editor/MetricCard";
 import { ProductVisual } from "@/components/maker/shelf-editor/ProductVisual";
 import { CategoryLegend } from "@/components/maker/shelf-editor/CategoryLegend";
-import { StockingRules } from "@/components/maker/shelf-editor/StockingRules";
 import { RemovedItemsSidebar } from "@/components/maker/shelf-editor/RemovedItemsSidebar";
 import { ProductDataTable } from "@/components/maker/shelf-editor/ProductDataTable";
 
@@ -27,6 +26,7 @@ import { toast } from "@/hooks/use-toast";
 import planogramData from "@/lib/constants/planogram.json";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Download, Plus, X, MousePointer2 } from "lucide-react";
+// import { StockingRules } from "@/components/maker/shelf-editor/StockingRules";
 
 export const Route = createFileRoute("/maker/shelves/$shelfId/edit")({
     component: EditShelfPage,
@@ -43,8 +43,10 @@ interface Product {
     height: number;
     depth: number;
     depthCount: number;
-    optimalStock: number;
-    currentStock: number;
+    // optimalStock: number;
+    // currentStock: number;
+    backroomStock: number; // Replaced optimalStock and currentStock
+
 }
 
 interface ShelfLevel {
@@ -72,9 +74,7 @@ const getCategoryBgColor = (category: string) => CATEGORY_COLORS[category] || "b
 // PAGE COMPONENT
 export default function EditShelfPage() {
     const { planogram } = planogramData;
-    const { fixture, stockingRules: rulesData } = planogram;
-
-    const isHighDemand = (sku: string) => rulesData.highDemandProducts.includes(sku);
+    const { fixture } = planogram;
 
     const [levels, setLevels] = useState<ShelfLevel[]>(
         fixture.shelves.map((s) => ({
@@ -82,13 +82,15 @@ export default function EditShelfPage() {
             name: s.name,
             verticalPosition: s.verticalPosition,
             height: s.height,
-            products: s.products.map((p) => ({
+            products: s.products.map((p: Product) => ({
                 ...p,
                 width: p.width || 0,
                 height: p.height || 0,
-                depthCount: (p as any).depthCount || 1,
-                optimalStock: p.optimalStock || 0,
-                currentStock: p.currentStock || 0,
+                // depthCount: (p as any).depthCount || 1,
+                // optimalStock: p.optimalStock || 0,
+                // currentStock: p.currentStock || 0,
+                depthCount: p.depthCount || 1,
+                backroomStock: p.backroomStock || 0,
             })),
         }))
     );
@@ -101,9 +103,10 @@ export default function EditShelfPage() {
     const totalFacings = levels.reduce((acc, level) => acc + level.products.reduce((sum, p) => sum + p.facings, 0), 0);
     const totalUnits = levels.reduce((acc, level) => acc + level.products.reduce((sum, p) => sum + p.facings * p.depthCount, 0), 0);
     const categoriesCount = new Set(levels.flatMap(l => l.products.map(p => p.category))).size;
-    const highDemandCount = levels.reduce((acc, level) =>
-        acc + level.products.filter(p => isHighDemand(p.sku)).length,
-        0);
+    // const highDemandCount = levels.reduce((acc, level) =>
+    //     acc + level.products.filter(p => isHighDemand(p.sku)).length,
+    //     0);
+    const highDemandCount = 0;
 
     // HANDLERS
     const handleRemoveProduct = (levelIndex: number, productIndex: number) => {
@@ -170,7 +173,7 @@ export default function EditShelfPage() {
                     {/* Left Section: Visualizer */}
                     <div className="flex-1 w-full space-y-4 flex flex-col h-full min-h-0">
                         {/* Sub Header / Info Bar */}
-                        <div className="flex-shrink-0 flex items-center justify-between bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-[10px] text-slate-500 uppercase font-black tracking-widest shadow-lg">
+                        <div className="shrink-0 flex items-center justify-between bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-[10px] text-slate-500 uppercase font-black tracking-widest shadow-lg">
                             <div className="flex gap-6 items-center">
                                 <span className="flex items-center gap-2">
                                     <div className="size-1.5 rounded-full bg-slate-700" />
@@ -185,7 +188,7 @@ export default function EditShelfPage() {
                         </div>
 
                         {/* Shelf Levels Canvas */}
-                        <div className="flex-1 overflow-y-auto space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 min-h-[600px] scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                        <div className="flex-1 overflow-y-auto space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 min-h-150 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
                             {levels.map((level, lvlIdx) => (
                                 <div key={level.shelfNumber} className="group/level relative bg-slate-900/20 rounded-xl border border-slate-800/30 p-2">
                                     {/* Shelf Header Meta */}
@@ -210,8 +213,8 @@ export default function EditShelfPage() {
 
                                             {level.products.map((product, pIdx) => {
                                                 const facingsArray = Array.from({ length: product.facings || 1 });
-                                                const isHigh = isHighDemand(product.sku);
-
+                                                // const isHigh = isHighDemand(product.sku);
+                                                const isHigh = false;
                                                 return (
                                                     <div
                                                         key={`${product.sku}-${pIdx}`}
@@ -237,7 +240,7 @@ export default function EditShelfPage() {
                                                             {facingsArray.map((_, fIdx) => (
                                                                 <DropdownMenu key={`${product.sku}-${pIdx}-${fIdx}`}>
                                                                     <DropdownMenuTrigger asChild>
-                                                                        <div className="flex-1 max-w-[4rem] h-32 cursor-pointer transition-transform hover:-translate-y-1">
+                                                                        <div className="flex-1 max-w-16 h-32 cursor-pointer transition-transform hover:-translate-y-1">
                                                                             <ProductVisual
                                                                                 category={product.category}
                                                                                 isHighDemand={isHigh}
@@ -270,7 +273,7 @@ export default function EditShelfPage() {
                                                         </div>
 
                                                         {/* Centered Group Label (Overlay) - Always Visible */}
-                                                        <div className="absolute bottom-36 z-20 flex flex-col items-center w-[300px] pointer-events-none transition-all duration-300">
+                                                        <div className="absolute bottom-36 z-20 flex flex-col items-center w-75 pointer-events-none transition-all duration-300">
                                                             <div className="h-4 w-px bg-white/20 mb-1 opacity-20" />
                                                             <div className="text-[10px] font-black text-center leading-tight drop-shadow-2xl text-white px-2 line-clamp-1 uppercase tracking-tighter">
                                                                 {product.name}
@@ -312,8 +315,8 @@ export default function EditShelfPage() {
                     />
                 </div>
 
-                <StockingRules rules={rulesData} />
-                <ProductDataTable products={levels.reduce((acc: any[], l) => [
+                {/* <StockingRules rules={rulesData} /> */}
+                <ProductDataTable products={levels.reduce((acc: Product[], l) => [
                     ...acc,
                     ...l.products.map(p => ({ ...p, shelfNumber: l.shelfNumber }))
                 ], [])} />

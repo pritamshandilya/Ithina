@@ -51,6 +51,10 @@ export {
   type ComplianceResultsViewProps,
 } from "./compliance-results-view";
 export {
+  ReportSnippetsView,
+  type ReportSnippetsViewProps,
+} from "./report-snippets-view";
+export {
   AnalysisFlowPage,
   type AnalysisFlowPageProps,
 } from "./analysis-flow-page";

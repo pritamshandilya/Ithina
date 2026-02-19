@@ -19,11 +19,11 @@ import {
 } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceResultsView, HeaderContextBar } from "@/components/maker";
+import { HeaderContextBar, ReportSnippetsView } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import {
   useAnalysisPipeline,
-  MOCK_ANALYSIS_RESULT,
+  MOCK_REPORT_SNIPPET,
   SIMPLE_PROGRESS_STEPS,
 } from "@/features/maker/analysis";
 import { useStores } from "@/features/maker/hooks";
@@ -180,9 +180,9 @@ export function AnalysisFlowPage({
           )}
 
           {state === "results" ? (
-            <ComplianceResultsView
+            <ReportSnippetsView
               imagePreview={imagePreview}
-              analysisResult={MOCK_ANALYSIS_RESULT}
+              report={MOCK_REPORT_SNIPPET}
               onRetake={handleReset}
               onReplaceImage={triggerFileInput}
               onSubmitAudit={() => {

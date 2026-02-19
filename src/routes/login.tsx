@@ -185,12 +185,12 @@ function LoginPage() {
               )}
             </Button>
 
-            <p className="text-center text-xs text-gray-500">
+            {/* <p className="text-center text-xs text-gray-500">
               All data is stored locally in your browser
-            </p>
+            </p> */}
           </form>
 
-          <div className="text-center">
+          {/* <div className="text-center">
             <p className="text-sm text-gray-400">
               Don&apos;t have an account?{" "}
               <button
@@ -201,7 +201,7 @@ function LoginPage() {
                 Create an account
               </button>
             </p>
-          </div>
+          </div> */}
         </div>
       </motion.div>
     </div>

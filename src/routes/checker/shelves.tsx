@@ -5,15 +5,16 @@ import { renderToString } from "react-dom/server";
 import { Plus, Search, LayoutGrid, List } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar, ShelfCard, ShelfActions } from "@/components/maker";
+import { ShelfCard, ShelfActions } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { useAssignedShelves, useStores } from "@/features/maker/hooks";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
-import { mockUser } from "@/lib/api/mock-data";
+// import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 import type { Shelf } from "@/types/maker";
+// import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/checker/shelves")({
   component: ShelfManagementPage,
@@ -110,8 +111,8 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
 
 function ShelfManagementPage() {
   const { data: shelves, isLoading } = useAssignedShelves();
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+  // const { data: stores } = useStores();
+  // const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -159,11 +160,6 @@ function ShelfManagementPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
 
           {/* Header Bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">

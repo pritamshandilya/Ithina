@@ -17,13 +17,12 @@ import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { CheckerHeader } from "@/components/checker";
+import { useStore } from "@/providers/store";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import {
   useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
   useNotifications,
-  useStores,
 } from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import type { Notification } from "@/types/checker";
@@ -48,16 +47,13 @@ type KnowledgeCenterTab = "rules" | "versions" | "documents";
 function KnowledgeCenterPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<KnowledgeCenterTab>("rules");
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+  const { selectedStore } = useStore();
+  const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
-  const { data: stores } = useStores();
   const { data: notifications } = useNotifications(selectedStoreId);
   const markAsRead = useMarkNotificationAsRead();
   const markAllAsRead = useMarkAllNotificationsAsRead();
 
-  const handleStoreChange = useCallback((storeId: string) => {
-    setSelectedStoreId(storeId);
-  }, []);
 
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
@@ -85,16 +81,6 @@ function KnowledgeCenterPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <CheckerHeader
-            user={mockCheckerUser}
-            stores={stores || []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={handleStoreChange}
-            notifications={notifications || []}
-            onNotificationClick={handleNotificationClick}
-            onMarkAsRead={(id) => markAsRead.mutate(id)}
-            onMarkAllAsRead={() => markAllAsRead.mutate()}
-          />
 
           {/* Page Header */}
           <header className="space-y-1">

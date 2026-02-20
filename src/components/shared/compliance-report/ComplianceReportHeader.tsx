@@ -19,6 +19,8 @@ export interface ComplianceReportHeaderProps {
   backTo?: string;
   /** Callback when Export PDF is clicked */
   onExportPdf?: () => void;
+  /** Whether PDF export is in progress */
+  isExporting?: boolean;
   /** Additional class names */
   className?: string;
 }
@@ -28,6 +30,7 @@ export function ComplianceReportHeader({
   subtitle = 'Planogram "Food & Beverage Shelf" • 88 products detected • 3 analysis issues',
   backTo = "/maker/audits/planogram",
   onExportPdf,
+  isExporting = false,
   className,
 }: ComplianceReportHeaderProps) {
   return (
@@ -57,10 +60,11 @@ export function ComplianceReportHeader({
         variant="outline"
         size="sm"
         onClick={onExportPdf}
+        disabled={isExporting}
         className="gap-2 border-accent/50 text-foreground hover:bg-accent/10 shrink-0"
       >
         <Download className="size-4" aria-hidden />
-        Export PDF
+        {isExporting ? "Generating…" : "Export PDF"}
       </Button>
     </header>
   );

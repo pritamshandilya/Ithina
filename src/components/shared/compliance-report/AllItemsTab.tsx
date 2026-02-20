@@ -170,11 +170,14 @@ function filterRows<T extends Record<string, unknown>>(
 export interface AllItemsTabProps {
   /** Report data – defaults to mock; pass from API when available */
   data?: typeof MOCK_ALL_ITEMS_REPORT;
+  /** PDF export mode: hide search, show all rows without pagination */
+  pdfMode?: boolean;
   className?: string;
 }
 
 export function AllItemsTab({
   data = MOCK_ALL_ITEMS_REPORT,
+  pdfMode = false,
   className,
 }: AllItemsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -205,7 +208,8 @@ export function AllItemsTab({
 
   return (
     <div className={cn("space-y-6", className)}>
-      {/* Search */}
+      {/* Search – hidden in PDF mode */}
+      {!pdfMode && (
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
         <Input
@@ -216,6 +220,7 @@ export function AllItemsTab({
           className="pl-9 bg-card"
         />
       </div>
+      )}
 
       {/* SKU Facings & Depth Summary */}
       <section>
@@ -228,10 +233,11 @@ export function AllItemsTab({
           rowIdField="id"
           initialSort={{ field: "productName", dir: "asc" }}
           emptyMessage="No SKU facings match your search."
-          pageSize={DEFAULT_PAGE_SIZE}
-          pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
-          onPaginationChange={setSkuPagination}
-          headerFilters={true}
+          pagination={!pdfMode}
+          pageSize={pdfMode ? 9999 : DEFAULT_PAGE_SIZE}
+          pageSizeSelector={pdfMode ? [] : [...PAGE_SIZE_OPTIONS]}
+          onPaginationChange={pdfMode ? undefined : setSkuPagination}
+          headerFilters={!pdfMode}
         />
       </section>
 
@@ -246,10 +252,11 @@ export function AllItemsTab({
           rowIdField="id"
           initialSort={{ field: "productName", dir: "asc" }}
           emptyMessage="No planogram items match your search."
-          pageSize={DEFAULT_PAGE_SIZE}
-          pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
-          onPaginationChange={setPlanogramPagination}
-          headerFilters={true}
+          pagination={!pdfMode}
+          pageSize={pdfMode ? 9999 : DEFAULT_PAGE_SIZE}
+          pageSizeSelector={pdfMode ? [] : [...PAGE_SIZE_OPTIONS]}
+          onPaginationChange={pdfMode ? undefined : setPlanogramPagination}
+          headerFilters={!pdfMode}
         />
       </section>
     </div>

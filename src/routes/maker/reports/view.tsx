@@ -6,9 +6,16 @@
  */
 
 import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createRoot } from "react-dom/client";
+import { useState } from "react";
 import MainLayout from "@/components/layouts/main";
-import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ComplianceReportFull,
+  ComplianceReportPdfContent,
+} from "@/components/shared/compliance-report";
 import { MOCK_REPORT_SNIPPET } from "@/features/maker/analysis";
+import { exportReportToPdf } from "@/lib/pdf/export-report-pdf";
 
 export const Route = createFileRoute("/maker/reports/view")({
   component: FullReportPage,
@@ -16,11 +23,41 @@ export const Route = createFileRoute("/maker/reports/view")({
 
 function FullReportPage() {
   const location = useLocation();
+  const { toast } = useToast();
   const imageUrl = (location.state as { imageUrl?: string } | undefined)?.imageUrl;
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handleExportPdf = () => {
-    // TODO: Implement PDF export
-    console.log("Export PDF clicked");
+  const handleExportPdf = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportReportToPdf({
+        renderContent: (container) => {
+          const root = createRoot(container);
+          root.render(
+            <ComplianceReportPdfContent
+              report={MOCK_REPORT_SNIPPET}
+              imageUrl={imageUrl}
+            />
+          );
+          return () => root.unmount();
+        },
+        filename: "compliance-report.pdf",
+      });
+      toast({
+        title: "PDF exported",
+        description: "The report has been exported. A preview opened in a new tab and the file was downloaded.",
+      });
+    } catch (err) {
+      console.error("PDF export failed:", err);
+      toast({
+        title: "Export failed",
+        description: "Could not generate the PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -32,6 +69,7 @@ function FullReportPage() {
             imageUrl={imageUrl}
             backTo="/maker/audits/planogram"
             onExportPdf={handleExportPdf}
+            isExportingPdf={isExporting}
           />
         </div>
       </div>

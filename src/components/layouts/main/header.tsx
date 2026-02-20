@@ -5,6 +5,13 @@ import { useCallback } from "react";
 import logo from "@/assets/logo.avif";
 import { NotificationsDropdown } from "@/components/checker";
 import { Button } from "@/components/ui/button";
+import { Link } from "@tanstack/react-router";
+import { BookOpen, User } from "lucide-react";
+import { useCallback } from "react";
+
+import logo from "@/assets/logo.avif";
+import { NotificationsDropdown } from "@/components/checker";
+import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   useMarkAllNotificationsAsRead,
@@ -46,7 +53,7 @@ export default function Header() {
       ) {
         console.log("Navigate to audit:", notification.auditId);
       } else if (notification.type === "rule_change") {
-       console.log("Navigate to rule change:", notification.auditId); 
+        
       }
     },
     [markAsRead],
@@ -64,7 +71,7 @@ export default function Header() {
   }, [markAllAsRead]);
 
   return (
-    <header className="border-sidebar-border bg-sidebar sticky top-0 z-10 flex h-14 items-center justify-between border-b px-4">
+    <header className="border-border bg-card/80 sticky top-0 z-10 flex h-14 items-center justify-between border-b px-4 backdrop-blur">
       {/* Left section: Logo and App Name */}
       <div className="flex items-center gap-3">
         <SidebarTrigger className="border-border bg-card hover:bg-accent/40 size-9 rounded-md border" />

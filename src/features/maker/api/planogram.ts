@@ -41,7 +41,7 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
     return {
       id: planogram.id,
       name: planogram.name,
-      shelfCount: fixture.shelfCount,
+      shelfCount: fixture.shelves.length,
       productCount,
       dimensions: metadata ? `${fixture.width}×${fixture.height} ${fixture.units}` : undefined,
       location: metadata?.location,

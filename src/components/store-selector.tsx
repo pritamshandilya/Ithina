@@ -42,7 +42,7 @@ export function StoreSelector() {
           <div className="flex items-center gap-2">
             <Store className="h-4 w-4 text-blue-400" />
             <span className="font-medium">
-              {selectedStore.code} - {selectedStore.city}
+              {selectedStore.code ?? selectedStore.name} - {selectedStore.city ?? selectedStore.address}
             </span>
           </div>
         ) : (
@@ -102,10 +102,10 @@ export function StoreSelector() {
                         </div>
                         <div>
                           <p className={`font-semibold ${isSelected ? 'text-blue-400' : 'text-gray-100'}`}>
-                            {store.code} - {store.city}
+                            {store.code ?? store.name} - {store.city ?? store.address}
                           </p>
                           <p className="text-xs text-gray-500">
-                            {store.region}, {store.country}
+                            {store.region ?? ""}, {store.country ?? ""}
                           </p>
                         </div>
                       </div>

@@ -4,6 +4,7 @@ import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import { routeTree } from "./routeTree.gen";
+import { StoreProvider } from "./providers/store";
 
 const queryClient = new QueryClient();
 const normalizedBasePath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
@@ -22,7 +23,9 @@ const router = createRouter({
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <StoreProvider>
+        <RouterProvider router={router} />
+      </StoreProvider>
 
       {Boolean(import.meta.env.VITE_DEBUG) && (
         <>

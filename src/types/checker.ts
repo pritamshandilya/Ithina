@@ -80,6 +80,34 @@ export interface ComplianceOverview {
 }
 
 /**
+ * Daily compliance for chart (last 7 days)
+ */
+export interface CheckerDailyCompliance {
+  day: string;
+  label: string;
+  avgScore: number;
+  approved: number;
+}
+
+/**
+ * Shelf status breakdown for store
+ */
+export interface CheckerShelfBreakdown {
+  status: string;
+  label: string;
+  count: number;
+  color: string;
+}
+
+/**
+ * Checker dashboard stats for charts
+ */
+export interface CheckerDashboardStats {
+  weeklyCompliance: CheckerDailyCompliance[];
+  shelfBreakdown: CheckerShelfBreakdown[];
+}
+
+/**
  * Store information for multi-store management
  */
 export interface Store {

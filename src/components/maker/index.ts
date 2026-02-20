@@ -7,6 +7,30 @@ export {
   type HeaderContextBarProps,
 } from "./header-context-bar";
 export {
+  MakerDashboardHeader,
+  type MakerDashboardHeaderProps,
+} from "./maker-dashboard-header";
+export {
+  MakerAccomplishedCards,
+  type MakerAccomplishedCardsProps,
+} from "./maker-accomplished-cards";
+export {
+  MakerAttentionSection,
+  type MakerAttentionSectionProps,
+} from "./maker-attention-section";
+export {
+  MakerAssignedPreview,
+  type MakerAssignedPreviewProps,
+} from "./maker-assigned-preview";
+export {
+  MakerAssignedTable,
+  type MakerAssignedTableProps,
+} from "./maker-assigned-table";
+export {
+  MakerPerformanceCharts,
+  type MakerPerformanceChartsProps,
+} from "./maker-performance-charts";
+export {
   PrimaryActionSection,
   type PrimaryActionSectionProps,
 } from "./primary-action-section";
@@ -47,18 +71,13 @@ export * from "./manual-override-list";
 export { ShelfActions } from "./shelf-actions";
 export { PlanogramPreview } from "./planogram-preview";
 export {
-  SelectRuleSetModal,
-  type SelectRuleSetModalProps,
-} from "./select-rule-set-modal";
+  ComplianceResultsView,
+  type ComplianceResultsViewProps,
+} from "./compliance-results-view";
 export {
-  SkuDataEnrichmentModal,
-  type SkuDataEnrichmentModalProps,
-} from "./sku-data-enrichment-modal";
-export {
-  AnalysisReportView,
-  type AnalysisReportViewProps,
-  type AnalysisReportTab,
-} from "./analysis-report-view";
+  ReportSnippetsView,
+  type ReportSnippetsViewProps,
+} from "./report-snippets-view";
 export {
   AnalysisFlowPage,
   type AnalysisFlowPageProps,

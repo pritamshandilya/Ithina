@@ -16,9 +16,17 @@ export interface PlanogramProduct {
   depth: number;
   optimalStock: number;
   currentStock: number;
+  backroomStock: number | null;
+  price: number | null;
+  salesVelocityPerDay: number | null;
+  margin: number | null;
+  expirySensitive: boolean;
+  planogramRole: string | null;
+  isOnPromotion: boolean;
 }
 
 export interface PlanogramShelfDef {
+  shelfId: string;
   shelfNumber: number;
   name: string;
   verticalPosition: number;
@@ -27,20 +35,38 @@ export interface PlanogramShelfDef {
 }
 
 export interface PlanogramFixture {
+  fixtureId: string;
   type: string;
   width: number;
   height: number;
   depth: number;
-  units: string;
-  shelfCount: number;
+  units?: string;
+  shelfCount?: number;
   shelves: PlanogramShelfDef[];
 }
 
+export interface PlanogramPhysicalLocation {
+  storeId: string;
+  zone: string;
+  aisle: string;
+  bay: string;
+  side: string;
+  section: string;
+  fixtureIndexInBay: number;
+}
 export interface PlanogramDefinition {
   id: string;
   name: string;
   version: string;
   createdDate: string;
+  location: string;
+  status: string;
+  storeConfig?: {
+    units: string;
+    currency: string;
+  };
+  physicalLocation: PlanogramPhysicalLocation;
+  metadata?: PlanogramMetadata;
   fixture: PlanogramFixture;
 }
 
@@ -51,11 +77,18 @@ export interface StockingRules {
 }
 
 export interface PlanogramMetadata {
-  location: string;
-  lastUpdated: string;
-  status: string;
-  totalSKUs: number;
-  totalProducts: number;
+  createdBy: string;
+  updatedBy: string;
+  sourceSystem: string;
+  tags: string[];
+  auditTrailId: string;
+  syncStatus: string;
+  location?: string;
+  lastUpdated?: string;
+  stockingRules: StockingRules;
+  status?: string;
+  totalSKUs?: number;
+  totalProducts?: number;
 }
 
 /** Full payload from third-party planogram API */

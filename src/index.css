@@ -311,6 +311,7 @@
     color: var(--accent);
     border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
   }
+
 }
 
 /* ==========================================================================
@@ -565,6 +566,20 @@
   animation: pulse-slow 3s ease-in-out infinite;
 }
 
+/* Shine animation for logo */
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(200%);
+  }
+}
+
+.animate-shine {
+  animation: shine 5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
 /* Native select: match app color scheme (trigger + options where supported) */
 select[data-slot="select"],
 select.select-themed {
@@ -576,4 +591,25 @@ select[data-slot="select"] option,
 select.select-themed option {
   background-color: var(--card);
   color: var(--card-foreground);
+}
+
+/* ==========================================================================
+   Compliance Report – PDF export friendly
+   ========================================================================== */
+
+.print-report {
+  /* Ensure report layout is preserved for print/PDF */
+  break-inside: avoid;
+}
+
+@media print {
+  .print-report {
+    background: white;
+    color: black;
+  }
+
+  .print-report * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

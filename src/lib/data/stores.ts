@@ -108,8 +108,8 @@ export function searchStores(query: string): Store[] {
   return MOCK_STORES.filter(
     (store) =>
       store.name.toLowerCase().includes(lowerQuery) ||
-      store.code.toLowerCase().includes(lowerQuery) ||
-      store.city.toLowerCase().includes(lowerQuery) ||
-      store.region.toLowerCase().includes(lowerQuery),
+      (store.code?.toLowerCase().includes(lowerQuery)) ||
+      (store.city?.toLowerCase().includes(lowerQuery)) ||
+      (store.region?.toLowerCase().includes(lowerQuery)),
   );
 }

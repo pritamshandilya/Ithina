@@ -5,15 +5,22 @@
 
 import { getCreatedPlanogramShelves } from "@/features/maker/api/planogram";
 import {
+  generateMakerDashboardStats,
   generateMockAdhocAnalyses,
   generateMockAudits,
   generateMockQuickStats,
   generateMockShelves,
   generateMockStores,
-  getReturnedAudits,
   getDraftAudits,
+  getReturnedAudits,
 } from "@/lib/api/mock-data";
-import type { AdhocAnalysis, Audit, QuickStats, Shelf } from "@/types/maker";
+import type {
+  AdhocAnalysis,
+  Audit,
+  MakerDashboardStats,
+  QuickStats,
+  Shelf,
+} from "@/types/maker";
 import type { Store } from "@/types/checker";
 
 /**
@@ -46,11 +53,11 @@ export async function fetchStores(_userId: string): Promise<Store[]> {
  */
 export async function fetchAssignedShelves(): Promise<Shelf[]> {
   await simulateNetworkDelay(300);
-
+  
   // In production, this would be:
   // const response = await api.get('/maker/shelves');
   // return response.data;
-
+  
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
   return [...mockShelves, ...planogramShelves];
@@ -115,6 +122,14 @@ export async function fetchQuickStats(): Promise<QuickStats> {
 }
 
 /**
+ * Fetch maker dashboard stats (weekly audits, status breakdown) for charts
+ */
+export async function fetchMakerDashboardStats(): Promise<MakerDashboardStats> {
+  await simulateNetworkDelay(200);
+  return generateMakerDashboardStats();
+}
+
+/**
  * Fetch returned audits that need resubmission
  * 
  * @returns Promise<Audit[]> - Array of returned audit objects
@@ -168,11 +183,11 @@ export async function fetchAudits(): Promise<Audit[]> {
  */
 export async function fetchShelfById(shelfId: string): Promise<Shelf | null> {
   await simulateNetworkDelay(200);
-
+  
   // In production, this would be:
   // const response = await api.get(`/maker/shelves/${shelfId}`);
   // return response.data;
-
+  
   const shelves = generateMockShelves();
   return shelves.find((shelf) => shelf.id === shelfId) || null;
 }

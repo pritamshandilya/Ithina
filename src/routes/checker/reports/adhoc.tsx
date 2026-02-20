@@ -29,9 +29,10 @@ function AdhocReport() {
             title: "STATUS",
             field: "status",
             width: 120,
-            formatter: (cell: any) => {
-                const val = cell.getValue();
-                const issues = cell.getData().issues;
+            formatter: (cell: unknown) => {
+                const cellData = cell as { getValue: () => string; getData: () => AdhocAnalysis };
+                const val = cellData.getValue();
+                const issues = cellData.getData().issues;
                 if (issues > 0) {
                     return `
             <div class="flex items-center gap-1.5 px-2 py-0.5 rounded border border-destructive/50 bg-destructive/10 text-destructive text-xs font-medium w-fit">
@@ -43,25 +44,13 @@ function AdhocReport() {
                 return val;
             }
         },
-        {
-            title: "",
-            field: "action",
-            width: 120,
-            headerSort: false,
-            cellClick: (_e: any, cell: any) => {
-                const id = cell.getData().id;
-                navigate({ to: `/checker/reports/view/${id}` as any });
-            },
-            formatter: () => {
-                return `
-          <div class="flex items-center gap-1 text-accent hover:underline cursor-pointer font-medium text-xs">
-            View Report
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-external-link"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
-          </div>
-        `;
-            }
-        }
     ];
+
+    const handleRowClick = (row: AdhocAnalysis) => {
+        // eslint-disable-next-line no-console
+        console.log("Adhoc row clicked:", row);
+        navigate({ to: `/checker/reports/view/${row.id}` });
+    };
 
     return (
         <MainLayout>
@@ -74,6 +63,9 @@ function AdhocReport() {
                         tableTitle="Adhoc Analyses"
                         tableColumns={columns}
                         tableData={ADHOC_REPORT_MOCK_DATA}
+                        tableProps={{
+                            onRowClick: handleRowClick,
+                        }}
                     />
                 </div>
             </div>

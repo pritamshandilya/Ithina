@@ -6,7 +6,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useCallback, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,8 +23,8 @@ import {
   useAssignedShelves,
   usePlanogramById,
   usePlanogramList,
-  useStores,
 } from "@/features/maker/hooks";
+import { useStore } from "@/providers/store";
 import { saveShelfArrangement } from "@/features/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 import { mockUser } from "@/lib/api/mock-data";
@@ -39,10 +38,10 @@ function AddPlanogramPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: stores } = useStores();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useAssignedShelves();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+  const { selectedStore } = useStore();
+  const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
   const [shelfName, setShelfName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -89,7 +88,8 @@ function AddPlanogramPage() {
       );
       await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
       toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
-      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
+      // navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
+      navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: shelf.id } });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -114,11 +114,6 @@ function AddPlanogramPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
 
           <header className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
@@ -247,7 +242,7 @@ function AddPlanogramPage() {
                           Shelves
                         </p>
                         <p className="text-lg font-semibold tabular-nums text-foreground">
-                          {fixture.shelfCount}
+                          {fixture.shelves.length}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -272,7 +267,7 @@ function AddPlanogramPage() {
                           Location
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {metadata?.location ?? "—"}
+                          {metadata?.location ?? planogram.physicalLocation.bay}
                         </p>
                       </div>
                     </div>

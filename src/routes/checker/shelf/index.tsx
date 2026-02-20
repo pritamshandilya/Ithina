@@ -4,17 +4,17 @@ import { LayoutGrid, Plus, Search } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar } from "@/components/maker";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets, useStores } from "@/features/maker/hooks";
+import { useAssignedShelves, useComplianceRuleSets } from "@/features/maker/hooks";
 import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/checker/shelf/")({
   component: PlanogramAnalysisPage,
@@ -218,9 +218,10 @@ const PLANOGRAM_COLUMNS = (
 function PlanogramAnalysisPage() {
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
-  const { data: stores } = useStores();
+  const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+  const _selectedStoreId = selectedStore?.id || mockUser.storeId;
+  void _selectedStoreId;
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [complianceOverrides, setComplianceOverrides] = useState<Record<string, string>>({});
@@ -291,17 +292,12 @@ function PlanogramAnalysisPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
 
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Planogram Based Analysis</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
-                {stores?.find((s) => s.id === selectedStoreId)?.name ?? "Select a store"}
+                {selectedStore?.name ?? "Select a store"}
               </p>
             </div>
           </header>

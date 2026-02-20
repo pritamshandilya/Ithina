@@ -13,7 +13,8 @@
  * - Empty states
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { LayoutGridIcon, Search, TableIcon } from "lucide-react";
 
 import { AuditQueueCard } from "@/components/checker/audit-queue-card";
@@ -175,6 +176,18 @@ const AUDIT_BASE_TABLE_COLUMNS: DataTableColumn<CheckerAudit>[] = [
  * Displays filterable, sortable grid of pending audits.
  * Default sort: Lowest compliance score first (most critical at top).
  */
+const ACTIONS_COLUMN: DataTableColumn<CheckerAudit> = {
+  title: "Actions",
+  field: "id",
+  width: 110,
+  headerSort: false,
+  headerFilter: false,
+  hozAlign: "center",
+  formatter: () =>
+    '<button type="button" class="rounded-md border border-border bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/90 transition-colors">Review</button>',
+  cellClick: () => {},
+};
+
 export function AuditReviewQueue({
   audits = [],
   isLoading,
@@ -182,6 +195,7 @@ export function AuditReviewQueue({
   onAuditClick,
   className,
 }: AuditReviewQueueProps) {
+  const navigate = useNavigate();
   const [activeFilter, setActiveFilter] = useState<AuditQueueFilter>("all");
   const [sortBy, setSortBy] = useState<AuditQueueSort>("compliance-asc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -189,27 +203,29 @@ export function AuditReviewQueue({
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [cardPage, setCardPage] = useState(1);
 
-  const tableColumns = useMemo<DataTableColumn<CheckerAudit>[]>(() => {
-    if (!onAuditClick) return AUDIT_BASE_TABLE_COLUMNS;
+  const handleReviewClick = useCallback(
+    (auditId: string) => {
+      if (onAuditClick) {
+        onAuditClick(auditId);
+      } else {
+        navigate({ to: "/checker/review/$auditId", params: { auditId } });
+      }
+    },
+    [onAuditClick, navigate]
+  );
 
+  const tableColumns = useMemo<DataTableColumn<CheckerAudit>[]>(() => {
     return [
       ...AUDIT_BASE_TABLE_COLUMNS,
       {
-        title: "Actions",
-        field: "id",
-        width: 120,
-        headerSort: false,
-        headerFilter: false,
-        hozAlign: "center",
-        formatter: () =>
-          '<button type="button" class="rounded-md border border-border bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">Review</button>',
+        ...ACTIONS_COLUMN,
         cellClick: (event: unknown, cell: { getData: () => CheckerAudit }) => {
-          (event as { stopPropagation?: () => void }).stopPropagation?.();
-          onAuditClick(cell.getData().id);
+          (event as { stopPropagation?: () => void })?.stopPropagation?.();
+          handleReviewClick(cell.getData().id);
         },
       },
     ];
-  }, [onAuditClick]);
+  }, [handleReviewClick]);
 
   // Filter and sort audits
   const filteredAndSortedAudits = useMemo(() => {
@@ -480,7 +496,7 @@ export function AuditReviewQueue({
             pageSize={10}
             pageSizeSelector={[5, 10, 20, 50]}
             onPaginationChange={setTablePagination}
-            onRowClick={onAuditClick ? (row) => onAuditClick(row.id) : undefined}
+            onRowClick={(row) => handleReviewClick(row.id)}
           />
 
           <p className="text-sm text-muted-foreground text-center">

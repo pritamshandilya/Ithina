@@ -1,0 +1,518 @@
+/**
+ * Report Snippets View
+ *
+ * Displays key sections of the full compliance report after analysis:
+ * - Key metrics row
+ * - Executive summary & key findings
+ * - AI recommendations
+ * - Compliance by shelf chart
+ * - Planogram issue distribution (donut)
+ * - Issue categories
+ * - Issues to review
+ *
+ * Full report will be recreated in depth later.
+ */
+
+import { useState } from "react";
+import { Link } from "@tanstack/react-router";
+import {
+  AlertTriangle,
+  BarChart3,
+  Camera,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  FileText,
+  Info,
+  Lightbulb,
+  RefreshCw,
+  Send,
+  Upload,
+  XCircle,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { SendForApprovalModal } from "@/components/maker/send-for-approval-modal";
+import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import type {
+  ReportSnippet,
+  ReportKeyFinding,
+  ReportIssueCategory,
+} from "@/features/maker/analysis";
+
+export interface ReportSnippetsViewProps {
+  /** Shelf image preview URL */
+  imagePreview: string | null;
+  /** Report snippet data */
+  report: ReportSnippet;
+  /** Callback when user wants to retake/replace image */
+  onRetake?: () => void;
+  /** Callback when user wants to replace image */
+  onReplaceImage?: () => void;
+  /** Callback when user submits audit */
+  onSubmitAudit?: () => void;
+  /** Callback when user submits anyway (with issues) */
+  onSubmitAnyway?: () => void;
+  /** Index of issue to highlight on image */
+  highlightedIssueIndex?: number | null;
+  /** Callback when user clicks an issue */
+  onIssueClick?: (index: number) => void;
+}
+
+function KeyFindingIcon({ type }: { type: ReportKeyFinding["type"] }) {
+  if (type === "error")
+    return <XCircle className="size-4 shrink-0 text-destructive" aria-hidden />;
+  if (type === "warning")
+    return <AlertTriangle className="size-4 shrink-0 text-amber-500" aria-hidden />;
+  return <Info className="size-4 shrink-0 text-accent" aria-hidden />;
+}
+
+function IssueCategoryVariant({
+  variant,
+}: {
+  variant?: ReportIssueCategory["variant"];
+}) {
+  const map: Record<string, string> = {
+    matched: "bg-chart-2/20 text-chart-2 border-chart-2/40",
+    misplaced: "bg-amber-500/20 text-amber-600 border-amber-500/40",
+    missing: "bg-destructive/20 text-destructive border-destructive/40",
+    extra: "bg-blue-500/20 text-blue-600 border-blue-500/40",
+    depth: "bg-teal-500/20 text-teal-600 border-teal-500/40",
+    analysis: "bg-accent/20 text-accent border-accent/40",
+  };
+  return map[variant ?? "analysis"] ?? map.analysis;
+}
+
+export function ReportSnippetsView({
+  imagePreview,
+  report,
+  onRetake,
+  onReplaceImage,
+  onSubmitAudit,
+  onSubmitAnyway,
+  highlightedIssueIndex = null,
+  onIssueClick,
+}: ReportSnippetsViewProps) {
+  const { toast } = useToast();
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [sendForApprovalOpen, setSendForApprovalOpen] = useState(false);
+  const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+  const hasIssues = report.issues > 0 || report.missing > 0 || report.misplaced > 0;
+
+  const handleSendForApproval = (_notes: string) => {
+    setIsSubmittingApproval(true);
+    // TODO: Call API to submit for approval
+    setTimeout(() => {
+      setIsSubmittingApproval(false);
+      toast({
+        title: "Sent for approval",
+        description: "This analysis has been sent to the Store Manager for review.",
+      });
+    }, 800);
+  };
+  const _isCompliant = report.complianceScore >= 100 && !hasIssues;
+  void _isCompliant; // Reserved for future UI (e.g. compliant badge)
+
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, 2));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
+
+  const totalDistribution =
+    report.issueDistribution.matched +
+    report.issueDistribution.misplaced +
+    report.issueDistribution.missing +
+    report.issueDistribution.extra;
+
+  return (
+    <div className="space-y-6">
+      <SendForApprovalModal
+        isOpen={sendForApprovalOpen}
+        onClose={() => setSendForApprovalOpen(false)}
+        onSubmit={handleSendForApproval}
+        isLoading={isSubmittingApproval}
+      />
+      {/* Report header */}
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-foreground">
+            Combined Compliance & Analysis Report
+          </h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {report.planogramName
+              ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
+              : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
+          </p>
+        </div>
+        <Button size="sm" variant="accent" asChild>
+          <Link
+            to="/maker/reports/view"
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            state={{ imageUrl: imagePreview ?? undefined } as any}
+          >
+            <FileText className="size-4" aria-hidden />
+            View Full Report
+          </Link>
+        </Button>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(640px,calc(100vh-14rem))] lg:items-stretch">
+        {/* Left: Observed Shelf */}
+        <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
+          <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+            <h3 className="text-sm font-semibold text-foreground">Observed Shelf</h3>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoomLevel >= 2} aria-label="Zoom in">
+                <ChevronUp className="size-4" aria-hidden />
+              </Button>
+              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+              <Button size="sm" variant="accent" onClick={onReplaceImage}>
+                <Upload className="size-4" aria-hidden />
+                Replace
+              </Button>
+              <Button size="sm" variant="accent" onClick={onRetake}>
+                <Camera className="size-4" aria-hidden />
+                Retake
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setSendForApprovalOpen(true)}
+                className="bg-chart-2 text-white hover:opacity-90"
+              >
+                <Send className="size-4" aria-hidden />
+                Send for Approval
+              </Button>
+            </div>
+          </div>
+          <div className="flex-1 min-h-0 overflow-auto bg-muted/30">
+            {imagePreview ? (
+              <div className="p-4 flex items-center justify-center min-h-full">
+                <img
+                  src={imagePreview}
+                  alt="Shelf analysis"
+                  className="max-w-full object-contain transition-transform duration-200"
+                  style={{ transform: `scale(${zoomLevel})` }}
+                />
+              </div>
+            ) : (
+              <div className="flex h-full min-h-[280px] items-center justify-center text-muted-foreground">
+                <p className="text-sm">No image</p>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-border px-4 py-2 flex flex-wrap gap-4 text-xs text-muted-foreground shrink-0">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-chart-2" aria-hidden />
+              Compliant
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm bg-destructive" aria-hidden />
+              Issue
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3 w-3 rounded-sm border border-dashed border-muted-foreground" aria-hidden />
+              Empty space
+            </span>
+          </div>
+        </section>
+
+        {/* Right: Report snippets (scrollable) */}
+        <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-6">
+            {/* Key metrics row */}
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 scrollbar-thin">
+              <MetricCard
+                label="Category"
+                value={`${report.complianceScore}%`}
+                variant="score"
+              />
+              <MetricCard label="Matched" value={report.matched} />
+              <MetricCard label="Misplaced" value={report.misplaced} />
+              <MetricCard label="Missing" value={report.missing} />
+              <MetricCard label="Extra" value={report.extra} />
+              <MetricCard label="Issues" value={report.issues} />
+              <MetricCard label="Facings" value={report.facings} />
+              <MetricCard label="Units" value={report.units} />
+              <MetricCard label="Detected" value={report.detected} />
+              <MetricCard label="Gap" value={report.gap} variant="error" />
+            </div>
+
+            {/* Executive summary */}
+            <div className="rounded-lg border border-border bg-card/40 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Info className="size-4 text-accent" aria-hidden />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Executive Summary
+                </h3>
+              </div>
+              <p className="text-sm text-foreground">{report.executiveSummary}</p>
+              <div className="mt-3 space-y-2">
+                {report.keyFindings.map((f, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "flex gap-2 rounded-md px-3 py-2 text-sm",
+                      f.type === "error" && "bg-destructive/10 border border-destructive/30",
+                      f.type === "warning" && "bg-amber-500/10 border border-amber-500/30",
+                      f.type === "info" && "bg-accent/10 border border-accent/30"
+                    )}
+                  >
+                    <KeyFindingIcon type={f.type} />
+                    <span className="text-foreground">{f.text}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* AI recommendations */}
+            <div className="rounded-lg border border-accent/40 bg-accent/10 p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Lightbulb className="size-4 text-accent" aria-hidden />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
+                  AI Recommendations
+                </h3>
+              </div>
+              <ul className="space-y-1.5 text-sm text-foreground">
+                {report.aiRecommendations.map((rec, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-accent shrink-0">•</span>
+                    <span>{rec}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Compliance by shelf */}
+            <div className="rounded-lg border border-border bg-card/40 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <BarChart3 className="size-4 text-accent" aria-hidden />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                  Compliance by Shelf
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {report.shelfCompliance.map((s) => (
+                  <div key={s.shelfName} className="flex items-center gap-3">
+                    <span className="w-24 shrink-0 text-xs font-medium text-foreground truncate text-right">
+                      {s.shelfName}
+                    </span>
+                    <div className="flex-1 h-5 rounded bg-muted/60 overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded transition-all",
+                          s.compliance >= 80 ? "bg-chart-2" : s.compliance > 0 ? "bg-amber-500" : "bg-destructive/70"
+                        )}
+                        style={{ width: `${s.compliance}%` }}
+                      />
+                    </div>
+                    <span>{s.compliance}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Planogram issue distribution */}
+            <div className="rounded-lg border border-border bg-card/40 p-4">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
+                Planogram Issue Distribution
+              </h3>
+              <div className="flex items-center gap-6">
+                <DonutChart distribution={report.issueDistribution} total={totalDistribution} />
+                <div className="flex flex-col gap-2 text-sm">
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-sm bg-chart-2" aria-hidden />
+                    Matched: {report.issueDistribution.matched}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-sm bg-amber-500" aria-hidden />
+                    Misplaced: {report.issueDistribution.misplaced}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-sm bg-destructive" aria-hidden />
+                    Missing: {report.issueDistribution.missing}
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="h-3 w-3 rounded-sm bg-blue-500" aria-hidden />
+                    Extra: {report.issueDistribution.extra}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Issue categories */}
+            <div className="flex flex-wrap gap-2">
+              {report.issueCategories.map((cat) => (
+                <div
+                  key={cat.id}
+                  className={cn(
+                    "rounded-lg border px-3 py-2 text-xs font-medium",
+                    IssueCategoryVariant({ variant: cat.variant })
+                  )}
+                >
+                  {cat.title} {cat.count}
+                </div>
+              ))}
+            </div>
+
+            {/* Issues to review */}
+            {report.issuesToReview.length > 0 && (
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  Issues to Review
+                </h3>
+                <div className="space-y-2">
+                  {report.issuesToReview.map((issue, idx) => (
+                    <button
+                      key={issue.id ?? idx}
+                      type="button"
+                      onClick={() => onIssueClick?.(idx)}
+                      className={cn(
+                        "w-full text-left rounded-lg border px-3 py-2.5 transition-colors",
+                        highlightedIssueIndex === idx
+                          ? "border-accent bg-accent/10"
+                          : "border-border bg-card/60 hover:bg-accent/5"
+                      )}
+                    >
+                      <p className="text-sm font-medium text-foreground">
+                        {issue.skuName ?? issue.description}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{issue.description}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="pt-4 border-t border-border space-y-3">
+              {hasIssues ? (
+                <>
+                  <p className="text-sm text-muted-foreground">
+                    Fix highlighted issues and retake photo.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button onClick={onRetake} variant="accent" size="sm">
+                      <RefreshCw className="size-4" aria-hidden />
+                      Retake & Reanalyze
+                    </Button>
+                    {onSubmitAnyway && (
+                      <Button onClick={onSubmitAnyway} variant="accent" size="sm">
+                        Submit Anyway
+                      </Button>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm font-medium text-chart-2 flex items-center gap-2">
+                    <Check className="size-4" aria-hidden />
+                    Shelf is compliant.
+                  </p>
+                  <Button onClick={onSubmitAudit} className="w-full bg-chart-2 text-white hover:opacity-90">
+                    Submit Audit
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+  variant,
+}: {
+  label: string;
+  value: number | string;
+  variant?: "score" | "error";
+}) {
+  const score = variant === "score" && typeof value === "string" ? parseInt(value, 10) : null;
+  return (
+    <div
+      className={cn(
+        "shrink-0 rounded-lg border px-3 py-2 min-w-[72px] text-center flex flex-col items-center justify-center",
+        variant === "error" && "border-destructive/50 bg-destructive/5",
+        !variant && "border-border bg-card/60"
+      )}
+    >
+      {variant === "score" && score !== null ? (
+        <div className="relative size-10 mb-1">
+          <svg viewBox="0 0 36 36" className="size-10 -rotate-90">
+            <path
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke="var(--muted)"
+              strokeWidth="3"
+            />
+            <path
+              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+              fill="none"
+              stroke={score >= 80 ? "var(--chart-2)" : score > 0 ? "var(--amber-500)" : "var(--destructive)"}
+              strokeWidth="3"
+              strokeDasharray={`${(score / 100) * 100} 100`}
+            />
+          </svg>
+          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">
+            {value}
+          </span>
+        </div>
+      ) : (
+        <p className="text-lg font-bold text-foreground">{value}</p>
+      )}
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
+    </div>
+  );
+}
+
+function DonutChart({
+  distribution,
+  total,
+}: {
+  distribution: { matched: number; misplaced: number; missing: number; extra: number };
+  total: number;
+}) {
+  if (total === 0) return null;
+  const cx = 50;
+  const cy = 50;
+  const or = 40;
+  const ir = 28;
+  const segments = [
+    { value: distribution.matched, color: "var(--chart-2)" },
+    { value: distribution.misplaced, color: "var(--action-warning)" },
+    { value: distribution.missing, color: "var(--destructive)" },
+    { value: distribution.extra, color: "oklch(0.6 0.2 250)" },
+  ];
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  let startAngle = -90;
+
+  return (
+    <div className="relative size-24">
+      <svg viewBox="0 0 100 100" className="size-24">
+        {segments.map((s, i) => {
+          const angle = (s.value / total) * 360;
+          const endAngle = startAngle + angle;
+          const x1 = cx + or * Math.cos(toRad(startAngle));
+          const y1 = cy + or * Math.sin(toRad(startAngle));
+          const x2 = cx + or * Math.cos(toRad(endAngle));
+          const y2 = cy + or * Math.sin(toRad(endAngle));
+          const x3 = cx + ir * Math.cos(toRad(endAngle));
+          const y3 = cy + ir * Math.sin(toRad(endAngle));
+          const x4 = cx + ir * Math.cos(toRad(startAngle));
+          const y4 = cy + ir * Math.sin(toRad(startAngle));
+          const largeArc = angle > 180 ? 1 : 0;
+          const path = `M ${x1} ${y1} A ${or} ${or} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+          startAngle = endAngle;
+          return <path key={i} d={path} fill={s.color} />;
+        })}
+      </svg>
+    </div>
+  );
+}

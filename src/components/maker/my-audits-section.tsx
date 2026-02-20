@@ -25,6 +25,8 @@ import type { Audit } from "@/types/maker";
 export interface MyAuditsSectionProps {
   onResume?: (auditId: string, shelfId: string) => void;
   onViewReport?: (auditId: string, shelfId: string) => void;
+  /** When set, limits display to the most recent N audits (e.g. 5 for dashboard preview) */
+  maxItems?: number;
   className?: string;
 }
 
@@ -36,6 +38,7 @@ function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[
 export function MyAuditsSection({
   onResume,
   onViewReport,
+  maxItems,
   className,
 }: MyAuditsSectionProps) {
   const { data: draftAudits = [], isLoading: isDraftsLoading } = useDraftAudits();
@@ -66,12 +69,13 @@ export function MyAuditsSection({
           getShelfName(a, shelves).toLowerCase().includes(query)
       );
     }
-    return result.sort((a, b) => {
+    const sorted = result.sort((a, b) => {
       const dateA = new Date(a.submittedAt || a.draftSavedAt || 0).getTime();
       const dateB = new Date(b.submittedAt || b.draftSavedAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [allAudits, activeFilter, searchQuery, shelves]);
+    return maxItems != null ? sorted.slice(0, maxItems) : sorted;
+  }, [allAudits, activeFilter, searchQuery, shelves, maxItems]);
 
   useEffect(() => {
     setTablePagination((p) => ({ ...p, page: 1 }));
@@ -227,13 +231,16 @@ export function MyAuditsSection({
     );
   }
 
-  const tableVisibleCount = Math.max(
-    0,
-    Math.min(
-      tablePagination.pageSize,
-      filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
-    )
-  );
+  const isLimitedView = maxItems != null;
+  const tableVisibleCount = isLimitedView
+    ? filteredAudits.length
+    : Math.max(
+        0,
+        Math.min(
+          tablePagination.pageSize,
+          filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
+        )
+      );
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -285,9 +292,19 @@ export function MyAuditsSection({
       {/* Table */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Showing{" "}
-          <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
-          <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
+          {isLimitedView ? (
+            <>
+              Showing last{" "}
+              <span className="font-semibold text-foreground">{tableVisibleCount}</span>{" "}
+              audit{tableVisibleCount !== 1 ? "s" : ""}
+            </>
+          ) : (
+            <>
+              Showing{" "}
+              <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
+              <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
+            </>
+          )}
         </p>
       </div>
       <div className="rounded-lg border border-border bg-card overflow-hidden">
@@ -297,10 +314,11 @@ export function MyAuditsSection({
           rowIdField="id"
           initialSort={{ field: "submittedAt", dir: "desc" }}
           emptyMessage="No audits match the current filter"
-          pageSize={10}
-          pageSizeSelector={[5, 10, 20]}
+          pagination={!isLimitedView}
+          pageSize={isLimitedView ? 5 : 10}
+          pageSizeSelector={isLimitedView ? [5] : [5, 10, 20]}
           headerFilters={false}
-          onPaginationChange={setTablePagination}
+          onPaginationChange={isLimitedView ? undefined : setTablePagination}
         />
       </div>
     </div>

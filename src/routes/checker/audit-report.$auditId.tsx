@@ -1,11 +1,14 @@
 /**
- * Full Compliance Report View
+ * Full Compliance Report for Audit Review
  *
- * Displayed when user clicks "View Full Report" from analysis results.
- * Uses MOCK_REPORT_SNIPPET for now; will be wired to dynamic data later.
+ * When checker clicks "View Full Report" from the audit review page,
+ * they see the full compliance report (same as maker report view).
+ * Back button returns to the audit review workspace.
+ *
+ * Access at: /checker/audit-report/:auditId
  */
 
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import { useToast } from "@/hooks/use-toast";
@@ -18,15 +21,16 @@ import {
 } from "@/features/maker/analysis";
 import { exportReportToPdf } from "@/features/reports/services/pdfExport";
 
-export const Route = createFileRoute("/maker/reports/view")({
-  component: FullReportPage,
+export const Route = createFileRoute("/checker/audit-report/$auditId")({
+  component: AuditReportPage,
 });
 
-function FullReportPage() {
-  const location = useLocation();
+function AuditReportPage() {
+  const { auditId } = Route.useParams();
   const { toast } = useToast();
-  const imageUrl = (location.state as { imageUrl?: string } | undefined)?.imageUrl;
   const [isExporting, setIsExporting] = useState(false);
+
+  const backTo = `/checker/review/${auditId}`;
 
   const handleExportPdf = async () => {
     if (isExporting) return;
@@ -35,16 +39,17 @@ function FullReportPage() {
       await exportReportToPdf({
         data: {
           report: MOCK_REPORT_SNIPPET,
-          imageUrl: imageUrl ?? null,
+          imageUrl: null,
           allItems: MOCK_ALL_ITEMS_REPORT,
           allIssues: MOCK_ALL_ISSUES_REPORT,
           imageComparison: MOCK_IMAGE_COMPARISON,
         },
-        filename: "compliance-report.pdf",
+        filename: `compliance-report-audit-${auditId}.pdf`,
       });
       toast({
         title: "PDF exported",
-        description: "The report has been exported. A preview opened in a new tab and the file was downloaded.",
+        description:
+          "The report has been exported. A preview opened in a new tab and the file was downloaded.",
       });
     } catch (err) {
       console.error("PDF export failed:", err);
@@ -64,8 +69,8 @@ function FullReportPage() {
         <div className="mx-auto max-w-7xl">
           <ComplianceReportFull
             report={MOCK_REPORT_SNIPPET}
-            imageUrl={imageUrl}
-            backTo="/maker/audits/planogram"
+            imageUrl={null}
+            backTo={backTo}
             onExportPdf={handleExportPdf}
             isExportingPdf={isExporting}
           />

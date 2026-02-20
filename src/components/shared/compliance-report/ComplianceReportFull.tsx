@@ -29,6 +29,8 @@ export interface ComplianceReportFullProps {
   backTo?: string;
   /** Callback when Export PDF is clicked */
   onExportPdf?: () => void;
+  /** Whether PDF export is in progress */
+  isExportingPdf?: boolean;
   /** Additional class names */
   className?: string;
 }
@@ -38,6 +40,7 @@ export function ComplianceReportFull({
   imageUrl = null,
   backTo,
   onExportPdf,
+  isExportingPdf = false,
   className,
 }: ComplianceReportFullProps) {
   const [activeTab, setActiveTab] = useState<ReportTabId>("overview");
@@ -58,6 +61,7 @@ export function ComplianceReportFull({
         subtitle={subtitle}
         backTo={backTo}
         onExportPdf={onExportPdf}
+        isExporting={isExportingPdf}
       />
 
       <ComplianceReportMetrics

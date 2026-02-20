@@ -32,7 +32,9 @@ import {
   User,
   Layers,
   FileText,
+  FileBarChart,
 } from "lucide-react";
+import { ComplianceReportMetrics } from "@/components/shared/compliance-report";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import type { Violation } from "@/types/checker";
@@ -241,34 +243,68 @@ function AuditReviewWorkspace() {
 
   const complianceColor = getComplianceColor(audit.complianceScore || 0);
 
+  // Derive metrics for ComplianceReportMetrics (report-style layout)
+  const criticalCount = violations?.filter((v) => v.severity === "critical").length ?? 0;
+  const warningCount = violations?.filter((v) => v.severity === "warning").length ?? 0;
+  const infoCount = violations?.filter((v) => v.severity === "info").length ?? 0;
+  const totalViolations = violations?.length ?? 0;
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          {/* Back Link */}
-          <Button variant="ghost" asChild size="sm">
-            <Link
-              to="/checker/audit-review"
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to Audit Review
-            </Link>
-          </Button>
+          {/* Header: Back + Title + View Full Report */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <Button variant="ghost" asChild size="sm">
+              <Link
+                to="/checker/audit-review"
+                className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Audit Review
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild className="gap-2 border-accent/50 text-foreground hover:bg-accent/10 shrink-0">
+              <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
+                <FileBarChart className="h-4 w-4" />
+                View Full Report
+              </Link>
+            </Button>
+          </div>
 
-          {/* Audit Header */}
-          <div className="rounded-lg border border-border bg-card p-6 shadow-sm">
+          {/* Audit Summary Header (report-style) */}
+          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <header className="space-y-1">
-                <h1 className="text-2xl font-bold text-foreground">{audit.shelfInfo.shelfName}</h1>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {audit.shelfInfo.shelfName}
+                </h1>
                 <p className="text-sm text-muted-foreground">
-                  Aisle {audit.shelfInfo.aisleNumber} • Bay {audit.shelfInfo.bayNumber}
+                  Aisle {audit.shelfInfo.aisleNumber} • Bay {audit.shelfInfo.bayNumber} • Rule version {audit.ruleVersionUsed}
                 </p>
               </header>
               <div className="text-left sm:text-right">
                 <p className="text-sm text-muted-foreground">Compliance Score</p>
-                <p className={cn("text-3xl font-bold", complianceColor)}>{audit.complianceScore}%</p>
+                <p className={cn("text-3xl font-bold", complianceColor)}>
+                  {audit.complianceScore ?? 0}%
+                </p>
               </div>
+            </div>
+
+            {/* Metrics row (aligned with full report) */}
+            <div className="mt-6">
+              <ComplianceReportMetrics
+                complianceScore={audit.complianceScore ?? 0}
+                matched={0}
+                misplaced={warningCount}
+                missing={criticalCount}
+                extra={infoCount}
+                issues={totalViolations}
+                facings={0}
+                units={0}
+                detected={0}
+                gap={0}
+              />
             </div>
 
             {/* Metadata */}
@@ -296,7 +332,9 @@ function AuditReviewWorkspace() {
                 <div>
                   <p className="text-xs text-muted-foreground">Audit Mode</p>
                   <p className="text-sm font-medium text-foreground">
-                    {audit.mode === "planogram-based" || audit.mode === "vision-edge" ? "Planogram Based" : "Adhoc Analysis"}
+                    {audit.mode === "planogram-based" || audit.mode === "vision-edge"
+                      ? "Planogram Based"
+                      : "Adhoc Analysis"}
                   </p>
                 </div>
               </div>
@@ -310,35 +348,105 @@ function AuditReviewWorkspace() {
             </div>
           </div>
 
-          {/* Violations Table */}
+          {/* Executive Summary (report-style) */}
+          {(totalViolations > 0 || (audit.complianceScore ?? 0) < 80) && (
+            <div className="rounded-xl border border-border bg-card/60 p-4 sm:p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <FileText className="h-4 w-4 text-accent shrink-0" aria-hidden />
+                <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                  Summary
+                </h3>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {(audit.complianceScore ?? 0) < 80 && (
+                  <div className="flex gap-2 rounded-lg px-3 py-2.5 text-sm bg-action-warning/10 border border-action-warning/30">
+                    <span className="size-4 rounded-full bg-action-warning/30 flex items-center justify-center shrink-0">
+                      <span className="size-2 rounded-full bg-action-warning" />
+                    </span>
+                    <span className="text-foreground">
+                      Compliance at {audit.complianceScore ?? 0}%. Review violations before approving.
+                    </span>
+                  </div>
+                )}
+                {criticalCount > 0 && (
+                  <div className="flex gap-2 rounded-lg px-3 py-2.5 text-sm bg-destructive/10 border border-destructive/30">
+                    <span className="size-4 rounded-full bg-destructive/30 flex items-center justify-center shrink-0">
+                      <span className="size-2 rounded-full bg-destructive" />
+                    </span>
+                    <span className="text-foreground">
+                      {criticalCount} critical violation{criticalCount !== 1 ? "s" : ""} require attention.
+                    </span>
+                  </div>
+                )}
+                {warningCount > 0 && (
+                  <div className="flex gap-2 rounded-lg px-3 py-2.5 text-sm bg-action-warning/10 border border-action-warning/30">
+                    <span className="size-4 rounded-full bg-action-warning/30 flex items-center justify-center shrink-0">
+                      <span className="size-2 rounded-full bg-action-warning" />
+                    </span>
+                    <span className="text-foreground">
+                      {warningCount} warning{warningCount !== 1 ? "s" : ""} identified.
+                    </span>
+                  </div>
+                )}
+                {totalViolations === 0 && (audit.complianceScore ?? 0) >= 80 && (
+                  <div className="flex gap-2 rounded-lg px-3 py-2.5 text-sm bg-chart-2/10 border border-chart-2/30">
+                    <span className="size-4 rounded-full bg-chart-2/30 flex items-center justify-center shrink-0">
+                      <CheckCircle className="size-2.5 text-chart-2" />
+                    </span>
+                    <span className="text-foreground">
+                      Audit meets compliance threshold. No violations found.
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Violations Section (report-style: All Issues) */}
           <section className="space-y-4">
-            <header className="space-y-1">
-              <h2 className="text-lg font-semibold text-foreground">
-                Violations ({violations?.length ?? 0})
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                Rule violations identified during this audit
-              </p>
+            <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-foreground">
+                  Rule Violations ({violations?.length ?? 0})
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Rule violations identified during this audit. View full report for detailed analysis.
+                </p>
+              </div>
+              <Button variant="outline" size="sm" asChild className="gap-2 shrink-0">
+                <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
+                  <FileBarChart className="h-4 w-4" />
+                  View Full Report
+                </Link>
+              </Button>
             </header>
 
             {violations && violations.length > 0 ? (
-              <DataTable<Violation>
-                columns={VIOLATION_COLUMNS}
-                data={violations}
-                rowIdField="id"
-                initialSort={{ field: "severity", dir: "asc" }}
-                emptyMessage="No violations"
-                pageSize={10}
-                pageSizeSelector={[5, 10, 20]}
-                headerFilters={false}
-              />
+              <div className="rounded-xl border border-border bg-card overflow-hidden">
+                <DataTable<Violation>
+                  columns={VIOLATION_COLUMNS}
+                  data={violations}
+                  rowIdField="id"
+                  initialSort={{ field: "severity", dir: "asc" }}
+                  emptyMessage="No violations"
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20]}
+                  headerFilters={false}
+                />
+              </div>
             ) : (
-              <div className="rounded-lg border border-border bg-card p-12 text-center">
+              <div className="rounded-xl border border-border bg-card p-12 text-center">
                 <CheckCircle className="mx-auto h-12 w-12 text-chart-2" />
                 <p className="mt-4 text-sm font-medium text-foreground">No violations found</p>
                 <p className="mt-1 text-sm text-muted-foreground">
                   This audit passed all compliance checks
                 </p>
+                <Button variant="outline" size="sm" asChild className="mt-4">
+                  <Link to="/checker/audit-report/$auditId" params={{ auditId }} className="gap-2">
+                    <FileBarChart className="h-4 w-4" />
+                    View Full Report
+                  </Link>
+                </Button>
               </div>
             )}
           </section>

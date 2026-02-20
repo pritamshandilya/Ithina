@@ -3,9 +3,17 @@
  * This file provides realistic mock data that mirrors the structure of real API responses
  */
 
-import type { AdhocAnalysis, Audit, MockUserContext, QuickStats, Shelf } from "@/types/maker";
+import type {
+  AdhocAnalysis,
+  Audit,
+  MakerDashboardStats,
+  MockUserContext,
+  QuickStats,
+  Shelf,
+} from "@/types/maker";
 import type {
   CheckerAudit,
+  CheckerDashboardStats,
   ComplianceOverview,
   MockCheckerContext,
   Notification,
@@ -270,6 +278,41 @@ export function generateMockShelves(): Shelf[] {
       assignedTo: mockUser.id,
       elevation: "Middle",
       notes: "High turnover area for family packs.",
+    },
+    {
+      id: "shelf-020",
+      aisleNumber: 5,
+      bayNumber: 4,
+      shelfName: "Dairy - Butter & Spreads",
+      status: "returned",
+      lastAuditDate: randomPastDate(2),
+      complianceScore: 71,
+      assignedTo: mockUser.id,
+      elevation: "Middle",
+      notes: "Refrigerated section.",
+    },
+    {
+      id: "shelf-021",
+      aisleNumber: 6,
+      bayNumber: 1,
+      shelfName: "Condiments - Sauces",
+      status: "draft",
+      lastAuditDate: randomPastDate(0),
+      assignedTo: mockUser.id,
+      elevation: "Middle",
+      notes: "In progress.",
+    },
+    {
+      id: "shelf-022",
+      aisleNumber: 8,
+      bayNumber: 2,
+      shelfName: "Cereal - Family Size",
+      status: "returned",
+      lastAuditDate: randomPastDate(5),
+      complianceScore: 65,
+      assignedTo: mockUser.id,
+      elevation: "Eye Level",
+      notes: "High visibility section.",
     }
   );
 
@@ -365,6 +408,38 @@ export function generateMockQuickStats(): QuickStats {
     pendingReviewCount: pendingCount,
     returnedAuditsCount: returnedCount,
   };
+}
+
+/** Short day names */
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Generate mock maker dashboard stats (for charts)
+ */
+export function generateMakerDashboardStats(): MakerDashboardStats {
+  const shelves = generateMockShelves();
+  const now = new Date();
+
+  // Build last 7 days with mock submitted/approved counts
+  const weeklyAudits = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    const dayStr = d.toISOString().slice(0, 10);
+    const label = i === 6 ? "Today" : DAY_NAMES[d.getDay()];
+    const submitted = Math.floor(Math.random() * 5) + (i >= 4 ? 2 : 1);
+    const approved = Math.max(0, submitted - Math.floor(Math.random() * 2));
+    return { day: dayStr, label, submitted, approved };
+  });
+
+  const statusBreakdown = [
+    { status: "approved", label: "Approved", count: shelves.filter((s) => s.status === "approved").length, color: "var(--chart-2)" },
+    { status: "pending", label: "Pending Review", count: shelves.filter((s) => s.status === "pending").length, color: "var(--chart-1)" },
+    { status: "returned", label: "Returned", count: shelves.filter((s) => s.status === "returned").length, color: "var(--destructive)" },
+    { status: "draft", label: "Draft", count: shelves.filter((s) => s.status === "draft").length, color: "var(--accent)" },
+    { status: "never-audited", label: "Never Audited", count: shelves.filter((s) => s.status === "never-audited").length, color: "var(--muted-foreground)" },
+  ].filter((s) => s.count > 0);
+
+  return { weeklyAudits, statusBreakdown };
 }
 
 /**
@@ -477,6 +552,62 @@ export function generateMockComplianceOverview(storeId?: string): ComplianceOver
     totalApprovedToday: Math.floor(Math.random() * 6) + 3, // 3-8 approved
     totalOverridesToday: Math.floor(Math.random() * 3), // 0-2 overrides
   };
+}
+
+const DAY_NAMES_CHECKER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Generate mock checker dashboard stats for charts
+ */
+export function generateCheckerDashboardStats(
+  storeId?: string
+): CheckerDashboardStats {
+  const shelves = generateMockShelves();
+
+  const weeklyCompliance = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayStr = d.toISOString().slice(0, 10);
+    const label = i === 6 ? "Today" : DAY_NAMES_CHECKER[d.getDay()];
+    const avgScore = 75 + Math.random() * 25;
+    const approved = Math.floor(Math.random() * 5) + 1;
+    return { day: dayStr, label, avgScore, approved };
+  });
+
+  const shelfBreakdown = [
+    {
+      status: "approved",
+      label: "Approved",
+      count: shelves.filter((s) => s.status === "approved").length,
+      color: "var(--chart-2)",
+    },
+    {
+      status: "pending",
+      label: "Pending Review",
+      count: shelves.filter((s) => s.status === "pending").length,
+      color: "var(--chart-1)",
+    },
+    {
+      status: "returned",
+      label: "Returned",
+      count: shelves.filter((s) => s.status === "returned").length,
+      color: "var(--destructive)",
+    },
+    {
+      status: "draft",
+      label: "Draft",
+      count: shelves.filter((s) => s.status === "draft").length,
+      color: "var(--accent)",
+    },
+    {
+      status: "never-audited",
+      label: "Never Audited",
+      count: shelves.filter((s) => s.status === "never-audited").length,
+      color: "var(--muted-foreground)",
+    },
+  ].filter((s) => s.count > 0);
+
+  return { weeklyCompliance, shelfBreakdown };
 }
 
 /**

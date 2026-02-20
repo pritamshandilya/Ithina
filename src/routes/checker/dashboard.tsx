@@ -1,28 +1,24 @@
-import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect } from "react";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { ChevronRight } from "lucide-react";
 
 import {
   AuditReviewQueue,
-  ComplianceOverview,
+  CheckerAccomplishedCards,
+  CheckerAttentionSection,
+  CheckerDashboardHeader,
+  CheckerPerformanceCharts,
+  CheckerStoreShelfPreview,
   KnowledgeCenterSection,
   OverrideActivityPanel,
-  NotificationsDropdown,
 } from "@/components/checker";
 import MainLayout from "@/components/layouts/main";
 import {
   useComplianceOverview,
-  useMarkAllNotificationsAsRead,
-  useMarkNotificationAsRead,
-  useNotifications,
   usePendingAudits,
 } from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-import type { Notification } from "@/types/checker";
 import { useStore } from "@/providers/store";
-import { Button } from "@/components/ui/button";
-import { BookOpen } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { Separator } from "@/components/ui/separator";
 
 export const Route = createFileRoute("/checker/dashboard")({
   component: CheckerDashboard,
@@ -34,47 +30,24 @@ function CheckerDashboard() {
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
-  const { data: complianceData, isLoading: complianceLoading, error: complianceError } =
-    useComplianceOverview(selectedStoreId);
-  const { data: audits, isLoading: auditsLoading, error: auditsError } =
-    usePendingAudits(selectedStoreId);
-  const { data: notifications } = useNotifications(selectedStoreId);
+  const { data: complianceData } = useComplianceOverview(selectedStoreId);
+  const {
+    data: audits = [],
+    isLoading: auditsLoading,
+    error: auditsError,
+  } = usePendingAudits(selectedStoreId);
 
-  const markAsRead = useMarkNotificationAsRead();
-  const markAllAsRead = useMarkAllNotificationsAsRead();
+  const hasAttentionItems =
+    (complianceData?.criticalAudits ?? 0) > 0 ||
+    (complianceData?.totalPendingAudits ?? 0) > 0;
 
-  const handleNotificationClick = useCallback(
-    (notification: Notification) => {
-      if (!notification.read) {
-        markAsRead.mutate(notification.id);
-      }
+  const handleAuditClick = (auditId: string) => {
+    navigate({ to: "/checker/review/$auditId", params: { auditId } });
+  };
 
-      if (notification.type === "new_audit" || notification.type === "critical_audit") {
-        console.log("Navigate to audit:", notification.auditId);
-      } else if (notification.type === "rule_change") {
-        console.log("Navigate to rule changes");
-      }
-    },
-    [markAsRead]
-  );
-
-  const handleMarkAsRead = useCallback(
-    (notificationId: string) => {
-      markAsRead.mutate(notificationId);
-    },
-    [markAsRead]
-  );
-
-  const handleMarkAllAsRead = useCallback(() => {
-    markAllAsRead.mutate();
-  }, [markAllAsRead]);
-
-  const handleAuditClick = useCallback(
-    (auditId: string) => {
-      navigate({ to: "/checker/review/$auditId", params: { auditId } });
-    },
-    [navigate]
-  );
+  const handleViewAllAudits = () => {
+    navigate({ to: "/checker/audit-review" });
+  };
 
   // Scroll to hash target when navigating with hash (e.g. sidebar links)
   useEffect(() => {
@@ -88,64 +61,66 @@ function CheckerDashboard() {
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <div className="flex items-center justify-between gap-4 rounded-lg bg-card border border-border p-4 shadow-sm">
-            <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+        <div className="mx-auto max-w-7xl space-y-8">
+          {/* Header with store selector + primary CTA */}
+          <CheckerDashboardHeader hasAttentionItems={hasAttentionItems} />
 
-            {/* <div className="flex items-center gap-2">
-              <Button
-                asChild
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                aria-label="Knowledge Center"
-              >
-                <Link to="/checker/knowledge-center">
-                  <BookOpen className="size-5" aria-hidden="true" />
-                </Link>
-              </Button>
+          {/* Key metrics - Store at a Glance */}
+          <CheckerAccomplishedCards />
 
-              <Separator orientation="vertical" className="h-6" />
+          {/* Store & Shelf Insights - charts */}
+          <CheckerPerformanceCharts />
 
-              <NotificationsDropdown
-                notifications={notifications || []}
-                onNotificationClick={handleNotificationClick}
-                onMarkAsRead={handleMarkAsRead}
-                onMarkAllAsRead={handleMarkAllAsRead}
-              />
-            </div> */}
+          {/* Two-column layout: Attention + Store/Shelf Preview (same height) */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 items-stretch">
+            <CheckerAttentionSection
+              onAuditClick={handleAuditClick}
+              onViewAll={audits.length > 0 ? handleViewAllAudits : undefined}
+            />
+            <CheckerStoreShelfPreview />
           </div>
 
-          <section aria-labelledby="compliance-overview-heading">
-            <ComplianceOverview
-              data={complianceData}
-              isLoading={complianceLoading}
-              error={complianceError}
-            />
-          </section>
-
-          <section aria-labelledby="audit-queue-heading">
-            <div className="space-y-4">
+          {/* Audit Review Queue - compact preview */}
+          <section
+            id="audit-queue-section"
+            aria-labelledby="audit-queue-heading"
+            className="space-y-4 scroll-mt-8"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 id="audit-queue-heading" className="text-2xl font-bold text-foreground scroll-mt-24">
+                <h2
+                  id="audit-queue-heading"
+                  className="text-xl font-bold text-foreground"
+                >
                   Audit Review Queue
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
                   Review, approve, or return audits submitted by store workers
                 </p>
               </div>
-
-              <AuditReviewQueue
-                audits={audits || []}
-                isLoading={auditsLoading}
-                error={auditsError}
-                onAuditClick={handleAuditClick}
-              />
+              <Link
+                to="/checker/audit-review"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
+              >
+                View All Audits
+                <ChevronRight className="size-4" aria-hidden />
+              </Link>
             </div>
+
+            <AuditReviewQueue
+              audits={audits}
+              isLoading={auditsLoading}
+              error={auditsError}
+              onAuditClick={handleAuditClick}
+            />
           </section>
 
+          {/* Knowledge Center + Override Activity */}
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <section aria-labelledby="knowledge-center-heading" className="lg:col-span-2">
+            <section
+              aria-labelledby="knowledge-center-heading"
+              className="lg:col-span-2"
+            >
               <KnowledgeCenterSection storeId={selectedStoreId} />
             </section>
 

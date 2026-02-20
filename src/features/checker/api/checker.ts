@@ -8,6 +8,7 @@
  */
 
 import {
+  generateCheckerDashboardStats,
   generateMockStores,
   generateMockComplianceOverview,
   generateMockPendingAudits,
@@ -18,13 +19,14 @@ import {
   generateMockViolations,
 } from "@/lib/api/mock-data";
 import type {
-  Store,
-  ComplianceOverview,
   CheckerAudit,
+  CheckerDashboardStats,
+  ComplianceOverview,
   Notification,
-  RuleInfo,
   OverrideActivity,
   PublishedAudit,
+  RuleInfo,
+  Store,
   Violation,
 } from "@/types/checker";
 
@@ -53,6 +55,16 @@ export async function fetchStores(_userId: string): Promise<Store[]> {
 export async function fetchComplianceOverview(storeId: string): Promise<ComplianceOverview> {
   await delay(400);
   return generateMockComplianceOverview(storeId);
+}
+
+/**
+ * Fetch checker dashboard stats for charts
+ */
+export async function fetchCheckerDashboardStats(
+  storeId: string
+): Promise<CheckerDashboardStats> {
+  await delay(200);
+  return generateCheckerDashboardStats(storeId);
 }
 
 /**

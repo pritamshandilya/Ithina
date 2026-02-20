@@ -96,11 +96,14 @@ function filterCategories(
 export interface AllIssuesTabProps {
   /** Report data – defaults to mock; pass from API when available */
   data?: AllIssuesReportData;
+  /** PDF export mode: hide search/filters, expand all categories */
+  pdfMode?: boolean;
   className?: string;
 }
 
 export function AllIssuesTab({
   data = MOCK_ALL_ISSUES_REPORT,
+  pdfMode = false,
   className,
 }: AllIssuesTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,7 +145,8 @@ export function AllIssuesTab({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* Search */}
+      {/* Search – hidden in PDF mode */}
+      {!pdfMode && (
       <div className="relative">
         <Search
           className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
@@ -156,8 +160,10 @@ export function AllIssuesTab({
           className="pl-9 bg-card"
         />
       </div>
+      )}
 
-      {/* Filter buttons */}
+      {/* Filter buttons – hidden in PDF mode */}
+      {!pdfMode && (
       <div className="flex flex-wrap gap-2">
         {filterButtons.map(({ key, label, count }) => {
           const isActive = activeFilter === key;
@@ -185,13 +191,14 @@ export function AllIssuesTab({
           );
         })}
       </div>
+      )}
 
       {/* Collapsible categories */}
       <div className="space-y-2">
         {filteredCategories.map((category) => {
           const Icon = VARIANT_ICONS[category.variant];
           const styles = VARIANT_STYLES[category.variant];
-          const isExpanded = expandedId === category.id;
+          const isExpanded = pdfMode || expandedId === category.id;
 
           return (
             <div

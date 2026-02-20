@@ -1,12 +1,16 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import {
-  AssignedShelvesList,
+  MakerAccomplishedCards,
+  MakerAssignedTable,
+  MakerAttentionSection,
+  MakerDashboardHeader,
+  MakerPerformanceCharts,
   MyAuditsSection,
-  PrimaryActionSection,
-  QuickStatsPanel,
 } from "@/components/maker";
+import { useDraftAudits, useReturnedAudits } from "@/features/maker/hooks";
 
 export const Route = createFileRoute("/maker/dashboard")({
   component: MakerDashboard,
@@ -14,50 +18,79 @@ export const Route = createFileRoute("/maker/dashboard")({
 
 function MakerDashboard() {
   const navigate = useNavigate();
+  const { data: returned = [] } = useReturnedAudits();
+  const { data: drafts = [] } = useDraftAudits();
+  const hasAttentionItems = returned.length > 0 || drafts.length > 0;
+
+  const handleResume = (_auditId: string, _shelfId: string) => {
+    navigate({ to: "/maker/audits/planogram" });
+  };
+
+  const handleViewReport = (_auditId: string, _shelfId: string) => {
+    navigate({ to: "/maker/audits/planogram" });
+  };
+
+  const handleViewAllAudits = () => {
+    navigate({ to: "/maker/audits/planogram" });
+  };
 
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-          <PrimaryActionSection />
-          <QuickStatsPanel />
+        <div className="mx-auto max-w-7xl space-y-8">
+          {/* Header with welcome + primary CTA */}
+          <MakerDashboardHeader hasAttentionItems={hasAttentionItems} />
 
-          <section aria-labelledby="my-audits-heading" className="space-y-4">
-            <div>
-              <h2 id="my-audits-heading" className="text-2xl font-bold text-foreground">
-                My Audits
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Continue draft audits and resolve returned submissions
-              </p>
-            </div>
+          {/* Key metrics - My Work at a Glance */}
+          <MakerAccomplishedCards />
 
-            <MyAuditsSection
-              onResume={(_auditId, _shelfId) => {
-                navigate({ to: "/maker/audits/planogram" });
-              }}
-              onViewReport={(_auditId, _shelfId) => {
-                navigate({ to: "/maker/audits/planogram" });
-              }}
+          {/* Maker performance charts */}
+          <MakerPerformanceCharts />
+
+          {/* Two-column layout: Attention + Assigned Shelves (same height) */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 items-stretch">
+            <MakerAttentionSection
+              onResume={handleResume}
+              onViewReport={handleViewReport}
+              onViewAll={hasAttentionItems ? handleViewAllAudits : undefined}
             />
-          </section>
-
-          <div className="space-y-4" aria-labelledby="assigned-shelves-heading">
-            <div>
-              <h2 id="assigned-shelves-heading" className="text-2xl font-bold text-foreground">
-                Assigned Shelves
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                View and manage your shelf audit assignments
-              </p>
-            </div>
-
-            <AssignedShelvesList
+            <MakerAssignedTable
               onShelfClick={(shelfId) => {
-                console.log("Shelf clicked:", shelfId);
+                navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
               }}
             />
           </div>
+
+          {/* Recent audit history section */}
+          <section
+            id="my-audits-section"
+            aria-labelledby="my-audits-heading"
+            className="space-y-4 scroll-mt-8"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
+                  Recent Audit History
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  History of the last 5 audits
+                </p>
+              </div>
+              <Link
+                to="/maker/audits/planogram"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
+              >
+                View All Audits
+                <ChevronRight className="size-4" aria-hidden />
+              </Link>
+            </div>
+
+            <MyAuditsSection
+              onResume={handleResume}
+              onViewReport={handleViewReport}
+              maxItems={5}
+            />
+          </section>
         </div>
       </div>
     </MainLayout>

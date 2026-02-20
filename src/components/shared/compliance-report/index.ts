@@ -35,3 +35,6 @@ export type { PlanogramExpectedPanelProps } from "./PlanogramExpectedPanel";
 
 export { ImageComparisonTab } from "./ImageComparisonTab";
 export type { ImageComparisonTabProps } from "./ImageComparisonTab";
+
+export { ComplianceReportPdfContent } from "./ComplianceReportPdfContent";
+export type { ComplianceReportPdfContentProps } from "./ComplianceReportPdfContent";

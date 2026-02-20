@@ -8,6 +8,10 @@
 // Query Hooks
 export { useStores, storesKeys } from "./useStores";
 export { useComplianceOverview, complianceOverviewKeys } from "./useComplianceOverview";
+export {
+  useCheckerDashboardStats,
+  checkerDashboardStatsKeys,
+} from "./useCheckerDashboardStats";
 export { usePendingAudits, pendingAuditsKeys } from "./usePendingAudits";
 export {
   useNotifications,

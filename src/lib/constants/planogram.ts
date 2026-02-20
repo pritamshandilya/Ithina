@@ -4,22 +4,22 @@
 
 /** Tailwind bg-* classes for product blocks by category */
 export const CATEGORY_COLORS: Record<string, string> = {
-  "Aperitif Snacks": "bg-amber-100 dark:bg-amber-900/40",
-  Chips: "bg-orange-100 dark:bg-orange-900/40",
-  Snacks: "bg-yellow-100 dark:bg-yellow-900/40",
-  "Kids Cereal": "bg-lime-100 dark:bg-lime-900/40",
-  Coffee: "bg-amber-200 dark:bg-amber-800/50",
-  "Baby Care": "bg-pink-100 dark:bg-pink-900/40",
-  "First Aid": "bg-rose-100 dark:bg-rose-900/40",
-  Grooming: "bg-violet-100 dark:bg-violet-900/40",
-  Water: "bg-sky-100 dark:bg-sky-900/40",
-  "Sparkling Water": "bg-cyan-100 dark:bg-cyan-900/40",
-  "Soft Drinks": "bg-red-100 dark:bg-red-900/40",
-  Juices: "bg-orange-200 dark:bg-orange-800/50",
-  Nectars: "bg-amber-100 dark:bg-amber-900/40",
-  Dairy: "bg-blue-100 dark:bg-blue-900/40",
-  Milk: "bg-sky-50 dark:bg-sky-950/50",
-  "Energy Drinks": "bg-emerald-100 dark:bg-emerald-900/40",
+  "Aperitif Snacks": "border-amber-100 dark:border-amber-900/40",
+  Chips: "border-orange-100 dark:border-orange-900/40",
+  Snacks: "border-yellow-100 dark:border-yellow-900/40",
+  "Kids Cereal": "border-lime-100 dark:border-lime-900/40",
+  Coffee: "border-amber-200 dark:border-amber-800/50",
+  "Baby Care": "border-pink-100 dark:border-pink-900/40",
+  "First Aid": "border-rose-100 dark:border-rose-900/40",
+  Grooming: "border-violet-100 dark:border-violet-900/40",
+  Water: "border-sky-100 dark:border-sky-900/40",
+  "Sparkling Water": "border-cyan-100 dark:border-cyan-900/40",
+  "Soft Drinks": "border-red-100 dark:border-red-900/40",
+  Juices: "border-orange-200 dark:border-orange-800/50",
+  Nectars: "border-amber-100 dark:border-amber-900/40",
+  Dairy: "border-blue-100 dark:border-blue-900/40",
+  Milk: "border-sky-50 dark:border-sky-950/50",
+  "Energy Drinks": "border-emerald-100 dark:border-emerald-900/40",
 };
 
 /** Default for unknown categories */

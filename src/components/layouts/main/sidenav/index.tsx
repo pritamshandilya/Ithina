@@ -8,7 +8,6 @@ import {
   LayoutGrid,
   Library,
   ListChecks,
-  LogOut,
   Rows3,
   Settings,
   ShieldCheck,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import SidenavFooter from "./footer";
 import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
 import { useStore } from "@/providers/store";
 import { useStores as useMakerStores } from "@/features/maker/hooks";
@@ -24,24 +22,18 @@ import { useStores as useCheckerStores } from "@/features/checker/hooks";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import logo from "@/assets/logo.avif";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/providers/auth";
 
 type NavItem = {
   label: string;
@@ -76,7 +68,6 @@ export default function Sidenav() {
   const currentUser = SimulatedAuthService.getCurrentUser();
   const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
   const { selectedStore, setSelectedStore } = useStore();
-  const { startLogout } = useAuth();
 
   const role = useMemo(() => {
     if (currentUser?.role) return currentUser.role;
@@ -142,32 +133,18 @@ export default function Sidenav() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <img src={logo} alt="Planogram Assistant" className="h-12 w-auto rounded" />
-          </div>
-          <SidebarTrigger className="size-8 rounded-md border border-sidebar-border hover:bg-sidebar-accent group-data-[collapsible=icon]:mx-auto" />
-        </div>
-      </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupContent className="px-2 pb-2">
-            <div className="flex flex-col gap-2">
-              <span className="text-[10px] font-medium uppercase text-muted-foreground group-data-[collapsible=icon]:hidden">
-                Active Store
-              </span>
-              <StoreSelectorDropdown
-                stores={stores ?? []}
-                selectedStoreId={selectedStore?.id ?? ""}
-                onStoreChange={handleStoreChange}
-                className="w-full justify-start group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:w-8 group-data-[collapsible=icon]:mx-auto"
-              />
-            </div>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+          <SidebarGroupContent >
+            <StoreSelectorDropdown
+              stores={stores ?? []}
+              selectedStoreId={selectedStore?.id ?? ""}
+              onStoreChange={handleStoreChange}
+              className="w-full justify-between"
+            />
           </SidebarGroupContent>
         </SidebarGroup>
         <SidebarGroup>
-          <SidebarGroupLabel>{role === "checker" ? "Checker" : "Maker"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -258,10 +235,10 @@ export default function Sidenav() {
                       </SidebarMenuButton>
                       {reportsOpen && (
                         <SidebarMenuSub>
-                          {item.items.map((subItem: { label: string; to: string }) => (
+                          {item.items.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.label}>
                               <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
-                                <Link to={subItem.to as any}>{subItem.label}</Link>
+                                <Link to={subItem.to}>{subItem.label}</Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
@@ -274,7 +251,7 @@ export default function Sidenav() {
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link to={item.to as any} hash={item.hash}>
+                      <Link to={item.to!} hash={item.hash}>
                         <Icon />
                         {item.label}
                       </Link>
@@ -285,27 +262,7 @@ export default function Sidenav() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        <SidebarGroup className="mt-auto">
-          <SidebarGroupContent>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={startLogout}
-                  tooltip="Logout"
-                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <LogOut className="size-4" />
-                  <span>Logout</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidenavFooter />
-      </SidebarFooter>
     </Sidebar>
   );
 }

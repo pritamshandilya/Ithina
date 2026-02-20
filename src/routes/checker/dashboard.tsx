@@ -92,7 +92,7 @@ function CheckerDashboard() {
           <div className="flex items-center justify-between gap-4 rounded-lg bg-card border border-border p-4 shadow-sm">
             <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
 
-            <div className="flex items-center gap-2">
+            {/* <div className="flex items-center gap-2">
               <Button
                 asChild
                 variant="ghost"
@@ -113,7 +113,7 @@ function CheckerDashboard() {
                 onMarkAsRead={handleMarkAsRead}
                 onMarkAllAsRead={handleMarkAllAsRead}
               />
-            </div>
+            </div> */}
           </div>
 
           <section aria-labelledby="compliance-overview-heading">

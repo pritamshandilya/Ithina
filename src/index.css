@@ -312,16 +312,6 @@
     border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
   }
 
-  /* Accent button – uses --accent from :root, single source of truth for purple actions */
-  .btn-accent {
-    background-color: var(--accent) !important;
-    color: white !important;
-    border-color: transparent !important;
-    transition: box-shadow 0.2s ease;
-  }
-  .btn-accent:hover:not(:disabled) {
-    box-shadow: 0 4px 12px color-mix(in oklch, var(--accent) 35%, transparent);
-  }
 }
 
 /* ==========================================================================

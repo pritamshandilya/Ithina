@@ -143,7 +143,7 @@ export function ReportSnippetsView({
         </div>
         <Button
           size="sm"
-          className="btn-accent"
+          variant="accent"
           onClick={() => {
             /* TODO: Navigate to full report */
           }}
@@ -165,11 +165,11 @@ export function ReportSnippetsView({
               <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
                 <ChevronDown className="size-4" aria-hidden />
               </Button>
-              <Button size="sm" onClick={onReplaceImage} className="btn-accent">
+              <Button size="sm" variant="accent" onClick={onReplaceImage}>
                 <Upload className="size-4" aria-hidden />
                 Replace
               </Button>
-              <Button size="sm" onClick={onRetake} className="btn-accent">
+              <Button size="sm" variant="accent" onClick={onRetake}>
                 <Camera className="size-4" aria-hidden />
                 Retake
               </Button>
@@ -390,12 +390,12 @@ export function ReportSnippetsView({
                     Fix highlighted issues and retake photo.
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <Button onClick={onRetake} variant="outline" size="sm">
+                    <Button onClick={onRetake} variant="accent" size="sm">
                       <RefreshCw className="size-4" aria-hidden />
                       Retake & Reanalyze
                     </Button>
                     {onSubmitAnyway && (
-                      <Button onClick={onSubmitAnyway} variant="secondary" size="sm">
+                      <Button onClick={onSubmitAnyway} variant="accent" size="sm">
                         Submit Anyway
                       </Button>
                     )}
@@ -477,35 +477,38 @@ function DonutChart({
   total: number;
 }) {
   if (total === 0) return null;
-  const circumference = 2 * Math.PI * 40;
-  const toLen = (n: number) => (n / total) * circumference;
-  let offset = 0;
+  const cx = 50;
+  const cy = 50;
+  const or = 40;
+  const ir = 28;
   const segments = [
-    { len: toLen(distribution.matched), color: "var(--chart-2)" },
-    { len: toLen(distribution.misplaced), color: "var(--amber-500)" },
-    { len: toLen(distribution.missing), color: "var(--destructive)" },
-    { len: toLen(distribution.extra), color: "var(--blue-500)" },
+    { value: distribution.matched, color: "var(--chart-2)" },
+    { value: distribution.misplaced, color: "var(--action-warning)" },
+    { value: distribution.missing, color: "var(--destructive)" },
+    { value: distribution.extra, color: "oklch(0.6 0.2 250)" },
   ];
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  let startAngle = -90;
 
   return (
     <div className="relative size-24">
-      <svg viewBox="0 0 100 100" className="size-24 -rotate-90">
+      <svg viewBox="0 0 100 100" className="size-24">
         {segments.map((s, i) => {
-          const o = offset;
-          offset += s.len;
-          return (
-            <circle
-              key={i}
-              cx="50"
-              cy="50"
-              r="40"
-              fill="none"
-              stroke={s.color}
-              strokeWidth="12"
-              strokeDasharray={`${s.len} ${circumference - s.len}`}
-              strokeDashoffset={-o}
-            />
-          );
+          const angle = (s.value / total) * 360;
+          const endAngle = startAngle + angle;
+          const x1 = cx + or * Math.cos(toRad(startAngle));
+          const y1 = cy + or * Math.sin(toRad(startAngle));
+          const x2 = cx + or * Math.cos(toRad(endAngle));
+          const y2 = cy + or * Math.sin(toRad(endAngle));
+          const x3 = cx + ir * Math.cos(toRad(endAngle));
+          const y3 = cy + ir * Math.sin(toRad(endAngle));
+          const x4 = cx + ir * Math.cos(toRad(startAngle));
+          const y4 = cy + ir * Math.sin(toRad(startAngle));
+          const largeArc = angle > 180 ? 1 : 0;
+          const path = `M ${x1} ${y1} A ${or} ${or} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${largeArc} 0 ${x4} ${y4} Z`;
+          startAngle = endAngle;
+          return <path key={i} d={path} fill={s.color} />;
         })}
       </svg>
     </div>

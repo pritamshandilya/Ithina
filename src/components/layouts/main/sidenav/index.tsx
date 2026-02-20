@@ -16,6 +16,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
+import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/providers/store";
 import { useStores as useMakerStores } from "@/features/maker/hooks";
 import { useStores as useCheckerStores } from "@/features/checker/hooks";
@@ -153,8 +154,8 @@ export default function Sidenav() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden">
-          <SidebarGroupContent >
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden p-0 h-12 px-2">
+          <SidebarGroupContent className="pt-2">
             <StoreSelectorDropdown
               stores={stores ?? []}
               selectedStoreId={selectedStore?.id ?? ""}
@@ -163,6 +164,7 @@ export default function Sidenav() {
             />
           </SidebarGroupContent>
         </SidebarGroup>
+        <Separator className="group-data-[collapsible=icon]:hidden" />
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>

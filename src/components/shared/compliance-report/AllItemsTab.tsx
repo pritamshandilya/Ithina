@@ -13,23 +13,12 @@ import { Input } from "@/components/ui/input";
 import { MOCK_ALL_ITEMS_REPORT } from "@/features/maker/analysis/mock-all-items-report";
 import type {
   PlanogramItemRow,
-  PlanogramItemStatus,
   SkuFacingRow,
 } from "@/features/maker/analysis/all-items-report-types";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PAGE_SIZE = 10;
 const PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
-
-function statusIcon(status: PlanogramItemStatus): string {
-  const icons: Record<PlanogramItemStatus, string> = {
-    matched: '<span class="inline-flex size-5 items-center justify-center rounded-full bg-chart-2/20 text-chart-2" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>',
-    misplaced: '<span class="inline-flex size-5 items-center justify-center rounded-full bg-action-warning/20 text-action-warning" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>',
-    missing: '<span class="inline-flex size-5 items-center justify-center rounded-full bg-destructive/20 text-destructive" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>',
-    extra: '<span class="inline-flex size-5 items-center justify-center rounded-full bg-blue-500/20 text-blue-500" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg></span>',
-  };
-  return icons[status] ?? icons.extra;
-}
 
 function complianceLevelBadge(level: string): string {
   const color =
@@ -42,17 +31,6 @@ function complianceLevelBadge(level: string): string {
 }
 
 const PLANOGRAM_ITEMS_COLUMNS: DataTableColumn<PlanogramItemRow>[] = [
-  {
-    title: "Match",
-    field: "status",
-    width: 56,
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell) => {
-      const data = (cell as { getData: () => PlanogramItemRow }).getData();
-      return statusIcon(data.status);
-    },
-  },
   {
     title: "Product / SKU",
     field: "productName",

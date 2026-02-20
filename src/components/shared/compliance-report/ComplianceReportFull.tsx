@@ -36,7 +36,7 @@ export interface ComplianceReportFullProps {
 export function ComplianceReportFull({
   report,
   imageUrl = null,
-  backTo = "/maker/audits/planogram",
+  backTo,
   onExportPdf,
   className,
 }: ComplianceReportFullProps) {

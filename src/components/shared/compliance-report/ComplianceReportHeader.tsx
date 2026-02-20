@@ -28,7 +28,7 @@ export interface ComplianceReportHeaderProps {
 export function ComplianceReportHeader({
   title = "Combined Compliance & Analysis Report",
   subtitle = 'Planogram "Food & Beverage Shelf" • 88 products detected • 3 analysis issues',
-  backTo = "/maker/audits/planogram",
+  backTo,
   onExportPdf,
   isExporting = false,
   className,

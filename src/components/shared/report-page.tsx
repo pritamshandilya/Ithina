@@ -2,7 +2,7 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@/components/shared/stat-card";
 import { DataTable } from "@/components/ui/data-table";
-import type { DataTableColumn } from "@/components/ui/data-table";
+import type { DataTableColumn, DataTableProps } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
 
@@ -21,6 +21,7 @@ interface ReportPageProps<T extends object> {
     tableColumns: DataTableColumn<T>[];
     tableData: T[];
     className?: string;
+    tableProps?: Partial<Omit<DataTableProps<T>, "columns" | "data">>;
 }
 
 export function ReportPage<T extends object>({
@@ -31,6 +32,7 @@ export function ReportPage<T extends object>({
     tableColumns,
     tableData,
     className,
+    tableProps,
 }: ReportPageProps<T>) {
     return (
         <div className={cn("flex flex-col gap-6 p-6", className)}>
@@ -73,6 +75,7 @@ export function ReportPage<T extends object>({
                     data={tableData}
                     pageSize={10}
                     className="min-h-[400px]"
+                    {...tableProps}
                 />
             </div>
         </div>

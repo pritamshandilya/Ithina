@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import MainLayout from "@/components/layouts/main";
 import { ReportPage } from "@/components/shared/report-page";
 import { STORE_LEVEL_MOCK_DATA } from "@/lib/constants/reports-mock-data";
@@ -11,6 +11,8 @@ export const Route = createFileRoute("/checker/reports/store-level")({
 });
 
 function StoreLevelReport() {
+    const navigate = useNavigate();
+
     const stats = [
         { title: "TOTAL SHELVES", value: 1, icon: Layers },
         { title: "TOTAL ANALYSES", value: 0, icon: FileBarChart },
@@ -29,18 +31,27 @@ function StoreLevelReport() {
         { title: "STATUS", field: "status" },
     ];
 
+    const handleRowClick = (row: ShelfSummary) => {
+        // eslint-disable-next-line no-console
+        console.log("Store level row clicked:", row);
+        navigate({ to: "/checker/reports/view/1" });
+    };
+
     return (
         <MainLayout>
             <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
                 <div className="mx-auto max-w-7xl">
                     <ReportPage
-                    title="Store Level Report"
-                    subtitle="Downtown Flagship — Consolidated from latest analysis per shelf"
-                    stats={stats}
-                    tableTitle="Shelf Summary (Latest Run)"
-                    tableColumns={columns}
-                    tableData={STORE_LEVEL_MOCK_DATA}
-                />
+                        title="Store Level Report"
+                        subtitle="Downtown Flagship — Consolidated from latest analysis per shelf"
+                        stats={stats}
+                        tableTitle="Shelf Summary"
+                        tableColumns={columns}
+                        tableData={STORE_LEVEL_MOCK_DATA}
+                        tableProps={{
+                            onRowClick: handleRowClick,
+                        }}
+                    />
                 </div>
             </div>
         </MainLayout>

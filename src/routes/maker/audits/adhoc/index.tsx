@@ -4,13 +4,13 @@ import { FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar } from "@/components/maker";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdhocAnalyses, useStores } from "@/features/maker/hooks";
+import { useAdhocAnalyses } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
 import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
+import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
@@ -111,8 +111,8 @@ const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
 ];
 
 function AdhocAnalysisPage() {
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+  const { selectedStore } = useStore();
+  const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const { data: adhocAnalyses, isLoading } = useAdhocAnalyses(selectedStoreId);
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
@@ -137,11 +137,6 @@ function AdhocAnalysisPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
 
           <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">

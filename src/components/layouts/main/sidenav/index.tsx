@@ -15,25 +15,24 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import SidenavFooter from "./footer";
+import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
+import { Separator } from "@/components/ui/separator";
+import { useStore } from "@/providers/store";
+import { useStores as useMakerStores } from "@/features/maker/hooks";
+import { useStores as useCheckerStores } from "@/features/checker/hooks";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import logo from "@/assets/logo.avif";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import { cn } from "@/lib/utils";
 
@@ -69,6 +68,7 @@ export default function Sidenav() {
   const location = useLocation();
   const currentUser = SimulatedAuthService.getCurrentUser();
   const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
+  const { selectedStore, setSelectedStore } = useStore();
 
   const role = useMemo(() => {
     if (currentUser?.role) return currentUser.role;
@@ -113,19 +113,40 @@ export default function Sidenav() {
 
   const [reportsOpen, setReportsOpen] = useState(true);
 
+  const { data: makerStores } = useMakerStores();
+  const { data: checkerStores } = useCheckerStores();
+
+  const stores = role === "checker" ? checkerStores : makerStores;
+
+  useEffect(() => {
+    if (stores && stores.length > 0 && !selectedStore) {
+      setSelectedStore(stores[0]);
+    }
+  }, [stores, selectedStore, setSelectedStore]);
+
+  const handleStoreChange = (storeId: string) => {
+    if (!stores) return;
+    const store = stores.find((s) => s.id === storeId);
+    if (store) {
+      setSelectedStore(store);
+    }
+  };
+
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center justify-between gap-2 px-2 py-1 group-data-[collapsible=icon]:justify-center">
-          <div className="flex items-center gap-2 group-data-[collapsible=icon]:hidden">
-            <img src={logo} alt="Planogram Assistant" className="h-12 w-auto rounded" />
-          </div>
-          <SidebarTrigger className="size-8 rounded-md border border-sidebar-border hover:bg-sidebar-accent group-data-[collapsible=icon]:mx-auto" />
-        </div>
-      </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden p-0 h-12 px-2">
+          <SidebarGroupContent className="pt-2">
+            <StoreSelectorDropdown
+              stores={stores ?? []}
+              selectedStoreId={selectedStore?.id ?? ""}
+              onStoreChange={handleStoreChange}
+              className="w-full justify-between"
+            />
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <Separator className="group-data-[collapsible=icon]:hidden" />
         <SidebarGroup>
-          <SidebarGroupLabel>{role === "checker" ? "Checker" : "Maker"}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
@@ -216,10 +237,10 @@ export default function Sidenav() {
                       </SidebarMenuButton>
                       {reportsOpen && (
                         <SidebarMenuSub>
-                          {item.items.map((subItem: { label: string; to: string }) => (
+                          {item.items.map((subItem) => (
                             <SidebarMenuSubItem key={subItem.label}>
                               <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
-                                <Link to={subItem.to as any}>{subItem.label}</Link>
+                                <Link to={subItem.to}>{subItem.label}</Link>
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
@@ -232,7 +253,7 @@ export default function Sidenav() {
                 return (
                   <SidebarMenuItem key={item.label}>
                     <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
-                      <Link to={item.to as any} hash={item.hash}>
+                      <Link to={item.to!} hash={item.hash}>
                         <Icon />
                         {item.label}
                       </Link>
@@ -244,9 +265,6 @@ export default function Sidenav() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
-        <SidenavFooter />
-      </SidebarFooter>
     </Sidebar>
   );
 }

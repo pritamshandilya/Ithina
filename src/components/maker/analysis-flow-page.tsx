@@ -231,7 +231,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                           "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
                           isDone && "border-chart-2 bg-chart-2 text-white",
                           isActive &&
-                            "border-accent bg-accent text-accent-foreground ring-4 ring-accent/20",
+                          "border-accent bg-accent text-accent-foreground ring-4 ring-accent/20",
                           isPending && "border-border bg-card text-muted-foreground"
                         )}
                       >

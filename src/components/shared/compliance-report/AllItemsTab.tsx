@@ -43,7 +43,7 @@ function complianceLevelBadge(level: string): string {
 
 const PLANOGRAM_ITEMS_COLUMNS: DataTableColumn<PlanogramItemRow>[] = [
   {
-    title: "Status",
+    title: "Match",
     field: "status",
     width: 56,
     headerSort: true,
@@ -72,7 +72,8 @@ const PLANOGRAM_ITEMS_COLUMNS: DataTableColumn<PlanogramItemRow>[] = [
     formatter: (cell) => {
       const data = (cell as { getData: () => PlanogramItemRow }).getData();
       if (!data.issueDescription) return "—";
-      return `<span class="text-muted-foreground text-sm">${escapeHtml(data.issueDescription)}</span>`;
+      const safe = escapeHtml(data.issueDescription);
+      return `<span class="text-muted-foreground text-sm truncate block max-w-full" title="${safe}">${safe}</span>`;
     },
   },
   {
@@ -82,9 +83,9 @@ const PLANOGRAM_ITEMS_COLUMNS: DataTableColumn<PlanogramItemRow>[] = [
     headerSort: true,
   },
   {
-    title: "Level",
+    title: "Issue Severity",
     field: "complianceLevel",
-    width: 100,
+    width: 120,
     headerSort: true,
     formatter: (cell) => {
       const val = (cell as { getValue: () => string }).getValue();

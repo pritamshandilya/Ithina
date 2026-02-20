@@ -5,7 +5,8 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 
-import { AnalysisFlowPage, PlanogramPreview } from "@/components/maker";
+import { AnalysisFlowPage } from "@/components/maker";
+import { MOCK_IMAGE_COMPARISON } from "@/features/maker/analysis";
 import { usePlanogramShelfPreview } from "@/features/maker/hooks";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId")({
@@ -22,11 +23,7 @@ function NewPlanogramAnalysisPage() {
       backTo="/maker/audits/planogram"
       shelfName={preview?.shelf.shelfName}
       planogramName={preview?.planogramPayload?.planogram?.name}
-      expectedLayoutPreview={
-        preview?.shelf.planogramId ? (
-          <PlanogramPreview planogramId={preview.shelf.planogramId} />
-        ) : undefined
-      }
+      planogramExpectedData={MOCK_IMAGE_COMPARISON}
     />
   );
 }

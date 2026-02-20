@@ -9,6 +9,7 @@ export { MOCK_ANALYSIS_RESULT } from "./mock-analysis-result";
 export { MOCK_REPORT_SNIPPET } from "./mock-report-snippets";
 export { MOCK_ALL_ITEMS_REPORT } from "./mock-all-items-report";
 export { MOCK_ALL_ISSUES_REPORT } from "./mock-all-issues-report";
+export { MOCK_IMAGE_COMPARISON } from "./mock-image-comparison";
 export type { AnalysisResult, AnalysisIssue } from "./analysis-result-types";
 export type {
   ReportSnippet,
@@ -37,3 +38,11 @@ export type {
   UseAnalysisPipelineOptions,
   UseAnalysisPipelineReturn,
 } from "./useAnalysisPipeline";
+export type {
+  ImageComparisonData,
+  PlanogramSlot,
+  PlanogramShelfRow,
+  PlanogramSlotStatus,
+  DetectionOverlay,
+  DetectionOverlayStatus,
+} from "./image-comparison-types";

@@ -210,8 +210,8 @@ export function AnalysisFlowPage({
               )}
             >
               {/* Shelf View (left) */}
-              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm min-h-0 flex flex-col">
-                <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm min-h-0 flex flex-col h-full">
+                <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
                   <h2 className="text-sm font-semibold text-foreground">Shelf image</h2>
                   {state === "processing" && (
                     <span className="text-xs text-muted-foreground">Analyzing…</span>
@@ -247,12 +247,12 @@ export function AnalysisFlowPage({
                 />
 
                 {imagePreview ? (
-                  <div className="relative">
-                    <div className="aspect-video w-full overflow-hidden bg-muted/50">
+                  <div className="relative flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1 min-h-0 w-full overflow-hidden bg-muted/50 flex items-center justify-center">
                       <img
                         src={imagePreview}
                         alt="Shelf preview"
-                        className="h-full w-full object-contain"
+                        className="max-h-full max-w-full object-contain"
                       />
                     </div>
                     {state === "processing" && (
@@ -301,7 +301,7 @@ export function AnalysisFlowPage({
                     onClick={triggerFileInput}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
-                    className="w-full flex flex-col items-center justify-center py-20 px-6 transition-all hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-b-xl border-2 border-dashed border-border hover:border-accent/50"
+                    className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-6 py-12 transition-all hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-b-xl border-2 border-dashed border-border hover:border-accent/50"
                   >
                     <div className="rounded-full bg-accent/10 p-4 mb-4">
                       <ImageIcon className="h-10 w-10 text-accent" aria-hidden />
@@ -316,7 +316,7 @@ export function AnalysisFlowPage({
                   </button>
                 )}
                 {uploadError && (
-                  <p className="px-4 py-2 text-sm text-destructive">{uploadError}</p>
+                  <p className="px-4 py-2 text-sm text-destructive shrink-0">{uploadError}</p>
                 )}
               </section>
 

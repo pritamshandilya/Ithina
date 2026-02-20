@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar, ReportSnippetsView } from "@/components/maker";
+import { ReportSnippetsView } from "@/components/maker";
 import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
 import type { ImageComparisonData } from "@/features/maker/analysis/image-comparison-types";
@@ -28,8 +28,6 @@ import {
   MOCK_REPORT_SNIPPET,
   SIMPLE_PROGRESS_STEPS,
 } from "@/features/maker/analysis";
-import { useStores } from "@/features/maker/hooks";
-import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -63,8 +61,6 @@ export function AnalysisFlowPage({
   planogramExpectedData,
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -148,12 +144,6 @@ export function AnalysisFlowPage({
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-8">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
-
           <header className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to={backTo}>
@@ -164,7 +154,7 @@ export function AnalysisFlowPage({
             <div>
               <h1 className="text-2xl font-bold text-foreground">{title}</h1>
               <p className="text-sm text-muted-foreground">
-                {stores?.find((s) => s.id === selectedStoreId)?.name ?? "Select a store"}
+                Upload your shelf image to begin analysis
               </p>
             </div>
           </header>

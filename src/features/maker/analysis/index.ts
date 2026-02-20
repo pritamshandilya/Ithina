@@ -8,6 +8,7 @@ export { MOCK_SKU_ENRICHMENT_ITEMS } from "./mock-sku-data";
 export { MOCK_ANALYSIS_RESULT } from "./mock-analysis-result";
 export { MOCK_REPORT_SNIPPET } from "./mock-report-snippets";
 export { MOCK_ALL_ITEMS_REPORT } from "./mock-all-items-report";
+export { MOCK_ALL_ISSUES_REPORT } from "./mock-all-issues-report";
 export type { AnalysisResult, AnalysisIssue } from "./analysis-result-types";
 export type {
   ReportSnippet,
@@ -21,6 +22,11 @@ export type {
   SkuFacingRow,
   AllItemsReportData,
 } from "./all-items-report-types";
+export type {
+  IssueEntry,
+  IssueCategoryGroup,
+  AllIssuesReportData,
+} from "./all-issues-report-types";
 export type {
   SkuEnrichmentItem,
   SkuIssueDetail,

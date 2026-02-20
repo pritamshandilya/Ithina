@@ -8,6 +8,7 @@ export interface ShelfSummary {
   issues: number | string;
   runs: number;
   status: string;
+  _children?: ShelfSummary[];
 }
 
 export interface AdhocAnalysis {
@@ -62,24 +63,26 @@ export const SHELF_LEVEL_MOCK_DATA: ShelfSummary[] = [
   {
     id: "1",
     sNo: 1,
-    shelf: "Dairy-01",
-    latestAnalysis: "Successful",
-    lastUpdated: "2024-03-20 14:30",
-    products: 45,
-    issues: 0,
-    runs: 12,
-    status: "Compliant",
-  },
-  {
-    id: "2",
-    sNo: 2,
-    shelf: "Snacks-04",
-    latestAnalysis: "Issues Found",
-    lastUpdated: "2024-03-20 12:15",
-    products: 32,
-    issues: 5,
-    runs: 8,
-    status: "Non-Compliant",
+    shelf: "r-shelf",
+    latestAnalysis: "Default Rules",
+    lastUpdated: "Just now",
+    products: 215,
+    issues: 3,
+    runs: 1,
+    status: "Stale",
+    _children: [
+      {
+        id: "1-1",
+        sNo: 1,
+        shelf: "Analysis Feb 20, 2026, 03:22:35 PM",
+        latestAnalysis: "By Category",
+        lastUpdated: "Feb 20, 2026, 03:22 PM",
+        products: 215,
+        issues: 3,
+        runs: 1,
+        status: "Stale",
+      },
+    ],
   },
 ];
 

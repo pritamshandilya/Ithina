@@ -67,6 +67,14 @@ export interface DataTableProps<T = object> {
   onPaginationChange?: (state: { page: number; pageSize: number }) => void;
   /** Optional row formatter - receives Tabulator row, can add classes etc. */
   rowFormatter?: (row: { getData: () => T; getElement: () => HTMLElement }) => void;
+  /** Enable tree structure (default: false) */
+  dataTree?: boolean;
+  /** Field name for child rows in tree structure (default: "_children") */
+  dataTreeChildField?: string;
+  /** Start with tree collapsed (default: false) */
+  dataTreeStartExpanded?: boolean;
+  /** Column to show tree toggle (default: first column) */
+  dataTreeElementColumn?: string;
 }
 
 /**
@@ -92,6 +100,10 @@ export function DataTable<T extends object>({
   movableColumns = false,
   onPaginationChange,
   rowFormatter,
+  dataTree = false,
+  dataTreeChildField = "_children",
+  dataTreeStartExpanded = false,
+  dataTreeElementColumn,
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -100,6 +112,9 @@ export function DataTable<T extends object>({
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    // eslint-disable-next-line no-console
+    console.log("DataTable useEffect - onRowClick:", onRowClick ? "defined" : "undefined");
 
     currentPageRef.current = 1;
     currentPageSizeRef.current = pageSize;
@@ -122,12 +137,16 @@ export function DataTable<T extends object>({
       movableColumns,
       placeholder: emptyMessage,
       index: rowIdKey,
-      rowClick: onRowClick
-        ? (_e: unknown, row: { getData: () => T }) => {
-            onRowClick(row.getData());
-          }
-        : undefined,
     };
+
+    if (dataTree) {
+      options.dataTree = true;
+      options.dataTreeChildField = dataTreeChildField;
+      options.dataTreeStartExpanded = dataTreeStartExpanded;
+      if (dataTreeElementColumn) {
+        options.dataTreeElementColumn = dataTreeElementColumn;
+      }
+    }
 
     if (pagination) {
       options.pagination = "local";
@@ -154,6 +173,13 @@ export function DataTable<T extends object>({
 
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
+    if (onRowClick) {
+      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (_e: unknown, row: { getData: () => T }) => {
+        console.log("Tabulator rowClick fired", row.getData());
+        onRowClick(row.getData());
+      });
+    }
+
     return () => {
       tableRef.current?.destroy();
       tableRef.current = null;
@@ -173,6 +199,10 @@ export function DataTable<T extends object>({
     onPaginationChange,
     rowFormatter,
     data,
+    dataTree,
+    dataTreeChildField,
+    dataTreeStartExpanded,
+    dataTreeElementColumn,
   ]);
 
   // Keep row updates cheap when only data changes.

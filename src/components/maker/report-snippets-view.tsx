@@ -14,6 +14,7 @@
  */
 
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
   BarChart3,
@@ -141,15 +142,11 @@ export function ReportSnippetsView({
               : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
           </p>
         </div>
-        <Button
-          size="sm"
-          variant="accent"
-          onClick={() => {
-            /* TODO: Navigate to full report */
-          }}
-        >
-          <FileText className="size-4" aria-hidden />
-          View Full Report
+        <Button size="sm" variant="accent" asChild>
+          <Link to="/maker/reports/view">
+            <FileText className="size-4" aria-hidden />
+            View Full Report
+          </Link>
         </Button>
       </div>
 

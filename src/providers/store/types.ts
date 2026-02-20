@@ -1,10 +1,11 @@
 export interface Store {
   id: string;
   name: string;
-  code: string;
-  city: string;
-  region: string;
-  country: string;
+  address: string;
+  pendingAuditCount?: number;
+  region?: string;
+  created?: string;
+  status?: "Active" | "Inactive";
 }
 
 export interface StoreContextValue {

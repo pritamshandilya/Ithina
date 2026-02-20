@@ -11,7 +11,6 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Info } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
-import { HeaderContextBar } from "@/components/maker";
 import {
   CategoryFilterTags,
   ProductDetailsTable,
@@ -26,10 +25,8 @@ import { updateShelfArrangement } from "@/features/maker/api/planogram";
 import {
   planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
-  useStores,
 } from "@/features/maker/hooks";
 import { useToast } from "@/hooks/use-toast";
-import { mockUser } from "@/lib/api/mock-data";
 import type {
   PlanogramArrangement,
   PlanogramProduct,
@@ -74,8 +71,6 @@ function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
   const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
@@ -190,11 +185,11 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) =>
-                  p.sku === sku ? { ...p, name: newName } : p
-                ),
-              }
+              ...s,
+              products: s.products.map((p) =>
+                p.sku === sku ? { ...p, name: newName } : p
+              ),
+            }
             : s
         )
       );
@@ -209,11 +204,11 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) =>
-                  p.sku === sku ? { ...p, category: newCategory } : p
-                ),
-              }
+              ...s,
+              products: s.products.map((p) =>
+                p.sku === sku ? { ...p, category: newCategory } : p
+              ),
+            }
             : s
         )
       );
@@ -232,14 +227,14 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) => {
-                  if (p.sku !== sku) return p;
-                  const facings = updates.facings ?? p.facings;
-                  const depthCount = updates.depthCount ?? p.depthCount;
-                  return { ...p, facings, depthCount };
-                }),
-              }
+              ...s,
+              products: s.products.map((p) => {
+                if (p.sku !== sku) return p;
+                const facings = updates.facings ?? p.facings;
+                const depthCount = updates.depthCount ?? p.depthCount;
+                return { ...p, facings, depthCount };
+              }),
+            }
             : s
         )
       );
@@ -256,9 +251,9 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.filter((p) => p.sku !== sku),
-              }
+              ...s,
+              products: s.products.filter((p) => p.sku !== sku),
+            }
             : s
         )
       );
@@ -618,11 +613,6 @@ function PlanogramPreviewPage() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-6xl space-y-6">
-          <HeaderContextBar
-            stores={stores ?? []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={setSelectedStoreId}
-          />
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/checker/shelves">

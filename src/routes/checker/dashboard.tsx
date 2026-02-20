@@ -1,12 +1,12 @@
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
 
 import {
   AuditReviewQueue,
-  CheckerHeader,
   ComplianceOverview,
   KnowledgeCenterSection,
   OverrideActivityPanel,
+  NotificationsDropdown,
 } from "@/components/checker";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -15,10 +15,14 @@ import {
   useMarkNotificationAsRead,
   useNotifications,
   usePendingAudits,
-  useStores,
 } from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import type { Notification } from "@/types/checker";
+import { useStore } from "@/providers/store";
+import { Button } from "@/components/ui/button";
+import { BookOpen } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Separator } from "@/components/ui/separator";
 
 export const Route = createFileRoute("/checker/dashboard")({
   component: CheckerDashboard,
@@ -27,8 +31,8 @@ export const Route = createFileRoute("/checker/dashboard")({
 function CheckerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+  const { selectedStore } = useStore();
+  const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
   const { data: complianceData, isLoading: complianceLoading, error: complianceError } =
     useComplianceOverview(selectedStoreId);
@@ -38,10 +42,6 @@ function CheckerDashboard() {
 
   const markAsRead = useMarkNotificationAsRead();
   const markAllAsRead = useMarkAllNotificationsAsRead();
-
-  const handleStoreChange = useCallback((storeId: string) => {
-    setSelectedStoreId(storeId);
-  }, []);
 
   const handleNotificationClick = useCallback(
     (notification: Notification) => {
@@ -89,16 +89,32 @@ function CheckerDashboard() {
     <MainLayout>
       <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
-          <CheckerHeader
-            user={mockCheckerUser}
-            stores={stores || []}
-            selectedStoreId={selectedStoreId}
-            onStoreChange={handleStoreChange}
-            notifications={notifications || []}
-            onNotificationClick={handleNotificationClick}
-            onMarkAsRead={handleMarkAsRead}
-            onMarkAllAsRead={handleMarkAllAsRead}
-          />
+          <div className="flex items-center justify-between gap-4 rounded-lg bg-card border border-border p-4 shadow-sm">
+            <h1 className="text-xl font-bold text-foreground">Dashboard</h1>
+
+            {/* <div className="flex items-center gap-2">
+              <Button
+                asChild
+                variant="ghost"
+                size="icon"
+                className="shrink-0"
+                aria-label="Knowledge Center"
+              >
+                <Link to="/checker/knowledge-center">
+                  <BookOpen className="size-5" aria-hidden="true" />
+                </Link>
+              </Button>
+
+              <Separator orientation="vertical" className="h-6" />
+
+              <NotificationsDropdown
+                notifications={notifications || []}
+                onNotificationClick={handleNotificationClick}
+                onMarkAsRead={handleMarkAsRead}
+                onMarkAllAsRead={handleMarkAllAsRead}
+              />
+            </div> */}
+          </div>
 
           <section aria-labelledby="compliance-overview-heading">
             <ComplianceOverview

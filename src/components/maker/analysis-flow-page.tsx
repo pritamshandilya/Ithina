@@ -20,7 +20,9 @@ import {
 
 import MainLayout from "@/components/layouts/main";
 import { HeaderContextBar, ReportSnippetsView } from "@/components/maker";
+import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
+import type { ImageComparisonData } from "@/features/maker/analysis/image-comparison-types";
 import {
   useAnalysisPipeline,
   MOCK_REPORT_SNIPPET,
@@ -45,8 +47,10 @@ export interface AnalysisFlowPageProps {
   planogramName?: string;
   /** Task context (e.g. "Weekly Compliance Audit") */
   taskContext?: string;
-  /** Optional expected layout preview – React node or null */
+  /** Optional expected layout preview – React node or null (legacy) */
   expectedLayoutPreview?: React.ReactNode;
+  /** Planogram expected data – planogram-based only. When provided, shows PlanogramExpectedPanel on the right. Not used in adhoc flow (upload stays full width). */
+  planogramExpectedData?: ImageComparisonData;
 }
 
 export function AnalysisFlowPage({
@@ -56,6 +60,7 @@ export function AnalysisFlowPage({
   planogramName,
   taskContext,
   expectedLayoutPreview,
+  planogramExpectedData,
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: stores } = useStores();
@@ -198,11 +203,14 @@ export function AnalysisFlowPage({
             <div
               className={cn(
                 "grid gap-6",
-                expectedLayoutPreview ? "lg:grid-cols-2" : "lg:grid-cols-1"
+                /* Planogram-based only: two columns (upload left, planogram right). Adhoc: single column, full width. */
+                (planogramExpectedData ?? expectedLayoutPreview)
+                  ? "lg:grid-cols-2 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:overflow-hidden"
+                  : "lg:grid-cols-1"
               )}
             >
-              {/* Shelf View */}
-              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
+              {/* Shelf View (left) */}
+              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm min-h-0 flex flex-col">
                 <div className="border-b border-border px-4 py-3 flex items-center justify-between">
                   <h2 className="text-sm font-semibold text-foreground">Shelf image</h2>
                   {state === "processing" && (
@@ -312,8 +320,15 @@ export function AnalysisFlowPage({
                 )}
               </section>
 
-              {/* Right panel: Planogram preview (planogram-based only) */}
-              {expectedLayoutPreview && (
+              {/* Right panel: Planogram (Expected) – same as Image Comparison tab */}
+              {planogramExpectedData && (
+                <PlanogramExpectedPanel
+                  data={planogramExpectedData}
+                  className="min-h-0"
+                />
+              )}
+              {/* Legacy: custom expected layout preview */}
+              {!planogramExpectedData && expectedLayoutPreview && (
                 <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
                   <div className="border-b border-border px-4 py-3">
                     <h2 className="text-sm font-semibold text-foreground">

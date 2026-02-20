@@ -29,3 +29,9 @@ export type { AllIssuesTabProps } from "./AllIssuesTab";
 
 export { ComplianceReportFull } from "./ComplianceReportFull";
 export type { ComplianceReportFullProps } from "./ComplianceReportFull";
+
+export { PlanogramExpectedPanel } from "./PlanogramExpectedPanel";
+export type { PlanogramExpectedPanelProps } from "./PlanogramExpectedPanel";
+
+export { ImageComparisonTab } from "./ImageComparisonTab";
+export type { ImageComparisonTabProps } from "./ImageComparisonTab";

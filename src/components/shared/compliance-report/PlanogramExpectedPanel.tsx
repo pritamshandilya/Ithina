@@ -54,12 +54,26 @@ function ProductIcon({
   }
 }
 
-function PlanogramSlotCard({ slot }: { slot: PlanogramSlot }) {
-  const borderByStatus: Record<PlanogramSlotStatus, string> = {
-    matched: slot.highDemand ? "border-2 border-amber-500" : "border-2 border-chart-2",
-    missing: "border-2 border-destructive",
-    misplaced: slot.highDemand ? "border-2 border-amber-500" : "border-2 border-action-warning",
-  };
+function PlanogramSlotCard({
+  slot,
+  variant,
+}: {
+  slot: PlanogramSlot;
+  variant: "preview" | "comparison";
+}) {
+  const isPreview = variant === "preview";
+
+  const borderByStatus: Record<PlanogramSlotStatus, string> = isPreview
+    ? {
+        matched: "border border-border",
+        missing: "border border-border",
+        misplaced: "border border-border",
+      }
+    : {
+        matched: slot.highDemand ? "border-2 border-amber-500" : "border-2 border-chart-2",
+        missing: "border-2 border-destructive",
+        misplaced: slot.highDemand ? "border-2 border-amber-500" : "border-2 border-action-warning",
+      };
   const facingsMatch = slot.detectedFacings === slot.expectedFacings;
   const badgeByStatus: Record<PlanogramSlotStatus, string> = {
     matched: "bg-chart-2/20 text-chart-2",
@@ -74,22 +88,28 @@ function PlanogramSlotCard({ slot }: { slot: PlanogramSlot }) {
         borderByStatus[slot.status]
       )}
     >
-      {slot.severity === "HIGH" && (
+      {!isPreview && slot.severity === "HIGH" && (
         <span className="absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[10px] font-bold bg-destructive/90 text-white uppercase">
           HIGH
         </span>
       )}
-      {slot.highDemand && slot.status !== "missing" && slot.severity !== "HIGH" && (
+      {!isPreview && slot.highDemand && slot.status !== "missing" && slot.severity !== "HIGH" && (
         <Star className="absolute top-1.5 left-1.5 size-3.5 fill-amber-500 text-amber-500" aria-hidden />
       )}
-      <span
-        className={cn(
-          "absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-          badgeByStatus[slot.status]
-        )}
-      >
-        {slot.detectedFacings}/{slot.expectedFacings}
-      </span>
+      {!isPreview ? (
+        <span
+          className={cn(
+            "absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+            badgeByStatus[slot.status]
+          )}
+        >
+          {slot.detectedFacings}/{slot.expectedFacings}
+        </span>
+      ) : (
+        <span className="absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+          {slot.expectedFacings} facings
+        </span>
+      )}
       <div className="flex-1 flex items-center justify-center mt-4">
         <ProductIcon shape={slot.shape} color={slot.color} />
       </div>
@@ -99,14 +119,18 @@ function PlanogramSlotCard({ slot }: { slot: PlanogramSlot }) {
       <p
         className={cn(
           "text-[10px] font-mono",
-          slot.status === "matched"
-            ? "text-chart-2"
-            : slot.status === "misplaced" && slot.totalDetectedUnits > 0
-              ? "text-action-warning"
-              : "text-destructive"
+          isPreview
+            ? "text-muted-foreground"
+            : slot.status === "matched"
+              ? "text-chart-2"
+              : slot.status === "misplaced" && slot.totalDetectedUnits > 0
+                ? "text-action-warning"
+                : "text-destructive"
         )}
       >
-        D{slot.depth} - {slot.totalDetectedUnits}/{slot.totalExpectedUnits}
+        {isPreview
+          ? `D${slot.depth} · ${slot.totalExpectedUnits} units`
+          : `D${slot.depth} - ${slot.totalDetectedUnits}/${slot.totalExpectedUnits}`}
       </p>
     </div>
   );
@@ -122,6 +146,8 @@ const PLANOGRAM_LEGEND = [
 export interface PlanogramExpectedPanelProps {
   /** Planogram layout data */
   data: ImageComparisonData;
+  /** "preview" = upload screen, layout only, no compliance metrics. "comparison" = report, full metrics. */
+  variant?: "preview" | "comparison";
   /** Show legend and helper text */
   showLegend?: boolean;
   /** Additional class names */
@@ -130,6 +156,7 @@ export interface PlanogramExpectedPanelProps {
 
 export function PlanogramExpectedPanel({
   data,
+  variant = "comparison",
   showLegend = true,
   className,
 }: PlanogramExpectedPanelProps) {
@@ -154,7 +181,7 @@ export function PlanogramExpectedPanel({
             </h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {shelf.slots.map((slot) => (
-                <PlanogramSlotCard key={slot.id} slot={slot} />
+                <PlanogramSlotCard key={slot.id} slot={slot} variant={variant} />
               ))}
             </div>
           </div>
@@ -162,22 +189,30 @@ export function PlanogramExpectedPanel({
       </div>
       {showLegend && (
         <div className="px-4 py-2 border-t border-border flex flex-wrap gap-4 text-[10px] text-muted-foreground shrink-0">
-          {PLANOGRAM_LEGEND.map((item) => (
-            <span key={item.label} className="flex items-center gap-1.5">
-              {"icon" in item && item.icon === "star" ? (
-                <Star className="size-3 fill-amber-500 text-amber-500 shrink-0" aria-hidden />
-              ) : (
-                <span
-                  className={cn("size-2 rounded-full shrink-0", item.color)}
-                  aria-hidden
-                />
-              )}
-              {item.label}
+          {variant === "comparison" ? (
+            <>
+              {PLANOGRAM_LEGEND.map((item) => (
+                <span key={item.label} className="flex items-center gap-1.5">
+                  {"icon" in item && item.icon === "star" ? (
+                    <Star className="size-3 fill-amber-500 text-amber-500 shrink-0" aria-hidden />
+                  ) : (
+                    <span
+                      className={cn("size-2 rounded-full shrink-0", item.color)}
+                      aria-hidden
+                    />
+                  )}
+                  {item.label}
+                </span>
+              ))}
+              <span className="text-muted-foreground/80">
+                Top-right: detected/expected facings · D = depth · Bottom: units
+              </span>
+            </>
+          ) : (
+            <span className="text-muted-foreground/80">
+              Expected layout · D = depth · facings and units per product
             </span>
-          ))}
-          <span className="text-muted-foreground/80">
-            Top-right: detected/expected facings · D = depth · Bottom: units
-          </span>
+          )}
         </div>
       )}
     </section>

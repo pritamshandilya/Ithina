@@ -324,6 +324,7 @@ export function AnalysisFlowPage({
               {planogramExpectedData && (
                 <PlanogramExpectedPanel
                   data={planogramExpectedData}
+                  variant="preview"
                   className="min-h-0"
                 />
               )}

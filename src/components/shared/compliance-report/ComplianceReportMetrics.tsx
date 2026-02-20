@@ -86,7 +86,7 @@ export function ComplianceReportMetrics({
   return (
     <div
       className={cn(
-        "flex gap-2 overflow-x-auto pb-2 -mx-1 scrollbar-thin flex-wrap",
+        "grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-3 w-full",
         className
       )}
     >
@@ -158,13 +158,13 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "shrink-0 rounded-lg border px-3 py-2 min-w-[72px] text-center flex flex-col items-center justify-center",
+        "rounded-lg border px-4 py-3 min-w-0 text-center flex flex-col items-center justify-center",
         variantStyles[variant] ?? variantStyles.neutral
       )}
     >
       {variant === "score" && score !== null ? (
-        <div className="relative size-10 mb-1">
-          <svg viewBox="0 0 36 36" className="size-10 -rotate-90">
+        <div className="relative size-12 mb-1">
+          <svg viewBox="0 0 36 36" className="size-12 -rotate-90">
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               fill="none"
@@ -185,7 +185,7 @@ function MetricCard({
               strokeDasharray={`${(score / 100) * 100} 100`}
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">
+          <span className="absolute inset-0 flex items-center justify-center text-sm font-bold text-foreground">
             {value}
           </span>
         </div>
@@ -193,13 +193,13 @@ function MetricCard({
         <div className="flex items-center gap-1.5">
           {Icon && (
             <Icon
-              className={cn("size-4 shrink-0", iconColors[variant] ?? "text-muted-foreground")}
+              className={cn("size-5 shrink-0", iconColors[variant] ?? "text-muted-foreground")}
               aria-hidden
             />
           )}
           <p
             className={cn(
-              "text-lg font-bold",
+              "text-xl font-bold",
               valueColors[variant] ?? "text-foreground"
             )}
           >
@@ -207,7 +207,7 @@ function MetricCard({
           </p>
         </div>
       )}
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </p>
     </div>

@@ -9,7 +9,6 @@ import { useMemo, useState } from "react";
 import {
   Search,
   ChevronDown,
-  ChevronRight,
   AlertTriangle,
   XCircle,
   Package,
@@ -106,7 +105,7 @@ export function AllIssuesTab({
 }: AllIssuesTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<IssueCategoryVariant | "all">("all");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set(["missing"]));
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filteredCategories = useMemo(
     () => filterCategories(data.categories, activeFilter, searchQuery),
@@ -114,12 +113,7 @@ export function AllIssuesTab({
   );
 
   const toggleExpanded = (id: string) => {
-    setExpandedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    setExpandedId((prev) => (prev === id ? null : id));
   };
 
   const filterButtons: { key: IssueCategoryVariant | "all"; label: string; count?: number }[] = [
@@ -197,7 +191,7 @@ export function AllIssuesTab({
         {filteredCategories.map((category) => {
           const Icon = VARIANT_ICONS[category.variant];
           const styles = VARIANT_STYLES[category.variant];
-          const isExpanded = expandedIds.has(category.id);
+          const isExpanded = expandedId === category.id;
 
           return (
             <div
@@ -220,16 +214,24 @@ export function AllIssuesTab({
                 <span className="text-sm text-muted-foreground truncate flex-1">
                   {category.description}
                 </span>
-                {isExpanded ? (
-                  <ChevronDown className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                ) : (
-                  <ChevronRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                )}
+                <ChevronDown
+                  className={cn(
+                    "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                    !isExpanded && "-rotate-90"
+                  )}
+                  aria-hidden
+                />
               </button>
 
-              {isExpanded && (
-                <div className="divide-y divide-border">
-                  {category.issues.map((issue: IssueEntry) => (
+              <div
+                className={cn(
+                  "grid transition-[grid-template-rows] duration-200 ease-out",
+                  isExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                )}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className="divide-y divide-border">
+                    {category.issues.map((issue: IssueEntry) => (
                     <div
                       key={issue.id}
                       className="px-4 py-3 bg-card/40 hover:bg-card/60 transition-colors"
@@ -268,9 +270,10 @@ export function AllIssuesTab({
                         {severityBadge(issue.severity)}
                       </div>
                     </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           );
         })}

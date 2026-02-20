@@ -131,17 +131,17 @@ const SKU_FACINGS_COLUMNS: DataTableColumn<SkuFacingRow>[] = [
   {
     title: "Status",
     field: "facingDiffVariant",
-    width: 90,
+    width: 100,
     headerSort: true,
     headerFilter: false,
     formatter: (cell) => {
       const data = (cell as { getData: () => SkuFacingRow }).getData();
       const v = data.facingDiffVariant;
       if (v === "ok")
-        return '<span class="inline-flex size-5 items-center justify-center rounded-full bg-chart-2/20 text-chart-2" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></span>';
+        return '<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-chart-2/20 text-chart-2 border border-chart-2/40">OK</span>';
       if (v === "extra")
-        return '<span class="inline-flex size-5 items-center justify-center rounded-full bg-blue-500/20 text-blue-500" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/></svg></span>';
-      return '<span class="inline-flex size-5 items-center justify-center rounded-full bg-destructive/20 text-destructive" aria-hidden"><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></span>';
+        return '<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-blue-500/20 text-blue-500 border border-blue-500/40">Extra</span>';
+      return '<span class="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-destructive/20 text-destructive border border-destructive/40">Short</span>';
     },
   },
 ];

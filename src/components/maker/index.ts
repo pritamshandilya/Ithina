@@ -47,18 +47,13 @@ export * from "./manual-override-list";
 export { ShelfActions } from "./shelf-actions";
 export { PlanogramPreview } from "./planogram-preview";
 export {
-  SelectRuleSetModal,
-  type SelectRuleSetModalProps,
-} from "./select-rule-set-modal";
+  ComplianceResultsView,
+  type ComplianceResultsViewProps,
+} from "./compliance-results-view";
 export {
-  SkuDataEnrichmentModal,
-  type SkuDataEnrichmentModalProps,
-} from "./sku-data-enrichment-modal";
-export {
-  AnalysisReportView,
-  type AnalysisReportViewProps,
-  type AnalysisReportTab,
-} from "./analysis-report-view";
+  ReportSnippetsView,
+  type ReportSnippetsViewProps,
+} from "./report-snippets-view";
 export {
   AnalysisFlowPage,
   type AnalysisFlowPageProps,

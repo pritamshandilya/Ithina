@@ -43,11 +43,13 @@ import { Route as CheckerKnowledgeCenterRouteImport } from './routes/checker/kno
 import { Route as CheckerDashboardRouteImport } from './routes/checker/dashboard'
 import { Route as CheckerAuditReviewRouteImport } from './routes/checker/audit-review'
 import { Route as CheckerLayoutRouteImport } from './routes/checker/_layout'
+import { Route as MakerReportsRouteRouteImport } from './routes/maker/reports/route'
 import { Route as MakerAuditsRouteRouteImport } from './routes/maker/audits/route'
 import { Route as CheckerShelfRouteRouteImport } from './routes/checker/shelf/route'
 import { Route as MakerShelvesIndexRouteImport } from './routes/maker/shelves/index'
 import { Route as MakerAuditsIndexRouteImport } from './routes/maker/audits/index'
 import { Route as CheckerShelfIndexRouteImport } from './routes/checker/shelf/index'
+import { Route as MakerReportsViewRouteImport } from './routes/maker/reports/view'
 import { Route as CheckerShelfNewRouteImport } from './routes/checker/shelf/new'
 import { Route as CheckerShelfShelfIdRouteImport } from './routes/checker/shelf/$shelfId'
 import { Route as CheckerReviewAuditIdRouteImport } from './routes/checker/review.$auditId'
@@ -236,6 +238,11 @@ const CheckerLayoutRoute = CheckerLayoutRouteImport.update({
   path: '/checker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerReportsRouteRoute = MakerReportsRouteRouteImport.update({
+  id: '/maker/reports',
+  path: '/maker/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakerAuditsRouteRoute = MakerAuditsRouteRouteImport.update({
   id: '/maker/audits',
   path: '/maker/audits',
@@ -260,6 +267,11 @@ const CheckerShelfIndexRoute = CheckerShelfIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CheckerShelfRouteRoute,
+} as any)
+const MakerReportsViewRoute = MakerReportsViewRouteImport.update({
+  id: '/view',
+  path: '/view',
+  getParentRoute: () => MakerReportsRouteRoute,
 } as any)
 const CheckerShelfNewRoute = CheckerShelfNewRouteImport.update({
   id: '/new',
@@ -374,6 +386,7 @@ export interface FileRoutesByFullPath {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
+  '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/checker': typeof CheckerLayoutRoute
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
@@ -394,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
+  '/maker/reports/view': typeof MakerReportsViewRoute
   '/checker/shelf/': typeof CheckerShelfIndexRoute
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
@@ -429,6 +443,7 @@ export interface FileRoutesByTo {
   '/test-returned-audits': typeof TestReturnedAuditsRoute
   '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
   '/test-shelves-list': typeof TestShelvesListRoute
+  '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/checker': typeof CheckerIndexRoute
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
@@ -444,6 +459,7 @@ export interface FileRoutesByTo {
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
+  '/maker/reports/view': typeof MakerReportsViewRoute
   '/checker/shelf': typeof CheckerShelfIndexRoute
   '/maker/audits': typeof MakerAuditsIndexRoute
   '/maker/shelves': typeof MakerShelvesIndexRoute
@@ -482,6 +498,7 @@ export interface FileRoutesById {
   '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
+  '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/checker/_layout': typeof CheckerLayoutRoute
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
@@ -502,6 +519,7 @@ export interface FileRoutesById {
   '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
+  '/maker/reports/view': typeof MakerReportsViewRoute
   '/checker/shelf/': typeof CheckerShelfIndexRoute
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
@@ -541,6 +559,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker/shelf'
     | '/maker/audits'
+    | '/maker/reports'
     | '/checker'
     | '/checker/audit-review'
     | '/checker/dashboard'
@@ -561,6 +580,7 @@ export interface FileRouteTypes {
     | '/checker/review/$auditId'
     | '/checker/shelf/$shelfId'
     | '/checker/shelf/new'
+    | '/maker/reports/view'
     | '/checker/shelf/'
     | '/maker/audits/'
     | '/maker/shelves/'
@@ -596,6 +616,7 @@ export interface FileRouteTypes {
     | '/test-returned-audits'
     | '/test-returned-audits-redesign'
     | '/test-shelves-list'
+    | '/maker/reports'
     | '/checker'
     | '/checker/audit-review'
     | '/checker/dashboard'
@@ -611,6 +632,7 @@ export interface FileRouteTypes {
     | '/checker/review/$auditId'
     | '/checker/shelf/$shelfId'
     | '/checker/shelf/new'
+    | '/maker/reports/view'
     | '/checker/shelf'
     | '/maker/audits'
     | '/maker/shelves'
@@ -648,6 +670,7 @@ export interface FileRouteTypes {
     | '/test-shelves-list'
     | '/checker/shelf'
     | '/maker/audits'
+    | '/maker/reports'
     | '/checker/_layout'
     | '/checker/audit-review'
     | '/checker/dashboard'
@@ -668,6 +691,7 @@ export interface FileRouteTypes {
     | '/checker/review/$auditId'
     | '/checker/shelf/$shelfId'
     | '/checker/shelf/new'
+    | '/maker/reports/view'
     | '/checker/shelf/'
     | '/maker/audits/'
     | '/maker/shelves/'
@@ -706,6 +730,7 @@ export interface RootRouteChildren {
   TestShelvesListRoute: typeof TestShelvesListRoute
   CheckerShelfRouteRoute: typeof CheckerShelfRouteRouteWithChildren
   MakerAuditsRouteRoute: typeof MakerAuditsRouteRouteWithChildren
+  MakerReportsRouteRoute: typeof MakerReportsRouteRouteWithChildren
   CheckerLayoutRoute: typeof CheckerLayoutRoute
   CheckerAuditReviewRoute: typeof CheckerAuditReviewRoute
   CheckerDashboardRoute: typeof CheckerDashboardRoute
@@ -965,6 +990,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maker/reports': {
+      id: '/maker/reports'
+      path: '/maker/reports'
+      fullPath: '/maker/reports'
+      preLoaderRoute: typeof MakerReportsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker/audits': {
       id: '/maker/audits'
       path: '/maker/audits'
@@ -999,6 +1031,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/checker/shelf/'
       preLoaderRoute: typeof CheckerShelfIndexRouteImport
       parentRoute: typeof CheckerShelfRouteRoute
+    }
+    '/maker/reports/view': {
+      id: '/maker/reports/view'
+      path: '/view'
+      fullPath: '/maker/reports/view'
+      preLoaderRoute: typeof MakerReportsViewRouteImport
+      parentRoute: typeof MakerReportsRouteRoute
     }
     '/checker/shelf/new': {
       id: '/checker/shelf/new'
@@ -1180,6 +1219,17 @@ const MakerAuditsRouteRouteChildren: MakerAuditsRouteRouteChildren = {
 const MakerAuditsRouteRouteWithChildren =
   MakerAuditsRouteRoute._addFileChildren(MakerAuditsRouteRouteChildren)
 
+interface MakerReportsRouteRouteChildren {
+  MakerReportsViewRoute: typeof MakerReportsViewRoute
+}
+
+const MakerReportsRouteRouteChildren: MakerReportsRouteRouteChildren = {
+  MakerReportsViewRoute: MakerReportsViewRoute,
+}
+
+const MakerReportsRouteRouteWithChildren =
+  MakerReportsRouteRoute._addFileChildren(MakerReportsRouteRouteChildren)
+
 interface MakerShelvesRouteChildren {
   MakerShelvesIndexRoute: typeof MakerShelvesIndexRoute
   MakerShelvesShelfIdEditRoute: typeof MakerShelvesShelfIdEditRoute
@@ -1219,6 +1269,7 @@ const rootRouteChildren: RootRouteChildren = {
   TestShelvesListRoute: TestShelvesListRoute,
   CheckerShelfRouteRoute: CheckerShelfRouteRouteWithChildren,
   MakerAuditsRouteRoute: MakerAuditsRouteRouteWithChildren,
+  MakerReportsRouteRoute: MakerReportsRouteRouteWithChildren,
   CheckerLayoutRoute: CheckerLayoutRoute,
   CheckerAuditReviewRoute: CheckerAuditReviewRoute,
   CheckerDashboardRoute: CheckerDashboardRoute,

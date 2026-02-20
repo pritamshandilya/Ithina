@@ -311,6 +311,7 @@
     color: var(--accent);
     border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
   }
+
 }
 
 /* ==========================================================================
@@ -590,4 +591,25 @@ select[data-slot="select"] option,
 select.select-themed option {
   background-color: var(--card);
   color: var(--card-foreground);
+}
+
+/* ==========================================================================
+   Compliance Report – PDF export friendly
+   ========================================================================== */
+
+.print-report {
+  /* Ensure report layout is preserved for print/PDF */
+  break-inside: avoid;
+}
+
+@media print {
+  .print-report {
+    background: white;
+    color: black;
+  }
+
+  .print-report * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
 }

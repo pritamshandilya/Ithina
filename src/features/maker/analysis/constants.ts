@@ -20,3 +20,10 @@ export const PIPELINE_STEPS: PipelineStepDef[] = [
   { id: "mapping", label: "Geometric Mapping", sub: "Logic maps layout & positions", icon: GitBranch },
   { id: "report", label: "Compliance Report", sub: "Planogram engine generates results", icon: FileText },
 ];
+
+/** Simple progress labels for Maker UI – no technical terminology */
+export const SIMPLE_PROGRESS_STEPS = [
+  "Detecting products",
+  "Mapping layout",
+  "Checking compliance",
+] as const;

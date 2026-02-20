@@ -1,35 +1,35 @@
 /**
- * Shared analysis flow page – upload image, run pipeline, view report.
- * Reused by both adhoc and planogram-based analysis.
+ * Shelf Audit – Image Upload & Analysis
+ *
+ * Shared for adhoc and planogram-based flows.
+ * Three states: Before Upload, Processing, Results.
+ *
+ * Maker-focused: no AI pipeline details, simple operational language.
  */
 
 import { Link } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ArrowLeft,
   Camera,
   Check,
+  ImageIcon,
   Loader2,
   Upload,
-  ImageIcon,
-  Sparkles,
 } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import {
-  AnalysisReportView,
-  HeaderContextBar,
-  SelectRuleSetModal,
-  SkuDataEnrichmentModal,
-} from "@/components/maker";
+import { HeaderContextBar, ReportSnippetsView } from "@/components/maker";
+import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
+import type { ImageComparisonData } from "@/features/maker/analysis/image-comparison-types";
 import {
   useAnalysisPipeline,
-  type SkuEnrichmentItem,
+  MOCK_REPORT_SNIPPET,
+  SIMPLE_PROGRESS_STEPS,
 } from "@/features/maker/analysis";
 import { useStores } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
-import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
@@ -37,13 +37,31 @@ const MAX_SIZE_MB = 10;
 const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
 export interface AnalysisFlowPageProps {
-  /** Page title (e.g. "New Adhoc Analysis" or "New Planogram Based Analysis") */
+  /** Page title */
   title: string;
   /** Route to navigate back to */
   backTo: string;
+  /** Shelf name (planogram flow) */
+  shelfName?: string;
+  /** Planogram name (planogram flow) */
+  planogramName?: string;
+  /** Task context (e.g. "Weekly Compliance Audit") */
+  taskContext?: string;
+  /** Optional expected layout preview – React node or null (legacy) */
+  expectedLayoutPreview?: React.ReactNode;
+  /** Planogram expected data – planogram-based only. When provided, shows PlanogramExpectedPanel on the right. Not used in adhoc flow (upload stays full width). */
+  planogramExpectedData?: ImageComparisonData;
 }
 
-export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
+export function AnalysisFlowPage({
+  title,
+  backTo,
+  shelfName,
+  planogramName,
+  taskContext,
+  expectedLayoutPreview,
+  planogramExpectedData,
+}: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { data: stores } = useStores();
   const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
@@ -51,42 +69,15 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
-  const [ruleSetModalOpen, setRuleSetModalOpen] = useState(false);
-  const [selectedRuleSet, setSelectedRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
-  const [skuEnrichmentModalOpen, setSkuEnrichmentModalOpen] = useState(false);
-  const [enrichmentItems, setEnrichmentItems] = useState<SkuEnrichmentItem[]>([]);
-  const [finalSkuItems, setFinalSkuItems] = useState<SkuEnrichmentItem[]>([]);
-  const [showReport, setShowReport] = useState(false);
-  const [isGeneratingStrategy, setIsGeneratingStrategy] = useState(false);
-  const enrichmentResolverRef = useRef<((items: SkuEnrichmentItem[]) => void) | null>(null);
-  const enrichmentRejectRef = useRef<((reason?: unknown) => void) | null>(null);
-
-  const onEnrichmentRequired = useCallback((items: SkuEnrichmentItem[]) => {
-    return new Promise<SkuEnrichmentItem[]>((resolve, reject) => {
-      setEnrichmentItems(items);
-      setSkuEnrichmentModalOpen(true);
-      enrichmentResolverRef.current = resolve;
-      enrichmentRejectRef.current = reject;
-    });
-  }, []);
-
-  const onAnalysisComplete = useCallback(() => {
-    setShowReport(true);
-  }, []);
+  const [highlightedIssueIndex, setHighlightedIssueIndex] = useState<number | null>(null);
 
   const {
     isAnalyzing,
-    currentStep,
-    elapsedSeconds,
-    analysisComplete,
-    awaitingEnrichment,
-    progressPercent,
     currentStepIndex,
-    pipelineSteps: PIPELINE_STEPS,
+    analysisComplete,
+    progressPercent,
     startAnalysis,
   } = useAnalysisPipeline({
-    onEnrichmentRequired,
-    onComplete: onAnalysisComplete,
     stepIntervalMs: 1500,
   });
 
@@ -132,42 +123,26 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
 
   const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
-  const handleRunAnalysis = () => setRuleSetModalOpen(true);
-
-  const handleRuleSetConfirm = () => {
-    if (!selectedRuleSet) return;
-    setRuleSetModalOpen(false);
-    startAnalysis();
-  };
-
-  const handleGenerateStrategy = useCallback((items: SkuEnrichmentItem[]) => {
-    setIsGeneratingStrategy(true);
-    setFinalSkuItems(items);
-    setSkuEnrichmentModalOpen(false);
-    enrichmentResolverRef.current?.(items);
-    enrichmentResolverRef.current = null;
-    enrichmentRejectRef.current = null;
-    setIsGeneratingStrategy(false);
+  const handleReset = useCallback(() => {
+    setImageFile(null);
+    setImagePreview(null);
+    setHighlightedIssueIndex(null);
   }, []);
 
-  const handleCloseEnrichmentModal = useCallback(() => {
-    setSkuEnrichmentModalOpen(false);
-    enrichmentRejectRef.current?.();
-    enrichmentResolverRef.current = null;
-    enrichmentRejectRef.current = null;
-  }, []);
+  const handleRunAnalysis = () => startAnalysis();
 
-  const stepRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const simpleStepIndex =
+    currentStepIndex >= 0
+      ? Math.min(Math.floor(currentStepIndex / 2), SIMPLE_PROGRESS_STEPS.length - 1)
+      : 0;
 
-  useEffect(() => {
-    if (isAnalyzing && currentStepIndex >= 0 && stepRefs.current[currentStepIndex]) {
-      stepRefs.current[currentStepIndex]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "center",
-      });
-    }
-  }, [isAnalyzing, currentStepIndex]);
+  const state = !imageFile
+    ? "before"
+    : analysisComplete
+      ? "results"
+      : isAnalyzing
+        ? "processing"
+        : "ready";
 
   return (
     <MainLayout>
@@ -194,127 +169,72 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
             </div>
           </header>
 
-          {/* Pipeline: Horizontal stepper */}
-          <section className="rounded-xl border border-border bg-card/80 p-4 shadow-sm">
-            <h2 className="text-sm font-semibold text-foreground mb-1">
-              How your image will be analyzed
-            </h2>
-            <p className="text-xs text-muted-foreground mb-4">
-              Six steps from upload to compliance report
-            </p>
-            <div
-              className="flex gap-0 overflow-x-auto overflow-y-hidden pb-2 -mx-1 px-1 scroll-smooth"
-              style={{
-                scrollbarWidth: "thin",
-                scrollbarColor: "var(--border) transparent",
-              }}
-            >
-              {PIPELINE_STEPS.map((step, idx) => {
-                const Icon = step.icon;
-                const isActive = currentStep === step.id;
-                const isDone = currentStepIndex > idx || analysisComplete;
-                const isPending = !isActive && !isDone;
-                const isLast = idx === PIPELINE_STEPS.length - 1;
-                const segmentProgress = currentStepIndex > idx ? 100 : 0;
-
-                return (
-                  <div
-                    key={step.id}
-                    ref={(el) => {
-                      stepRefs.current[idx] = el;
-                    }}
-                    className="flex shrink-0 items-start"
-                  >
-                    <div className="flex flex-col items-center min-w-[88px] sm:min-w-[110px]">
-                      <div
-                        className={cn(
-                          "relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-300",
-                          isDone && "border-chart-2 bg-chart-2 text-white",
-                          isActive &&
-                          "border-accent bg-accent text-accent-foreground ring-4 ring-accent/20",
-                          isPending && "border-border bg-card text-muted-foreground"
-                        )}
-                      >
-                        {isDone ? (
-                          <Check className="size-3.5" strokeWidth={2.5} />
-                        ) : (
-                          <Icon className="size-3.5" />
-                        )}
-                      </div>
-                      <p
-                        className={cn(
-                          "mt-1.5 text-center text-[11px] sm:text-xs font-medium leading-tight line-clamp-2 max-w-[88px] sm:max-w-[110px] px-0.5",
-                          isActive ? "text-accent" : "text-foreground"
-                        )}
-                      >
-                        {step.label}
-                      </p>
-                      <p
-                        className="text-[10px] text-muted-foreground text-center line-clamp-1 max-w-[88px] sm:max-w-[110px] px-0.5 mt-0.5"
-                        title={step.sub}
-                      >
-                        {step.sub}
-                      </p>
-                    </div>
-                    {!isLast && (
-                      <div
-                        className="flex-1 min-w-[16px] sm:min-w-[24px] h-0.5 mx-0.5 sm:mx-1 mt-4 relative bg-border rounded-full overflow-hidden shrink"
-                        aria-hidden
-                      >
-                        <div
-                          className="absolute inset-y-0 left-0 bg-chart-2 rounded-full transition-all duration-500 ease-out"
-                          style={{ width: `${segmentProgress}%` }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+          {/* STATE 3: Results header */}
+          {state === "results" && (shelfName || planogramName) && (
+            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+              {shelfName && <span>{shelfName}</span>}
+              {shelfName && planogramName && <span>|</span>}
+              {planogramName && <span>{planogramName}</span>}
+              {taskContext && (
+                <>
+                  <span>|</span>
+                  <span>{taskContext}</span>
+                </>
+              )}
             </div>
-          </section>
+          )}
 
-          {analysisComplete && showReport ? (
-            <AnalysisReportView
+          {state === "results" ? (
+            <ReportSnippetsView
               imagePreview={imagePreview}
-              skuItems={finalSkuItems}
-              onUploadImage={triggerFileInput}
-              onReset={() => {
-                setImageFile(null);
-                setImagePreview(null);
-                setFinalSkuItems([]);
-                setShowReport(false);
+              report={MOCK_REPORT_SNIPPET}
+              onRetake={handleReset}
+              onReplaceImage={triggerFileInput}
+              onSubmitAudit={() => {
+                /* TODO: submit audit */
               }}
+              onSubmitAnyway={() => {
+                /* TODO: submit anyway */
+              }}
+              highlightedIssueIndex={highlightedIssueIndex}
+              onIssueClick={setHighlightedIssueIndex}
             />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-2">
-              {/* Shelf View: Unified upload card */}
-              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
-                <div className="border-b border-border px-4 py-3 flex items-center justify-between">
+            <div
+              className={cn(
+                "grid gap-6",
+                /* Planogram-based only: two columns (upload left, planogram right). Adhoc: single column, full width. */
+                (planogramExpectedData ?? expectedLayoutPreview)
+                  ? "lg:grid-cols-2 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:overflow-hidden"
+                  : "lg:grid-cols-1"
+              )}
+            >
+              {/* Shelf View (left) */}
+              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm min-h-0 flex flex-col h-full">
+                <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
                   <h2 className="text-sm font-semibold text-foreground">Shelf image</h2>
-                  <div className="flex items-center gap-2">
+                  {state === "processing" && (
+                    <span className="text-xs text-muted-foreground">Analyzing…</span>
+                  )}
+                  {state === "ready" && (
                     <Button
-                      variant="outline"
                       size="sm"
-                      disabled
-                      className="text-muted-foreground cursor-not-allowed"
+                      onClick={handleRunAnalysis}
+                      className="bg-chart-2 text-white hover:opacity-90"
+                    >
+                      Run Analysis
+                    </Button>
+                  )}
+                  {state === "before" && (
+                    <Button
+                      size="sm"
+                      onClick={triggerFileInput}
+                      className="bg-chart-2 text-white hover:opacity-90"
                     >
                       <Camera className="size-4" aria-hidden />
-                      Take pic
-                      <span className="ml-1 rounded bg-muted/80 px-1.5 py-0.5 text-[10px]">
-                        Phase 2
-                      </span>
+                      Capture or Upload Shelf Image
                     </Button>
-                    {imageFile && !isAnalyzing && !awaitingEnrichment && (
-                      <Button
-                        size="sm"
-                        onClick={handleRunAnalysis}
-                        className="bg-chart-2 text-white hover:opacity-90"
-                      >
-                        <Sparkles className="size-4" aria-hidden />
-                        Run Analysis
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
 
                 <input
@@ -327,20 +247,53 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                 />
 
                 {imagePreview ? (
-                  <div className="relative group">
-                    <div className="aspect-video w-full overflow-hidden bg-muted/50">
+                  <div className="relative flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1 min-h-0 w-full overflow-hidden bg-muted/50 flex items-center justify-center">
                       <img
                         src={imagePreview}
                         alt="Shelf preview"
-                        className="h-full w-full object-contain"
+                        className="max-h-full max-w-full object-contain"
                       />
                     </div>
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <Button variant="secondary" size="sm" onClick={triggerFileInput}>
-                        <Upload className="size-4" aria-hidden />
-                        Replace image
-                      </Button>
-                    </div>
+                    {state === "processing" && (
+                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
+                        <Loader2 className="size-12 animate-spin text-white" aria-hidden />
+                        <div className="space-y-2 text-center">
+                          {SIMPLE_PROGRESS_STEPS.map((label, idx) => (
+                            <p
+                              key={label}
+                              className={cn(
+                                "text-sm font-medium",
+                                idx <= simpleStepIndex ? "text-white" : "text-white/60"
+                              )}
+                            >
+                              {idx < simpleStepIndex ? (
+                                <Check className="inline size-4 mr-2" aria-hidden />
+                              ) : idx === simpleStepIndex ? (
+                                <Loader2 className="inline size-4 mr-2 animate-spin" aria-hidden />
+                              ) : (
+                                <span className="inline-block w-3 h-3 mr-2" aria-hidden />
+                              )}
+                              {label}
+                            </p>
+                          ))}
+                        </div>
+                        <div className="w-48 h-1.5 rounded-full bg-white/30 overflow-hidden">
+                          <div
+                            className="h-full bg-chart-2 rounded-full transition-all duration-300"
+                            style={{ width: `${progressPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    {(state === "before" || state === "ready") && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                        <Button variant="secondary" size="sm" onClick={triggerFileInput}>
+                          <Upload className="size-4" aria-hidden />
+                          Replace image
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <button
@@ -348,7 +301,7 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                     onClick={triggerFileInput}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
-                    className="w-full flex flex-col items-center justify-center py-20 px-6 transition-all hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-b-xl border-2 border-dashed border-border hover:border-accent/50"
+                    className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-6 py-12 transition-all hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-b-xl border-2 border-dashed border-border hover:border-accent/50"
                   >
                     <div className="rounded-full bg-accent/10 p-4 mb-4">
                       <ImageIcon className="h-10 w-10 text-accent" aria-hidden />
@@ -363,108 +316,35 @@ export function AnalysisFlowPage({ title, backTo }: AnalysisFlowPageProps) {
                   </button>
                 )}
                 {uploadError && (
-                  <p className="px-4 py-2 text-sm text-destructive">{uploadError}</p>
+                  <p className="px-4 py-2 text-sm text-destructive shrink-0">{uploadError}</p>
                 )}
               </section>
 
-              {/* Analysis Status: Contextual panel */}
-              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
-                <div className="border-b border-border px-4 py-3">
-                  <h2 className="text-sm font-semibold text-foreground">What happens next</h2>
-                </div>
-                <div className="p-6 min-h-[280px] flex flex-col">
-                  {!imageFile ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      <div className="rounded-full bg-muted/80 p-5 mb-4">
-                        <ImageIcon
-                          className="h-12 w-12 text-muted-foreground"
-                          aria-hidden
-                        />
-                      </div>
-                      <p className="font-medium text-foreground">Upload to get started</p>
-                      <p className="text-sm text-muted-foreground mt-2 max-w-[240px]">
-                        Add a shelf photo and we&apos;ll run it through our AI pipeline to detect
-                        products, map layout, and check compliance.
-                      </p>
-                    </div>
-                  ) : isAnalyzing || analysisComplete ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      {isAnalyzing ? (
-                        <>
-                          <div className="rounded-full bg-accent/20 p-4 mb-4">
-                            <Loader2
-                              className="h-10 w-10 animate-spin text-accent"
-                              aria-hidden
-                            />
-                          </div>
-                          <p className="font-medium text-foreground">Analyzing with AI</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {elapsedSeconds}s elapsed
-                          </p>
-                          <div className="mt-6 w-full max-w-[200px]">
-                            <div className="h-2 rounded-full bg-muted overflow-hidden">
-                              <div
-                                className="h-full bg-accent rounded-full transition-all duration-300"
-                                style={{ width: `${progressPercent}%` }}
-                              />
-                            </div>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Step {currentStepIndex + 1} of {PIPELINE_STEPS.length}
-                            </p>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div className="rounded-full bg-chart-2/20 p-4 mb-4">
-                            <Check
-                              className="h-10 w-10 text-chart-2"
-                              strokeWidth={2}
-                              aria-hidden
-                            />
-                          </div>
-                          <p className="font-medium text-foreground">All done</p>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Redirecting to your analyses...
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-center">
-                      <div className="rounded-full bg-chart-2/10 p-4 mb-4">
-                        <Sparkles className="h-10 w-10 text-chart-2" aria-hidden />
-                      </div>
-                      <p className="font-medium text-foreground">Ready to analyze</p>
-                      <p className="text-sm text-muted-foreground mt-2 max-w-[260px]">
-                        Click &quot;Run Analysis&quot; above, pick a compliance rule set, and
-                        we&apos;ll process your image through the pipeline.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </section>
+              {/* Right panel: Planogram (Expected) – same as Image Comparison tab */}
+              {planogramExpectedData && (
+                <PlanogramExpectedPanel
+                  data={planogramExpectedData}
+                  variant="preview"
+                  className="min-h-0"
+                />
+              )}
+              {/* Legacy: custom expected layout preview */}
+              {!planogramExpectedData && expectedLayoutPreview && (
+                <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
+                  <div className="border-b border-border px-4 py-3">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Expected Layout
+                    </h2>
+                  </div>
+                  <div className="p-6 min-h-[280px] overflow-auto">
+                    {expectedLayoutPreview}
+                  </div>
+                </section>
+              )}
             </div>
           )}
         </div>
       </div>
-
-      <SelectRuleSetModal
-        isOpen={ruleSetModalOpen}
-        onClose={() => setRuleSetModalOpen(false)}
-        selectedId={selectedRuleSet?.id ?? null}
-        onSelect={setSelectedRuleSet}
-        onConfirm={handleRuleSetConfirm}
-        isRunning={false}
-        autoSelectDefault
-      />
-
-      <SkuDataEnrichmentModal
-        isOpen={skuEnrichmentModalOpen}
-        onClose={handleCloseEnrichmentModal}
-        items={enrichmentItems}
-        onGenerateStrategy={handleGenerateStrategy}
-        isGenerating={isGeneratingStrategy}
-      />
     </MainLayout>
   );
 }

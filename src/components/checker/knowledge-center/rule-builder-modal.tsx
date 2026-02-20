@@ -29,15 +29,6 @@ import type {
 } from "@/types/checker";
 
 const RULE_CATEGORIES: RuleType[] = ["VISUAL", "SAFETY", "PROFITABILITY", "EFFICIENCY"];
-const LEGACY_RULE_TYPES: RuleType[] = [
-  "Facings",
-  "Spacing",
-  "Product Position",
-  "Margin",
-  "OOS",
-  "Labeling",
-];
-const ALL_RULE_TYPES: RuleType[] = [...RULE_CATEGORIES, ...LEGACY_RULE_TYPES];
 
 export interface RuleSetItem {
   id: string;
@@ -288,7 +279,7 @@ export function RuleBuilderModal({
   const isPending = createRule.isPending || updateRule.isPending;
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-2xl">
+    <Modal isOpen={isOpen} onClose={handleClose} className="max-w-4xl">
       <div className="rounded-lg border border-border bg-card shadow-lg max-h-[90vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border shrink-0">
@@ -313,16 +304,17 @@ export function RuleBuilderModal({
         </div>
 
         {/* Content - unified form for create and edit */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="space-y-4">
+        <div className="flex-1 min-h-0 flex flex-col px-6 py-4">
+          <div className="flex flex-col min-h-0 flex-1 gap-4">
             {isEdit && rule?.ruleId && (
-              <p className="text-sm text-muted-foreground">Rule ID: {rule.ruleId}</p>
+              <p className="text-sm text-muted-foreground shrink-0">Rule ID: {rule.ruleId}</p>
             )}
             <FormField
               label="Rule Set Name"
               required
               error={errors.ruleSetName}
               htmlFor="rule-set-name"
+              className="shrink-0"
             >
               <Input
                 id="rule-set-name"
@@ -332,7 +324,7 @@ export function RuleBuilderModal({
                 disabled={isRetired}
               />
             </FormField>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between shrink-0">
               <h3 className="text-sm font-semibold text-foreground">
                 Rules ({rules.length})
               </h3>
@@ -350,40 +342,70 @@ export function RuleBuilderModal({
               )}
             </div>
 
-            <div className="space-y-4 max-h-[50vh] overflow-y-auto pr-2">
-              {rules.map((r) => (
-                <div
-                  key={r.id}
-                  className="rounded-lg border border-border bg-card/50 p-4 space-y-4"
-                >
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      id={`enabled-${r.id}`}
-                      checked={r.enabled}
-                      onCheckedChange={(checked: boolean | "indeterminate") =>
-                        !isEdit && updateRuleItem(r.id, { enabled: checked === true })
-                      }
-                      className="mt-1"
-                      disabled={isEdit}
-                    />
-                    <div className="flex-1 min-w-0 space-y-3">
-                      <Input
-                        placeholder="Rule name"
-                        value={r.name}
-                        onChange={(e) => updateRuleItem(r.id, { name: e.target.value })}
-                        className="font-medium"
-                        disabled={isRetired}
-                      />
-                      <Input
-                        placeholder="Description"
-                        value={r.description}
-                        onChange={(e) =>
-                          updateRuleItem(r.id, { description: e.target.value })
-                        }
-                        className="text-sm text-muted-foreground"
-                        disabled={isRetired}
-                      />
-                      <div className="flex flex-wrap items-center gap-3">
+            <div className="rounded-lg border border-border overflow-hidden flex-1 min-h-0 overflow-y-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-muted/50 border-b border-border">
+                    <th className="text-left p-2 w-10" scope="col">
+                      <span className="sr-only">Enabled</span>
+                    </th>
+                    <th className="text-left p-2 font-medium text-foreground" scope="col">
+                      Rule name
+                    </th>
+                    <th className="text-left p-2 font-medium text-foreground" scope="col">
+                      Description
+                    </th>
+                    <th className="text-left p-2 font-medium text-foreground" scope="col">
+                      Category
+                    </th>
+                    <th className="text-left p-2 font-medium text-foreground" scope="col">
+                      Threshold
+                    </th>
+                    {!isEdit && (
+                      <th className="text-left p-2 w-10" scope="col">
+                        <span className="sr-only">Actions</span>
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((r) => (
+                    <tr
+                      key={r.id}
+                      className="border-b border-border last:border-b-0 hover:bg-muted/30 transition-colors"
+                    >
+                      <td className="p-2 align-top">
+                        <Checkbox
+                          id={`enabled-${r.id}`}
+                          checked={r.enabled}
+                          onCheckedChange={(checked: boolean | "indeterminate") =>
+                            !isEdit && updateRuleItem(r.id, { enabled: checked === true })
+                          }
+                          className="mt-1"
+                          disabled={isEdit}
+                        />
+                      </td>
+                      <td className="p-2 align-top">
+                        <Input
+                          placeholder="Rule name"
+                          value={r.name}
+                          onChange={(e) => updateRuleItem(r.id, { name: e.target.value })}
+                          className="font-medium h-8 w-full min-w-[120px]"
+                          disabled={isRetired}
+                        />
+                      </td>
+                      <td className="p-2 align-top">
+                        <Input
+                          placeholder="Description"
+                          value={r.description}
+                          onChange={(e) =>
+                            updateRuleItem(r.id, { description: e.target.value })
+                          }
+                          className="text-sm text-muted-foreground h-8 w-full min-w-[140px]"
+                          disabled={isRetired}
+                        />
+                      </td>
+                      <td className="p-2 align-top">
                         <Select
                           value={r.category}
                           onChange={(e) =>
@@ -391,50 +413,53 @@ export function RuleBuilderModal({
                               category: e.target.value as RuleType,
                             })
                           }
-                          className="w-[180px]"
+                          className="w-full min-w-[140px] h-8"
                           disabled={isRetired}
                         >
-                          {ALL_RULE_TYPES.map((c) => (
+                          {RULE_CATEGORIES.map((c) => (
                             <option key={c} value={c}>
                               {c}
                             </option>
                           ))}
                         </Select>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            Threshold:
-                          </span>
-                          <Input
-                            placeholder="N/A"
-                            value={r.threshold}
-                            onChange={(e) =>
-                              updateRuleItem(r.id, { threshold: e.target.value })
-                            }
-                            className="w-24"
-                            disabled={isRetired}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    {!isEdit && rules.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeRule(r.id)}
-                        className="rounded p-2 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                        aria-label="Delete rule"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                      </td>
+                      <td className="p-2 align-top">
+                        <Input
+                          placeholder="N/A"
+                          value={r.threshold}
+                          onChange={(e) =>
+                            updateRuleItem(r.id, { threshold: e.target.value })
+                          }
+                          className="w-20 h-8"
+                          disabled={isRetired}
+                        />
+                      </td>
+                      {!isEdit && (
+                        <td className="p-2 align-top">
+                          {rules.length > 1 ? (
+                            <button
+                              type="button"
+                              onClick={() => removeRule(r.id)}
+                              className="rounded p-2 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                              aria-label="Delete rule"
+                            >
+                              <Trash2 className="size-4" />
+                            </button>
+                          ) : (
+                            <span className="w-10 block" aria-hidden />
+                          )}
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
             {errors.rules && (
-              <p className="text-sm text-destructive">{errors.rules}</p>
+              <p className="text-sm text-destructive shrink-0">{errors.rules}</p>
             )}
             {isRetired && (
-              <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              <p className="rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground shrink-0">
                 Retired rules cannot be edited. Clone the rule to create a new version.
               </p>
             )}

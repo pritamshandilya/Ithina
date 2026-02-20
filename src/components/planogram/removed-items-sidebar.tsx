@@ -169,7 +169,7 @@ export function RemovedItemsSidebar({
       className={cn(
         "flex flex-col rounded-lg border border-border bg-card/80 transition-all",
         collapsed ? "w-12" : "w-64 min-w-0 shrink-0",
-        !collapsed && "min-h-[200px]",
+        !collapsed && "min-h-50",
         className
       )}
       role="region"

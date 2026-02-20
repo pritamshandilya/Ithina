@@ -1,5 +1,6 @@
 import { cn } from "@/lib/utils";
 import planogramData from "@/lib/constants/planogram.json";
+import { fetchPlanogramById } from "@/features/maker/api/planogram";
 
 interface PlanogramPreviewProps {
   planogramId?: string;
@@ -9,9 +10,9 @@ interface PlanogramPreviewProps {
 export function PlanogramPreview({ planogramId, className }: PlanogramPreviewProps) {
   if (!planogramId) return null;
 
-  const { planogram } = planogramData;
+  const { planogram } = fetchPlanogramById(planogramId) || planogramData;
   const { fixture, metadata } = planogram;
-
+  console.log("PlanogramPreview data:", { planogram, fixture, metadata });
   return (
     <div className={cn("mt-4 animate-in fade-in slide-in-from-top-2 duration-300", className)}>
       <div className="rounded-xl border border-border/50 bg-card/40 backdrop-blur-sm p-4 space-y-5 shadow-sm">
@@ -22,11 +23,11 @@ export function PlanogramPreview({ planogramId, className }: PlanogramPreviewPro
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <h4 className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest">Shelves</h4>
-            <p className="text-xl font-bold text-foreground">{fixture.shelfCount}</p>
+            <p className="text-xl font-bold text-foreground">{fixture.shelves.length}</p>
           </div>
           <div className="space-y-1">
             <h4 className="text-[10px] uppercase text-muted-foreground font-bold tracking-widest">Products</h4>
-            <p className="text-xl font-bold text-foreground">{metadata.totalProducts}</p>
+            <p className="text-xl font-bold text-foreground">{productcount}</p>
           </div>
           
           <div className="space-y-1 col-span-1">
@@ -35,7 +36,7 @@ export function PlanogramPreview({ planogramId, className }: PlanogramPreviewPro
                <span className="text-xl font-bold text-foreground">{fixture.width}</span>
                <span className="text-muted-foreground text-sm">x</span>
                <span className="text-xl font-bold text-foreground">{fixture.height}</span>
-               <span className="text-xs text-muted-foreground ml-1">{fixture.units}</span>
+               <span className="text-xs text-muted-foreground ml-1">{fixture?.depth}</span>
              </div>
           </div>
            <div className="space-y-1 col-span-1">

@@ -38,7 +38,7 @@ export function ShelfProduct({
   shelfNumber,
   widthFraction,
   highDemandSkus = [],
-  categoryColor = "bg-muted",
+  categoryColor = "border-muted",
   shapeClass = "rounded-md",
   editHandlers,
   className,
@@ -125,7 +125,7 @@ export function ShelfProduct({
           <InlineEdit
             value={product.name}
             onSave={(v) => editHandlers.onEditName(shelfNumber, product.sku, v)}
-            className="text-left text-inherit"
+            className={`text-left`}
             aria-label="Edit product name"
           />
         ) : (
@@ -134,7 +134,7 @@ export function ShelfProduct({
       </div>
       <div
         className={cn(
-          "min-w-0 truncate text-[10px] text-slate-600 dark:text-muted-foreground",
+          "min-w-0 truncate text-[10px] text-stone-200 dark:text-muted-foreground",
           isHighDemand && "pl-10"
         )}
       >
@@ -156,10 +156,10 @@ export function ShelfProduct({
           onSave={(updates) =>
             editHandlers.onEditFacingsDepth(shelfNumber, product.sku, updates)
           }
-          className="text-slate-600 dark:text-muted-foreground"
+          className="text-stone-300 dark:text-muted-foreground"
         />
       ) : (
-        <p className="mt-1 text-[10px] font-mono text-slate-600 dark:text-muted-foreground">
+        <p className="mt-1 text-[10px] font-mono text-stone-300 dark:text-muted-foreground">
           ×{product.facings} D{product.depthCount} ={totalUnits}
         </p>
       )}

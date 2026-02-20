@@ -106,7 +106,7 @@ export function InlineEdit({
       onClick={startEditing}
       onDoubleClick={startEditing}
       className={cn(
-        "w-full min-w-0 cursor-text rounded px-1 py-0.5 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+        "w-full min-w-0 cursor-text text-white rounded px-1 py-0.5 text-left hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
         !value && "italic text-muted-foreground",
         className
       )}

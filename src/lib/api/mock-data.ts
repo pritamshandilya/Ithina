@@ -13,6 +13,7 @@ import type {
 } from "@/types/maker";
 import type {
   CheckerAudit,
+  CheckerDashboardStats,
   ComplianceOverview,
   MockCheckerContext,
   Notification,
@@ -551,6 +552,62 @@ export function generateMockComplianceOverview(storeId?: string): ComplianceOver
     totalApprovedToday: Math.floor(Math.random() * 6) + 3, // 3-8 approved
     totalOverridesToday: Math.floor(Math.random() * 3), // 0-2 overrides
   };
+}
+
+const DAY_NAMES_CHECKER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/**
+ * Generate mock checker dashboard stats for charts
+ */
+export function generateCheckerDashboardStats(
+  storeId?: string
+): CheckerDashboardStats {
+  const shelves = generateMockShelves();
+
+  const weeklyCompliance = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const dayStr = d.toISOString().slice(0, 10);
+    const label = i === 6 ? "Today" : DAY_NAMES_CHECKER[d.getDay()];
+    const avgScore = 75 + Math.random() * 25;
+    const approved = Math.floor(Math.random() * 5) + 1;
+    return { day: dayStr, label, avgScore, approved };
+  });
+
+  const shelfBreakdown = [
+    {
+      status: "approved",
+      label: "Approved",
+      count: shelves.filter((s) => s.status === "approved").length,
+      color: "var(--chart-2)",
+    },
+    {
+      status: "pending",
+      label: "Pending Review",
+      count: shelves.filter((s) => s.status === "pending").length,
+      color: "var(--chart-1)",
+    },
+    {
+      status: "returned",
+      label: "Returned",
+      count: shelves.filter((s) => s.status === "returned").length,
+      color: "var(--destructive)",
+    },
+    {
+      status: "draft",
+      label: "Draft",
+      count: shelves.filter((s) => s.status === "draft").length,
+      color: "var(--accent)",
+    },
+    {
+      status: "never-audited",
+      label: "Never Audited",
+      count: shelves.filter((s) => s.status === "never-audited").length,
+      color: "var(--muted-foreground)",
+    },
+  ].filter((s) => s.count > 0);
+
+  return { weeklyCompliance, shelfBreakdown };
 }
 
 /**

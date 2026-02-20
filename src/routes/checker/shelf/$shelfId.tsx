@@ -84,11 +84,18 @@ function PlanogramPreviewPage() {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set()
   );
+  
+  const [categoryPositions, setCategoryPositions] = useState<Map<string, {
+    shelfNumber: number;
+    position: number; // index in products array
+  }>>(new Map());
 
   const dragRef = useRef<{
     sku: string;
     fromShelf: number | "removed";
   } | null>(null);
+
+  const toggleInProgressRef = useRef(false);
 
   useEffect(() => {
     if (!preview?.planogramPayload.planogram.fixture.shelves) return;
@@ -145,8 +152,16 @@ function PlanogramPreviewPage() {
       });
     }
 
+    const posMap = new Map<string, { shelfNumber: number; position: number }>();
+    shelves.forEach((shelf) => {
+      shelf.products.forEach((product, idx) => {
+        posMap.set(product.sku, { shelfNumber: shelf.shelfNumber, position: idx });
+      });
+    });
+
     setLocalShelves(shelves);
     setRemovedItems(removed);
+    setCategoryPositions(posMap);
     setHasChanges(false);
     setSelectedCategories(new Set());
   }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
@@ -280,6 +295,16 @@ function PlanogramPreviewPage() {
           return { ...s, products: reordered };
         })
       );
+      
+      // Update position tracking
+      setCategoryPositions((prev) => {
+        const next = new Map(prev);
+        productIds.forEach((sku, idx) => {
+          next.set(sku, { shelfNumber, position: idx });
+        });
+        return next;
+      });
+      
       setHasChanges(true);
     },
     []
@@ -342,6 +367,17 @@ function PlanogramPreviewPage() {
       if (from === "removed") {
         setRemovedItems((items) => items.filter((p) => p.sku !== sku));
       }
+      
+      setCategoryPositions((prev) => {
+        const next = new Map(prev);
+        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
+        if (targetShelf) {
+          const productIds = targetShelf.products.map((p) => p.sku);
+          const targetIdx = targetSku ? productIds.indexOf(targetSku) : productIds.length;
+          next.set(sku, { shelfNumber: to, position: targetIdx });
+        }
+        return next;
+      });
 
       setHasChanges(true);
     },
@@ -462,32 +498,120 @@ function PlanogramPreviewPage() {
     [baseShelves, removedItems]
   );
 
-  const shelvesToShow = useMemo(() => {
-    if (selectedCategories.size === 0) return baseShelves;
-    return baseShelves
-      .map((s) => ({
-        ...s,
-        products: s.products.filter((p) => selectedCategories.has(p.category)),
-      }))
-      .filter((s) => s.products.length > 0);
-  }, [baseShelves, selectedCategories]);
+  const shelvesToShow = baseShelves;
 
   const onToggleCategory = useCallback(
     (category: string) => {
-      setSelectedCategories((prev) => {
-        const all = stats.categoryList;
-        const next = new Set(prev);
-        if (prev.size === 0) {
-          all.forEach((c) => next.add(c));
-          next.delete(category);
+      if (toggleInProgressRef.current) {
+        
+        return;
+      }
+      
+      toggleInProgressRef.current = true;
+
+      setSelectedCategories((prevSelected) => {
+        const isCurrentlyHidden = prevSelected.has(category);
+        const nextSelected = new Set(prevSelected);
+
+        if (isCurrentlyHidden) {
+          nextSelected.delete(category);
+
+          const toRestore = removedItems.filter((p) => p.category === category);
+          
+          const restoredSkus = new Set<string>(
+            toRestore
+              .filter((p) => categoryPositions.has(p.sku))
+              .map((p) => p.sku)
+          );
+
+          // console.log(
+          //   `Restoring category "${category}": ${restoredSkus.size} products to restore`,
+          //   Array.from(restoredSkus)
+          // );
+
+          setLocalShelves((prevShelves) => {
+            return prevShelves.map((shelf) => {
+              const newProducts = [...shelf.products];
+
+              toRestore.forEach((product) => {
+                const originalPos = categoryPositions.get(product.sku);
+                if (
+                  !originalPos ||
+                  originalPos.shelfNumber !== shelf.shelfNumber
+                )
+                  return;
+
+                const capacity = shelfCapacities[shelf.shelfNumber] ?? 0;
+                const currentFacings = newProducts.reduce(
+                  (sum, p) => sum + p.facings,
+                  0
+                );
+                const hasSpace = currentFacings + product.facings <= capacity;
+
+                if (hasSpace) {
+                  const insertPos = Math.min(
+                    originalPos.position,
+                    newProducts.length
+                  );
+                  newProducts.splice(insertPos, 0, product);
+                } else if (originalPos.position < newProducts.length) {
+                  const occupant = newProducts[originalPos.position];
+                  newProducts.splice(originalPos.position, 1, product);
+
+                  setRemovedItems((items) => {
+                    if (items.some((i) => i.sku === occupant.sku))
+                      return items;
+                    return [...items, occupant];
+                  });
+                }
+              });
+
+              return { ...shelf, products: newProducts };
+            });
+          });
+
+          setTimeout(() => {
+            setRemovedItems((prevRemoved) => {
+              const filtered = prevRemoved.filter(
+                (p) => !restoredSkus.has(p.sku)
+              );
+              
+              return filtered;
+            });
+          }, 0);
+
+          setHasChanges(true);
         } else {
-          if (next.has(category)) next.delete(category);
-          else next.add(category);
+          nextSelected.add(category);
+
+          const toRemove = localShelves.flatMap((shelf) =>
+            shelf.products.filter((p) => p.category === category)
+          );
+
+          setLocalShelves((prevShelves) => {
+            return prevShelves.map((shelf) => ({
+              ...shelf,
+              products: shelf.products.filter((p) => p.category !== category),
+            }));
+          });
+
+          setRemovedItems((prevRemoved) => {
+            const existingSkus = new Set(prevRemoved.map((p) => p.sku));
+            const newItems = toRemove.filter((p) => !existingSkus.has(p.sku));
+            return [...prevRemoved, ...newItems];
+          });
+
+          setHasChanges(true);
         }
-        return next;
+
+        setTimeout(() => {
+          toggleInProgressRef.current = false;
+        }, 100);
+
+        return nextSelected;
       });
     },
-    [stats.categoryList]
+    [removedItems, categoryPositions, shelfCapacities, localShelves]
   );
 
   return (
@@ -611,14 +735,13 @@ function PlanogramPreviewPage() {
 
               <div>
                 <p className="mb-2 text-xs font-medium text-foreground">
-                  Categories
+                  Categories (Click to hide/show)
                 </p>
                 <CategoryFilterTags
                   categories={stats.categoryList}
                   selected={
-                    selectedCategories.size === 0
-                      ? new Set(stats.categoryList)
-                      : selectedCategories
+                    // Invert logic: selected = visible (not hidden)
+                    new Set(stats.categoryList.filter(c => !selectedCategories.has(c)))
                   }
                   onToggle={onToggleCategory}
                 />
@@ -629,10 +752,7 @@ function PlanogramPreviewPage() {
                   {shelvesToShow.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
                       <p className="text-sm font-medium text-muted-foreground">
-                        No shelves match the selected categories
-                      </p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Click a category pill above to include it in the view
+                        No shelves available
                       </p>
                     </div>
                   ) : (
@@ -649,10 +769,7 @@ function PlanogramPreviewPage() {
                             onEditFacingsDepth,
                             onRemoveProduct,
                             onMoveProduct,
-                            onReorderProducts:
-                              selectedCategories.size === 0
-                                ? onReorderProducts
-                                : undefined,
+                            onReorderProducts,
                           }}
                           dragHandlers={{
                             onDragStart: handleDragStart,

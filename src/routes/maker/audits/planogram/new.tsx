@@ -89,7 +89,8 @@ function AddPlanogramPage() {
       );
       await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
       toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
-      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
+      // navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
+      navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: shelf.id } });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {

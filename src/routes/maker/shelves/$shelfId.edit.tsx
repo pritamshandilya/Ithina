@@ -1,327 +1,830 @@
-// Components and Layout
+
+
+/**
+ * Planogram Preview Route
+ *
+ * Visual preview of a saved planogram shelf.
+ * Editable: product name, category, facings/depth; remove products.
+ * Drag-and-drop: reorder within shelf, move between shelves, restore from removed.
+ * Access at: /maker/audits/planogram/:shelfId
+ */
+import { useQueryClient } from "@tanstack/react-query";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ArrowLeft, Check, Info } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
-import { MetricCard } from "@/components/maker/shelf-editor/MetricCard";
-import { ProductVisual } from "@/components/maker/shelf-editor/ProductVisual";
-import { CategoryLegend } from "@/components/maker/shelf-editor/CategoryLegend";
-import { RemovedItemsSidebar } from "@/components/maker/shelf-editor/RemovedItemsSidebar";
-import { ProductDataTable } from "@/components/maker/shelf-editor/ProductDataTable";
-
-// UI Shadcn
-import { Button } from "@/components/ui/button";
+import { HeaderContextBar } from "@/components/maker";
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-
-// Hooks & state
-import { useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { toast } from "@/hooks/use-toast";
-
-// Utils & Data
-import planogramData from "@/lib/constants/planogram.json";
-import { cn } from "@/lib/utils";
-import { ArrowLeft, Download, Plus, X, MousePointer2 } from "lucide-react";
-// import { StockingRules } from "@/components/maker/shelf-editor/StockingRules";
+  CategoryFilterTags,
+  ProductDetailsTable,
+  RemovedItemsSidebar,
+  ShelfRow,
+  StockingRulesSection,
+} from "@/components/planogram";
+import { StatCard } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { updateShelfArrangement } from "@/features/maker/api/planogram";
+import {
+  planogramShelfPreviewKeys,
+  usePlanogramShelfPreview,
+  useStores,
+} from "@/features/maker/hooks";
+import { useToast } from "@/hooks/use-toast";
+import { mockUser } from "@/lib/api/mock-data";
+import type {
+  PlanogramArrangement,
+  PlanogramProduct,
+  PlanogramShelfDef,
+} from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/shelves/$shelfId/edit")({
-    component: EditShelfPage,
+  component: PlanogramPreviewPage,
 });
 
-// TYPES
-interface Product {
-    sku: string;
-    name: string;
-    brand: string;
-    category: string;
-    facings: number;
-    width: number;
-    height: number;
-    depth: number;
-    depthCount: number;
-    // optimalStock: number;
-    // currentStock: number;
-    backroomStock: number; // Replaced optimalStock and currentStock
-
+function derivePlanogramStats(
+  shelves: PlanogramShelfDef[],
+  removedItems: PlanogramProduct[]
+) {
+  const allProducts = shelves.flatMap((s) => s.products);
+  const uniqueSkus = new Set([...allProducts, ...removedItems].map((p) => p.sku)).size;
+  const frontFacings = allProducts.reduce((sum, p) => sum + p.facings, 0);
+  const totalUnits = allProducts.reduce(
+    (sum, p) => sum + p.facings * (p.depthCount || 1),
+    0
+  );
+  const categorySet = new Set([...allProducts, ...removedItems].map((p) => p.category));
+  return {
+    shelves: shelves.length,
+    skus: uniqueSkus,
+    frontFacings,
+    totalUnits,
+    categories: categorySet.size,
+    categoryList: Array.from(categorySet).sort(),
+    removed: removedItems.length,
+  };
 }
 
-interface ShelfLevel {
+function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
+  return shelves.map((s) => ({
+    ...s,
+    products: s.products.map((p) => ({ ...p })),
+  }));
+}
+
+function PlanogramPreviewPage() {
+  const { shelfId } = Route.useParams();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { data: stores } = useStores();
+  const [selectedStoreId, setSelectedStoreId] = useState(() => mockUser.storeId);
+  const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
+  const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
+  const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    () => new Set()
+  );
+  
+  const [categoryPositions, setCategoryPositions] = useState<Map<string, {
     shelfNumber: number;
-    name: string;
-    products: Product[];
-    verticalPosition?: number;
-    height?: number;
-}
+    position: number; // index in products array
+  }>>(new Map());
 
-// COLORS
-const CATEGORY_COLORS: Record<string, string> = {
-    "Aperitif Snacks": "bg-pink-600",
-    "Chips": "bg-yellow-500",
-    "Snacks": "bg-orange-500",
-    "Kids Cereal": "bg-orange-500",
-    "Coffee": "bg-orange-600",
-    "Baby Care": "bg-pink-500",
-    "First Aid": "bg-red-500",
-    "Grooming": "bg-cyan-500",
-};
+  const dragRef = useRef<{
+    sku: string;
+    fromShelf: number | "removed";
+  } | null>(null);
 
-const getCategoryBgColor = (category: string) => CATEGORY_COLORS[category] || "bg-slate-500";
+  const toggleInProgressRef = useRef(false);
 
-// PAGE COMPONENT
-export default function EditShelfPage() {
-    const { planogram } = planogramData;
-    const { fixture } = planogram;
+  useEffect(() => {
+    if (!preview?.planogramPayload.planogram.fixture.shelves) return;
+    const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
+    const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
+    let shelves = deepCopyShelves(fixtureShelves);
+    const removed: PlanogramProduct[] = [];
 
-    const [levels, setLevels] = useState<ShelfLevel[]>(
-        fixture.shelves.map((s) => ({
-            shelfNumber: s.shelfNumber,
-            name: s.name,
-            verticalPosition: s.verticalPosition,
-            height: s.height,
-            products: s.products.map((p: Product) => ({
-                ...p,
-                width: p.width || 0,
-                height: p.height || 0,
-                // depthCount: (p as any).depthCount || 1,
-                // optimalStock: p.optimalStock || 0,
-                // currentStock: p.currentStock || 0,
-                depthCount: p.depthCount || 1,
-                backroomStock: p.backroomStock || 0,
-            })),
-        }))
+    if (arrangement?.productEdits) {
+      shelves = shelves.map((s) => ({
+        ...s,
+        products: s.products.map((p) => {
+          const edits = arrangement.productEdits![p.sku];
+          if (!edits) return p;
+          return {
+            ...p,
+            ...(edits.name != null && { name: edits.name }),
+            ...(edits.category != null && { category: edits.category }),
+            ...(edits.facings != null && { facings: edits.facings }),
+            ...(edits.depthCount != null && { depthCount: edits.depthCount }),
+          };
+        }),
+      }));
+    }
+
+    if (arrangement?.removedProductIds?.length) {
+      const removedSet = new Set(arrangement.removedProductIds);
+      for (const shelf of shelves) {
+        for (const p of shelf.products) {
+          if (removedSet.has(p.sku)) removed.push(p);
+        }
+      }
+      shelves = shelves.map((s) => ({
+        ...s,
+        products: s.products.filter((p) => !removedSet.has(p.sku)),
+      }));
+    }
+
+    if (arrangement?.shelfOrder?.length) {
+      const orderMap = new Map(
+        arrangement.shelfOrder.map((o) => [
+          o.shelfId.replace("shelf-", ""),
+          o.productIds,
+        ])
+      );
+      shelves = shelves.map((s) => {
+        const productIds = orderMap.get(String(s.shelfNumber));
+        if (!productIds?.length) return s;
+        const bySku = new Map(s.products.map((p) => [p.sku, p]));
+        const ordered = productIds
+          .map((id) => bySku.get(id))
+          .filter((p): p is PlanogramProduct => p != null);
+        return { ...s, products: ordered.length ? ordered : s.products };
+      });
+    }
+
+    const posMap = new Map<string, { shelfNumber: number; position: number }>();
+    shelves.forEach((shelf) => {
+      shelf.products.forEach((product, idx) => {
+        posMap.set(product.sku, { shelfNumber: shelf.shelfNumber, position: idx });
+      });
+    });
+
+    setLocalShelves(shelves);
+    setRemovedItems(removed);
+    setCategoryPositions(posMap);
+    setHasChanges(false);
+    setSelectedCategories(new Set());
+  }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+
+  const shelfCapacities = useMemo(() => {
+    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    return Object.fromEntries(
+      orig.map((s) => [
+        s.shelfNumber,
+        s.products.reduce((sum, p) => sum + p.facings, 0),
+      ])
     );
+  }, [preview?.planogramPayload.planogram.fixture.shelves]);
 
-    const [removedItems, setRemovedItems] = useState<Product[]>([]);
+  const findProduct = useCallback(
+    (shelfNumber: number, sku: string) => {
+      const shelf = localShelves.find((s) => s.shelfNumber === shelfNumber);
+      return shelf?.products.find((p) => p.sku === sku);
+    },
+    [localShelves]
+  );
 
-    // Metric Calculations
-    const totalShelves = levels.length;
-    const totalSKUs = levels.reduce((acc, level) => acc + level.products.length, 0);
-    const totalFacings = levels.reduce((acc, level) => acc + level.products.reduce((sum, p) => sum + p.facings, 0), 0);
-    const totalUnits = levels.reduce((acc, level) => acc + level.products.reduce((sum, p) => sum + p.facings * p.depthCount, 0), 0);
-    const categoriesCount = new Set(levels.flatMap(l => l.products.map(p => p.category))).size;
-    // const highDemandCount = levels.reduce((acc, level) =>
-    //     acc + level.products.filter(p => isHighDemand(p.sku)).length,
-    //     0);
-    const highDemandCount = 0;
+  const onEditName = useCallback(
+    (shelfNumber: number, sku: string, newName: string) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) =>
+                  p.sku === sku ? { ...p, name: newName } : p
+                ),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
 
-    // HANDLERS
-    const handleRemoveProduct = (levelIndex: number, productIndex: number) => {
-        const newLevels = [...levels];
-        const [removed] = newLevels[levelIndex].products.splice(productIndex, 1);
-        setLevels(newLevels);
-        setRemovedItems((prev) => [...prev, removed]);
-    };
+  const onEditCategory = useCallback(
+    (shelfNumber: number, sku: string, newCategory: string) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) =>
+                  p.sku === sku ? { ...p, category: newCategory } : p
+                ),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
 
-    const handleMoveProduct = (fromLevelIdx: number, prodIdx: number, toLevelIdx: number) => {
-        if (fromLevelIdx === toLevelIdx) return;
-        const newLevels = [...levels];
-        const [moved] = newLevels[fromLevelIdx].products.splice(prodIdx, 1);
-        newLevels[toLevelIdx].products.push(moved);
-        setLevels(newLevels);
-        toast({ title: "Item Moved", description: `${moved.name} moved to shelf ${newLevels[toLevelIdx].shelfNumber}` });
-    };
+  const onEditFacingsDepth = useCallback(
+    (
+      shelfNumber: number,
+      sku: string,
+      updates: { facings?: number; depthCount?: number }
+    ) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.map((p) => {
+                  if (p.sku !== sku) return p;
+                  const facings = updates.facings ?? p.facings;
+                  const depthCount = updates.depthCount ?? p.depthCount;
+                  return { ...p, facings, depthCount };
+                }),
+              }
+            : s
+        )
+      );
+      setHasChanges(true);
+    },
+    []
+  );
 
-    const handleRestoreProduct = (removedIdx: number, targetLevelIdx: number) => {
-        const newRemoved = [...removedItems];
-        const [restored] = newRemoved.splice(removedIdx, 1);
-        setRemovedItems(newRemoved);
-        const newLevels = [...levels];
-        newLevels[targetLevelIdx].products.push(restored);
-        setLevels(newLevels);
-    };
+  const onRemoveProduct = useCallback(
+    (shelfNumber: number, sku: string) => {
+      const product = findProduct(shelfNumber, sku);
+      if (!product) return;
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? {
+                ...s,
+                products: s.products.filter((p) => p.sku !== sku),
+              }
+            : s
+        )
+      );
+      setRemovedItems((prev) => [...prev, product]);
+      setHasChanges(true);
+    },
+    [findProduct]
+  );
 
-    return (
-        <MainLayout>
-            <div className="min-h-screen bg-[#0a0f1d] text-slate-100 font-sans p-4 sm:p-6 lg:p-8 selection:bg-accent/30">
-                <div className="mx-auto max-w-7xl flex flex-col">
-                {/* Header Section */}
-                <div className="flex items-center justify-between mb-8">
-                    <div className="flex flex-col gap-1">
-                        <div className="flex items-center gap-3">
-                            <Button variant="ghost" size="icon" asChild className="size-8 text-slate-400 hover:text-white hover:bg-slate-800">
-                                <Link to="/maker/shelves"><ArrowLeft className="size-4" /></Link>
-                            </Button>
-                            <h1 className="text-3xl font-black tracking-tighter text-white">
-                                r-shelf
-                            </h1>
-                        </div>
-                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-11">
-                            Store #1234 - Downtown • active
-                        </p>
-                    </div>
-                    <Button className="bg-[#1e293b] hover:bg-[#334155] text-slate-200 font-bold px-5 text-xs rounded-lg border border-slate-700 shadow-xl">
-                        <Download className="mr-2 size-3.5" /> Export JSON
-                    </Button>
-                </div>
+  const onRestoreProduct = useCallback(
+    (shelfNumber: number, product: PlanogramProduct) => {
+      setLocalShelves((prev) =>
+        prev.map((s) =>
+          s.shelfNumber === shelfNumber
+            ? { ...s, products: [...s.products, { ...product }] }
+            : s
+        )
+      );
+      setRemovedItems((prev) => prev.filter((p) => p.sku !== product.sku));
+      setHasChanges(true);
+    },
+    []
+  );
 
-                {/* Top Metrics Bar */}
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-                    <MetricCard label="Shelves" value={totalShelves} />
-                    <MetricCard label="SKUs" value={totalSKUs} />
-                    <MetricCard label="Front Facings" value={totalFacings} />
-                    <MetricCard label="Total Units (w/ depth)" value={totalUnits} color="text-cyan-400" />
-                    <MetricCard label="Categories" value={categoriesCount} />
-                    <MetricCard label="Removed" value={removedItems.length} color="text-orange-500" />
-                </div>
+  const onReorderProducts = useCallback(
+    (shelfNumber: number, productIds: string[]) => {
+      setLocalShelves((prev) =>
+        prev.map((s) => {
+          if (s.shelfNumber !== shelfNumber) return s;
+          const bySku = new Map(s.products.map((p) => [p.sku, p]));
+          const reordered = productIds
+            .map((id) => bySku.get(id))
+            .filter((p): p is PlanogramProduct => p != null);
+          return { ...s, products: reordered };
+        })
+      );
+      
+      // Update position tracking
+      setCategoryPositions((prev) => {
+        const next = new Map(prev);
+        productIds.forEach((sku, idx) => {
+          next.set(sku, { shelfNumber, position: idx });
+        });
+        return next;
+      });
+      
+      setHasChanges(true);
+    },
+    []
+  );
 
-                {/* Main Editor Canvas Container */}
-                <div className="flex flex-col lg:flex-row gap-8 items-start flex-1 min-h-0">
-                    {/* Left Section: Visualizer */}
-                    <div className="flex-1 w-full space-y-4 flex flex-col h-full min-h-0">
-                        {/* Sub Header / Info Bar */}
-                        <div className="shrink-0 flex items-center justify-between bg-slate-900/80 p-3 rounded-lg border border-slate-800 text-[10px] text-slate-500 uppercase font-black tracking-widest shadow-lg">
-                            <div className="flex gap-6 items-center">
-                                <span className="flex items-center gap-2">
-                                    <div className="size-1.5 rounded-full bg-slate-700" />
-                                    Fixture: {fixture.width}*{fixture.height}*{fixture.depth}mm • {fixture.type.replace('_', ' ')}
-                                </span>
-                                <span className="opacity-40 tracking-tighter normal-case font-medium">Click name to edit • X to remove</span>
-                            </div>
-                            <div className="flex items-center gap-2 bg-yellow-400/10 border border-yellow-400/20 px-2 py-1 rounded text-yellow-500 text-[9px]">
-                                <MousePointer2 className="size-2.5" />
-                                {highDemandCount} High Demand SKUs Highlighted
-                            </div>
-                        </div>
+  const onMoveProduct = useCallback(
+    (from: number | "removed", to: number, sku: string, targetSku?: string) => {
+      let productToMove: PlanogramProduct | undefined;
+      if (from === "removed") {
+        productToMove = removedItems.find((p) => p.sku === sku);
+      } else {
+        productToMove = localShelves
+          .find((s) => s.shelfNumber === from)
+          ?.products.find((p) => p.sku === sku);
+      }
+      if (!productToMove) return;
 
-                        {/* Shelf Levels Canvas */}
-                        <div className="flex-1 overflow-y-auto space-y-4 bg-slate-900/40 border border-slate-800 rounded-2xl p-6 min-h-150 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                            {levels.map((level, lvlIdx) => (
-                                <div key={level.shelfNumber} className="group/level relative bg-slate-900/20 rounded-xl border border-slate-800/30 p-2">
-                                    {/* Shelf Header Meta */}
-                                    <div className="flex items-center justify-between text-[10px] text-slate-500 mb-2 px-3">
-                                        <div className="flex items-center gap-3">
-                                            <span className="font-black text-slate-300 tracking-widest">SHELF {level.shelfNumber}</span>
-                                            <span className="text-slate-600 font-bold uppercase">{level.name}</span>
-                                        </div>
-                                        <div className="font-bold tracking-tighter">
-                                            {level.products.length} Items • {level.products.reduce((acc, p) => acc + p.facings, 0)}/{fixture.width / 120} facings • <span className="text-cyan-400">{level.products.reduce((acc, p) => acc + p.facings * p.depth, 0)} total units</span>
-                                        </div>
-                                    </div>
+      if (from !== to) {
+        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
+        if (targetShelf) {
+          const currentFacings = targetShelf.products.reduce(
+            (sum, p) => sum + p.facings,
+            0
+          );
+          const capacity = shelfCapacities[to] ?? 0;
+          if (currentFacings + productToMove.facings > capacity) {
+            toast({
+              title: "Shelf full",
+              description: `${targetShelf.name} does not have enough space.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
 
-                                    {/* Shelf Visualization Area */}
-                                    <div className="h-64 bg-slate-900/50 border-b-8 border-slate-800/80 rounded-t-xl relative flex items-end px-8 w-full overflow-hidden shadow-inner group-hover/level:bg-slate-900/70 transition-colors">
-                                        <div className="flex items-end justify-between w-full h-full pb-0 relative">
-                                            {level.products.length === 0 && (
-                                                <div className="absolute inset-0 flex items-center justify-center text-[10px] text-slate-700 font-bold uppercase tracking-[0.2em]">
-                                                    Empty Shelf Segment
-                                                </div>
-                                            )}
+      setLocalShelves((prev) => {
+        let nextShelves = [...prev];
+        if (from !== "removed") {
+          nextShelves = nextShelves.map((s) =>
+            s.shelfNumber === from
+              ? { ...s, products: s.products.filter((p) => p.sku !== sku) }
+              : s
+          );
+        }
+        return nextShelves.map((s) => {
+          if (s.shelfNumber !== to) return s;
+          const productIds = s.products.map((p) => p.sku);
+          const targetIdx = targetSku ? productIds.indexOf(targetSku) : -1;
+          const newProducts = [...s.products];
+          if (targetIdx !== -1) {
+            newProducts.splice(targetIdx, 0, productToMove!);
+          } else {
+            newProducts.push(productToMove!);
+          }
+          return { ...s, products: newProducts };
+        });
+      });
 
-                                            {level.products.map((product, pIdx) => {
-                                                const facingsArray = Array.from({ length: product.facings || 1 });
-                                                // const isHigh = isHighDemand(product.sku);
-                                                const isHigh = false;
-                                                return (
-                                                    <div
-                                                        key={`${product.sku}-${pIdx}`}
-                                                        className="flex flex-1 justify-center relative group/product min-w-0 pt-10 pb-2 px-1 transition-all duration-300 hover:bg-white/5 hover:shadow-[0_20px_50px_rgba(0,0,0,0.7)] hover:ring-1 hover:ring-white/10 rounded-xl"
-                                                    >
-                                                        {/* High Demand Tag */}
-                                                        {isHigh && (
-                                                            <div className="absolute top-2 right-11 z-30 bg-yellow-400 text-black text-[7px] font-black px-1.5 py-0.5 rounded shadow-lg uppercase tracking-widest ring-1 ring-yellow-500/20">
-                                                                High Demand
-                                                            </div>
-                                                        )}
+      if (from === "removed") {
+        setRemovedItems((items) => items.filter((p) => p.sku !== sku));
+      }
+      
+      setCategoryPositions((prev) => {
+        const next = new Map(prev);
+        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
+        if (targetShelf) {
+          const productIds = targetShelf.products.map((p) => p.sku);
+          const targetIdx = targetSku ? productIds.indexOf(targetSku) : productIds.length;
+          next.set(sku, { shelfNumber: to, position: targetIdx });
+        }
+        return next;
+      });
 
-                                                        {/* Action: Remove */}
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); handleRemoveProduct(lvlIdx, pIdx); }}
-                                                            className="absolute top-2 right-2 z-30 bg-red-600 hover:bg-red-500 text-white rounded-full p-1.5 shadow-xl opacity-0 group-hover/product:opacity-100 transition-all scale-75 hover:scale-100 active:scale-90"
-                                                        >
-                                                            <X className="size-3.5" />
-                                                        </button>
+      setHasChanges(true);
+    },
+    [localShelves, removedItems, shelfCapacities, toast]
+  );
 
-                                                        {/* Individual Facings Render */}
-                                                        <div className="flex items-end justify-center w-full gap-1 h-full max-w-full">
-                                                            {facingsArray.map((_, fIdx) => (
-                                                                <DropdownMenu key={`${product.sku}-${pIdx}-${fIdx}`}>
-                                                                    <DropdownMenuTrigger asChild>
-                                                                        <div className="flex-1 max-w-16 h-32 cursor-pointer transition-transform hover:-translate-y-1">
-                                                                            <ProductVisual
-                                                                                category={product.category}
-                                                                                isHighDemand={isHigh}
-                                                                            />
-                                                                        </div>
-                                                                    </DropdownMenuTrigger>
+  const handleDragStart = useCallback(
+    (sku: string, fromShelf: number | "removed") => {
+      dragRef.current = { sku, fromShelf };
+    },
+    []
+  );
 
-                                                                    <DropdownMenuContent className="w-56 bg-[#0f172a] border-slate-800 text-slate-200 font-sans shadow-2xl">
-                                                                        <div className="p-3">
-                                                                            <div className="font-black text-[11px] uppercase tracking-tight text-white mb-0.5">{product.name}</div>
-                                                                            <div className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Facing {fIdx + 1} of {product.facings}</div>
-                                                                        </div>
-                                                                        <DropdownMenuSeparator className="bg-slate-800" />
-                                                                        <DropdownMenuLabel className="text-[9px] text-slate-500 uppercase tracking-widest px-3 py-1.5">Shift Selection to...</DropdownMenuLabel>
-                                                                        <div className="grid grid-cols-2 gap-1.5 p-2 pt-0">
-                                                                            {levels.map((l, i) => (
-                                                                                <DropdownMenuItem
-                                                                                    key={l.shelfNumber}
-                                                                                    disabled={i === lvlIdx}
-                                                                                    onClick={() => handleMoveProduct(lvlIdx, pIdx, i)}
-                                                                                    className="text-[10px] font-bold justify-center rounded-md border border-slate-800 focus:bg-slate-800 focus:text-white"
-                                                                                >
-                                                                                    Shelf {l.shelfNumber}
-                                                                                </DropdownMenuItem>
-                                                                            ))}
-                                                                        </div>
-                                                                    </DropdownMenuContent>
-                                                                </DropdownMenu>
-                                                            ))}
-                                                        </div>
+  const handleDropOnShelf = useCallback(
+    (toShelfNumber: number, targetSku?: string) => {
+      if (!dragRef.current) return;
+      const { sku, fromShelf } = dragRef.current;
+      dragRef.current = null;
+      onMoveProduct(fromShelf, toShelfNumber, sku, targetSku);
+    },
+    [onMoveProduct]
+  );
 
-                                                        {/* Centered Group Label (Overlay) - Always Visible */}
-                                                        <div className="absolute bottom-36 z-20 flex flex-col items-center w-75 pointer-events-none transition-all duration-300">
-                                                            <div className="h-4 w-px bg-white/20 mb-1 opacity-20" />
-                                                            <div className="text-[10px] font-black text-center leading-tight drop-shadow-2xl text-white px-2 line-clamp-1 uppercase tracking-tighter">
-                                                                {product.name}
-                                                            </div>
-                                                            <div className="text-[8px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">
-                                                                {product.category}
-                                                            </div>
-                                                            <div className="flex items-center gap-1 mt-1.5 shadow-2xl">
-                                                                <div className="flex items-center text-[8px] font-black rounded-sm overflow-hidden border border-white/10">
-                                                                    <span className={cn("px-1.5 py-0.5 text-white shadow-sm", getCategoryBgColor(product.category))}>x{product.facings}</span>
-                                                                    <span className="px-1.5 py-0.5 text-slate-300 bg-slate-800">D{product.depthCount}</span>
-                                                                </div>
-                                                                <div className="bg-slate-900/90 text-[8px] font-black px-1.5 py-0.5 rounded-sm text-cyan-400 border border-cyan-500/30">
-                                                                    ={product.facings * product.depthCount}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
+  const handleDropOnRemoved = useCallback(() => {
+    if (!dragRef.current) return;
+    const { sku, fromShelf } = dragRef.current;
+    dragRef.current = null;
+    if (fromShelf === "removed") return;
+    onRemoveProduct(fromShelf as number, sku);
+  }, [onRemoveProduct]);
 
-                            {/* Action: Add Shelf Area */}
-                            <button className="w-full h-12 border border-dashed border-slate-800 rounded-xl flex items-center justify-center text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] hover:text-slate-400 hover:bg-slate-900/40 hover:border-slate-700 transition-all">
-                                <Plus className="mr-3 size-4" /> Add Shelf
-                            </button>
+  const handleSave = useCallback(async () => {
+    if (!preview || !hasChanges || !shelfId) return;
+    setIsSaving(true);
+    try {
+      const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
+      const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
 
-                            <CategoryLegend categories={CATEGORY_COLORS} />
-                        </div>
-                    </div>
+      for (const shelf of localShelves) {
+        for (const p of shelf.products) {
+          const orig = originalShelves
+            .flatMap((s) => s.products)
+            .find((op) => op.sku === p.sku);
+          if (!orig) continue;
+          const edits: {
+            name?: string;
+            category?: string;
+            facings?: number;
+            depthCount?: number;
+          } = {};
+          if (p.name !== orig.name) edits.name = p.name;
+          if (p.category !== orig.category) edits.category = p.category;
+          if (p.facings !== orig.facings) edits.facings = p.facings;
+          if (p.depthCount !== orig.depthCount) edits.depthCount = p.depthCount;
+          if (Object.keys(edits).length > 0) productEdits[p.sku] = edits;
+        }
+      }
 
-                    <RemovedItemsSidebar
-                        items={removedItems}
-                        shelves={levels}
-                        onRestore={handleRestoreProduct}
-                    />
-                </div>
+      const arrangement: PlanogramArrangement = {
+        shelfOrder: localShelves.map((s) => ({
+          shelfId: `shelf-${s.shelfNumber}`,
+          productIds: s.products.map((p) => p.sku),
+        })),
+        removedProductIds: removedItems.map((p) => p.sku),
+        productEdits:
+          Object.keys(productEdits).length > 0 ? productEdits : undefined,
+      };
 
-                {/* <StockingRules rules={rulesData} /> */}
-                <ProductDataTable products={levels.reduce((acc: Product[], l) => [
-                    ...acc,
-                    ...l.products.map(p => ({ ...p, shelfNumber: l.shelfNumber }))
-                ], [])} />
-                </div>
+      const updated = await updateShelfArrangement(shelfId, arrangement);
+      if (updated) {
+        await queryClient.invalidateQueries({
+          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
+        });
+        toast({
+          title: "Changes saved",
+          description: "Your planogram edits have been saved.",
+        });
+        setHasChanges(false);
+      } else {
+        toast({
+          title: "Save failed",
+          description: "Could not update shelf. It may not exist.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "An error occurred while saving.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [
+    preview,
+    hasChanges,
+    shelfId,
+    localShelves,
+    removedItems,
+    queryClient,
+    toast,
+  ]);
+
+  const planogram = preview?.planogramPayload.planogram;
+  const metadata = preview?.planogramPayload.metadata;
+  const fixture = planogram?.fixture;
+  const highDemandSkus =
+    preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
+
+  const baseShelves = useMemo(
+    () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
+    [localShelves, fixture?.shelves]
+  );
+
+  const stats = useMemo(
+    () => derivePlanogramStats(baseShelves, removedItems),
+    [baseShelves, removedItems]
+  );
+
+  const shelvesToShow = baseShelves;
+
+  const onToggleCategory = useCallback(
+    (category: string) => {
+      if (toggleInProgressRef.current) {
+        
+        return;
+      }
+      
+      toggleInProgressRef.current = true;
+
+      setSelectedCategories((prevSelected) => {
+        const isCurrentlyHidden = prevSelected.has(category);
+        const nextSelected = new Set(prevSelected);
+
+        if (isCurrentlyHidden) {
+          nextSelected.delete(category);
+
+          const toRestore = removedItems.filter((p) => p.category === category);
+          
+          const restoredSkus = new Set<string>(
+            toRestore
+              .filter((p) => categoryPositions.has(p.sku))
+              .map((p) => p.sku)
+          );
+
+          // console.log(
+          //   `Restoring category "${category}": ${restoredSkus.size} products to restore`,
+          //   Array.from(restoredSkus)
+          // );
+
+          setLocalShelves((prevShelves) => {
+            return prevShelves.map((shelf) => {
+              const newProducts = [...shelf.products];
+
+              toRestore.forEach((product) => {
+                const originalPos = categoryPositions.get(product.sku);
+                if (
+                  !originalPos ||
+                  originalPos.shelfNumber !== shelf.shelfNumber
+                )
+                  return;
+
+                const capacity = shelfCapacities[shelf.shelfNumber] ?? 0;
+                const currentFacings = newProducts.reduce(
+                  (sum, p) => sum + p.facings,
+                  0
+                );
+                const hasSpace = currentFacings + product.facings <= capacity;
+
+                if (hasSpace) {
+                  const insertPos = Math.min(
+                    originalPos.position,
+                    newProducts.length
+                  );
+                  newProducts.splice(insertPos, 0, product);
+                } else if (originalPos.position < newProducts.length) {
+                  const occupant = newProducts[originalPos.position];
+                  newProducts.splice(originalPos.position, 1, product);
+
+                  setRemovedItems((items) => {
+                    if (items.some((i) => i.sku === occupant.sku))
+                      return items;
+                    return [...items, occupant];
+                  });
+                }
+              });
+
+              return { ...shelf, products: newProducts };
+            });
+          });
+
+          setTimeout(() => {
+            setRemovedItems((prevRemoved) => {
+              const filtered = prevRemoved.filter(
+                (p) => !restoredSkus.has(p.sku)
+              );
+              
+              return filtered;
+            });
+          }, 0);
+
+          setHasChanges(true);
+        } else {
+          nextSelected.add(category);
+
+          const toRemove = localShelves.flatMap((shelf) =>
+            shelf.products.filter((p) => p.category === category)
+          );
+
+          setLocalShelves((prevShelves) => {
+            return prevShelves.map((shelf) => ({
+              ...shelf,
+              products: shelf.products.filter((p) => p.category !== category),
+            }));
+          });
+
+          setRemovedItems((prevRemoved) => {
+            const existingSkus = new Set(prevRemoved.map((p) => p.sku));
+            const newItems = toRemove.filter((p) => !existingSkus.has(p.sku));
+            return [...prevRemoved, ...newItems];
+          });
+
+          setHasChanges(true);
+        }
+
+        setTimeout(() => {
+          toggleInProgressRef.current = false;
+        }, 100);
+
+        return nextSelected;
+      });
+    },
+    [removedItems, categoryPositions, shelfCapacities, localShelves]
+  );
+
+  return (
+    <MainLayout>
+      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <HeaderContextBar
+            stores={stores ?? []}
+            selectedStoreId={selectedStoreId}
+            onStoreChange={setSelectedStoreId}
+          />
+          <header className="flex flex-wrap items-center gap-4">
+            <Button variant="ghost" size="icon" asChild>
+              <Link to="/checker/shelves">
+                <ArrowLeft className="size-4" aria-hidden />
+                <span className="sr-only">Back</span>
+              </Link>
+            </Button>
+            <div className="min-w-0 flex-1">
+              {isLoading ? (
+                <Skeleton className="h-8 w-64" />
+              ) : error ? (
+                <h1 className="text-2xl font-bold text-destructive">
+                  Error loading planogram
+                </h1>
+              ) : preview ? (
+                <>
+                  <h1 className="text-2xl font-bold text-foreground truncate">
+                    {preview.shelf.shelfName}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    v{planogram?.version ?? "1.0"} {metadata?.location ?? "—"} ·{" "}
+                    {metadata?.status ?? "active"}
+                  </p>
+                </>
+              ) : (
+                <h1 className="text-2xl font-bold text-foreground">
+                  Planogram not found
+                </h1>
+              )}
             </div>
-        </MainLayout>
-    );
+            {hasChanges && (
+              <Button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="bg-chart-2 text-white hover:opacity-90"
+              >
+                <Check className="size-4" aria-hidden />
+                {isSaving ? "Saving…" : "Save"}
+              </Button>
+            )}
+          </header>
+
+          {isLoading && (
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-64 w-full rounded-lg" />
+            </div>
+          )}
+
+          {error && (
+            <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center">
+              <p className="text-destructive font-medium">
+                Failed to load planogram
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This shelf may not have planogram data, or it could not be loaded.
+              </p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link to="/maker/audits/planogram">Back to list</Link>
+              </Button>
+            </div>
+          )}
+
+          {preview && !isLoading && (
+            <div className="space-y-6">
+              <div
+                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                role="region"
+                aria-label="Planogram summary metrics"
+              >
+                <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
+                <StatCard title="SKUs" value={stats.skus} className="stat-card" />
+                <StatCard
+                  title="Front Facings"
+                  value={stats.frontFacings}
+                  className="stat-card"
+                />
+                <StatCard
+                  title="Total Units (w/ depth)"
+                  value={stats.totalUnits}
+                  className="stat-card"
+                />
+                <StatCard
+                  title="Categories"
+                  value={stats.categories}
+                  className="stat-card"
+                />
+                <StatCard
+                  title="Removed"
+                  value={stats.removed}
+                  className="stat-card"
+                />
+              </div>
+
+              {fixture && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                  <Info
+                    className="size-4 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                  <span className="text-sm text-foreground">
+                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
+                    {fixture.units} · {fixture.type}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    Click name to edit · X to remove · Drag to reorder or move between shelves
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <p className="mb-2 text-xs font-medium text-foreground">
+                  Categories (Click to hide/show)
+                </p>
+                <CategoryFilterTags
+                  categories={stats.categoryList}
+                  selected={
+                    // Invert logic: selected = visible (not hidden)
+                    new Set(stats.categoryList.filter(c => !selectedCategories.has(c)))
+                  }
+                  onToggle={onToggleCategory}
+                />
+              </div>
+
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1 space-y-6">
+                  {shelvesToShow.length === 0 ? (
+                    <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
+                      <p className="text-sm font-medium text-muted-foreground">
+                        No shelves available
+                      </p>
+                    </div>
+                  ) : (
+                    [...shelvesToShow]
+                      .sort((a, b) => b.verticalPosition - a.verticalPosition)
+                      .map((shelf) => (
+                        <ShelfRow
+                          key={shelf.shelfNumber}
+                          shelf={shelf}
+                          highDemandSkus={highDemandSkus}
+                          editHandlers={{
+                            onEditName,
+                            onEditCategory,
+                            onEditFacingsDepth,
+                            onRemoveProduct,
+                            onMoveProduct,
+                            onReorderProducts,
+                          }}
+                          dragHandlers={{
+                            onDragStart: handleDragStart,
+                            onDropOnShelf: handleDropOnShelf,
+                            onDropOnRemoved: handleDropOnRemoved,
+                          }}
+                        />
+                      ))
+                  )}
+                </div>
+                <RemovedItemsSidebar
+                  removedItems={removedItems}
+                  shelves={baseShelves}
+                  shelfCapacities={shelfCapacities}
+                  // originalShelfAssignment={originalShelfAssignment}
+                  onRestore={onRestoreProduct}
+                  onRemoveFromShelf={(sku, shelfNumber) =>
+                    onRemoveProduct(shelfNumber, sku)
+                  }
+                  onMoveFromSidebar={(sku, toShelfNumber) =>
+                    onMoveProduct("removed", toShelfNumber, sku)
+                  }
+                />
+              </div>
+
+              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+                <div className="min-w-0 overflow-x-auto">
+                  <div className="min-w-275">
+                    <ProductDetailsTable
+                      shelves={shelvesToShow}
+                      highDemandSkus={highDemandSkus}
+                    />
+                  </div>
+                </div>
+                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
+                  <StockingRulesSection
+                    stockingRules={preview.planogramPayload.stockingRules}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!preview && !isLoading && !error && (
+            <div className="rounded-xl border border-border bg-card/80 p-6 text-center">
+              <p className="text-muted-foreground">Planogram not found.</p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link to="/maker/audits/planogram">Back to list</Link>
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </MainLayout>
+  );
 }

@@ -1,4 +1,6 @@
-import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
+import { BadgeCheck, ChevronsUpDown, LogOut, User } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -16,15 +18,24 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { useAuth } from "@/providers/auth";
+import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 export default function SidenavFooter() {
   const { isMobile } = useSidebar();
+  const navigate = useNavigate();
 
-  const { userInfo, isFetchingUserInfo, manageAccount, startLogout } =
-    useAuth();
+  const currentUser = useMemo(() => SimulatedAuthService.getCurrentUser(), []);
 
-  if (isFetchingUserInfo || !userInfo) return null;
+  const handleManageAccount = () => {
+    navigate({ to: "/profile" });
+  };
+
+  const handleLogout = () => {
+    SimulatedAuthService.logout();
+    navigate({ to: "/login" });
+  };
+
+  if (!currentUser) return null;
 
   return (
     <SidebarMenu>
@@ -37,22 +48,22 @@ export default function SidenavFooter() {
             >
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
-                  src={userInfo.profilePictureUrl}
-                  alt={userInfo.firstName}
+                  src={undefined}
+                  alt={currentUser.firstName}
                 />
 
                 <AvatarFallback className="rounded-lg">
-                  {userInfo.firstName.charAt(0)}
-                  {userInfo.lastName.charAt(0)}
+                  {currentUser.firstName.charAt(0)}
+                  {currentUser.lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
 
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {userInfo.firstName} {userInfo.lastName}
+                  {currentUser.firstName} {currentUser.lastName}
                 </span>
 
-                <span className="truncate text-xs">{userInfo.email}</span>
+                <span className="truncate text-xs">{currentUser.email}</span>
               </div>
 
               <ChevronsUpDown className="ml-auto size-4" />
@@ -69,22 +80,22 @@ export default function SidenavFooter() {
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
-                    src={userInfo.profilePictureUrl}
-                    alt={userInfo.firstName}
+                    src={undefined}
+                    alt={currentUser.firstName}
                   />
 
                   <AvatarFallback className="rounded-lg">
-                    {userInfo.firstName.charAt(0)}
-                    {userInfo.lastName.charAt(0)}
+                    {currentUser.firstName.charAt(0)}
+                    {currentUser.lastName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {userInfo.firstName} {userInfo.lastName}
+                    {currentUser.firstName} {currentUser.lastName}
                   </span>
 
-                  <span className="truncate text-xs">{userInfo.email}</span>
+                  <span className="truncate text-xs">{currentUser.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
@@ -92,7 +103,11 @@ export default function SidenavFooter() {
             <DropdownMenuSeparator />
 
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={manageAccount}>
+              <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
+                <User />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleManageAccount}>
                 <BadgeCheck />
                 Account
               </DropdownMenuItem>
@@ -100,7 +115,7 @@ export default function SidenavFooter() {
 
             <DropdownMenuSeparator />
 
-            <DropdownMenuItem onClick={startLogout}>
+            <DropdownMenuItem onClick={handleLogout}>
               <LogOut />
               Log out
             </DropdownMenuItem>

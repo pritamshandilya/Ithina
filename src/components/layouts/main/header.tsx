@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { BookOpen, User } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 
 import logo from "@/assets/logo.avif";
 import { NotificationsDropdown } from "@/components/checker";
@@ -13,23 +13,24 @@ import {
   
 } from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-// import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import { useStore } from "@/providers/store";
 import type { Notification } from "@/types/checker";
 
 export default function Header() {
-  // const location = useLocation();
-  // const currentUser = SimulatedAuthService.getCurrentUser();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const currentUser = SimulatedAuthService.getCurrentUser();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
   const { data: notifications } = useNotifications(selectedStoreId);
 
-  // const role = useMemo(() => {
-  //   if (currentUser?.role) return currentUser.role;
-  //   if (location.pathname.startsWith("/checker")) return "checker";
-  //   return "maker";
-  // }, [currentUser?.role, location.pathname]);
+  const role = useMemo(() => {
+    if (currentUser?.role) return currentUser.role;
+    if (location.pathname.startsWith("/checker")) return "checker";
+    return "maker";
+  }, [currentUser?.role, location.pathname]);
 
   const markAsRead = useMarkNotificationAsRead();
   const markAllAsRead = useMarkAllNotificationsAsRead();
@@ -84,17 +85,19 @@ export default function Header() {
             className="w-[200px] pl-8 h-9 bg-background/50"
           />
         </div> */}
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="shrink-0"
-          aria-label="Knowledge Center"
-        >
-          <Link to="/checker/knowledge-center">
-            <BookOpen className="size-5" aria-hidden="true" />
-          </Link>
-        </Button>
+        {role === "checker" && (
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            className="shrink-0"
+            aria-label="Knowledge Center"
+          >
+            <Link to="/checker/knowledge-center">
+              <BookOpen className="size-5" aria-hidden="true" />
+            </Link>
+          </Button>
+        )}
         <NotificationsDropdown
           notifications={notifications || []}
           onNotificationClick={handleNotificationClick}
@@ -102,7 +105,7 @@ export default function Header() {
           onMarkAllAsRead={handleMarkAllAsRead}
         />
 
-        <Button variant="ghost" size="icon">
+        <Button onClick={() => navigate({ to: "/profile" })} variant="ghost" size="icon">
           <User className="h-5 w-5" />
         </Button>
 

@@ -23,6 +23,7 @@ import { useStores as useCheckerStores } from "@/features/checker/hooks";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/sidebar";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 import { cn } from "@/lib/utils";
+import SidenavFooter from "./footer";
 
 type NavItem = {
   label: string;
@@ -265,6 +267,9 @@ export default function Sidenav() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidenavFooter />
+      </SidebarFooter>
     </Sidebar>
   );
 }

@@ -91,6 +91,34 @@ export interface QuickStats {
 }
 
 /**
+ * Daily audit count for chart (last 7 days)
+ */
+export interface MakerDailyAuditCount {
+  day: string;
+  label: string;
+  submitted: number;
+  approved: number;
+}
+
+/**
+ * Status breakdown for pie/donut chart
+ */
+export interface MakerStatusBreakdown {
+  status: string;
+  label: string;
+  count: number;
+  color: string;
+}
+
+/**
+ * Maker dashboard performance stats (charts data)
+ */
+export interface MakerDashboardStats {
+  weeklyAudits: MakerDailyAuditCount[];
+  statusBreakdown: MakerStatusBreakdown[];
+}
+
+/**
  * Mock user context (will be replaced with real auth later)
  */
 export interface MockUserContext {

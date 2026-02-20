@@ -5,15 +5,22 @@
 
 import { getCreatedPlanogramShelves } from "@/features/maker/api/planogram";
 import {
+  generateMakerDashboardStats,
   generateMockAdhocAnalyses,
   generateMockAudits,
   generateMockQuickStats,
   generateMockShelves,
   generateMockStores,
-  getReturnedAudits,
   getDraftAudits,
+  getReturnedAudits,
 } from "@/lib/api/mock-data";
-import type { AdhocAnalysis, Audit, QuickStats, Shelf } from "@/types/maker";
+import type {
+  AdhocAnalysis,
+  Audit,
+  MakerDashboardStats,
+  QuickStats,
+  Shelf,
+} from "@/types/maker";
 import type { Store } from "@/types/checker";
 
 /**
@@ -112,6 +119,14 @@ export async function fetchQuickStats(): Promise<QuickStats> {
   // return response.data;
   
   return generateMockQuickStats();
+}
+
+/**
+ * Fetch maker dashboard stats (weekly audits, status breakdown) for charts
+ */
+export async function fetchMakerDashboardStats(): Promise<MakerDashboardStats> {
+  await simulateNetworkDelay(200);
+  return generateMakerDashboardStats();
 }
 
 /**

@@ -8,6 +8,10 @@ export {
 } from "./useAssignedShelves";
 export { useQuickStats, quickStatsKeys } from "./useQuickStats";
 export {
+  useMakerDashboardStats,
+  makerDashboardStatsKeys,
+} from "./useMakerDashboardStats";
+export {
   useReturnedAudits,
   returnedAuditsKeys,
 } from "./useReturnedAudits";

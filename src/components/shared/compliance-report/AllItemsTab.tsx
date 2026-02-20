@@ -152,6 +152,70 @@ function escapeHtml(s: string): string {
   return div.innerHTML;
 }
 
+/** Simple HTML table for PDF export – avoids Tabulator (oklch/verticalFillMode issues) */
+function PdfSimpleTable<T extends Record<string, unknown>>({
+  columns,
+  data,
+  renderCell,
+}: {
+  columns: { key: keyof T | string; header: string }[];
+  data: T[];
+  renderCell: (row: T, key: string) => React.ReactNode;
+}) {
+  const tableStyle: React.CSSProperties = {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "0.8125rem",
+    backgroundColor: "#f9fafb",
+    color: "#1a1a1a",
+  };
+  const thStyle: React.CSSProperties = {
+    padding: "0.75rem 1rem",
+    textAlign: "left",
+    fontWeight: 600,
+    backgroundColor: "#e8e8e8",
+    borderBottom: "2px solid #e5e7eb",
+    color: "#1a1a1a",
+  };
+  const tdStyle: React.CSSProperties = {
+    padding: "0.75rem 1rem",
+    borderBottom: "1px solid #e5e7eb",
+    borderRight: "1px dotted #e5e7eb",
+    color: "#1a1a1a",
+  };
+  return (
+    <div style={{ overflowX: "auto" }}>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            {columns.map((c) => (
+              <th key={c.key} style={thStyle}>
+                {c.header}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, i) => (
+            <tr
+              key={(row.id as string) ?? i}
+              style={{
+                backgroundColor: i % 2 === 0 ? "#f9fafb" : "#f5f5f5",
+              }}
+            >
+              {columns.map((c) => (
+                <td key={c.key} style={tdStyle}>
+                  {renderCell(row, c.key as string)}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function filterRows<T extends Record<string, unknown>>(
   rows: T[],
   query: string,
@@ -227,18 +291,67 @@ export function AllItemsTab({
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
           SKU Facings & Depth Summary
         </h3>
-        <DataTable<SkuFacingRow>
-          columns={SKU_FACINGS_COLUMNS}
-          data={filteredSkuFacings}
-          rowIdField="id"
-          initialSort={{ field: "productName", dir: "asc" }}
-          emptyMessage="No SKU facings match your search."
-          pagination={!pdfMode}
-          pageSize={pdfMode ? 9999 : DEFAULT_PAGE_SIZE}
-          pageSizeSelector={pdfMode ? [] : [...PAGE_SIZE_OPTIONS]}
-          onPaginationChange={pdfMode ? undefined : setSkuPagination}
-          headerFilters={!pdfMode}
-        />
+        {pdfMode ? (
+          <PdfSimpleTable
+            columns={[
+              { key: "productName", header: "SKU / Product" },
+              { key: "frontFacings", header: "Front Facings" },
+              { key: "detected", header: "Detected" },
+              { key: "depth", header: "Depth" },
+              { key: "totalExpected", header: "Total Expected" },
+              { key: "facingDiffText", header: "Facing Diff" },
+              { key: "facingDiffVariant", header: "Status" },
+            ]}
+            data={filteredSkuFacings}
+            renderCell={(row, key) => {
+              if (key === "productName") {
+                return (
+                  <>
+                    <span style={{ fontWeight: 500 }}>{row.productName}</span>{" "}
+                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>({row.sku})</span>
+                  </>
+                );
+              }
+              if (key === "facingDiffVariant") {
+                const v = row.facingDiffVariant;
+                const badgeStyle: React.CSSProperties =
+                  v === "ok"
+                    ? { background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" }
+                    : v === "extra"
+                      ? { background: "#dbeafe", color: "#2563eb", border: "1px solid #93c5fd" }
+                      : { background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" };
+                return (
+                  <span style={{ ...badgeStyle, display: "inline-flex", borderRadius: 4, padding: "2px 8px", fontSize: "0.75rem", fontWeight: 500 }}>
+                    {v === "ok" ? "OK" : v === "extra" ? "Extra" : "Short"}
+                  </span>
+                );
+              }
+              if (key === "facingDiffText") {
+                const color =
+                  row.facingDiffVariant === "short"
+                    ? "#dc2626"
+                    : row.facingDiffVariant === "extra"
+                      ? "#2563eb"
+                      : "#16a34a";
+                return <span style={{ color, fontWeight: 500 }}>{row.facingDiffText}</span>;
+              }
+              return String((row as Record<string, unknown>)[key] ?? "—");
+            }}
+          />
+        ) : (
+          <DataTable<SkuFacingRow>
+            columns={SKU_FACINGS_COLUMNS}
+            data={filteredSkuFacings}
+            rowIdField="id"
+            initialSort={{ field: "productName", dir: "asc" }}
+            emptyMessage="No SKU facings match your search."
+            pagination
+            pageSize={DEFAULT_PAGE_SIZE}
+            pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
+            onPaginationChange={setSkuPagination}
+            headerFilters
+          />
+        )}
       </section>
 
       {/* All Planogram Items */}
@@ -246,18 +359,55 @@ export function AllItemsTab({
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
           All Planogram Items ({filteredPlanogramItems.length})
         </h3>
-        <DataTable<PlanogramItemRow>
-          columns={PLANOGRAM_ITEMS_COLUMNS}
-          data={filteredPlanogramItems}
-          rowIdField="id"
-          initialSort={{ field: "productName", dir: "asc" }}
-          emptyMessage="No planogram items match your search."
-          pagination={!pdfMode}
-          pageSize={pdfMode ? 9999 : DEFAULT_PAGE_SIZE}
-          pageSizeSelector={pdfMode ? [] : [...PAGE_SIZE_OPTIONS]}
-          onPaginationChange={pdfMode ? undefined : setPlanogramPagination}
-          headerFilters={!pdfMode}
-        />
+        {pdfMode ? (
+          <PdfSimpleTable
+            columns={[
+              { key: "productName", header: "Product / SKU" },
+              { key: "issueDescription", header: "Issue" },
+              { key: "shelf", header: "Shelf" },
+              { key: "complianceLevel", header: "Issue Severity" },
+            ]}
+            data={filteredPlanogramItems}
+            renderCell={(row, key) => {
+              if (key === "productName") {
+                return (
+                  <>
+                    <span style={{ fontWeight: 500 }}>{row.productName}</span>{" "}
+                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>{row.sku}</span>
+                  </>
+                );
+              }
+              if (key === "complianceLevel") {
+                const level = row.complianceLevel;
+                const badgeStyle: React.CSSProperties =
+                  level === "LOW"
+                    ? { background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" }
+                    : level === "MEDIUM"
+                      ? { background: "#fef3c7", color: "#d97706", border: "1px solid #fcd34d" }
+                      : { background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" };
+                return (
+                  <span style={{ ...badgeStyle, display: "inline-flex", borderRadius: 4, padding: "2px 8px", fontSize: "0.75rem", fontWeight: 500 }}>
+                    {level}
+                  </span>
+                );
+              }
+              return String((row as Record<string, unknown>)[key] ?? "—");
+            }}
+          />
+        ) : (
+          <DataTable<PlanogramItemRow>
+            columns={PLANOGRAM_ITEMS_COLUMNS}
+            data={filteredPlanogramItems}
+            rowIdField="id"
+            initialSort={{ field: "productName", dir: "asc" }}
+            emptyMessage="No planogram items match your search."
+            pagination
+            pageSize={DEFAULT_PAGE_SIZE}
+            pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
+            onPaginationChange={setPlanogramPagination}
+            headerFilters
+          />
+        )}
       </section>
     </div>
   );

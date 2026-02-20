@@ -101,7 +101,7 @@ function DonutChart({
     { value: distribution.matched, color: "var(--chart-2)" },
     { value: distribution.misplaced, color: "var(--action-warning)" },
     { value: distribution.missing, color: "var(--destructive)" },
-    { value: distribution.extra, color: "oklch(0.6 0.2 250)" },
+    { value: distribution.extra, color: "#6366f1" },
   ];
 
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -246,7 +246,7 @@ function SpaceEfficiencyChart() {
           const r = bubbleScale(d.unitMargin);
           const cx = xScale(d.weightKg);
           const cy = yScale(d.revenuePerSqFt);
-          const fill = d.isHighEfficiency ? "var(--chart-2)" : "oklch(0.6 0.2 270)";
+          const fill = d.isHighEfficiency ? "var(--chart-2)" : "#8b5cf6";
 
           return (
             <g key={i}>

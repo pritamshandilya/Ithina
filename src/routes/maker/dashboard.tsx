@@ -1,11 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ChevronRight } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import {
   MakerAccomplishedCards,
-  MakerAssignedPreview,
+  MakerAssignedTable,
   MakerAttentionSection,
   MakerDashboardHeader,
+  MakerPerformanceCharts,
   MyAuditsSection,
 } from "@/components/maker";
 import { useDraftAudits, useReturnedAudits } from "@/features/maker/hooks";
@@ -28,8 +30,8 @@ function MakerDashboard() {
     navigate({ to: "/maker/audits/planogram" });
   };
 
-  const scrollToMyAudits = () => {
-    document.getElementById("my-audits-section")?.scrollIntoView({ behavior: "smooth" });
+  const handleViewAllAudits = () => {
+    navigate({ to: "/maker/audits/planogram" });
   };
 
   return (
@@ -42,38 +44,51 @@ function MakerDashboard() {
           {/* Key metrics - My Work at a Glance */}
           <MakerAccomplishedCards />
 
-          {/* Two-column layout: Attention + Assigned Preview */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+          {/* Maker performance charts */}
+          <MakerPerformanceCharts />
+
+          {/* Two-column layout: Attention + Assigned Shelves (same height) */}
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 items-stretch">
             <MakerAttentionSection
               onResume={handleResume}
               onViewReport={handleViewReport}
-              onViewAll={hasAttentionItems ? scrollToMyAudits : undefined}
+              onViewAll={hasAttentionItems ? handleViewAllAudits : undefined}
             />
-            <MakerAssignedPreview
+            <MakerAssignedTable
               onShelfClick={(shelfId) => {
                 navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
               }}
             />
           </div>
 
-          {/* Full My Audits section (collapsible context) */}
+          {/* Recent audit history section */}
           <section
             id="my-audits-section"
             aria-labelledby="my-audits-heading"
             className="space-y-4 scroll-mt-8"
           >
-            <div>
-              <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
-                My Audits
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Full list of draft and returned audits
-              </p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
+                  Recent Audit History
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  History of the last 5 audits
+                </p>
+              </div>
+              <Link
+                to="/maker/audits/planogram"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
+              >
+                View All Audits
+                <ChevronRight className="size-4" aria-hidden />
+              </Link>
             </div>
 
             <MyAuditsSection
               onResume={handleResume}
               onViewReport={handleViewReport}
+              maxItems={5}
             />
           </section>
         </div>

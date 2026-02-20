@@ -15,6 +15,7 @@ import { ComplianceReportTabs } from "./ComplianceReportTabs";
 import { OverviewChartsTab } from "./OverviewChartsTab";
 import { AllItemsTab } from "./AllItemsTab";
 import { AllIssuesTab } from "./AllIssuesTab";
+import { ImageComparisonTab } from "./ImageComparisonTab";
 import type { ReportSnippet } from "@/features/maker/analysis";
 import type { ReportTabId } from "./ComplianceReportTabs";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,8 @@ import { cn } from "@/lib/utils";
 export interface ComplianceReportFullProps {
   /** Report data */
   report: ReportSnippet;
+  /** Captured shelf image URL – from analysis flow */
+  imageUrl?: string | null;
   /** Back navigation target */
   backTo?: string;
   /** Callback when Export PDF is clicked */
@@ -32,6 +35,7 @@ export interface ComplianceReportFullProps {
 
 export function ComplianceReportFull({
   report,
+  imageUrl = null,
   backTo = "/maker/audits/planogram",
   onExportPdf,
   className,
@@ -84,9 +88,7 @@ export function ComplianceReportFull({
       )}
 
       {activeTab === "image-comparison" && (
-        <div className="rounded-xl border border-border bg-card/60 p-8 text-center text-muted-foreground">
-          <p className="text-sm">Image Comparison tab — placeholder (coming soon)</p>
-        </div>
+        <ImageComparisonTab imageUrl={imageUrl} />
       )}
 
       {activeTab === "issues" && <AllIssuesTab />}

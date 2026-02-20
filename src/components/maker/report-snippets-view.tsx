@@ -143,7 +143,10 @@ export function ReportSnippetsView({
           </p>
         </div>
         <Button size="sm" variant="accent" asChild>
-          <Link to="/maker/reports/view">
+          <Link
+            to="/maker/reports/view"
+            state={{ imageUrl: imagePreview ?? undefined }}
+          >
             <FileText className="size-4" aria-hidden />
             View Full Report
           </Link>

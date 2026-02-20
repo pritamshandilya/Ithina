@@ -560,7 +560,7 @@ const DAY_NAMES_CHECKER = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
  * Generate mock checker dashboard stats for charts
  */
 export function generateCheckerDashboardStats(
-  storeId?: string
+  _storeId?: string
 ): CheckerDashboardStats {
   const shelves = generateMockShelves();
 

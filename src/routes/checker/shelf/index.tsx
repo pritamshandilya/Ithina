@@ -220,7 +220,8 @@ function PlanogramAnalysisPage() {
   const { data: shelves, isLoading } = useAssignedShelves();
   const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
-  const selectedStoreId = selectedStore?.id || mockUser.storeId;
+  const _selectedStoreId = selectedStore?.id || mockUser.storeId;
+  void _selectedStoreId;
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [complianceOverrides, setComplianceOverrides] = useState<Record<string, string>>({});

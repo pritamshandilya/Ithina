@@ -19,7 +19,7 @@ export function StoreModal({
 
   const filteredStores = MOCK_STORES.filter((store) =>
     store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    store.city.toLowerCase().includes(searchQuery.toLowerCase())
+    (store.city?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
   return (
@@ -62,7 +62,7 @@ export function StoreModal({
                       {store.name}
                     </span>
                     <span className="text-xs text-gray-500 group-hover:text-gray-400">
-                      {store.city}, {store.country}
+                      {store.city ?? ""}, {store.country ?? ""}
                     </span>
                   </button>
                 </motion.div>

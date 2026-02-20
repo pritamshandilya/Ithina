@@ -100,7 +100,7 @@ export function ReportSnippetsView({
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
   const hasIssues = report.issues > 0 || report.missing > 0 || report.misplaced > 0;
 
-  const handleSendForApproval = (notes: string) => {
+  const handleSendForApproval = (_notes: string) => {
     setIsSubmittingApproval(true);
     // TODO: Call API to submit for approval
     setTimeout(() => {
@@ -111,7 +111,8 @@ export function ReportSnippetsView({
       });
     }, 800);
   };
-  const isCompliant = report.complianceScore >= 100 && !hasIssues;
+  const _isCompliant = report.complianceScore >= 100 && !hasIssues;
+  void _isCompliant; // Reserved for future UI (e.g. compliant badge)
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, 2));
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
@@ -145,7 +146,8 @@ export function ReportSnippetsView({
         <Button size="sm" variant="accent" asChild>
           <Link
             to="/maker/reports/view"
-            state={{ imageUrl: imagePreview ?? undefined }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            state={{ imageUrl: imagePreview ?? undefined } as any}
           >
             <FileText className="size-4" aria-hidden />
             View Full Report

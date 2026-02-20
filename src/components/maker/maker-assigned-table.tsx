@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignedShelves } from "@/features/maker/hooks";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
-import type { AuditStatus, Shelf } from "@/types/maker";
+import type { AuditStatus } from "@/types/maker";
 
 const PREVIEW_ROWS = 6;
 /** Fixed height to match What Needs Your Attention; content scrolls when it overflows */

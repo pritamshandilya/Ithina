@@ -25,10 +25,7 @@ import type {
 } from "@/features/maker/analysis/all-issues-report-types";
 import { cn } from "@/lib/utils";
 
-const VARIANT_STYLES: Record<
-  IssueCategoryVariant,
-  { bg: string; border: string; icon: string }
-> = {
+const VARIANT_STYLES: Record<IssueCategoryVariant, string> = {
   misplaced:
     "bg-action-warning/15 border-action-warning/40 text-action-warning",
   missing: "bg-destructive/15 border-destructive/40 text-destructive",

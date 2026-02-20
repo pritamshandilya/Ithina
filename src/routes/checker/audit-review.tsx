@@ -22,7 +22,7 @@ export const Route = createFileRoute("/checker/audit-review")({
 function CheckerAuditReviewPage() {
   const navigate = useNavigate();
   // const { data: stores } = useStores();
-  const [selectedStoreId, setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+  const [selectedStoreId, _setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
 
   const { data: audits, isLoading: auditsLoading, error: auditsError } =
     usePendingAudits(selectedStoreId);

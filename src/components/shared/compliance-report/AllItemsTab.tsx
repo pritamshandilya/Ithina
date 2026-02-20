@@ -153,7 +153,7 @@ function escapeHtml(s: string): string {
 }
 
 /** Simple HTML table for PDF export – avoids Tabulator (oklch/verticalFillMode issues) */
-function PdfSimpleTable<T extends Record<string, unknown>>({
+function PdfSimpleTable<T extends { id?: string }>({
   columns,
   data,
   renderCell,
@@ -189,7 +189,7 @@ function PdfSimpleTable<T extends Record<string, unknown>>({
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c.key} style={thStyle}>
+              <th key={String(c.key)} style={thStyle}>
                 {c.header}
               </th>
             ))}
@@ -198,13 +198,13 @@ function PdfSimpleTable<T extends Record<string, unknown>>({
         <tbody>
           {data.map((row, i) => (
             <tr
-              key={(row.id as string) ?? i}
+              key={("id" in row ? String(row.id) : undefined) ?? i}
               style={{
                 backgroundColor: i % 2 === 0 ? "#f9fafb" : "#f5f5f5",
               }}
             >
               {columns.map((c) => (
-                <td key={c.key} style={tdStyle}>
+                <td key={String(c.key)} style={tdStyle}>
                   {renderCell(row, c.key as string)}
                 </td>
               ))}
@@ -216,7 +216,7 @@ function PdfSimpleTable<T extends Record<string, unknown>>({
   );
 }
 
-function filterRows<T extends Record<string, unknown>>(
+function filterRows<T extends object>(
   rows: T[],
   query: string,
   searchFields: (keyof T)[]
@@ -245,11 +245,11 @@ export function AllItemsTab({
   className,
 }: AllItemsTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [planogramPagination, setPlanogramPagination] = useState({
+  const [, setPlanogramPagination] = useState({
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
   });
-  const [skuPagination, setSkuPagination] = useState({
+  const [, setSkuPagination] = useState({
     page: 1,
     pageSize: DEFAULT_PAGE_SIZE,
   });
@@ -307,8 +307,8 @@ export function AllItemsTab({
               if (key === "productName") {
                 return (
                   <>
-                    <span style={{ fontWeight: 500 }}>{row.productName}</span>{" "}
-                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>({row.sku})</span>
+                    <span style={{ fontWeight: 500 }}>{String(row.productName)}</span>{" "}
+                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>({String(row.sku)})</span>
                   </>
                 );
               }
@@ -333,9 +333,9 @@ export function AllItemsTab({
                     : row.facingDiffVariant === "extra"
                       ? "#2563eb"
                       : "#16a34a";
-                return <span style={{ color, fontWeight: 500 }}>{row.facingDiffText}</span>;
+                return <span style={{ color, fontWeight: 500 }}>{String(row.facingDiffText)}</span>;
               }
-              return String((row as Record<string, unknown>)[key] ?? "—");
+              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
             }}
           />
         ) : (
@@ -372,13 +372,13 @@ export function AllItemsTab({
               if (key === "productName") {
                 return (
                   <>
-                    <span style={{ fontWeight: 500 }}>{row.productName}</span>{" "}
-                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>{row.sku}</span>
+                    <span style={{ fontWeight: 500 }}>{String(row.productName)}</span>{" "}
+                    <span style={{ color: "#6b7280", fontSize: "0.75rem" }}>{String(row.sku)}</span>
                   </>
                 );
               }
               if (key === "complianceLevel") {
-                const level = row.complianceLevel;
+                const level = String(row.complianceLevel);
                 const badgeStyle: React.CSSProperties =
                   level === "LOW"
                     ? { background: "#dcfce7", color: "#16a34a", border: "1px solid #86efac" }
@@ -387,11 +387,11 @@ export function AllItemsTab({
                       : { background: "#fee2e2", color: "#dc2626", border: "1px solid #fca5a5" };
                 return (
                   <span style={{ ...badgeStyle, display: "inline-flex", borderRadius: 4, padding: "2px 8px", fontSize: "0.75rem", fontWeight: 500 }}>
-                    {level}
+                    {String(level)}
                   </span>
                 );
               }
-              return String((row as Record<string, unknown>)[key] ?? "—");
+              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
             }}
           />
         ) : (

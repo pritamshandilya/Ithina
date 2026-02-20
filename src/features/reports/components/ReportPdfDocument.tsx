@@ -144,12 +144,6 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
     ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
     : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`;
 
-  const totalDist =
-    report.issueDistribution.matched +
-    report.issueDistribution.misplaced +
-    report.issueDistribution.missing +
-    report.issueDistribution.extra;
-
   return (
     <Document title="Compliance Report">
       <Page size="A4" style={styles.page}>
@@ -416,7 +410,7 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
               if (key === "productName") return `${row.productName} (${row.sku})`;
               if (key === "facingDiffVariant")
                 return row.facingDiffVariant === "ok" ? "OK" : row.facingDiffVariant === "extra" ? "Extra" : "Short";
-              return String((row as Record<string, unknown>)[key] ?? "—");
+              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
             }}
           />
           <Text style={[styles.subtitle, { marginTop: 12, marginBottom: 6 }]}>
@@ -432,8 +426,8 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
             data={items.planogramItems}
             renderCell={(row, key) => {
               if (key === "productName") return `${row.productName} ${row.sku}`;
-              if (key === "complianceLevel") return row.complianceLevel;
-              return String((row as Record<string, unknown>)[key] ?? "—");
+              if (key === "complianceLevel") return String(row.complianceLevel);
+              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
             }}
           />
         </View>
@@ -442,7 +436,7 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
   );
 }
 
-function PdfTable<T extends Record<string, unknown>>({
+function PdfTable<T extends { id?: string }>({
   columns,
   data,
   renderCell,

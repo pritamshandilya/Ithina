@@ -9,7 +9,7 @@ import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
-import type { AuditStatus, Shelf } from "@/types/maker";
+import type { AuditStatus } from "@/types/maker";
 
 const PREVIEW_ROWS = 6;
 const SECTION_HEIGHT = 420;

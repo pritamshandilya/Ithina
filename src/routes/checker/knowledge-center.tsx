@@ -13,19 +13,13 @@
  * - Reference Documents (policy grounding)
  */
 
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useCallback, useState } from "react";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { useStore } from "@/providers/store";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
-import {
-  useMarkAllNotificationsAsRead,
-  useMarkNotificationAsRead,
-  useNotifications,
-} from "@/features/checker/hooks";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-import type { Notification } from "@/types/checker";
 import { cn } from "@/lib/utils";
 
 import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compliance-rules-tab";
@@ -45,31 +39,10 @@ export const Route = createFileRoute("/checker/knowledge-center")({
 type KnowledgeCenterTab = "rules" | "versions" | "documents";
 
 function KnowledgeCenterPage() {
-  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<KnowledgeCenterTab>("rules");
   const { selectedStore } = useStore();
-  const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
-
-  const { data: notifications } = useNotifications(selectedStoreId);
-  const markAsRead = useMarkNotificationAsRead();
-  const markAllAsRead = useMarkAllNotificationsAsRead();
-
-
-  const handleNotificationClick = useCallback(
-    (notification: Notification) => {
-      if (!notification.read) {
-        markAsRead.mutate(notification.id);
-      }
-      if (
-        (notification.type === "new_audit" || notification.type === "critical_audit") &&
-        notification.auditId
-      ) {
-        navigate({ to: "/checker/review/$auditId", params: { auditId: notification.auditId } });
-      }
-      // rule_change: already on Knowledge Center
-    },
-    [markAsRead, navigate]
-  );
+  const _selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
+  void _selectedStoreId; // Reserved for notifications
 
   const tabs: { id: KnowledgeCenterTab; label: string }[] = [
     { id: "rules", label: "Compliance Rules" },
@@ -79,7 +52,7 @@ function KnowledgeCenterPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
+        <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-7xl space-y-6">
 
           {/* Page Header */}

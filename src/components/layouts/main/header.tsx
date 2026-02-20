@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { BookOpen, User } from "lucide-react";
 import { useCallback } from "react";
 
@@ -19,6 +19,7 @@ import type { Notification } from "@/types/checker";
 
 export default function Header() {
   // const location = useLocation();
+  const navigate = useNavigate();
   // const currentUser = SimulatedAuthService.getCurrentUser();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
@@ -102,7 +103,7 @@ export default function Header() {
           onMarkAllAsRead={handleMarkAllAsRead}
         />
 
-        <Button variant="ghost" size="icon">
+        <Button onClick={() => navigate({ to: "/profile" })} variant="ghost" size="icon">
           <User className="h-5 w-5" />
         </Button>
 

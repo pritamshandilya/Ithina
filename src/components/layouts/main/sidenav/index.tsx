@@ -132,25 +132,6 @@ export default function Sidenav() {
     }
   };
 
-  const { data: makerStores } = useMakerStores();
-  const { data: checkerStores } = useCheckerStores();
-
-  const stores = role === "checker" ? checkerStores : makerStores;
-
-  useEffect(() => {
-    if (stores && stores.length > 0 && !selectedStore) {
-      setSelectedStore(stores[0]);
-    }
-  }, [stores, selectedStore, setSelectedStore]);
-
-  const handleStoreChange = (storeId: string) => {
-    if (!stores) return;
-    const store = stores.find((s) => s.id === storeId);
-    if (store) {
-      setSelectedStore(store);
-    }
-  };
-
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>

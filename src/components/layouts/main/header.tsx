@@ -5,13 +5,6 @@ import { useCallback } from "react";
 import logo from "@/assets/logo.avif";
 import { NotificationsDropdown } from "@/components/checker";
 import { Button } from "@/components/ui/button";
-import { Link } from "@tanstack/react-router";
-import { BookOpen, User } from "lucide-react";
-import { useCallback } from "react";
-
-import logo from "@/assets/logo.avif";
-import { NotificationsDropdown } from "@/components/checker";
-import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
   useMarkAllNotificationsAsRead,

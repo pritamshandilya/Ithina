@@ -351,9 +351,9 @@ const MakerAuditsAdhocNewRoute = MakerAuditsAdhocNewRouteImport.update({
 } as any)
 const CheckerReportsViewReportIdRoute =
   CheckerReportsViewReportIdRouteImport.update({
-    id: '/checker/reports/view/$reportId',
-    path: '/checker/reports/view/$reportId',
-    getParentRoute: () => rootRouteImport,
+    id: '/$reportId',
+    path: '/$reportId',
+    getParentRoute: () => CheckerReportsViewRoute,
   } as any)
 const MakerAuditsPlanogramRunShelfIdRoute =
   MakerAuditsPlanogramRunShelfIdRouteImport.update({
@@ -748,7 +748,6 @@ export interface RootRouteChildren {
   CheckerReportsShelfLevelRoute: typeof CheckerReportsShelfLevelRoute
   CheckerReportsStoreLevelRoute: typeof CheckerReportsStoreLevelRoute
   CheckerReviewAuditIdRoute: typeof CheckerReviewAuditIdRoute
-  CheckerReportsViewReportIdRoute: typeof CheckerReportsViewReportIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -1140,10 +1139,10 @@ declare module '@tanstack/react-router' {
     }
     '/checker/reports/view/$reportId': {
       id: '/checker/reports/view/$reportId'
-      path: '/checker/reports/view/$reportId'
+      path: '/$reportId'
       fullPath: '/checker/reports/view/$reportId'
       preLoaderRoute: typeof CheckerReportsViewReportIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof CheckerReportsViewRoute
     }
     '/maker/audits/planogram/run/$shelfId': {
       id: '/maker/audits/planogram/run/$shelfId'
@@ -1287,7 +1286,6 @@ const rootRouteChildren: RootRouteChildren = {
   CheckerReportsShelfLevelRoute: CheckerReportsShelfLevelRoute,
   CheckerReportsStoreLevelRoute: CheckerReportsStoreLevelRoute,
   CheckerReviewAuditIdRoute: CheckerReviewAuditIdRoute,
-  CheckerReportsViewReportIdRoute: CheckerReportsViewReportIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

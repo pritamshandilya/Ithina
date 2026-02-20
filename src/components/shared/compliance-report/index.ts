@@ -21,5 +21,8 @@ export type {
 export { OverviewChartsTab } from "./OverviewChartsTab";
 export type { OverviewChartsTabProps } from "./OverviewChartsTab";
 
+export { AllItemsTab } from "./AllItemsTab";
+export type { AllItemsTabProps } from "./AllItemsTab";
+
 export { ComplianceReportFull } from "./ComplianceReportFull";
 export type { ComplianceReportFullProps } from "./ComplianceReportFull";

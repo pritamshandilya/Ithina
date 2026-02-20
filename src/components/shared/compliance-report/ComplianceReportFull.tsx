@@ -13,6 +13,7 @@ import { ComplianceReportHeader } from "./ComplianceReportHeader";
 import { ComplianceReportMetrics } from "./ComplianceReportMetrics";
 import { ComplianceReportTabs } from "./ComplianceReportTabs";
 import { OverviewChartsTab } from "./OverviewChartsTab";
+import { AllItemsTab } from "./AllItemsTab";
 import type { ReportSnippet } from "@/features/maker/analysis";
 import type { ReportTabId } from "./ComplianceReportTabs";
 import { cn } from "@/lib/utils";
@@ -93,11 +94,7 @@ export function ComplianceReportFull({
         </div>
       )}
 
-      {activeTab === "items" && (
-        <div className="rounded-xl border border-border bg-card/60 p-8 text-center text-muted-foreground">
-          <p className="text-sm">All Items tab — placeholder (coming soon)</p>
-        </div>
-      )}
+      {activeTab === "items" && <AllItemsTab />}
     </div>
   );
 }

@@ -7,6 +7,7 @@ export type { PipelineStepDef } from "./constants";
 export { MOCK_SKU_ENRICHMENT_ITEMS } from "./mock-sku-data";
 export { MOCK_ANALYSIS_RESULT } from "./mock-analysis-result";
 export { MOCK_REPORT_SNIPPET } from "./mock-report-snippets";
+export { MOCK_ALL_ITEMS_REPORT } from "./mock-all-items-report";
 export type { AnalysisResult, AnalysisIssue } from "./analysis-result-types";
 export type {
   ReportSnippet,
@@ -15,6 +16,11 @@ export type {
   ReportIssueDistribution,
   ReportIssueCategory,
 } from "./report-snippet-types";
+export type {
+  PlanogramItemRow,
+  SkuFacingRow,
+  AllItemsReportData,
+} from "./all-items-report-types";
 export type {
   SkuEnrichmentItem,
   SkuIssueDetail,

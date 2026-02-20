@@ -5,22 +5,23 @@
  * they see the full compliance report (same as maker report view).
  * Back button returns to the audit review workspace.
  *
- * Access at: /checker/review/:auditId/report
+ * Access at: /checker/audit-report/:auditId
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { createRoot } from "react-dom/client";
 import { useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import { useToast } from "@/hooks/use-toast";
+import { ComplianceReportFull } from "@/components/shared/compliance-report";
 import {
-  ComplianceReportFull,
-  ComplianceReportPdfContent,
-} from "@/components/shared/compliance-report";
-import { MOCK_REPORT_SNIPPET } from "@/features/maker/analysis";
-import { exportReportToPdf } from "@/lib/pdf/export-report-pdf";
+  MOCK_REPORT_SNIPPET,
+  MOCK_ALL_ITEMS_REPORT,
+  MOCK_ALL_ISSUES_REPORT,
+  MOCK_IMAGE_COMPARISON,
+} from "@/features/maker/analysis";
+import { exportReportToPdf } from "@/features/reports/services/pdfExport";
 
-export const Route = createFileRoute("/checker/review/$auditId/report")({
+export const Route = createFileRoute("/checker/audit-report/$auditId")({
   component: AuditReportPage,
 });
 
@@ -36,12 +37,12 @@ function AuditReportPage() {
     setIsExporting(true);
     try {
       await exportReportToPdf({
-        renderContent: (container) => {
-          const root = createRoot(container);
-          root.render(
-            <ComplianceReportPdfContent report={MOCK_REPORT_SNIPPET} />
-          );
-          return () => root.unmount();
+        data: {
+          report: MOCK_REPORT_SNIPPET,
+          imageUrl: null,
+          allItems: MOCK_ALL_ITEMS_REPORT,
+          allIssues: MOCK_ALL_ISSUES_REPORT,
+          imageComparison: MOCK_IMAGE_COMPARISON,
         },
         filename: `compliance-report-audit-${auditId}.pdf`,
       });

@@ -265,7 +265,7 @@ function AuditReviewWorkspace() {
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild className="gap-2 border-accent/50 text-foreground hover:bg-accent/10 shrink-0">
-              <Link to={`/checker/review/${auditId}/report`}>
+              <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
                 <FileBarChart className="h-4 w-4" />
                 View Full Report
               </Link>
@@ -414,7 +414,7 @@ function AuditReviewWorkspace() {
                 </p>
               </div>
               <Button variant="outline" size="sm" asChild className="gap-2 shrink-0">
-                <Link to={`/checker/review/${auditId}/report`}>
+                <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
                   <FileBarChart className="h-4 w-4" />
                   View Full Report
                 </Link>
@@ -442,7 +442,7 @@ function AuditReviewWorkspace() {
                   This audit passed all compliance checks
                 </p>
                 <Button variant="outline" size="sm" asChild className="mt-4">
-                  <Link to={`/checker/review/${auditId}/report`} className="gap-2">
+                  <Link to="/checker/audit-report/$auditId" params={{ auditId }} className="gap-2">
                     <FileBarChart className="h-4 w-4" />
                     View Full Report
                   </Link>

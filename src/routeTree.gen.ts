@@ -55,6 +55,7 @@ import { Route as CheckerReviewAuditIdRouteImport } from './routes/checker/revie
 import { Route as CheckerReportsStoreLevelRouteImport } from './routes/checker/reports/store-level'
 import { Route as CheckerReportsShelfLevelRouteImport } from './routes/checker/reports/shelf-level'
 import { Route as CheckerReportsAdhocRouteImport } from './routes/checker/reports/adhoc'
+import { Route as CheckerAuditReportAuditIdRouteImport } from './routes/checker/audit-report.$auditId'
 import { Route as MakerAuditsPlanogramRouteRouteImport } from './routes/maker/audits/planogram/route'
 import { Route as MakerAuditsAdhocRouteRouteImport } from './routes/maker/audits/adhoc/route'
 import { Route as MakerAuditsPlanogramIndexRouteImport } from './routes/maker/audits/planogram/index'
@@ -63,7 +64,6 @@ import { Route as MakerShelvesShelfIdEditRouteImport } from './routes/maker/shel
 import { Route as MakerAuditsPlanogramNewRouteImport } from './routes/maker/audits/planogram/new'
 import { Route as MakerAuditsPlanogramShelfIdRouteImport } from './routes/maker/audits/planogram/$shelfId'
 import { Route as MakerAuditsAdhocNewRouteImport } from './routes/maker/audits/adhoc/new'
-import { Route as CheckerReviewAuditIdReportRouteImport } from './routes/checker/review.$auditId.report'
 import { Route as CheckerReportsViewReportIdRouteImport } from './routes/checker/reports/view.$reportId'
 import { Route as MakerAuditsPlanogramRunShelfIdRouteImport } from './routes/maker/audits/planogram/run.$shelfId'
 
@@ -300,6 +300,12 @@ const CheckerReportsAdhocRoute = CheckerReportsAdhocRouteImport.update({
   path: '/checker/reports/adhoc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckerAuditReportAuditIdRoute =
+  CheckerAuditReportAuditIdRouteImport.update({
+    id: '/checker/audit-report/$auditId',
+    path: '/checker/audit-report/$auditId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const MakerAuditsPlanogramRouteRoute =
   MakerAuditsPlanogramRouteRouteImport.update({
     id: '/planogram',
@@ -343,12 +349,6 @@ const MakerAuditsAdhocNewRoute = MakerAuditsAdhocNewRouteImport.update({
   path: '/new',
   getParentRoute: () => MakerAuditsAdhocRouteRoute,
 } as any)
-const CheckerReviewAuditIdReportRoute =
-  CheckerReviewAuditIdReportRouteImport.update({
-    id: '/report',
-    path: '/report',
-    getParentRoute: () => CheckerReviewAuditIdRoute,
-  } as any)
 const CheckerReportsViewReportIdRoute =
   CheckerReportsViewReportIdRouteImport.update({
     id: '/checker/reports/view/$reportId',
@@ -401,10 +401,11 @@ export interface FileRoutesByFullPath {
   '/maker/': typeof MakerIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
+  '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdRoute
   '/checker/reports/adhoc': typeof CheckerReportsAdhocRoute
   '/checker/reports/shelf-level': typeof CheckerReportsShelfLevelRoute
   '/checker/reports/store-level': typeof CheckerReportsStoreLevelRoute
-  '/checker/review/$auditId': typeof CheckerReviewAuditIdRouteWithChildren
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
   '/maker/reports/view': typeof MakerReportsViewRoute
@@ -412,7 +413,6 @@ export interface FileRoutesByFullPath {
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/checker/reports/view/$reportId': typeof CheckerReportsViewReportIdRoute
-  '/checker/review/$auditId/report': typeof CheckerReviewAuditIdReportRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
   '/maker/audits/planogram/$shelfId': typeof MakerAuditsPlanogramShelfIdRoute
   '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
@@ -453,10 +453,11 @@ export interface FileRoutesByTo {
   '/maker': typeof MakerIndexRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/manual-audits': typeof MakerManualAuditsRoute
+  '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdRoute
   '/checker/reports/adhoc': typeof CheckerReportsAdhocRoute
   '/checker/reports/shelf-level': typeof CheckerReportsShelfLevelRoute
   '/checker/reports/store-level': typeof CheckerReportsStoreLevelRoute
-  '/checker/review/$auditId': typeof CheckerReviewAuditIdRouteWithChildren
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
   '/maker/reports/view': typeof MakerReportsViewRoute
@@ -464,7 +465,6 @@ export interface FileRoutesByTo {
   '/maker/audits': typeof MakerAuditsIndexRoute
   '/maker/shelves': typeof MakerShelvesIndexRoute
   '/checker/reports/view/$reportId': typeof CheckerReportsViewReportIdRoute
-  '/checker/review/$auditId/report': typeof CheckerReviewAuditIdReportRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
   '/maker/audits/planogram/$shelfId': typeof MakerAuditsPlanogramShelfIdRoute
   '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
@@ -513,10 +513,11 @@ export interface FileRoutesById {
   '/maker/': typeof MakerIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
+  '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdRoute
   '/checker/reports/adhoc': typeof CheckerReportsAdhocRoute
   '/checker/reports/shelf-level': typeof CheckerReportsShelfLevelRoute
   '/checker/reports/store-level': typeof CheckerReportsStoreLevelRoute
-  '/checker/review/$auditId': typeof CheckerReviewAuditIdRouteWithChildren
+  '/checker/review/$auditId': typeof CheckerReviewAuditIdRoute
   '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdRoute
   '/checker/shelf/new': typeof CheckerShelfNewRoute
   '/maker/reports/view': typeof MakerReportsViewRoute
@@ -524,7 +525,6 @@ export interface FileRoutesById {
   '/maker/audits/': typeof MakerAuditsIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/checker/reports/view/$reportId': typeof CheckerReportsViewReportIdRoute
-  '/checker/review/$auditId/report': typeof CheckerReviewAuditIdReportRoute
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewRoute
   '/maker/audits/planogram/$shelfId': typeof MakerAuditsPlanogramShelfIdRoute
   '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewRoute
@@ -574,6 +574,7 @@ export interface FileRouteTypes {
     | '/maker/'
     | '/maker/audits/adhoc'
     | '/maker/audits/planogram'
+    | '/checker/audit-report/$auditId'
     | '/checker/reports/adhoc'
     | '/checker/reports/shelf-level'
     | '/checker/reports/store-level'
@@ -585,7 +586,6 @@ export interface FileRouteTypes {
     | '/maker/audits/'
     | '/maker/shelves/'
     | '/checker/reports/view/$reportId'
-    | '/checker/review/$auditId/report'
     | '/maker/audits/adhoc/new'
     | '/maker/audits/planogram/$shelfId'
     | '/maker/audits/planogram/new'
@@ -626,6 +626,7 @@ export interface FileRouteTypes {
     | '/maker'
     | '/maker/dashboard'
     | '/maker/manual-audits'
+    | '/checker/audit-report/$auditId'
     | '/checker/reports/adhoc'
     | '/checker/reports/shelf-level'
     | '/checker/reports/store-level'
@@ -637,7 +638,6 @@ export interface FileRouteTypes {
     | '/maker/audits'
     | '/maker/shelves'
     | '/checker/reports/view/$reportId'
-    | '/checker/review/$auditId/report'
     | '/maker/audits/adhoc/new'
     | '/maker/audits/planogram/$shelfId'
     | '/maker/audits/planogram/new'
@@ -685,6 +685,7 @@ export interface FileRouteTypes {
     | '/maker/'
     | '/maker/audits/adhoc'
     | '/maker/audits/planogram'
+    | '/checker/audit-report/$auditId'
     | '/checker/reports/adhoc'
     | '/checker/reports/shelf-level'
     | '/checker/reports/store-level'
@@ -696,7 +697,6 @@ export interface FileRouteTypes {
     | '/maker/audits/'
     | '/maker/shelves/'
     | '/checker/reports/view/$reportId'
-    | '/checker/review/$auditId/report'
     | '/maker/audits/adhoc/new'
     | '/maker/audits/planogram/$shelfId'
     | '/maker/audits/planogram/new'
@@ -743,10 +743,11 @@ export interface RootRouteChildren {
   MakerShelvesRoute: typeof MakerShelvesRouteWithChildren
   CheckerIndexRoute: typeof CheckerIndexRoute
   MakerIndexRoute: typeof MakerIndexRoute
+  CheckerAuditReportAuditIdRoute: typeof CheckerAuditReportAuditIdRoute
   CheckerReportsAdhocRoute: typeof CheckerReportsAdhocRoute
   CheckerReportsShelfLevelRoute: typeof CheckerReportsShelfLevelRoute
   CheckerReportsStoreLevelRoute: typeof CheckerReportsStoreLevelRoute
-  CheckerReviewAuditIdRoute: typeof CheckerReviewAuditIdRouteWithChildren
+  CheckerReviewAuditIdRoute: typeof CheckerReviewAuditIdRoute
   CheckerReportsViewReportIdRoute: typeof CheckerReportsViewReportIdRoute
 }
 
@@ -1074,6 +1075,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerReportsAdhocRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checker/audit-report/$auditId': {
+      id: '/checker/audit-report/$auditId'
+      path: '/checker/audit-report/$auditId'
+      fullPath: '/checker/audit-report/$auditId'
+      preLoaderRoute: typeof CheckerAuditReportAuditIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker/audits/planogram': {
       id: '/maker/audits/planogram'
       path: '/planogram'
@@ -1129,13 +1137,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/maker/audits/adhoc/new'
       preLoaderRoute: typeof MakerAuditsAdhocNewRouteImport
       parentRoute: typeof MakerAuditsAdhocRouteRoute
-    }
-    '/checker/review/$auditId/report': {
-      id: '/checker/review/$auditId/report'
-      path: '/report'
-      fullPath: '/checker/review/$auditId/report'
-      preLoaderRoute: typeof CheckerReviewAuditIdReportRouteImport
-      parentRoute: typeof CheckerReviewAuditIdRoute
     }
     '/checker/reports/view/$reportId': {
       id: '/checker/reports/view/$reportId'
@@ -1244,17 +1245,6 @@ const MakerShelvesRouteWithChildren = MakerShelvesRoute._addFileChildren(
   MakerShelvesRouteChildren,
 )
 
-interface CheckerReviewAuditIdRouteChildren {
-  CheckerReviewAuditIdReportRoute: typeof CheckerReviewAuditIdReportRoute
-}
-
-const CheckerReviewAuditIdRouteChildren: CheckerReviewAuditIdRouteChildren = {
-  CheckerReviewAuditIdReportRoute: CheckerReviewAuditIdReportRoute,
-}
-
-const CheckerReviewAuditIdRouteWithChildren =
-  CheckerReviewAuditIdRoute._addFileChildren(CheckerReviewAuditIdRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
@@ -1292,10 +1282,11 @@ const rootRouteChildren: RootRouteChildren = {
   MakerShelvesRoute: MakerShelvesRouteWithChildren,
   CheckerIndexRoute: CheckerIndexRoute,
   MakerIndexRoute: MakerIndexRoute,
+  CheckerAuditReportAuditIdRoute: CheckerAuditReportAuditIdRoute,
   CheckerReportsAdhocRoute: CheckerReportsAdhocRoute,
   CheckerReportsShelfLevelRoute: CheckerReportsShelfLevelRoute,
   CheckerReportsStoreLevelRoute: CheckerReportsStoreLevelRoute,
-  CheckerReviewAuditIdRoute: CheckerReviewAuditIdRouteWithChildren,
+  CheckerReviewAuditIdRoute: CheckerReviewAuditIdRoute,
   CheckerReportsViewReportIdRoute: CheckerReportsViewReportIdRoute,
 }
 export const routeTree = rootRouteImport

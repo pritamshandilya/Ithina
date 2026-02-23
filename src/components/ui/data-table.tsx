@@ -188,14 +188,25 @@ export function DataTable<T extends object>({
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
 
-    if (rowFormatter) {
-      options.rowFormatter = rowFormatter;
+    const effectiveRowFormatter = rowFormatter
+      ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
+          rowFormatter(row);
+          if (onRowClick) row.getElement().classList.add("cursor-pointer");
+        }
+      : onRowClick
+        ? (row: { getElement: () => HTMLElement }) => row.getElement().classList.add("cursor-pointer")
+        : undefined;
+    if (effectiveRowFormatter) {
+      options.rowFormatter = effectiveRowFormatter;
     }
 
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (_e: unknown, row: { getData: () => T }) => {
+      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+        const ev = e as { target?: EventTarget };
+        const target = ev?.target as HTMLElement | null;
+        if (target?.closest?.("button, select, [data-action], a[href]")) return;
         onRowClick(row.getData());
       });
     }

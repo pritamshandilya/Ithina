@@ -22,6 +22,7 @@ import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { updateShelfArrangement } from "@/features/maker/api/planogram";
+import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
   planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
@@ -98,8 +99,9 @@ function PlanogramPreviewPage() {
   } | null>(null);
 
   useEffect(() => {
-    const payload = preview?.planogramPayload;
-    if (!preview || !payload?.planogram?.fixture?.shelves) return;
+    if (!preview) return;
+    const payload = preview.planogramPayload ?? PLANOGRAM_POC_002;
+    if (!payload?.planogram?.fixture?.shelves) return;
     const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
     let shelves = deepCopyShelves(fixtureShelves);
@@ -157,17 +159,20 @@ function PlanogramPreviewPage() {
     setRemovedItems(removed);
     setHasChanges(false);
     setSelectedCategories(new Set());
-  }, [preview?.planogramPayload?.planogram?.fixture?.shelves, preview?.shelf.arrangement]);
+  }, [preview]);
+
+  const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
+  const isPlaceholder = !!preview && !preview.planogramPayload;
 
   const shelfCapacities = useMemo(() => {
-    const orig = preview?.planogramPayload?.planogram?.fixture?.shelves ?? [];
+    const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
     return Object.fromEntries(
       orig.map((s) => [
         s.shelfNumber,
         s.products.reduce((sum, p) => sum + p.facings, 0),
       ])
     );
-  }, [preview?.planogramPayload?.planogram?.fixture?.shelves]);
+  }, [effectivePayload?.planogram?.fixture?.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -455,11 +460,11 @@ function PlanogramPreviewPage() {
     toast,
   ]);
 
-  const planogram = preview?.planogramPayload?.planogram;
-  const metadata = preview?.planogramPayload?.metadata;
+  const planogram = effectivePayload?.planogram;
+  const metadata = effectivePayload?.metadata;
   const fixture = planogram?.fixture;
   const highDemandSkus =
-    preview?.planogramPayload?.stockingRules?.highDemandProducts ?? [];
+    effectivePayload?.metadata?.stockingRules?.highDemandProducts ?? [];
 
   const baseShelves = useMemo(
     () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
@@ -530,7 +535,7 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
-            {hasChanges && (
+            {hasChanges && !isPlaceholder && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -565,6 +570,11 @@ function PlanogramPreviewPage() {
 
           {preview && !isLoading && (
             <div className="space-y-6">
+              {isPlaceholder && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+                  Sample planogram for display. Assign a planogram to this shelf to save edits.
+                </div>
+              )}
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
@@ -690,7 +700,7 @@ function PlanogramPreviewPage() {
                 </div>
                 <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
-                    stockingRules={preview.planogramPayload?.stockingRules}
+                    stockingRules={effectivePayload?.metadata?.stockingRules}
                   />
                 </div>
               </div>

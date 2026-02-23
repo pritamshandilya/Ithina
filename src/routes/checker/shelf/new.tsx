@@ -59,12 +59,12 @@ function AddPlanogramPage() {
     );
 
   const duplicateNameError = useMemo(() => {
-    if (!shelfName.trim()) return null;
+    if (!shelfName.trim() || isSaving) return null;
     const exists = (shelves ?? []).some(
       (s) => s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
     );
     return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
-  }, [shelves, shelfName]);
+  }, [shelves, shelfName, isSaving]);
 
   const isBlankShelf = selectedPlanogramId === BLANK_SHELF_VALUE;
   const canSave = useMemo(() => {

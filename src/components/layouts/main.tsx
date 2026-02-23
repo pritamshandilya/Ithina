@@ -24,6 +24,7 @@ function isStickyTablePage(pathname: string): boolean {
     return true;
   if (pathname === "/checker/shelf" || pathname === "/checker/shelf/") return true;
   if (pathname === "/maker/audits/adhoc" || pathname === "/maker/audits/adhoc/") return true;
+  if (pathname === "/maker/manual-audits" || pathname === "/maker/manual-audits/") return true;
   if (pathname.startsWith("/maker/historical-analysis")) return true;
   return false;
 }

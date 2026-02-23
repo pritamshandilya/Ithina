@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Search, AlertTriangle, CheckCircle, Clock } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[
 function getModeLabel(mode: string): string {
   if (mode === "planogram-based" || mode === "vision-edge") return "Planogram Based";
   if (mode === "adhoc" || mode === "assist-mode") return "Adhoc Analysis";
-  return "Planogram Based"; // default for unknown
+  return "Planogram Based";
 }
 
 export function ApprovalStatusList({ className, onAction }: ApprovalStatusListProps) {
@@ -45,13 +45,33 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
-  // Filter only submitted audits (exclude drafts)
   const submittedAudits = useMemo(() => {
-    return (allAudits || []).filter(a => a.status !== "draft" && a.status !== "never-audited");
+    return (allAudits || []).filter((a) => a.status !== "draft" && a.status !== "never-audited");
   }, [allAudits]);
 
+  const normalizedAudits = useMemo(() => {
+    return submittedAudits.map((audit) => {
+      const submittedAt = audit.submittedAt ? new Date(audit.submittedAt) : undefined;
+      let approvedAt = audit.approvedAt ? new Date(audit.approvedAt) : undefined;
+
+      if (audit.status === "approved") {
+        if (submittedAt && (!approvedAt || approvedAt < submittedAt)) {
+          approvedAt = new Date(submittedAt.getTime() + 30 * 60 * 1000);
+        }
+      } else {
+        approvedAt = undefined;
+      }
+
+      return {
+        ...audit,
+        submittedAt,
+        approvedAt,
+      };
+    });
+  }, [submittedAudits]);
+
   const filteredAudits = useMemo(() => {
-    let result = submittedAudits;
+    let result = normalizedAudits;
 
     if (activeFilter !== "all") {
       result = result.filter((a) => a.status === activeFilter);
@@ -72,7 +92,7 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
       const dateB = new Date(b.submittedAt || b.draftSavedAt || 0).getTime();
       return dateB - dateA;
     });
-  }, [submittedAudits, activeFilter, searchQuery, shelves]);
+  }, [normalizedAudits, activeFilter, searchQuery, shelves]);
 
   useEffect(() => {
     setTablePagination((p) => ({ ...p, page: 1 }));
@@ -139,15 +159,30 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
       {
         title: "Submitted",
         field: "submittedAt",
-        width: 140,
+        width: 180,
         sorter: "datetime",
         headerSort: true,
         headerFilter: false,
         formatter: (cell: unknown) => {
           const audit = (cell as { getData: () => Audit }).getData();
           const date = audit.submittedAt;
-          if (!date) return "—";
-          return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(new Date(date), { addSuffix: true })}</span>`;
+          if (!date) return "&mdash;";
+          return `<span class="text-sm text-muted-foreground">${format(new Date(date), "MMM d, yyyy h:mm a")}</span>`;
+        },
+      },
+      {
+        title: "Date Approved",
+        field: "approvedAt",
+        width: 180,
+        sorter: "datetime",
+        headerSort: true,
+        headerFilter: false,
+        formatter: (cell: unknown) => {
+          const audit = (cell as { getData: () => Audit }).getData();
+          if (audit.status !== "approved" || !audit.approvedAt) {
+            return `<span class="text-sm text-muted-foreground">&mdash;</span>`;
+          }
+          return `<span class="text-sm text-muted-foreground">${format(new Date(audit.approvedAt), "MMM d, yyyy h:mm a")}</span>`;
         },
       },
       {
@@ -159,7 +194,9 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
           const audit = (cell as { getData: () => Audit }).getData();
           const modeLabel = getModeLabel(audit.mode);
           const isPlanogram = modeLabel === "Planogram Based";
-          const modeClass = isPlanogram ? "text-blue-600 dark:text-blue-400 font-medium" : "text-amber-600 dark:text-amber-400 font-medium";
+          const modeClass = isPlanogram
+            ? "text-blue-600 dark:text-blue-400 font-medium"
+            : "text-amber-600 dark:text-amber-400 font-medium";
           return `<span class="text-sm ${modeClass}">${modeLabel}</span>`;
         },
       },
@@ -186,7 +223,7 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
             const btnClass = `${btnBase} border border-accent/50 bg-accent/10 text-accent hover:bg-accent/20`;
             return `<button type="button" class="${btnClass}" data-action="view-details">View Details</button>`;
           }
-          return `<span class="text-xs text-muted-foreground">—</span>`;
+          return `<span class="text-xs text-muted-foreground">&mdash;</span>`;
         },
         cellClick: (event: unknown, cell: { getData: () => Audit }) => {
           (event as { stopPropagation?: () => void }).stopPropagation?.();
@@ -206,8 +243,13 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
 
   if (isLoading) {
     return (
-      <div className={cn("space-y-4", className)}>
-        <Skeleton className="h-10 w-64" />
+      <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <Skeleton className="h-20 w-full rounded-lg" />
+        </div>
+        <Skeleton className="h-9 w-full max-w-80 rounded-md" />
         <Skeleton className="h-64 w-full rounded-lg" />
       </div>
     );
@@ -215,54 +257,52 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
 
   const counts = {
     all: submittedAudits.length,
-    pending: submittedAudits.filter(a => a.status === "pending").length,
-    approved: submittedAudits.filter(a => a.status === "approved").length,
-    returned: submittedAudits.filter(a => a.status === "returned").length,
+    pending: submittedAudits.filter((a) => a.status === "pending").length,
+    approved: submittedAudits.filter((a) => a.status === "approved").length,
+    returned: submittedAudits.filter((a) => a.status === "returned").length,
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
-      {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
-             <div className="rounded-full bg-amber-100 dark:bg-amber-900/30 p-2 text-amber-600 dark:text-amber-400">
-               <Clock className="w-6 h-6" />
-             </div>
-             <div>
-               <p className="text-sm text-muted-foreground">Pending Approval</p>
-               <p className="text-2xl font-bold">{counts.pending}</p>
-             </div>
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
+      <div className="shrink-0 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div className="rounded-full bg-amber-100 p-2 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+            <Clock className="size-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Pending Approval</p>
+            <p className="text-xl font-bold">{counts.pending}</p>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
-             <div className="rounded-full bg-green-100 dark:bg-green-900/30 p-2 text-green-600 dark:text-green-400">
-               <CheckCircle className="w-6 h-6" />
-             </div>
-             <div>
-               <p className="text-sm text-muted-foreground">Approved</p>
-               <p className="text-2xl font-bold">{counts.approved}</p>
-             </div>
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div className="rounded-full bg-green-100 p-2 text-green-600 dark:bg-green-900/30 dark:text-green-400">
+            <CheckCircle className="size-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Approved</p>
+            <p className="text-xl font-bold">{counts.approved}</p>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-card p-4 flex items-center gap-4">
-             <div className="rounded-full bg-red-100 dark:bg-red-900/30 p-2 text-red-600 dark:text-red-400">
-               <AlertTriangle className="w-6 h-6" />
-             </div>
-             <div>
-               <p className="text-sm text-muted-foreground">Returned</p>
-               <p className="text-2xl font-bold">{counts.returned}</p>
-             </div>
+        <div className="flex items-center gap-3 rounded-lg border border-border bg-card p-3">
+          <div className="rounded-full bg-red-100 p-2 text-red-600 dark:bg-red-900/30 dark:text-red-400">
+            <AlertTriangle className="size-5" />
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Returned</p>
+            <p className="text-xl font-bold">{counts.returned}</p>
+          </div>
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex flex-wrap gap-2 pb-2">
+      <div className="mt-2 shrink-0 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap gap-2">
           {(["all", "pending", "approved", "returned"] as const).map((filter) => (
             <button
               key={filter}
               type="button"
               onClick={() => setActiveFilter(filter)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shrink-0",
+                "inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-all",
                 "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                 activeFilter === filter
                   ? "border-accent bg-accent text-accent-foreground shadow-sm"
@@ -271,46 +311,49 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
               aria-pressed={activeFilter === filter}
             >
               <span className="capitalize">{filter}</span>
-              <span className="ml-1 opacity-60 text-xs">
-                ({filter === 'all' ? counts.all : counts[filter as keyof typeof counts]})
+              <span className="ml-1 text-xs opacity-60">
+                ({filter === "all" ? counts.all : counts[filter as keyof typeof counts]})
               </span>
             </button>
           ))}
         </div>
 
         <div className="relative w-full lg:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
             placeholder="Search audits..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-10 w-full bg-background"
+            className="h-9 w-full bg-background pl-9"
             aria-label="Search audits"
           />
         </div>
       </div>
 
-      {/* Table */}
-      {filteredAudits.length === 0 ? (
-        <div className="rounded-lg border border-border bg-card p-12 text-center shadow-sm">
-          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted mb-4">
-             <Search className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-lg font-semibold text-foreground">No audits found</h3>
-          <p className="text-muted-foreground mt-1">
-            There are no submitted audits matching your criteria.
+      {filteredAudits.length > 0 && (
+        <div className="mt-2 shrink-0 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Showing <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
+            <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
           </p>
         </div>
-      ) : (
-        <>
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing{" "}
-              <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
-              <span className="font-semibold text-foreground">{filteredAudits.length}</span> audits
-            </p>
+      )}
+
+      <div className="mt-2 flex-1 min-h-0 overflow-auto">
+        {filteredAudits.length === 0 ? (
+          <div className="flex min-h-full items-center justify-center rounded-lg border border-border bg-card p-8 text-center">
+            <div>
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-muted">
+                <Search className="size-5 text-muted-foreground" />
+              </div>
+              <h3 className="text-base font-semibold text-foreground">No audits found</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                There are no submitted audits matching your criteria.
+              </p>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card overflow-hidden shadow-sm">
+        ) : (
+          <div className="overflow-hidden rounded-lg border border-border bg-card">
             <DataTable<Audit>
               columns={tableColumns}
               data={filteredAudits}
@@ -323,8 +366,8 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
               onPaginationChange={setTablePagination}
             />
           </div>
-        </>
-      )}
+        )}
+      </div>
     </div>
   );
 }

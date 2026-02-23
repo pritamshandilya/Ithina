@@ -30,22 +30,18 @@ function MakerManualAuditsPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto max-w-screen-2xl space-y-4">
-
-          {/* Header Bar */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
-            <header className="space-y-1">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
+          <header className="shrink-0 flex flex-col gap-1">
+            <div>
               <h1 className="text-2xl font-bold text-foreground">Approvals</h1>
               <p className="text-sm text-muted-foreground">
                 Track the approval status of your submitted audits
               </p>
-            </header>
-          </div>
+            </div>
+          </header>
 
-          <div className="rounded-lg border border-border bg-card shadow-sm p-6">
-            <ManualOverrideList onAction={handleAction} />
-          </div>
+          <ManualOverrideList className="mt-3 flex-1 min-h-0" onAction={handleAction} />
         </div>
       </div>
     </MainLayout>

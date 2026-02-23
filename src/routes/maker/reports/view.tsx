@@ -25,7 +25,9 @@ export const Route = createFileRoute("/maker/reports/view")({
 function FullReportPage() {
   const location = useLocation();
   const { toast } = useToast();
-  const imageUrl = (location.state as { imageUrl?: string } | undefined)?.imageUrl;
+  const state = location.state as { imageUrl?: string; backTo?: string } | undefined;
+  const imageUrl = state?.imageUrl;
+  const backTo = state?.backTo ?? "/maker/audits/planogram";
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportPdf = async () => {
@@ -65,7 +67,7 @@ function FullReportPage() {
           <ComplianceReportFull
           report={MOCK_REPORT_SNIPPET}
           imageUrl={imageUrl}
-          backTo="/maker/audits/planogram"
+          backTo={backTo}
           onExportPdf={handleExportPdf}
           isExportingPdf={isExporting}
         />

@@ -23,6 +23,7 @@ import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { updateShelfArrangement } from "@/features/maker/api/planogram";
+import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
   planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
@@ -95,8 +96,9 @@ function PlanogramPreviewPage() {
   const toggleInProgressRef = useRef(false);
 
   useEffect(() => {
-    const payload = preview?.planogramPayload;
-    if (!preview || !payload?.planogram.fixture.shelves) return;
+    if (!preview) return;
+    const payload = preview.planogramPayload ?? PLANOGRAM_POC_002;
+    if (!payload?.planogram?.fixture?.shelves) return;
     const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
     let shelves = deepCopyShelves(fixtureShelves);
@@ -162,17 +164,20 @@ function PlanogramPreviewPage() {
     setCategoryPositions(posMap);
     setHasChanges(false);
     setSelectedCategories(new Set());
-  }, [preview, preview?.planogramPayload?.planogram.fixture.shelves, preview?.shelf.arrangement]);
+  }, [preview]);
+
+  const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
+  const isPlaceholder = !!preview && !preview.planogramPayload;
 
   const shelfCapacities = useMemo(() => {
-    const orig = preview?.planogramPayload?.planogram.fixture.shelves ?? [];
+    const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
     return Object.fromEntries(
       orig.map((s) => [
         s.shelfNumber,
         s.products.reduce((sum, p) => sum + p.facings, 0),
       ])
     );
-  }, [preview?.planogramPayload?.planogram?.fixture?.shelves]);
+  }, [effectivePayload?.planogram?.fixture?.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -480,12 +485,11 @@ function PlanogramPreviewPage() {
     toast,
   ]);
 
-  const planogram = preview?.planogramPayload?.planogram;
-  const metadata = preview?.planogramPayload?.metadata;
+  const planogram = effectivePayload?.planogram;
+  const metadata = effectivePayload?.metadata;
   const fixture = planogram?.fixture;
   const highDemandSkus =
-    preview?.planogramPayload?.stockingRules?.highDemandProducts ?? [];
-  const isBlankShelf = !!preview && !preview.planogramPayload;
+    effectivePayload?.metadata?.stockingRules?.highDemandProducts ?? [];
 
   const baseShelves = useMemo(
     () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
@@ -637,8 +641,8 @@ function PlanogramPreviewPage() {
                     {preview.shelf.shelfName}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    {isBlankShelf
-                      ? "Blank shelf · Add products in a future release"
+                    {isPlaceholder
+                      ? "Sample planogram for display"
                       : `v${planogram?.version ?? "1.0"} ${metadata?.location ?? "—"} · ${metadata?.status ?? "active"}`}
                   </p>
                 </>
@@ -661,7 +665,8 @@ function PlanogramPreviewPage() {
               </Button>
             )}
 
-            {hasChanges && (
+            {/* {hasChanges && ( */}
+            {hasChanges && !isPlaceholder && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -694,20 +699,13 @@ function PlanogramPreviewPage() {
             </div>
           )}
 
-          {preview && !isLoading && isBlankShelf && (
-            <div className="rounded-xl border border-border bg-card/80 p-8 text-center">
-              <p className="font-medium text-foreground">Blank shelf</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                This shelf has no planogram. Product arrangement and editing will be available in a future release.
-              </p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link to="/checker/shelves">Back to shelves</Link>
-              </Button>
-            </div>
-          )}
-
-          {preview && !isLoading && !isBlankShelf && (
+          {preview && !isLoading && (
             <div className="space-y-4">
+              {isPlaceholder && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+                  Sample planogram for display. Assign a planogram to this shelf to save edits.
+                </div>
+              )}
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
@@ -736,22 +734,6 @@ function PlanogramPreviewPage() {
                   className="stat-card"
                 />
               </div>
-
-              {fixture && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <Info
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="text-sm text-foreground">
-                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
-                    {fixture.units} · {fixture.type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove · Drag to reorder or move between shelves
-                  </span>
-                </div>
-              )}
 
               <div>
                 <p className="mb-2 text-xs font-medium text-foreground">
@@ -782,6 +764,7 @@ function PlanogramPreviewPage() {
                         <ShelfRow
                           key={shelf.shelfNumber}
                           shelf={shelf}
+                          fixture={fixture}
                           highDemandSkus={highDemandSkus}
                           editHandlers={{
                             onEditName,
@@ -821,12 +804,13 @@ function PlanogramPreviewPage() {
                     <ProductDetailsTable
                       shelves={shelvesToShow}
                       highDemandSkus={highDemandSkus}
+                      units={fixture?.units}
                     />
                   </div>
                 </div>
                 <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
-                    stockingRules={preview.planogramPayload?.stockingRules}
+                    stockingRules={effectivePayload?.metadata?.stockingRules}
                   />
                 </div>
               </div>

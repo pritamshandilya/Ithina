@@ -218,7 +218,7 @@
 
   /* Card Components */
   .stat-card {
-    @apply bg-card text-card-foreground border border-border rounded-lg p-3 shadow-sm;
+    @apply bg-card text-card-foreground border border-border rounded-lg p-2 shadow-sm;
   }
 
   /* Unified Card Styles (used by both Maker and Checker) */
@@ -339,16 +339,19 @@
   background-color: var(--tabulator-bg) !important;
   border: none;
   color: var(--tabulator-fg);
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
 }
 
 .data-table-wrapper .tabulator-tableholder {
   background-color: var(--tabulator-bg) !important;
+  min-width: 100% !important;
 }
 
 .data-table-wrapper .tabulator-tableholder .tabulator-table {
   background-color: var(--tabulator-bg) !important;
-  width: 100% !important;
+  min-width: 100% !important;
+  width: max-content !important;
 }
 
 /* Header: distinct background, clear border */
@@ -445,6 +448,11 @@
   border-right: 2px dotted var(--tabulator-border) !important;
 }
 
+.data-table-wrapper .tabulator-cell.tabulator-frozen.tabulator-frozen-right {
+  border-right: none !important;
+  border-left: 2px dotted var(--tabulator-border) !important;
+}
+
 /* Placeholder when no data */
 .data-table-wrapper .tabulator-placeholder {
   color: var(--muted-foreground);
@@ -452,9 +460,15 @@
   background-color: var(--tabulator-bg) !important;
 }
 
-/* Scrollbar: themed for dark UI */
+/* Scrollbar: themed for dark UI, always visible for horizontal scroll */
+.data-table-wrapper .tabulator-tableholder {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
 .data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {
-  height: 8px;
+  height: 12px;
+  width: 12px;
 }
 
 .data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-track {
@@ -469,6 +483,11 @@
 
 .data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
+}
+
+/* Ensure wrapper also scrolls when table overflows (fallback) */
+.data-table-wrapper {
+  overflow-x: auto !important;
 }
 
 /* Focus: visible focus ring for keyboard nav */

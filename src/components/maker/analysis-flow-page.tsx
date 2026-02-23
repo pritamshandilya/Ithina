@@ -70,6 +70,7 @@ export function AnalysisFlowPage({
     analysisComplete,
     progressPercent,
     startAnalysis,
+    resetAnalysis,
   } = useAnalysisPipeline({
     stepIntervalMs: 1500,
   });
@@ -77,6 +78,16 @@ export function AnalysisFlowPage({
   const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const handleReplaceImage = useCallback(() => {
+    setImageFile(null);
+    setImagePreview(null);
+    setUploadError(null);
+    setHighlightedIssueIndex(null);
+    resetAnalysis();
+    // Open file picker so user can immediately select a new image
+    requestAnimationFrame(() => fileInputRef.current?.click());
+  }, [resetAnalysis]);
 
   const processFile = useCallback((file: File) => {
     setUploadError(null);
@@ -154,7 +165,7 @@ export function AnalysisFlowPage({
             <ReportSnippetsView
               imagePreview={imagePreview}
               report={MOCK_REPORT_SNIPPET}
-              onReplaceImage={triggerFileInput}
+              onReplaceImage={handleReplaceImage}
               highlightedIssueIndex={highlightedIssueIndex}
               onIssueClick={setHighlightedIssueIndex}
             />

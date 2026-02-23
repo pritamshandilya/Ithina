@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { Eye, FileText, LayoutGrid, Plus, Search, Trash2 } from "lucide-react";
+import { createPortal } from "react-dom";
+import { FileText, LayoutGrid, Plus, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
@@ -9,7 +10,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets } from "@/features/maker/hooks";
+import { useAssignedShelves, useComplianceRuleSets, usePlanogramList } from "@/features/maker/hooks";
 import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
@@ -22,12 +23,18 @@ export const Route = createFileRoute("/checker/shelf/")({
 });
 
 /** Map shelf to planogram row with derived/mock planogram-specific fields */
-function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
+function toPlanogramRow(
+  shelf: Shelf,
+  planogramMap?: Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>
+): PlanogramShelfRow {
   const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
   const skuCount =
     arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ??
     8 + (shelf.id.charCodeAt(shelf.id.length - 1) % 12);
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
+  const planogramInfo = shelf.planogramId ? planogramMap?.get(shelf.planogramId) : undefined;
+  const info = planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
+  const aisle = info?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -35,10 +42,18 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
+    aisle,
+    zone: info?.zone,
+    section: info?.section,
+    fixtureType: info?.fixtureType,
+    dimensions: info?.dimensions,
   };
 }
 
 const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
+
+const PLANOGRAM_INITIAL_SORT = { field: "shelfName" as const, dir: "asc" as const };
+const PLANOGRAM_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
 
 const PLANOGRAM_COLUMNS = (
   onOpenMenu: (row: PlanogramShelfRow, anchor: { x: number; y: number }) => void,
@@ -53,11 +68,24 @@ const PLANOGRAM_COLUMNS = (
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm tabular-nums text-foreground">${row.aisleNumber ?? "—"}</span>`;
+      const val = row.aisle ?? (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ?? "—";
+      return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
     },
   },
   {
-    title: "Shelf",
+    title: "Zone",
+    field: "zone",
+    width: 100,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Shelf Name",
     field: "shelfName",
     minWidth: 180,
     sorter: "string",
@@ -74,6 +102,55 @@ const PLANOGRAM_COLUMNS = (
           <span class="text-muted-foreground"> ${suffix}</span>
         </div>
       `;
+    },
+  },
+  {
+    title: "Shelf ID",
+    field: "id",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.id}</span>`;
+    },
+  },
+  {
+    title: "Section",
+    field: "section",
+    minWidth: 140,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground truncate block">${row.section ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Fixture",
+    field: "fixtureType",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+    },
+  },
+  {
+    title: "Dimensions",
+    field: "dimensions",
+    width: 110,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
     },
   },
   {
@@ -203,6 +280,7 @@ const PLANOGRAM_COLUMNS = (
 function PlanogramAnalysisPage() {
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: planogramList } = usePlanogramList();
   const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
   const _selectedStoreId = selectedStore?.id || mockUser.storeId;
@@ -221,9 +299,23 @@ function PlanogramAnalysisPage() {
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
+  const planogramMap = useMemo(() => {
+    const map = new Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>();
+    (planogramList ?? []).forEach((p) => {
+      map.set(p.id, {
+        aisle: p.aisle,
+        zone: p.zone,
+        section: p.section,
+        fixtureType: p.fixtureType,
+        dimensions: p.dimensions,
+      });
+    });
+    return map;
+  }, [planogramList]);
+
   const planogramRows = useMemo(() => {
-    return (shelves ?? []).map(toPlanogramRow);
-  }, [shelves]);
+    return (shelves ?? []).map((s) => toPlanogramRow(s, planogramMap));
+  }, [shelves, planogramMap]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -234,7 +326,11 @@ function PlanogramAnalysisPage() {
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
         String(r.aisleNumber).includes(q) ||
-        String(r.bayNumber).includes(q)
+        r.aisle?.toLowerCase().includes(q) ||
+        String(r.bayNumber).includes(q) ||
+        r.zone?.toLowerCase().includes(q) ||
+        r.section?.toLowerCase().includes(q) ||
+        r.fixtureType?.toLowerCase().includes(q)
     );
   }, [planogramRows, searchQuery]);
 
@@ -287,10 +383,9 @@ function PlanogramAnalysisPage() {
     setActionsMenu({ row, anchor: { ...anchor, x } });
   }, []);
 
-  const handleViewPlanogram = useCallback(
-    (shelfId: string) => {
-      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
-      setActionsMenu(null);
+  const handleRowClick = useCallback(
+    (row: PlanogramShelfRow) => {
+      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: row.id } });
     },
     [navigate]
   );
@@ -386,12 +481,14 @@ function PlanogramAnalysisPage() {
                   columns={tableColumns}
                   data={rowsWithOverrides}
                   rowIdField="id"
-                  initialSort={{ field: "shelfName", dir: "asc" }}
+                  initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No shelves match your search"
                   pageSize={10}
-                  pageSizeSelector={[5, 10, 20, 50]}
+                  pageSizeSelector={[...PLANOGRAM_PAGE_SIZE_OPTIONS]}
                   headerFilters={false}
+                  layout="fitData"
                   onPaginationChange={setTablePagination}
+                  onRowClick={handleRowClick}
                 />
               </div>
             )}
@@ -399,49 +496,41 @@ function PlanogramAnalysisPage() {
         </div>
       </div>
 
-      {actionsMenu && (
-        <div
-          ref={actionsMenuRef}
-          className="fixed z-50 min-w-48 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
-          style={{ left: actionsMenu.anchor.x, top: actionsMenu.anchor.y }}
-        >
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
-            onClick={() => handleNewRun(actionsMenu.row.id)}
+      {actionsMenu &&
+        createPortal(
+          <div
+            ref={actionsMenuRef}
+            className="fixed z-50 min-w-48 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
+            style={{ left: actionsMenu.anchor.x, top: actionsMenu.anchor.y }}
           >
-            <Plus className="text-muted-foreground" />
-            New
-          </button>
-          {actionsMenu.row.planogramId && (
             <button
               type="button"
               className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
-              onClick={() => handleViewPlanogram(actionsMenu.row.id)}
+              onClick={() => handleNewRun(actionsMenu.row.id)}
             >
-              <Eye className="text-chart-2" />
-              View Planogram
+              <Plus className="text-muted-foreground" />
+              New
             </button>
-          )}
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
-            onClick={() => handleViewComplianceRule(actionsMenu.row)}
-          >
-            <FileText className="text-muted-foreground" />
-            View Compliance Rule
-          </button>
-          <div className="-mx-1 my-1 h-px bg-border" />
-          <button
-            type="button"
-            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
-            onClick={() => setActionsMenu(null)}
-          >
-            <Trash2 />
-            Delete
-          </button>
-        </div>
-      )}
+            <button
+              type="button"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
+              onClick={() => handleViewComplianceRule(actionsMenu.row)}
+            >
+              <FileText className="text-muted-foreground" />
+              View Compliance Rule
+            </button>
+            <div className="-mx-1 my-1 h-px bg-border" />
+            <button
+              type="button"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
+              onClick={() => setActionsMenu(null)}
+            >
+              <Trash2 />
+              Delete
+            </button>
+          </div>,
+          document.body
+        )}
 
       <ComplianceRuleViewSheet
         open={complianceSheetOpen}

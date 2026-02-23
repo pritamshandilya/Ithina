@@ -50,7 +50,7 @@ function CheckerDashboard() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-1 pb-4 sm:pt-3 sm:px-1 sm:pb-4 lg:pt-4 lg:px-1 lg:pb-5">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto w-full max-w-screen-2xl space-y-5">
           {/* Header with store selector + primary CTA */}
           <CheckerDashboardHeader hasAttentionItems={hasAttentionItems} />

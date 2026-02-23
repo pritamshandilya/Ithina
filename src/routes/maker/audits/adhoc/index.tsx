@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -37,40 +37,101 @@ function getAdhocStatusClass(status: AdhocAnalysisStatus): string {
 
 const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
   {
-    title: "Name",
-    field: "name",
+    title: "Shelf ID",
+    field: "shelfId",
+    width: 140,
     sorter: "string",
-    minWidth: 200,
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="font-medium text-foreground">${row.name}</span>`;
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.shelfId ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Shelf Name",
+    field: "shelfName",
+    minWidth: 160,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.shelfName ?? "—"}</span>`;
     },
   },
   {
     title: "Store",
     field: "storeName",
     sorter: "string",
-    minWidth: 180,
+    minWidth: 160,
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm text-muted-foreground">${row.storeName}</span>`;
+      return `<span class="text-sm font-medium text-foreground">${row.storeName}</span>`;
+    },
+  },
+  {
+    title: "Zone",
+    field: "zone",
+    width: 100,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Section",
+    field: "section",
+    minWidth: 140,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      return `<span class="text-sm font-medium text-foreground truncate block">${row.section ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Fixture",
+    field: "fixtureType",
+    width: 130,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+    },
+  },
+  {
+    title: "Dimensions",
+    field: "dimensions",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
     },
   },
   {
     title: "Date",
     field: "createdAt",
     sorter: "datetime",
-    width: 140,
+    width: 120,
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
       const date = row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
-      return `<span class="text-sm text-muted-foreground">${format(date, "MMM d, yyyy")}</span>`;
+      return `<span class="text-sm font-medium text-foreground">${format(date, "MMM d, yyyy")}</span>`;
     },
   },
   {
@@ -97,7 +158,7 @@ const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
       if (row.status !== "completed" || row.complianceScore == null) {
-        return "—";
+        return `<span class="text-sm font-medium text-foreground">—</span>`;
       }
       const color =
         row.complianceScore >= 90
@@ -105,16 +166,25 @@ const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
           : row.complianceScore >= 75
             ? "text-accent"
             : "text-destructive";
-      return `<span class="tabular-nums font-semibold ${color}">${row.complianceScore}%</span>`;
+      return `<span class="text-sm tabular-nums font-medium ${color}">${row.complianceScore}%</span>`;
     },
   },
 ];
 
 function AdhocAnalysisPage() {
+  const navigate = useNavigate();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const { data: adhocAnalyses, isLoading } = useAdhocAnalyses(selectedStoreId);
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+
+  const handleRowClick = (row: AdhocAnalysis) => {
+    navigate({
+      to: "/maker/historical-analysis/$analysisId",
+      params: { analysisId: row.id },
+      search: { type: "adhoc" },
+    });
+  };
 
   const analyses = adhocAnalyses ?? [];
   const sortedAnalyses = useMemo(() => {
@@ -191,7 +261,9 @@ function AdhocAnalysisPage() {
                 pageSize={10}
                 pageSizeSelector={[5, 10, 20, 50]}
                 headerFilters={false}
+                layout="fitData"
                 onPaginationChange={setTablePagination}
+                onRowClick={handleRowClick}
               />
             )}
           </div>

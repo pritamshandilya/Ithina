@@ -52,7 +52,7 @@ export default function Header() {
   }, [markAllAsRead]);
 
   return (
-    <header className="border-sidebar-border bg-sidebar sticky top-0 z-10 flex h-12 items-center justify-between border-b px-3">
+    <header className="border-sidebar-border bg-sidebar sticky top-0 z-50 flex h-12 items-center justify-between border-b px-3">
       {/* Left section: Logo and App Name */}
       <div className="flex items-center gap-3">
         <SidebarTrigger className="border-border bg-card hover:bg-accent/40 size-9 rounded-md border" />

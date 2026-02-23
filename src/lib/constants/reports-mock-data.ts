@@ -19,6 +19,10 @@ export interface AdhocAnalysis {
   products: number;
   issues: number;
   status: string;
+  zone?: string;
+  section?: string;
+  fixtureType?: string;
+  dimensions?: string;
 }
 
 export interface DetailedReport {
@@ -95,6 +99,10 @@ export const ADHOC_REPORT_MOCK_DATA: AdhocAnalysis[] = [
     products: 101,
     issues: 5,
     status: "Failed",
+    zone: "Grocery",
+    section: "Beverages & Dairy",
+    fixtureType: "wall_shelving",
+    dimensions: "1200×2000 mm",
   },
 ];
 

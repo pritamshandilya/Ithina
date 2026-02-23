@@ -152,9 +152,9 @@ export function DataTable<T extends object>({
       data: [...data],
       columns: finalColumns,
       layout,
-      responsiveLayout: "hide",
+      responsiveLayout: false,
       resizableColumns: true,
-      resizableColumnFit: true,
+      resizableColumnFit: false,
       movableColumns,
       placeholder: emptyMessage,
       index: rowIdKey,
@@ -188,14 +188,22 @@ export function DataTable<T extends object>({
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
 
-    if (rowFormatter) {
-      options.rowFormatter = rowFormatter;
+    const effectiveRowFormatter = rowFormatter
+      ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
+          rowFormatter(row);
+          if (onRowClick) row.getElement().classList.add("cursor-pointer");
+        }
+      : onRowClick
+        ? (row: { getElement: () => HTMLElement }) => row.getElement().classList.add("cursor-pointer")
+        : undefined;
+    if (effectiveRowFormatter) {
+      options.rowFormatter = effectiveRowFormatter;
     }
 
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     if (onRowClick) {
-      (tableRef.current as any).on("rowClick", (e: any, row: any) => {
+      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
         onRowClick(row.getData(), e);
       });
     }
@@ -236,7 +244,7 @@ export function DataTable<T extends object>({
   return (
     <div
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-hidden",
+        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"

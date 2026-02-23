@@ -14,7 +14,11 @@ export interface ProductDetailsRow {
   shelfNumber: number;
   shelfName: string;
   facings: number;
+  productWidth: number;
+  productHeight: number;
+  productDepth: number;
   depthCount: number;
+  stockedDepth: number;
   totalUnits: number;
   currentStock: number;
   optimalStock: number;
@@ -37,7 +41,11 @@ function flattenProducts(
         shelfNumber: shelf.shelfNumber,
         shelfName: shelf.name,
         facings: p.facings,
+        productWidth: p.width,
+        productHeight: p.height,
+        productDepth: p.depth,
         depthCount: p.depthCount,
+        stockedDepth: p.depth * (p.depthCount || 1),
         totalUnits,
         currentStock: p.currentStock,
         optimalStock: p.optimalStock,
@@ -51,12 +59,14 @@ function flattenProducts(
 export interface ProductDetailsTableProps {
   shelves: PlanogramShelfDef[];
   highDemandSkus: string[];
+  units?: string;
   className?: string;
 }
 
 export function ProductDetailsTable({
   shelves,
   highDemandSkus,
+  units = "mm",
   className,
 }: ProductDetailsTableProps) {
   const data = flattenProducts(shelves, highDemandSkus);
@@ -111,11 +121,55 @@ export function ProductDetailsTable({
       headerSort: true,
     },
     {
-      title: "Depth",
-      field: "depthCount",
-      width: 90,
+      title: "W",
+      field: "productWidth",
+      width: 80,
       sorter: "number",
       headerSort: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => ProductDetailsRow }).getData();
+        return `<span class="tabular-nums">${row.productWidth} ${units}</span>`;
+      },
+    },
+    {
+      title: "H",
+      field: "productHeight",
+      width: 80,
+      sorter: "number",
+      headerSort: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => ProductDetailsRow }).getData();
+        return `<span class="tabular-nums">${row.productHeight} ${units}</span>`;
+      },
+    },
+    {
+      title: "D",
+      field: "productDepth",
+      width: 80,
+      sorter: "number",
+      headerSort: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => ProductDetailsRow }).getData();
+        return `<span class="tabular-nums">${row.productDepth} ${units}</span>`;
+      },
+    },
+    {
+      title: "Depth Count",
+      field: "depthCount",
+      width: 110,
+      sorter: "number",
+      headerSort: true,
+    },
+    {
+      title: "Stocked Depth",
+      field: "stockedDepth",
+      width: 130,
+      sorter: "number",
+      headerSort: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => ProductDetailsRow }).getData();
+        return `<span class="tabular-nums">${row.stockedDepth} ${units}</span>`;
+      },
     },
     {
       title: "Total Units",

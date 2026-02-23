@@ -46,6 +46,12 @@ export interface ReportSnippetsViewProps {
   highlightedIssueIndex?: number | null;
   /** Callback when user clicks an issue */
   onIssueClick?: (index: number) => void;
+  /** When true, hides Replace and Send for Approval (e.g. for historical runs) */
+  isHistorical?: boolean;
+  /** Custom link for View Full Report (e.g. with state) */
+  viewFullReportTo?: string;
+  /** State to pass when navigating to View Full Report */
+  viewFullReportState?: Record<string, unknown>;
 }
 
 function KeyFindingIcon({ type }: { type: ReportKeyFinding["type"] }) {
@@ -78,6 +84,9 @@ export function ReportSnippetsView({
   onReplaceImage,
   highlightedIssueIndex: _highlightedIssueIndex = null,
   onIssueClick: _onIssueClick,
+  isHistorical = false,
+  viewFullReportTo = "/maker/reports/view",
+  viewFullReportState,
 }: ReportSnippetsViewProps) {
   const { toast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -107,24 +116,29 @@ export function ReportSnippetsView({
         onSubmit={handleSendForApproval}
         isLoading={isSubmittingApproval}
       />
-      {/* Report header */}
+      {/* Report header - hide title when isHistorical (parent page provides it) */}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-bold text-foreground">
-            Combined Compliance & Analysis Report
-          </h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            {report.planogramName
-              ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
-              : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
-          </p>
-        </div>
-        <Button size="sm" variant="accent" asChild>
+        {!isHistorical && (
+          <div>
+            <h2 className="text-lg font-bold text-foreground">
+              Combined Compliance & Analysis Report
+            </h2>
+            <p className="text-sm text-muted-foreground mt-0.5">
+              {report.planogramName
+                ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
+                : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
+            </p>
+          </div>
+        )}
+        <Button size="sm" variant="accent" asChild className={isHistorical ? "ml-auto" : undefined}>
           <Link
-            to="/maker/reports/view"
+            to={viewFullReportTo}
             preload="render"
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            state={{ imageUrl: imagePreview ?? undefined } as any}
+            state={
+              (viewFullReportState ?? {
+                imageUrl: imagePreview ?? undefined,
+              }) as Record<string, unknown>
+            }
           >
             <FileText className="size-4" aria-hidden />
             View Full Report
@@ -144,18 +158,22 @@ export function ReportSnippetsView({
               <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
                 <Minus className="size-4" aria-hidden />
               </Button>
-              <Button size="sm" variant="accent" onClick={onReplaceImage}>
-                <Upload className="size-4" aria-hidden />
-                Replace
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => setSendForApprovalOpen(true)}
-                className="bg-chart-2 text-white hover:opacity-90"
-              >
-                <Send className="size-4" aria-hidden />
-                Send for Approval
-              </Button>
+              {!isHistorical && (
+                <>
+                  <Button size="sm" variant="accent" onClick={onReplaceImage}>
+                    <Upload className="size-4" aria-hidden />
+                    Replace
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setSendForApprovalOpen(true)}
+                    className="bg-chart-2 text-white hover:opacity-90"
+                  >
+                    <Send className="size-4" aria-hidden />
+                    Send for Approval
+                  </Button>
+                </>
+              )}
             </div>
           </div>
           <div className="flex-1 min-h-0 overflow-auto bg-muted/30">

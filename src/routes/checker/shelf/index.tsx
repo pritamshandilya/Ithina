@@ -84,6 +84,38 @@ const PLANOGRAM_COLUMNS = (
     },
   },
   {
+    title: "Shelf Name",
+    field: "shelfName",
+    minWidth: 180,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const skus = row.productsCount ?? 0;
+      const runs = row.lastRun ? "1 run" : "0 runs";
+      const suffix = `(${skus} SKUs · ${runs})`;
+      return `
+        <div class="min-w-0 py-1">
+          <span class="font-medium text-foreground truncate">${row.shelfName}</span>
+          <span class="text-muted-foreground"> ${suffix}</span>
+        </div>
+      `;
+    },
+  },
+  {
+    title: "Shelf ID",
+    field: "id",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.id}</span>`;
+    },
+  },
+  {
     title: "Section",
     field: "section",
     minWidth: 140,
@@ -118,26 +150,6 @@ const PLANOGRAM_COLUMNS = (
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
       return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Shelf",
-    field: "shelfName",
-    minWidth: 180,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const skus = row.productsCount ?? 0;
-      const runs = row.lastRun ? "1 run" : "0 runs";
-      const suffix = `(${skus} SKUs · ${runs})`;
-      return `
-        <div class="min-w-0 py-1">
-          <span class="font-medium text-foreground truncate">${row.shelfName}</span>
-          <span class="text-muted-foreground"> ${suffix}</span>
-        </div>
-      `;
     },
   },
   {

@@ -8,7 +8,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Check, Info } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -507,7 +507,7 @@ function PlanogramPreviewPage() {
   return (
     <MainLayout>
       <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto max-w-screen-2xl space-y-6">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
               <ArrowLeft className="size-4" aria-hidden />
@@ -569,14 +569,14 @@ function PlanogramPreviewPage() {
           )}
 
           {preview && !isLoading && (
-            <div className="space-y-6">
+            <div className="space-y-3">
               {isPlaceholder && (
                 <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
                   Sample planogram for display. Assign a planogram to this shelf to save edits.
                 </div>
               )}
               <div
-                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
                 aria-label="Planogram summary metrics"
               >
@@ -604,24 +604,8 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              {fixture && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <Info
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="text-sm text-foreground">
-                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
-                    {fixture.units} · {fixture.type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove · Drag to reorder or move between shelves
-                  </span>
-                </div>
-              )}
-
               <div>
-                <p className="mb-2 text-xs font-medium text-foreground">
+                <p className="mb-0.5 text-xs font-medium text-foreground">
                   Categories
                 </p>
                 <CategoryFilterTags
@@ -635,8 +619,8 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                <div className="min-w-0 flex-1 space-y-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1 space-y-2">
                   {shelvesToShow.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
                       <p className="text-sm font-medium text-muted-foreground">
@@ -653,6 +637,7 @@ function PlanogramPreviewPage() {
                         <ShelfRow
                           key={shelf.shelfNumber}
                           shelf={shelf}
+                          fixture={fixture}
                           highDemandSkus={highDemandSkus}
                           editHandlers={{
                             onEditName,
@@ -689,16 +674,17 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
                 <div className="min-w-0 overflow-x-auto">
                   <div className="min-w-275">
                     <ProductDetailsTable
                       shelves={shelvesToShow}
                       highDemandSkus={highDemandSkus}
+                      units={fixture?.units}
                     />
                   </div>
                 </div>
-                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
+                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-3">
                   <StockingRulesSection
                     stockingRules={effectivePayload?.metadata?.stockingRules}
                   />

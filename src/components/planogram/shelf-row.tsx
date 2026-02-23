@@ -1,17 +1,26 @@
+import { Info } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   getCategoryColor as defaultGetCategoryColor,
   getProductShapeType,
 } from "@/lib/constants/planogram";
 import { cn } from "@/lib/utils";
-import type { PlanogramShelfDef } from "@/types/planogram";
+import type { PlanogramFixture, PlanogramShelfDef } from "@/types/planogram";
 import { ShelfProduct } from "./shelf-product";
 import type { PlanogramEditHandlers } from "./types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export type { PlanogramEditHandlers as ShelfRowEditHandlers } from "./types";
 
 export interface ShelfRowProps {
   shelf: PlanogramShelfDef;
+  /** Fixture dimensions (width, depth) - used for shelf info popup */
+  fixture?: PlanogramFixture | null;
   highDemandSkus?: string[];
   getCategoryColor?: (category: string) => string;
   editHandlers?: PlanogramEditHandlers;
@@ -23,14 +32,22 @@ export interface ShelfRowProps {
   className?: string;
 }
 
+const UNITS = "mm";
+
 export function ShelfRow({
   shelf,
+  fixture,
   highDemandSkus = [],
   getCategoryColor = defaultGetCategoryColor,
   editHandlers,
   dragHandlers,
   className,
 }: ShelfRowProps) {
+  const units = fixture?.units ?? UNITS;
+  const hasShelfWidth = shelf.width != null;
+  const hasShelfDepth = shelf.depth != null;
+  const widthValue = shelf.width ?? fixture?.width;
+  const depthValue = shelf.depth ?? fixture?.depth;
   const totalFacings = shelf.products.reduce((sum, p) => sum + p.facings, 0);
   const totalUnits = shelf.products.reduce(
     (sum, p) => sum + p.facings * (p.depthCount || 1),
@@ -105,16 +122,58 @@ export function ShelfRow({
       className={className}
       aria-label={`Shelf ${shelf.shelfNumber}: ${shelf.name}`}
     >
-      <header className="mb-2 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+      <header className="mb-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
         <h3 className="text-sm font-semibold text-foreground">
           Shelf {shelf.shelfNumber}: {shelf.name}
         </h3>
         <span className="text-xs text-muted-foreground">
           {shelf.products.length} items · {totalFacings} facings · {totalUnits} units
         </span>
+        {fixture && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 shrink-0 gap-1.5 rounded-full border border-chart-2/70 bg-chart-2/20 px-3 text-chart-2 shadow-sm hover:bg-chart-2/30 hover:text-chart-2"
+                aria-label="View shelf dimensions"
+              >
+                <Info className="size-4" aria-hidden />
+                <span className="text-xs font-semibold">View dimensions</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="min-w-[200px] p-3">
+              <div className="space-y-2 text-sm">
+                <p className="font-semibold text-foreground">Shelf {shelf.shelfNumber} info</p>
+                <dl className="space-y-1 text-muted-foreground">
+                  <div className="flex justify-between gap-4">
+                    <dt>Height</dt>
+                    <dd className="tabular-nums text-foreground">{shelf.height} {units}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>Vertical position</dt>
+                    <dd className="tabular-nums text-foreground">{shelf.verticalPosition} {units}</dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>{hasShelfWidth ? "Width (shelf)" : "Width (fixture default)"}</dt>
+                    <dd className="tabular-nums text-foreground">
+                      {widthValue != null ? `${widthValue} ${units}` : "N/A"}
+                    </dd>
+                  </div>
+                  <div className="flex justify-between gap-4">
+                    <dt>{hasShelfDepth ? "Depth (shelf)" : "Depth (fixture default)"}</dt>
+                    <dd className="tabular-nums text-foreground">
+                      {depthValue != null ? `${depthValue} ${units}` : "N/A"}
+                    </dd>
+                  </div>
+                </dl>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </header>
       <div className="flex flex-col gap-0" onDrop={(e) => handleDrop(e)} onDragOver={(e) => e.preventDefault()}>
-        <div className="flex gap-1 overflow-hidden rounded-t-lg border border-b-0 border-border bg-muted/20 p-2">
+        <div className="flex gap-0.5 overflow-hidden rounded-t-lg border border-b-0 border-border bg-muted/20 p-1">
           {shelf.products.map((product) => (
             <div
               key={product.sku}

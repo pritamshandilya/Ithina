@@ -218,7 +218,7 @@
 
   /* Card Components */
   .stat-card {
-    @apply bg-card text-card-foreground border border-border rounded-lg p-3 shadow-sm;
+    @apply bg-card text-card-foreground border border-border rounded-lg p-2 shadow-sm;
   }
 
   /* Unified Card Styles (used by both Maker and Checker) */

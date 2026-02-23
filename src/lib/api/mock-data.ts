@@ -483,11 +483,11 @@ export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
   ];
   const statuses: AdhocAnalysis["status"][] = ["completed", "completed", "processing", "completed", "failed"];
   const fixtureContexts = [
-    { zone: "Grocery", section: "Beverages & Dairy", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
-    { zone: "Grocery", section: "Snacks & Personal Care", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
-    { zone: "Dairy", section: "Milk & Yogurt", fixtureType: "cooler_shelving", dimensions: "800×1800 mm" },
-    { zone: "Frozen", section: "Ice Cream & Desserts", fixtureType: "freezer_shelving", dimensions: "1000×1900 mm" },
-    { zone: "Bakery", section: "Bread & Pastries", fixtureType: "gondola", dimensions: "900×1600 mm" },
+    { shelfId: "shelf-aisle3-bev-01", shelfName: "Aisle 3 Beverages", zone: "Grocery", section: "Beverages & Dairy", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { shelfId: "shelf-snacks-02", shelfName: "Snacks Bay", zone: "Grocery", section: "Snacks & Personal Care", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { shelfId: "shelf-dairy-03", shelfName: "Dairy Section", zone: "Dairy", section: "Milk & Yogurt", fixtureType: "cooler_shelving", dimensions: "800×1800 mm" },
+    { shelfId: "shelf-frozen-04", shelfName: "Frozen Foods", zone: "Frozen", section: "Ice Cream & Desserts", fixtureType: "freezer_shelving", dimensions: "1000×1900 mm" },
+    { shelfId: "shelf-bakery-05", shelfName: "Bakery End Cap", zone: "Bakery", section: "Bread & Pastries", fixtureType: "gondola", dimensions: "900×1600 mm" },
   ];
   return names.map((name, i) => {
     const ctx = fixtureContexts[i % fixtureContexts.length];
@@ -500,6 +500,8 @@ export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
       status: statuses[i],
       complianceScore: statuses[i] === "completed" ? randomScore(72, 98) : undefined,
       errorMessage: statuses[i] === "failed" ? "Image quality too low for analysis" : undefined,
+      shelfId: ctx.shelfId,
+      shelfName: ctx.shelfName,
       zone: ctx.zone,
       section: ctx.section,
       fixtureType: ctx.fixtureType,

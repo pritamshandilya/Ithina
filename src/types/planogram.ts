@@ -31,6 +31,9 @@ export interface PlanogramShelfDef {
   name: string;
   verticalPosition: number;
   height: number;
+  /** Optional per-shelf dimensions from payloads that provide them */
+  width?: number;
+  depth?: number;
   products: PlanogramProduct[];
 }
 

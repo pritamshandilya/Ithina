@@ -37,15 +37,27 @@ function getAdhocStatusClass(status: AdhocAnalysisStatus): string {
 
 const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
   {
-    title: "Name",
-    field: "name",
+    title: "Shelf ID",
+    field: "shelfId",
+    width: 140,
     sorter: "string",
-    minWidth: 200,
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.name}</span>`;
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.shelfId ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Shelf Name",
+    field: "shelfName",
+    minWidth: 160,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => AdhocAnalysis }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.shelfName ?? "—"}</span>`;
     },
   },
   {

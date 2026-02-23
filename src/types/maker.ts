@@ -79,6 +79,10 @@ export interface AdhocAnalysis {
   status: AdhocAnalysisStatus;
   complianceScore?: number; // 0-100 when completed
   errorMessage?: string; // When status is failed
+  /** Shelf ID from capture context */
+  shelfId?: string;
+  /** Shelf name from capture context */
+  shelfName?: string;
   /** Zone from capture context (e.g. Grocery, Dairy) */
   zone?: string;
   /** Section from capture context */

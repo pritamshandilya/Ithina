@@ -35,7 +35,7 @@ export function ReportPage<T extends object>({
     tableProps,
 }: ReportPageProps<T>) {
     return (
-        <div className={cn("flex flex-col gap-6 p-6", className)}>
+        <div className={cn("flex flex-col gap-4 p-4", className)}>
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>

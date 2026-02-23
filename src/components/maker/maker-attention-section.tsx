@@ -1,16 +1,12 @@
-import { formatDistanceToNow } from "date-fns";
-import { AlertCircle, FileEdit, LayoutGrid, ChevronRight } from "lucide-react";
+import { AlertCircle, LayoutGrid, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useDraftAudits,
   useReturnedAudits,
-  useAssignedShelves,
-  useDeleteDraft,
 } from "@/features/maker/hooks";
 import { cn } from "@/lib/utils";
-import type { Audit } from "@/types/maker";
 
 export interface MakerAttentionSectionProps {
   onResume?: (auditId: string, shelfId: string) => void;
@@ -19,62 +15,61 @@ export interface MakerAttentionSectionProps {
   className?: string;
 }
 
-const MAX_ITEMS = 8;
-/** Fixed height to match Assigned Shelves; content scrolls when it overflows */
+/** Fixed height to match Assigned Shelves */
 const SECTION_HEIGHT = 420;
 
-function getShelfName(audit: Audit, shelves?: { id: string; shelfName: string }[]) {
-  const shelf = shelves?.find((s) => s.id === audit.shelfId);
-  return shelf?.shelfName ?? `Shelf ${audit.shelfId.replace("shelf-", "")}`;
+/**
+ * Donut chart segment - returns SVG path for a segment from startAngle to endAngle (degrees)
+ */
+function donutSegment(
+  cx: number,
+  cy: number,
+  r: number,
+  ir: number,
+  startAngle: number,
+  endAngle: number
+): string {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const angle = endAngle - startAngle;
+  const x1 = cx + r * Math.cos(toRad(startAngle));
+  const y1 = cy + r * Math.sin(toRad(startAngle));
+  const x2 = cx + r * Math.cos(toRad(endAngle));
+  const y2 = cy + r * Math.sin(toRad(endAngle));
+  const x3 = cx + ir * Math.cos(toRad(endAngle));
+  const y3 = cy + ir * Math.sin(toRad(endAngle));
+  const x4 = cx + ir * Math.cos(toRad(startAngle));
+  const y4 = cy + ir * Math.sin(toRad(startAngle));
+  const largeArc = angle > 180 ? 1 : 0;
+  return `M ${x1} ${y1} A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${largeArc} 0 ${x4} ${y4} Z`;
 }
 
 /**
- * "What Needs Your Attention" - compact list of returned and draft audits
- * with quick actions. Prioritizes returned (needs fix) over drafts.
+ * "What Needs Your Attention" - graphical summary of returned and draft audits.
+ * Users go to audit review for individual items.
  */
 export function MakerAttentionSection({
-  onResume,
-  onViewReport,
   onViewAll,
   className,
 }: MakerAttentionSectionProps) {
   const { data: drafts = [], isLoading: draftsLoading } = useDraftAudits();
   const { data: returned = [], isLoading: returnedLoading } = useReturnedAudits();
-  const { data: shelves } = useAssignedShelves();
-  const deleteDraftMutation = useDeleteDraft();
 
   const isLoading = draftsLoading || returnedLoading;
-
-  // Prioritize returned, then drafts. Take up to MAX_ITEMS total.
-  const attentionItems = [
-    ...returned.slice(0, MAX_ITEMS).map((a) => ({ ...a, _type: "returned" as const })),
-    ...drafts
-      .slice(0, Math.max(0, MAX_ITEMS - returned.length))
-      .map((a) => ({ ...a, _type: "draft" as const })),
-  ];
-
-  const hasItems = attentionItems.length > 0;
-
-  const handleAction = (audit: Audit, action: "resume" | "fix" | "delete") => {
-    if (action === "delete") {
-      if (window.confirm("Delete this draft? This cannot be undone.")) {
-        deleteDraftMutation.mutate(audit.id);
-      }
-      return;
-    }
-    if (action === "fix") onViewReport?.(audit.id, audit.shelfId);
-    else onResume?.(audit.id, audit.shelfId);
-  };
+  const total = returned.length + drafts.length;
+  const hasItems = total > 0;
 
   if (isLoading) {
     return (
       <div className={cn("space-y-4", className)}>
         <Skeleton className="h-6 w-48" />
-        <div className="rounded-xl border border-border bg-card p-6">
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-14 w-full" />
-            ))}
+        <div
+          className="rounded-xl border border-border bg-card overflow-hidden flex flex-col shrink-0"
+          style={{ height: SECTION_HEIGHT }}
+        >
+          <div className="p-6 flex flex-col items-center justify-center gap-4">
+            <Skeleton className="size-32 rounded-full" />
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-10 w-40" />
           </div>
         </div>
       </div>
@@ -114,139 +109,109 @@ export function MakerAttentionSection({
         {!hasItems ? (
           <div className="flex flex-1 flex-col items-center justify-center py-12 px-6 text-center min-h-0">
             <div
-              className="flex size-12 items-center justify-center rounded-full mb-3"
+              className="flex size-16 items-center justify-center rounded-full mb-4"
               style={{ backgroundColor: "color-mix(in oklch, var(--maker-approved) 15%, transparent)" }}
               aria-hidden
             >
               <LayoutGrid
-                className="size-6"
+                className="size-8"
                 style={{ color: "var(--maker-approved)" }}
                 aria-hidden
               />
             </div>
-            <p className="font-medium text-foreground">All caught up</p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="font-medium text-foreground text-lg">All caught up</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[240px]">
               No returned audits or drafts. Start a new audit when ready.
             </p>
           </div>
         ) : (
-          <>
-            <div className="flex-1 min-h-0 overflow-auto">
-              <ul className="divide-y divide-border" role="list">
-                {attentionItems.map((item) => {
-              const isReturned = item._type === "returned";
-              const shelfName = getShelfName(item, shelves);
-              const date = item.submittedAt || item.draftSavedAt;
-
-              return (
-                <li
-                  key={item.id}
-                  className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-muted/30 transition-colors"
-                >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <div
-                      className={cn(
-                        "flex size-9 shrink-0 items-center justify-center rounded-lg",
-                        isReturned
-                          ? "bg-destructive/10"
-                          : "bg-accent/10"
+          <div className="flex flex-1 flex-col items-center justify-center p-6 min-h-0">
+            {/* Donut chart: Returned vs Drafts */}
+            <div className="flex items-center gap-8">
+              <svg
+                viewBox="0 0 100 100"
+                className="size-36 shrink-0 min-w-[144px] min-h-[144px]"
+                aria-label="Audit workload: returned vs drafts"
+              >
+                <g transform="rotate(-90 50 50)">
+                  {returned.length > 0 && (
+                    <path
+                      d={donutSegment(
+                        50,
+                        50,
+                        40,
+                        26,
+                        0,
+                        (returned.length / total) * 360
                       )}
-                      aria-hidden
+                      fill="var(--destructive)"
+                      className="transition-opacity hover:opacity-90"
                     >
-                      {isReturned ? (
-                        <AlertCircle
-                          className="size-4"
-                          style={{ color: "var(--destructive)" }}
-                          aria-hidden
-                        />
-                      ) : (
-                        <FileEdit
-                          className="size-4"
-                          style={{ color: "var(--accent)" }}
-                          aria-hidden
-                        />
+                      <title>Returned: {returned.length}</title>
+                    </path>
+                  )}
+                  {drafts.length > 0 && (
+                    <path
+                      d={donutSegment(
+                        50,
+                        50,
+                        40,
+                        26,
+                        (returned.length / total) * 360,
+                        360
                       )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground truncate">
-                        {shelfName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {date
-                          ? formatDistanceToNow(new Date(date), { addSuffix: true })
-                          : "—"}
-                      </p>
-                    </div>
-                  </div>
+                      fill="var(--accent)"
+                      className="transition-opacity hover:opacity-90"
+                    >
+                      <title>Drafts: {drafts.length}</title>
+                    </path>
+                  )}
+                </g>
+              </svg>
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    {isReturned ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="border-destructive/50 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleAction(item, "fix")}
-                      >
-                        View Report
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAction(item, "resume")}
-                          style={{
-                            backgroundColor: "var(--maker-primary)",
-                            color: "var(--accent-foreground)",
-                          }}
-                        >
-                          Resume
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="size-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => handleAction(item, "delete")}
-                          aria-label="Delete draft"
-                        >
-                          <span className="sr-only">Delete</span>
-                          <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="16"
-                            height="16"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            aria-hidden
-                          >
-                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                            <line x1="10" y1="11" x2="10" y2="17" />
-                            <line x1="14" y1="11" x2="14" y2="17" />
-                          </svg>
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-              </ul>
+              <div className="flex flex-col gap-3 text-left">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="size-3 rounded-sm shrink-0"
+                    style={{ backgroundColor: "var(--destructive)" }}
+                    aria-hidden
+                  />
+                  <span className="text-sm">
+                    <span className="font-semibold text-foreground">{returned.length}</span>
+                    <span className="text-muted-foreground ml-1">returned</span>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="size-3 rounded-sm shrink-0"
+                    style={{ backgroundColor: "var(--accent)" }}
+                    aria-hidden
+                  />
+                  <span className="text-sm">
+                    <span className="font-semibold text-foreground">{drafts.length}</span>
+                    <span className="text-muted-foreground ml-1">drafts</span>
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {total} total needing action
+                </p>
+              </div>
             </div>
-          </>
-        )}
 
-        {hasItems && (returned.length > 0 || drafts.length > 0) && onViewAll && (
-          <div className="border-t border-border px-4 py-3 bg-muted/20">
-            <button
-              type="button"
-              onClick={onViewAll}
-              className="flex w-full items-center justify-center gap-2 text-sm font-medium text-accent hover:text-accent/90 transition-colors py-1"
-            >
-              View all audits
-              <ChevronRight className="size-4" aria-hidden />
-            </button>
+            {onViewAll && (
+              <Button
+                size="lg"
+                onClick={onViewAll}
+                className="mt-6 gap-2 font-semibold"
+                style={{
+                  backgroundColor: "var(--accent)",
+                  color: "var(--accent-foreground)",
+                }}
+              >
+                View all audits
+                <ChevronRight className="size-4" aria-hidden />
+              </Button>
+            )}
           </div>
         )}
       </div>

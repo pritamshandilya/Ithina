@@ -54,9 +54,6 @@ export interface AnalysisFlowPageProps {
 export function AnalysisFlowPage({
   title,
   backTo,
-  shelfName,
-  planogramName,
-  taskContext,
   expectedLayoutPreview,
   planogramExpectedData,
 }: AnalysisFlowPageProps) {
@@ -119,12 +116,6 @@ export function AnalysisFlowPage({
 
   const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
-  const handleReset = useCallback(() => {
-    setImageFile(null);
-    setImagePreview(null);
-    setHighlightedIssueIndex(null);
-  }, []);
-
   const handleRunAnalysis = () => startAnalysis();
 
   const simpleStepIndex =
@@ -142,66 +133,44 @@ export function AnalysisFlowPage({
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-8">
-          <header className="flex items-center gap-4">
+      <div className="flex min-h-full flex-col bg-primary pt-2 px-2 pb-2 sm:pt-3 sm:px-2 sm:pb-3 lg:pt-4 lg:px-2 lg:pb-4">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-2 lg:gap-3">
+          <header className="flex shrink-0 items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
               <Link to={backTo}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>
             </Button>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">{title}</h1>
-              <p className="text-sm text-muted-foreground">
+            <div className="space-y-0.5">
+              <h1 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h1>
+              <p className="text-xs text-muted-foreground">
                 Upload your shelf image to begin analysis
               </p>
             </div>
           </header>
 
-          {/* STATE 3: Results header */}
-          {state === "results" && (shelfName || planogramName) && (
-            <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-              {shelfName && <span>{shelfName}</span>}
-              {shelfName && planogramName && <span>|</span>}
-              {planogramName && <span>{planogramName}</span>}
-              {taskContext && (
-                <>
-                  <span>|</span>
-                  <span>{taskContext}</span>
-                </>
-              )}
-            </div>
-          )}
-
           {state === "results" ? (
             <ReportSnippetsView
               imagePreview={imagePreview}
               report={MOCK_REPORT_SNIPPET}
-              onRetake={handleReset}
               onReplaceImage={triggerFileInput}
-              onSubmitAudit={() => {
-                /* TODO: submit audit */
-              }}
-              onSubmitAnyway={() => {
-                /* TODO: submit anyway */
-              }}
               highlightedIssueIndex={highlightedIssueIndex}
               onIssueClick={setHighlightedIssueIndex}
             />
           ) : (
             <div
               className={cn(
-                "grid gap-6",
+                "grid min-h-0 flex-1 gap-4",
                 /* Planogram-based only: two columns (upload left, planogram right). Adhoc: single column, full width. */
                 (planogramExpectedData ?? expectedLayoutPreview)
-                  ? "lg:grid-cols-2 lg:h-[calc(100vh-14rem)] lg:min-h-[480px] lg:overflow-hidden"
+                  ? "lg:grid-cols-2 lg:min-h-0"
                   : "lg:grid-cols-1"
               )}
             >
               {/* Shelf View (left) */}
-              <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm min-h-0 flex flex-col h-full">
-                <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
+              <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm">
+                <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
                   <h2 className="text-sm font-semibold text-foreground">Shelf image</h2>
                   {state === "processing" && (
                     <span className="text-xs text-muted-foreground">Analyzing…</span>
@@ -291,16 +260,16 @@ export function AnalysisFlowPage({
                     onClick={triggerFileInput}
                     onDrop={handleDrop}
                     onDragOver={handleDragOver}
-                    className="flex-1 min-h-0 w-full flex flex-col items-center justify-center px-6 py-12 transition-all hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 rounded-b-xl border-2 border-dashed border-border hover:border-accent/50"
+                    className="flex min-h-0 flex-1 flex-col items-center justify-center rounded-b-xl border-2 border-dashed border-border px-4 py-6 transition-all hover:border-accent/50 hover:bg-accent/5 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
-                    <div className="rounded-full bg-accent/10 p-4 mb-4">
-                      <ImageIcon className="h-10 w-10 text-accent" aria-hidden />
+                    <div className="mb-2 rounded-full bg-accent/10 p-3">
+                      <ImageIcon className="h-8 w-8 text-accent" aria-hidden />
                     </div>
                     <p className="text-sm font-medium text-foreground">
                       Drop your shelf image here
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">or click to browse</p>
-                    <p className="text-xs text-muted-foreground/80 mt-2">
+                    <p className="mt-0.5 text-xs text-muted-foreground">or click to browse</p>
+                    <p className="mt-1 text-xs text-muted-foreground/80">
                       PNG, JPG, WebP · max {MAX_SIZE_MB}MB
                     </p>
                   </button>
@@ -320,13 +289,13 @@ export function AnalysisFlowPage({
               )}
               {/* Legacy: custom expected layout preview */}
               {!planogramExpectedData && expectedLayoutPreview && (
-                <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm">
-                  <div className="border-b border-border px-4 py-3">
+                <section className="overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm">
+                  <div className="border-b border-border px-3 py-2">
                     <h2 className="text-sm font-semibold text-foreground">
                       Expected Layout
                     </h2>
                   </div>
-                  <div className="p-6 min-h-[280px] overflow-auto">
+                  <div className="min-h-[280px] overflow-auto p-4">
                     {expectedLayoutPreview}
                   </div>
                 </section>

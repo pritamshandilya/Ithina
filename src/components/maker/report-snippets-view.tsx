@@ -5,27 +5,21 @@
  * - Key metrics row
  * - Executive summary & key findings
  * - AI recommendations
- * - Compliance by shelf chart
- * - Planogram issue distribution (donut)
  * - Issue categories
- * - Issues to review
  *
- * Full report will be recreated in depth later.
+ * Compliance by shelf, planogram issue distribution, and issues to review
+ * are available in the full report.
  */
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   AlertTriangle,
-  BarChart3,
-  Camera,
-  Check,
-  ChevronDown,
-  ChevronUp,
   FileText,
   Info,
   Lightbulb,
-  RefreshCw,
+  Minus,
+  Plus,
   Send,
   Upload,
   XCircle,
@@ -46,14 +40,8 @@ export interface ReportSnippetsViewProps {
   imagePreview: string | null;
   /** Report snippet data */
   report: ReportSnippet;
-  /** Callback when user wants to retake/replace image */
-  onRetake?: () => void;
   /** Callback when user wants to replace image */
   onReplaceImage?: () => void;
-  /** Callback when user submits audit */
-  onSubmitAudit?: () => void;
-  /** Callback when user submits anyway (with issues) */
-  onSubmitAnyway?: () => void;
   /** Index of issue to highlight on image */
   highlightedIssueIndex?: number | null;
   /** Callback when user clicks an issue */
@@ -87,18 +75,14 @@ function IssueCategoryVariant({
 export function ReportSnippetsView({
   imagePreview,
   report,
-  onRetake,
   onReplaceImage,
-  onSubmitAudit,
-  onSubmitAnyway,
-  highlightedIssueIndex = null,
-  onIssueClick,
+  highlightedIssueIndex: _highlightedIssueIndex = null,
+  onIssueClick: _onIssueClick,
 }: ReportSnippetsViewProps) {
   const { toast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(1);
   const [sendForApprovalOpen, setSendForApprovalOpen] = useState(false);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
-  const hasIssues = report.issues > 0 || report.missing > 0 || report.misplaced > 0;
 
   const handleSendForApproval = (_notes: string) => {
     setIsSubmittingApproval(true);
@@ -111,20 +95,12 @@ export function ReportSnippetsView({
       });
     }, 800);
   };
-  const _isCompliant = report.complianceScore >= 100 && !hasIssues;
-  void _isCompliant; // Reserved for future UI (e.g. compliant badge)
 
   const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, 2));
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
 
-  const totalDistribution =
-    report.issueDistribution.matched +
-    report.issueDistribution.misplaced +
-    report.issueDistribution.missing +
-    report.issueDistribution.extra;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <SendForApprovalModal
         isOpen={sendForApprovalOpen}
         onClose={() => setSendForApprovalOpen(false)}
@@ -146,6 +122,7 @@ export function ReportSnippetsView({
         <Button size="sm" variant="accent" asChild>
           <Link
             to="/maker/reports/view"
+            preload="render"
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             state={{ imageUrl: imagePreview ?? undefined } as any}
           >
@@ -155,25 +132,21 @@ export function ReportSnippetsView({
         </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(640px,calc(100vh-14rem))] lg:items-stretch">
+      <div className="grid gap-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(640px,calc(100vh-14rem))] lg:items-stretch">
         {/* Left: Observed Shelf */}
         <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
           <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
             <h3 className="text-sm font-semibold text-foreground">Observed Shelf</h3>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoomLevel >= 2} aria-label="Zoom in">
-                <ChevronUp className="size-4" aria-hidden />
+                <Plus className="size-4" aria-hidden />
               </Button>
               <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
-                <ChevronDown className="size-4" aria-hidden />
+                <Minus className="size-4" aria-hidden />
               </Button>
               <Button size="sm" variant="accent" onClick={onReplaceImage}>
                 <Upload className="size-4" aria-hidden />
                 Replace
-              </Button>
-              <Button size="sm" variant="accent" onClick={onRetake}>
-                <Camera className="size-4" aria-hidden />
-                Retake
               </Button>
               <Button
                 size="sm"
@@ -219,7 +192,7 @@ export function ReportSnippetsView({
 
         {/* Right: Report snippets (scrollable) */}
         <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-6">
+          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
             {/* Key metrics row */}
             <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 scrollbar-thin">
               <MetricCard
@@ -283,63 +256,6 @@ export function ReportSnippetsView({
               </ul>
             </div>
 
-            {/* Compliance by shelf */}
-            <div className="rounded-lg border border-border bg-card/40 p-4">
-              <div className="flex items-center gap-2 mb-3">
-                <BarChart3 className="size-4 text-accent" aria-hidden />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Compliance by Shelf
-                </h3>
-              </div>
-              <div className="space-y-2">
-                {report.shelfCompliance.map((s) => (
-                  <div key={s.shelfName} className="flex items-center gap-3">
-                    <span className="w-24 shrink-0 text-xs font-medium text-foreground truncate text-right">
-                      {s.shelfName}
-                    </span>
-                    <div className="flex-1 h-5 rounded bg-muted/60 overflow-hidden">
-                      <div
-                        className={cn(
-                          "h-full rounded transition-all",
-                          s.compliance >= 80 ? "bg-chart-2" : s.compliance > 0 ? "bg-amber-500" : "bg-destructive/70"
-                        )}
-                        style={{ width: `${s.compliance}%` }}
-                      />
-                    </div>
-                    <span>{s.compliance}%</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Planogram issue distribution */}
-            <div className="rounded-lg border border-border bg-card/40 p-4">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">
-                Planogram Issue Distribution
-              </h3>
-              <div className="flex items-center gap-6">
-                <DonutChart distribution={report.issueDistribution} total={totalDistribution} />
-                <div className="flex flex-col gap-2 text-sm">
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm bg-chart-2" aria-hidden />
-                    Matched: {report.issueDistribution.matched}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm bg-amber-500" aria-hidden />
-                    Misplaced: {report.issueDistribution.misplaced}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm bg-destructive" aria-hidden />
-                    Missing: {report.issueDistribution.missing}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span className="h-3 w-3 rounded-sm bg-blue-500" aria-hidden />
-                    Extra: {report.issueDistribution.extra}
-                  </span>
-                </div>
-              </div>
-            </div>
-
             {/* Issue categories */}
             <div className="flex flex-wrap gap-2">
               {report.issueCategories.map((cat) => (
@@ -355,66 +271,6 @@ export function ReportSnippetsView({
               ))}
             </div>
 
-            {/* Issues to review */}
-            {report.issuesToReview.length > 0 && (
-              <div>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  Issues to Review
-                </h3>
-                <div className="space-y-2">
-                  {report.issuesToReview.map((issue, idx) => (
-                    <button
-                      key={issue.id ?? idx}
-                      type="button"
-                      onClick={() => onIssueClick?.(idx)}
-                      className={cn(
-                        "w-full text-left rounded-lg border px-3 py-2.5 transition-colors",
-                        highlightedIssueIndex === idx
-                          ? "border-accent bg-accent/10"
-                          : "border-border bg-card/60 hover:bg-accent/5"
-                      )}
-                    >
-                      <p className="text-sm font-medium text-foreground">
-                        {issue.skuName ?? issue.description}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">{issue.description}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div className="pt-4 border-t border-border space-y-3">
-              {hasIssues ? (
-                <>
-                  <p className="text-sm text-muted-foreground">
-                    Fix highlighted issues and retake photo.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button onClick={onRetake} variant="accent" size="sm">
-                      <RefreshCw className="size-4" aria-hidden />
-                      Retake & Reanalyze
-                    </Button>
-                    {onSubmitAnyway && (
-                      <Button onClick={onSubmitAnyway} variant="accent" size="sm">
-                        Submit Anyway
-                      </Button>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-medium text-chart-2 flex items-center gap-2">
-                    <Check className="size-4" aria-hidden />
-                    Shelf is compliant.
-                  </p>
-                  <Button onClick={onSubmitAudit} className="w-full bg-chart-2 text-white hover:opacity-90">
-                    Submit Audit
-                  </Button>
-                </>
-              )}
-            </div>
           </div>
         </section>
       </div>
@@ -471,48 +327,3 @@ function MetricCard({
   );
 }
 
-function DonutChart({
-  distribution,
-  total,
-}: {
-  distribution: { matched: number; misplaced: number; missing: number; extra: number };
-  total: number;
-}) {
-  if (total === 0) return null;
-  const cx = 50;
-  const cy = 50;
-  const or = 40;
-  const ir = 28;
-  const segments = [
-    { value: distribution.matched, color: "var(--chart-2)" },
-    { value: distribution.misplaced, color: "var(--action-warning)" },
-    { value: distribution.missing, color: "var(--destructive)" },
-    { value: distribution.extra, color: "oklch(0.6 0.2 250)" },
-  ];
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  let startAngle = -90;
-
-  return (
-    <div className="relative size-24">
-      <svg viewBox="0 0 100 100" className="size-24">
-        {segments.map((s, i) => {
-          const angle = (s.value / total) * 360;
-          const endAngle = startAngle + angle;
-          const x1 = cx + or * Math.cos(toRad(startAngle));
-          const y1 = cy + or * Math.sin(toRad(startAngle));
-          const x2 = cx + or * Math.cos(toRad(endAngle));
-          const y2 = cy + or * Math.sin(toRad(endAngle));
-          const x3 = cx + ir * Math.cos(toRad(endAngle));
-          const y3 = cy + ir * Math.sin(toRad(endAngle));
-          const x4 = cx + ir * Math.cos(toRad(startAngle));
-          const y4 = cy + ir * Math.sin(toRad(startAngle));
-          const largeArc = angle > 180 ? 1 : 0;
-          const path = `M ${x1} ${y1} A ${or} ${or} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${largeArc} 0 ${x4} ${y4} Z`;
-          startAngle = endAngle;
-          return <path key={i} d={path} fill={s.color} />;
-        })}
-      </svg>
-    </div>
-  );
-}

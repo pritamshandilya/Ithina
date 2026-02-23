@@ -30,8 +30,8 @@ function MakerManualAuditsPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
 
           {/* Header Bar */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">

@@ -37,7 +37,7 @@ export function CheckerStoreShelfPreview({
   const { selectedStore } = useStore();
   const storeId = selectedStore?.id ?? mockCheckerUser.storeId;
   const { data: shelves, isLoading: shelvesLoading } = useAssignedShelves();
-  const { data: compliance, isLoading: complianceLoading } =
+  const { data: _compliance, isLoading: complianceLoading } =
     useComplianceOverview(storeId);
 
   const isLoading = shelvesLoading || complianceLoading;
@@ -63,7 +63,6 @@ export function CheckerStoreShelfPreview({
 
   const previewShelves = (shelves ?? []).slice(0, PREVIEW_ROWS);
   const hasMore = (shelves ?? []).length > PREVIEW_ROWS;
-  const storeName = selectedStore?.name ?? "Store";
 
   const handleRowClick = (shelfId: string) => {
     if (onShelfClick) {
@@ -94,11 +93,7 @@ export function CheckerStoreShelfPreview({
             <h2 className="text-lg font-semibold text-foreground">
               Store & Shelf Overview
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {compliance
-                ? `${storeName} · ${compliance.avgComplianceScore.toFixed(1)}% avg compliance`
-                : `${(shelves ?? []).length} shelf${(shelves ?? []).length !== 1 ? "s" : ""} in store`}
-            </p>
+            
           </div>
         </div>
 

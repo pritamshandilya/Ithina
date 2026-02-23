@@ -41,6 +41,9 @@ export async function fetchStores(_userId: string): Promise<Store[]> {
   return generateMockStores();
 }
 
+/** In-memory store for shelves created via createShelf (wireframe; replace with API in production) */
+const createdShelves: Shelf[] = [];
+
 /**
  * Fetch all assigned shelves for the current user
  * 
@@ -60,7 +63,7 @@ export async function fetchAssignedShelves(): Promise<Shelf[]> {
   
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
-  return [...mockShelves, ...planogramShelves];
+  return [...mockShelves, ...planogramShelves, ...createdShelves];
 }
 
 /**
@@ -91,13 +94,14 @@ export async function createShelf(shelfData: {
   // const response = await api.post('/maker/shelves', shelfData);
   // return response.data;
 
-  // Mock response
-  return {
+  const shelf: Shelf = {
     id: `shelf-new-${Date.now()}`,
     ...shelfData,
     status: "never-audited",
     assignedTo: "user-001",
   };
+  createdShelves.push(shelf);
+  return shelf;
 }
 
 /**
@@ -201,7 +205,7 @@ export async function getShelfById(shelfId: string): Promise<Shelf | null> {
 
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
-  const all = [...mockShelves, ...planogramShelves];
+  const all = [...mockShelves, ...planogramShelves, ...createdShelves];
   return all.find((s) => s.id === shelfId) ?? null;
 }
 

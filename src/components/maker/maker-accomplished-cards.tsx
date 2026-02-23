@@ -25,7 +25,7 @@ export function MakerAccomplishedCards({ className }: MakerAccomplishedCardsProp
 
   if (statsLoading) {
     return (
-      <div className={cn("grid grid-cols-2 gap-4 sm:grid-cols-4", className)}>
+      <div className={cn("grid grid-cols-2 gap-3 sm:grid-cols-4", className)}>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="stat-card space-y-4">
             <Skeleton className="h-4 w-28" />
@@ -44,17 +44,15 @@ export function MakerAccomplishedCards({ className }: MakerAccomplishedCardsProp
   const assignedCount = shelves.length;
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-3", className)}>
       <div>
         <h2 className="text-lg font-semibold text-foreground">
           My Work at a Glance
         </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Today&apos;s progress and what&apos;s in the pipeline
-        </p>
+        
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           title="Audits Submitted Today"
           value={stats.auditsSubmittedToday}

@@ -271,7 +271,7 @@ export function AllItemsTab({
   );
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("w-full min-w-0 space-y-4", className)}>
       {/* Search – hidden in PDF mode */}
       {!pdfMode && (
       <div className="relative">
@@ -287,10 +287,11 @@ export function AllItemsTab({
       )}
 
       {/* SKU Facings & Depth Summary */}
-      <section>
+      <section className="min-w-0">
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
           SKU Facings & Depth Summary
         </h3>
+        <div className="min-w-0 overflow-x-auto">
         {pdfMode ? (
           <PdfSimpleTable
             columns={[
@@ -350,15 +351,18 @@ export function AllItemsTab({
             pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
             onPaginationChange={setSkuPagination}
             headerFilters
+            layout="fitDataFill"
           />
         )}
+        </div>
       </section>
 
       {/* All Planogram Items */}
-      <section>
+      <section className="min-w-0">
         <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">
           All Planogram Items ({filteredPlanogramItems.length})
         </h3>
+        <div className="min-w-0 overflow-x-auto">
         {pdfMode ? (
           <PdfSimpleTable
             columns={[
@@ -406,8 +410,10 @@ export function AllItemsTab({
             pageSizeSelector={[...PAGE_SIZE_OPTIONS]}
             onPaginationChange={setPlanogramPagination}
             headerFilters
+            layout="fitDataFill"
           />
         )}
+        </div>
       </section>
     </div>
   );

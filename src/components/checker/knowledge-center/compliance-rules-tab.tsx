@@ -595,6 +595,7 @@ export function ComplianceRulesTab() {
         }}
         rule={editingRule}
         createdBy={`${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`}
+        onAddNewRuleSet={() => setEditingRule(null)}
       />
 
       {/* Actions dropdown - positioned near the clicked "..." button */}

@@ -25,6 +25,9 @@ import type { AuditQueueFilter, AuditQueueSort } from "@/features/checker/types"
 import { cn } from "@/lib/utils";
 import type { CheckerAudit } from "@/types/checker";
 
+const PAGE_SIZE_OPTIONS = [5, 10, 20, 50];
+const INITIAL_SORT = { field: "complianceScore", dir: "asc" } as const;
+
 export interface AuditReviewQueueProps {
   /**
    * List of pending audits
@@ -529,10 +532,10 @@ export function AuditReviewQueue({
             columns={tableColumns}
             data={filteredAndSortedAudits}
             rowIdField="id"
-            initialSort={{ field: "complianceScore", dir: "asc" }}
+            initialSort={INITIAL_SORT}
             emptyMessage="No audits match the current filters"
             pageSize={10}
-            pageSizeSelector={[5, 10, 20, 50]}
+            pageSizeSelector={PAGE_SIZE_OPTIONS}
             onPaginationChange={setTablePagination}
             onRowClick={(row, event) => handleReviewClick(row.id, event)}
           />

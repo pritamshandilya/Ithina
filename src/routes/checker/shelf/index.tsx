@@ -412,6 +412,11 @@ function PlanogramAnalysisPage() {
     [handleOpenMenu, ruleSets]
   );
 
+  const pageSizeSelectorOptions = useMemo(
+    () => [...PLANOGRAM_PAGE_SIZE_OPTIONS],
+    []
+  );
+
   return (
     <MainLayout>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
@@ -484,7 +489,7 @@ function PlanogramAnalysisPage() {
                   initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No shelves match your search"
                   pageSize={10}
-                  pageSizeSelector={[...PLANOGRAM_PAGE_SIZE_OPTIONS]}
+                  pageSizeSelector={pageSizeSelectorOptions}
                   headerFilters={false}
                   layout="fitData"
                   onPaginationChange={setTablePagination}

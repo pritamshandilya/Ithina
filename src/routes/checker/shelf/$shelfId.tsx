@@ -8,7 +8,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, Info } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -17,6 +17,7 @@ import {
   RemovedItemsSidebar,
   ShelfRow,
   StockingRulesSection,
+  ShelfInfoModal,
 } from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -77,10 +78,11 @@ function PlanogramPreviewPage() {
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set()
   );
-  
+
   const [categoryPositions, setCategoryPositions] = useState<Map<string, {
     shelfNumber: number;
     position: number; // index in products array
@@ -165,7 +167,7 @@ function PlanogramPreviewPage() {
   }, [preview]);
 
   const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
-  const isPlaceholder = !!preview && !preview.planogramPayload;
+  const isBlankShelf = !!preview && !preview.planogramPayload;
 
   const shelfCapacities = useMemo(() => {
     const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
@@ -296,7 +298,7 @@ function PlanogramPreviewPage() {
           return { ...s, products: reordered };
         })
       );
-      
+
       // Update position tracking
       setCategoryPositions((prev) => {
         const next = new Map(prev);
@@ -305,7 +307,7 @@ function PlanogramPreviewPage() {
         });
         return next;
       });
-      
+
       setHasChanges(true);
     },
     []
@@ -368,7 +370,7 @@ function PlanogramPreviewPage() {
       if (from === "removed") {
         setRemovedItems((items) => items.filter((p) => p.sku !== sku));
       }
-      
+
       setCategoryPositions((prev) => {
         const next = new Map(prev);
         const targetShelf = localShelves.find((s) => s.shelfNumber === to);
@@ -504,10 +506,10 @@ function PlanogramPreviewPage() {
   const onToggleCategory = useCallback(
     (category: string) => {
       if (toggleInProgressRef.current) {
-        
+
         return;
       }
-      
+
       toggleInProgressRef.current = true;
 
       setSelectedCategories((prevSelected) => {
@@ -518,7 +520,7 @@ function PlanogramPreviewPage() {
           nextSelected.delete(category);
 
           const toRestore = removedItems.filter((p) => p.category === category);
-          
+
           const restoredSkus = new Set<string>(
             toRestore
               .filter((p) => categoryPositions.has(p.sku))
@@ -576,7 +578,7 @@ function PlanogramPreviewPage() {
               const filtered = prevRemoved.filter(
                 (p) => !restoredSkus.has(p.sku)
               );
-              
+
               return filtered;
             });
           }, 0);
@@ -639,7 +641,7 @@ function PlanogramPreviewPage() {
                     {preview.shelf.shelfName}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    {isPlaceholder
+                    {isBlankShelf
                       ? "Sample planogram for display"
                       : `v${planogram?.version ?? "1.0"} ${metadata?.location ?? "—"} · ${metadata?.status ?? "active"}`}
                   </p>
@@ -650,7 +652,20 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
-            {hasChanges && !isPlaceholder && (
+
+            {preview && !isBlankShelf && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsInfoModalOpen(true)}
+                className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 hover:text-white"
+                title="View Shelf Information"
+              >
+                <Info className="size-4" aria-hidden />
+              </Button>
+            )}
+
+            {hasChanges && !isBlankShelf && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -685,7 +700,7 @@ function PlanogramPreviewPage() {
 
           {preview && !isLoading && (
             <div className="space-y-4">
-              {isPlaceholder && (
+              {isBlankShelf && (
                 <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
                   Sample planogram for display. Assign a planogram to this shelf to save edits.
                 </div>
@@ -811,6 +826,14 @@ function PlanogramPreviewPage() {
           )}
         </div>
       </div>
+      {preview?.planogramPayload && (
+        <ShelfInfoModal
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          payload={preview.planogramPayload}
+          stats={stats}
+        />
+      )}
     </MainLayout>
   );
 }

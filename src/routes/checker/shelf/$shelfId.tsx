@@ -17,6 +17,7 @@ import {
   RemovedItemsSidebar,
   ShelfRow,
   StockingRulesSection,
+  ShelfInfoModal,
 } from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ function PlanogramPreviewPage() {
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set()
   );
@@ -646,6 +648,19 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
+
+            {preview && !isBlankShelf && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsInfoModalOpen(true)}
+                className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 hover:text-white"
+                title="View Shelf Information"
+              >
+                <Info className="size-4" aria-hidden />
+              </Button>
+            )}
+
             {hasChanges && (
               <Button
                 onClick={handleSave}
@@ -828,6 +843,14 @@ function PlanogramPreviewPage() {
           )}
         </div>
       </div>
+      {preview?.planogramPayload && (
+        <ShelfInfoModal
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          payload={preview.planogramPayload}
+          stats={stats}
+        />
+      )}
     </MainLayout>
   );
 }

@@ -19,6 +19,7 @@ import {
   RemovedItemsSidebar,
   ShelfRow,
   StockingRulesSection,
+  ShelfInfoModal,
 } from "@/components/planogram";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
@@ -90,10 +91,11 @@ function PlanogramPreviewPage() {
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set()
   );
-  
+
   const [categoryPositions, setCategoryPositions] = useState<Map<string, {
     shelfNumber: number;
     position: number; // index in products array
@@ -200,11 +202,11 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) =>
-                  p.sku === sku ? { ...p, name: newName } : p
-                ),
-              }
+              ...s,
+              products: s.products.map((p) =>
+                p.sku === sku ? { ...p, name: newName } : p
+              ),
+            }
             : s
         )
       );
@@ -219,11 +221,11 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) =>
-                  p.sku === sku ? { ...p, category: newCategory } : p
-                ),
-              }
+              ...s,
+              products: s.products.map((p) =>
+                p.sku === sku ? { ...p, category: newCategory } : p
+              ),
+            }
             : s
         )
       );
@@ -242,14 +244,14 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.map((p) => {
-                  if (p.sku !== sku) return p;
-                  const facings = updates.facings ?? p.facings;
-                  const depthCount = updates.depthCount ?? p.depthCount;
-                  return { ...p, facings, depthCount };
-                }),
-              }
+              ...s,
+              products: s.products.map((p) => {
+                if (p.sku !== sku) return p;
+                const facings = updates.facings ?? p.facings;
+                const depthCount = updates.depthCount ?? p.depthCount;
+                return { ...p, facings, depthCount };
+              }),
+            }
             : s
         )
       );
@@ -266,9 +268,9 @@ function PlanogramPreviewPage() {
         prev.map((s) =>
           s.shelfNumber === shelfNumber
             ? {
-                ...s,
-                products: s.products.filter((p) => p.sku !== sku),
-              }
+              ...s,
+              products: s.products.filter((p) => p.sku !== sku),
+            }
             : s
         )
       );
@@ -305,7 +307,7 @@ function PlanogramPreviewPage() {
           return { ...s, products: reordered };
         })
       );
-      
+
       // Update position tracking
       setCategoryPositions((prev) => {
         const next = new Map(prev);
@@ -314,7 +316,7 @@ function PlanogramPreviewPage() {
         });
         return next;
       });
-      
+
       setHasChanges(true);
     },
     []
@@ -377,7 +379,7 @@ function PlanogramPreviewPage() {
       if (from === "removed") {
         setRemovedItems((items) => items.filter((p) => p.sku !== sku));
       }
-      
+
       setCategoryPositions((prev) => {
         const next = new Map(prev);
         const targetShelf = localShelves.find((s) => s.shelfNumber === to);
@@ -514,10 +516,10 @@ function PlanogramPreviewPage() {
   const onToggleCategory = useCallback(
     (category: string) => {
       if (toggleInProgressRef.current) {
-        
+
         return;
       }
-      
+
       toggleInProgressRef.current = true;
 
       setSelectedCategories((prevSelected) => {
@@ -528,7 +530,7 @@ function PlanogramPreviewPage() {
           nextSelected.delete(category);
 
           const toRestore = removedItems.filter((p) => p.category === category);
-          
+
           const restoredSkus = new Set<string>(
             toRestore
               .filter((p) => categoryPositions.has(p.sku))
@@ -586,7 +588,7 @@ function PlanogramPreviewPage() {
               const filtered = prevRemoved.filter(
                 (p) => !restoredSkus.has(p.sku)
               );
-              
+
               return filtered;
             });
           }, 0);
@@ -657,6 +659,19 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
+
+            {preview && !isBlankShelf && (
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setIsInfoModalOpen(true)}
+                className="rounded-full bg-white/5 border-white/10 hover:bg-white/10"
+                title="View Shelf Information"
+              >
+                <Info className="size-4" aria-hidden />
+              </Button>
+            )}
+
             {hasChanges && (
               <Button
                 onClick={handleSave}
@@ -839,6 +854,14 @@ function PlanogramPreviewPage() {
           )}
         </div>
       </div>
+      {preview?.planogramPayload && (
+        <ShelfInfoModal
+          isOpen={isInfoModalOpen}
+          onClose={() => setIsInfoModalOpen(false)}
+          payload={preview.planogramPayload}
+          stats={stats}
+        />
+      )}
     </MainLayout>
   );
 }

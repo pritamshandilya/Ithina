@@ -59,27 +59,6 @@ const PLANOGRAM_COLUMNS = (
   ruleSets: ComplianceRuleSetSummary[]
 ): DataTableColumn<PlanogramShelfRow>[] => [
   {
-    title: "Action",
-    field: "id",
-    width: 56,
-    headerSort: false,
-    headerFilter: false,
-    hozAlign: "center",
-    formatter: () => `
-      <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
-        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-      </button>
-    `,
-    cellClick: (event: unknown, cell: { getData: () => PlanogramShelfRow }) => {
-      (event as { stopPropagation?: () => void }).stopPropagation?.();
-      const target = (event as { target?: HTMLElement }).target as HTMLElement;
-      const btn = target?.closest?.("[data-action]");
-      if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
-      const rect = (btn as HTMLElement).getBoundingClientRect();
-      onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
-    },
-  },
-  {
     title: "Aisle",
     field: "aisleNumber",
     width: 70,
@@ -260,6 +239,27 @@ const PLANOGRAM_COLUMNS = (
       const label = AUDIT_STATUS_LABELS[row.status] ?? row.status;
       const statusClass = getAuditStatusClass(row.status);
       return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
+    },
+  },
+  {
+    title: "Action",
+    field: "id",
+    width: 56,
+    headerSort: false,
+    headerFilter: false,
+    hozAlign: "center",
+    formatter: () => `
+      <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
+        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+    `,
+    cellClick: (event: unknown, cell: { getData: () => PlanogramShelfRow }) => {
+      (event as { stopPropagation?: () => void }).stopPropagation?.();
+      const target = (event as { target?: HTMLElement }).target as HTMLElement;
+      const btn = target?.closest?.("[data-action]");
+      if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
+      const rect = (btn as HTMLElement).getBoundingClientRect();
+      onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
     },
   },
 ];

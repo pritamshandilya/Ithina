@@ -245,7 +245,6 @@ const PLANOGRAM_COLUMNS = (
     title: "Action",
     field: "id",
     width: 56,
-    frozen: true,
     headerSort: false,
     headerFilter: false,
     hozAlign: "center",

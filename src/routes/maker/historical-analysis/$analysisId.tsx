@@ -14,7 +14,6 @@ import { ReportSnippetsView } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { MOCK_REPORT_SNIPPET } from "@/features/maker/analysis";
 import { useHistoricalAnalyses } from "@/features/maker/hooks";
-import type { HistoricalAnalysisRow } from "@/types/maker";
 
 import placeholderShelf from "@/assets/placeholder-shelf.jpg";
 

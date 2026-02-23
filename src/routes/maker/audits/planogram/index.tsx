@@ -32,8 +32,9 @@ function toPlanogramRow(
     arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ??
     8 + (shelf.id.charCodeAt(shelf.id.length - 1) % 12);
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
-  const planogramInfo = shelf.planogramId && planogramMap?.get(shelf.planogramId);
-  const aisle = planogramInfo?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
+  const planogramInfo = shelf.planogramId ? planogramMap?.get(shelf.planogramId) : undefined;
+  const info = planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
+  const aisle = info?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -42,10 +43,10 @@ function toPlanogramRow(
     productsCount: skuCount,
     issuesCount: issues,
     aisle,
-    zone: planogramInfo?.zone,
-    section: planogramInfo?.section,
-    fixtureType: planogramInfo?.fixtureType,
-    dimensions: planogramInfo?.dimensions,
+    zone: info?.zone,
+    section: info?.section,
+    fixtureType: info?.fixtureType,
+    dimensions: info?.dimensions,
   };
 }
 
@@ -483,7 +484,7 @@ function PlanogramAnalysisPage() {
                   initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No shelves match your search"
                   pageSize={10}
-                  pageSizeSelector={PLANOGRAM_PAGE_SIZE_OPTIONS}
+                  pageSizeSelector={[...PLANOGRAM_PAGE_SIZE_OPTIONS]}
                   headerFilters={false}
                   layout="fitData"
                   onPaginationChange={setTablePagination}

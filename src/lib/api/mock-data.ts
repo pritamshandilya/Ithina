@@ -650,6 +650,15 @@ export function generateCheckerDashboardStats(
 export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
   const shelves = generateMockShelves();
   const pendingAudits: CheckerAudit[] = [];
+  const clampAisle = (aisle: number | undefined) => {
+    if (!aisle || Number.isNaN(aisle)) return 1;
+    return Math.min(9, Math.max(1, Math.round(aisle)));
+  };
+  const normalizeBay = (bay: number | undefined, seed: number) => {
+    if (bay && bay >= 1 && bay <= 4) return Math.round(bay);
+    const safeSeed = Math.abs(Math.round((bay ?? 0) + seed));
+    return (safeSeed % 4) + 1;
+  };
 
   const makerNames = ["John Doe", "Jane Smith", "Mike Johnson", "Emily Davis", "Sarah Wilson", "David Brown"];
   const ruleVersions = ["v2.3.1", "v2.3.0", "v2.2.5"];
@@ -710,8 +719,8 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       publishingStatus,
       submittedByName: makerNames[index % makerNames.length],
       shelfInfo: {
-        aisleNumber: shelf.aisleNumber,
-        bayNumber: shelf.bayNumber,
+        aisleNumber: clampAisle(shelf.aisleNumber),
+        bayNumber: normalizeBay(shelf.bayNumber, index + 1),
         shelfName: shelf.shelfName,
       },
     };
@@ -746,8 +755,8 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       publishingStatus: "pending",
       submittedByName: makerNames[index % makerNames.length],
       shelfInfo: {
-        aisleNumber: shelf.aisle,
-        bayNumber: shelf.bay,
+        aisleNumber: clampAisle(shelf.aisle),
+        bayNumber: normalizeBay(shelf.bay, index + 101),
         shelfName: shelf.name,
       },
     };

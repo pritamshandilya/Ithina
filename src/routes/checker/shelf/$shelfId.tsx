@@ -8,7 +8,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, Info } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -653,7 +653,7 @@ function PlanogramPreviewPage() {
               )}
             </div>
 
-            {preview && !isBlankShelf && (
+            {/* {preview && !isBlankShelf && (
               <Button
                 variant="outline"
                 size="icon"
@@ -663,7 +663,7 @@ function PlanogramPreviewPage() {
               >
                 <Info className="size-4" aria-hidden />
               </Button>
-            )}
+            )} */}
 
             {hasChanges && !isBlankShelf && (
               <Button

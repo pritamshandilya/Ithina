@@ -13,7 +13,6 @@ function MakerManualAuditsPage() {
   const navigate = useNavigate();
   const { data: historicalAnalyses } = useHistoricalAnalyses();
 
-  const APPROVALS_PATH = "/maker/manual-audits";
   const adhocAnalyses = useMemo(
     () => historicalAnalyses.filter((row) => row.type === "adhoc"),
     [historicalAnalyses]
@@ -61,12 +60,10 @@ function MakerManualAuditsPage() {
         navigate({
           to: "/maker/audits/planogram/run/$shelfId",
           params: { shelfId },
-          state: { from: APPROVALS_PATH },
         });
       } else {
         navigate({
           to: "/maker/audits/adhoc/new",
-          state: { from: APPROVALS_PATH },
         });
       }
     } else if (action === "view-report" || action === "view-details") {
@@ -74,14 +71,12 @@ function MakerManualAuditsPage() {
         navigate({
           to: "/maker/audits/planogram/$shelfId",
           params: { shelfId },
-          state: { from: APPROVALS_PATH },
         });
       } else {
         const resolvedAnalysisId = resolveAdhocAnalysisId(adhocAnalysisId, shelfId, submittedAt);
         if (!resolvedAnalysisId) {
           navigate({
             to: "/maker/historical-analysis",
-            state: { from: APPROVALS_PATH },
           });
           return;
         }
@@ -89,7 +84,6 @@ function MakerManualAuditsPage() {
           to: "/maker/historical-analysis/$analysisId",
           params: { analysisId: resolvedAnalysisId },
           search: { type: "adhoc" },
-          state: { from: APPROVALS_PATH },
         });
       }
     }

@@ -52,6 +52,10 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
+  // Shelves: active on /checker/shelf and all sub-routes
+  if (item.to === "/checker/shelf") {
+    return pathname === "/checker/shelf" || pathname.startsWith("/checker/shelf/");
+  }
   // My Audits: active on /maker/audits/*
   if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
     return pathname.startsWith("/maker/audits");
@@ -99,7 +103,7 @@ export default function Sidenav() {
 
   const checkerItems: NavItem[] = [
     { label: "Audit Review", to: "/checker/audit-review", icon: ShieldCheck },
-    { label: "Shelves", to: "/checker/shelves", icon: Rows3 },
+    { label: "Shelves", to: "/checker/shelf", icon: Rows3 },
     { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
     {
       label: "Reports",

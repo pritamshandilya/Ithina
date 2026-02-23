@@ -114,12 +114,22 @@ const AUDIT_BASE_TABLE_COLUMNS: DataTableColumn<CheckerAudit>[] = [
     field: "shelfInfo.aisleNumber",
     sorter: "number",
     width: 90,
+    formatter: (cell) => {
+      const value = (cell as { getValue: () => number | undefined }).getValue();
+      if (value == null) return "A-";
+      return `A${value}`;
+    },
   },
   {
     title: "Bay",
     field: "shelfInfo.bayNumber",
     sorter: "number",
     width: 90,
+    formatter: (cell) => {
+      const value = (cell as { getValue: () => number | undefined }).getValue();
+      if (value == null) return "B-";
+      return `B${value}`;
+    },
   },
   {
     title: "Shelf",
@@ -359,7 +369,7 @@ export function AuditReviewQueue({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn("flex min-h-0 flex-1 flex-col gap-3", className)}>
         {/* Filter skeleton */}
         <div className="flex gap-2">
           {[1, 2, 3, 4].map((i) => (
@@ -384,7 +394,7 @@ export function AuditReviewQueue({
   // Error state
   if (error) {
     return (
-      <div className={cn("rounded-lg bg-destructive/10 border border-destructive p-6", className)}>
+      <div className={cn("rounded-lg border border-destructive bg-destructive/10 p-6", className)}>
         <p className="text-destructive font-semibold text-center">
           Failed to load audit queue
         </p>
@@ -396,9 +406,9 @@ export function AuditReviewQueue({
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
       {/* Filter Tabs and Search */}
-      <div className="space-y-3">
+      <div className="shrink-0 space-y-3">
         {/* Filter Tabs */}
         <div className="flex flex-wrap gap-2">
           {filterOptions.map((option) => {
@@ -455,7 +465,7 @@ export function AuditReviewQueue({
       </div>
 
       {/* Sort and View Options */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mt-3 shrink-0 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-muted-foreground">Sort by:</span>
           <select
@@ -509,97 +519,99 @@ export function AuditReviewQueue({
         </div>
       </div>
 
-      {/* Audit Cards Grid */}
-      {filteredAndSortedAudits.length === 0 ? (
-        <div className="rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
-          <p className="text-muted-foreground font-medium">
-            {searchQuery.trim()
-              ? `No audits found matching "${searchQuery}"`
-              : `No ${activeFilter === "all" ? "pending" : filterOptions.find((f) => f.value === activeFilter)?.label.toLowerCase()} audits`}
-          </p>
-          {searchQuery.trim() && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="mt-3 text-sm underline text-accent hover:text-accent/80"
-            >
-              Clear search
-            </button>
-          )}
-        </div>
-      ) : viewMode === "table" ? (
-        <>
-          <DataTable<CheckerAudit>
-            columns={tableColumns}
-            data={filteredAndSortedAudits}
-            rowIdField="id"
-            initialSort={INITIAL_SORT}
-            emptyMessage="No audits match the current filters"
-            pageSize={10}
-            pageSizeSelector={PAGE_SIZE_OPTIONS}
-            onPaginationChange={setTablePagination}
-            onRowClick={(row, event) => handleReviewClick(row.id, event)}
-          />
-
-          <p className="text-sm text-muted-foreground text-center">
-            Showing {visibleCount} of {filteredAndSortedAudits.length} audits
-          </p>
-        </>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginatedCardAudits.map((audit) => (
-              <AuditQueueCard
-                key={audit.id}
-                audit={audit}
-                onClick={onAuditClick}
-                onApprove={onApprove}
-                onReject={onReject}
-                onDelete={onDelete}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setCardPage((page) => Math.max(1, page - 1))}
-              disabled={cardPage === 1}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-all",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                cardPage === 1
-                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
-                  : "border-border text-foreground hover:bg-accent/40"
+      <div className="mt-3 flex-1 min-h-0 overflow-auto">
+        {filteredAndSortedAudits.length === 0 ? (
+          <div className="flex min-h-full items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-10 text-center">
+            <div>
+              <p className="font-medium text-muted-foreground">
+                {searchQuery.trim()
+                  ? `No audits found matching "${searchQuery}"`
+                  : `No ${activeFilter === "all" ? "pending" : filterOptions.find((f) => f.value === activeFilter)?.label.toLowerCase()} audits`}
+              </p>
+              {searchQuery.trim() && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="mt-3 text-sm text-accent underline hover:text-accent/80"
+                >
+                  Clear search
+                </button>
               )}
-            >
-              Previous
-            </button>
-            <span className="text-sm text-muted-foreground">
-              Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
-              <span className="font-semibold text-foreground">{cardTotalPages}</span>
-            </span>
-            <button
-              type="button"
-              onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
-              disabled={cardPage === cardTotalPages}
-              className={cn(
-                "rounded-md border px-3 py-1.5 text-sm transition-all",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                cardPage === cardTotalPages
-                  ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
-                  : "border-border text-foreground hover:bg-accent/40"
-              )}
-            >
-              Next
-            </button>
+            </div>
           </div>
+        ) : viewMode === "table" ? (
+          <>
+            <DataTable<CheckerAudit>
+              columns={tableColumns}
+              data={filteredAndSortedAudits}
+              rowIdField="id"
+              initialSort={INITIAL_SORT}
+              emptyMessage="No audits match the current filters"
+              pageSize={10}
+              pageSizeSelector={PAGE_SIZE_OPTIONS}
+              onPaginationChange={setTablePagination}
+              onRowClick={(row, event) => handleReviewClick(row.id, event)}
+            />
 
-          {/* Result Count */}
-          <p className="text-sm text-muted-foreground text-center">
-            Showing {visibleCount} of {filteredAndSortedAudits.length} audits
-          </p>
-        </>
-      )}
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Showing {visibleCount} of {filteredAndSortedAudits.length} audits
+            </p>
+          </>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {paginatedCardAudits.map((audit) => (
+                <AuditQueueCard
+                  key={audit.id}
+                  audit={audit}
+                  onClick={onAuditClick}
+                  onApprove={onApprove}
+                  onReject={onReject}
+                  onDelete={onDelete}
+                />
+              ))}
+            </div>
+
+            <div className="mt-3 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setCardPage((page) => Math.max(1, page - 1))}
+                disabled={cardPage === 1}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-sm transition-all",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  cardPage === 1
+                    ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                    : "border-border text-foreground hover:bg-accent/40"
+                )}
+              >
+                Previous
+              </button>
+              <span className="text-sm text-muted-foreground">
+                Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
+                <span className="font-semibold text-foreground">{cardTotalPages}</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
+                disabled={cardPage === cardTotalPages}
+                className={cn(
+                  "rounded-md border px-3 py-1.5 text-sm transition-all",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  cardPage === cardTotalPages
+                    ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
+                    : "border-border text-foreground hover:bg-accent/40"
+                )}
+              >
+                Next
+              </button>
+            </div>
+
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Showing {visibleCount} of {filteredAndSortedAudits.length} audits
+            </p>
+          </>
+        )}
+      </div>
     </div>
   );
 }

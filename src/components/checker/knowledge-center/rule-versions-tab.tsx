@@ -82,6 +82,17 @@ export function RuleVersionsTab() {
   } | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
+  const handleOpenMenu = useCallback((row: VersionDisplayRow, anchor: { x: number; y: number }) => {
+    const menuWidth = 192;
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const x =
+      anchor.x + menuWidth + padding > viewportWidth
+        ? viewportWidth - menuWidth - padding
+        : anchor.x;
+    setActionsMenu({ row, anchor: { ...anchor, x } });
+  }, []);
+
   const { data: rules } = useComplianceRules();
   const { data: versions, isLoading, error } = useRuleVersions(selectedRuleId);
   const activateRule = useActivateComplianceRule();
@@ -356,12 +367,12 @@ export function RuleVersionsTab() {
           const row = cell.getData();
           if (action === "open-menu") {
             const rect = (btn as HTMLElement).getBoundingClientRect();
-            setActionsMenu({ row, anchor: { x: rect.left, y: rect.bottom + 4 } });
+            handleOpenMenu(row, { x: rect.left, y: rect.bottom + 4 });
           }
         },
       },
     ],
-    []
+    [handleOpenMenu]
   );
 
   const rowFormatter = useMemo(
@@ -378,8 +389,8 @@ export function RuleVersionsTab() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="shrink-0">
         <h2 className="text-lg font-semibold text-foreground">Rule Versions</h2>
         <p className="text-sm text-muted-foreground">
           View version history, compare changes, and manage rules (edit, activate, retire, clone)
@@ -387,7 +398,7 @@ export function RuleVersionsTab() {
       </div>
 
       {/* Search, Filters, Sort */}
-      <div className="space-y-3">
+      <div className="mt-4 shrink-0 space-y-3">
         <div className="flex flex-wrap items-end gap-4">
           <div className="relative flex-1 min-w-[200px]">
             <Search
@@ -452,56 +463,58 @@ export function RuleVersionsTab() {
       </div>
 
       {/* Versions DataTable */}
-      {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
-          Loading versions…
-        </div>
-      ) : error ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-destructive">
-          Failed to load versions. Please try again.
-        </div>
-      ) : !filteredRows.length ? (
-        <div className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
-          <p className="text-muted-foreground">
-            {searchQuery.trim()
-              ? `No versions found matching "${searchQuery}"`
-              : selectedRuleId || versionFilter
-                ? "No versions match your filters."
-                : "No rule versions yet. Create and activate rules to see version history."}
-          </p>
-          {searchQuery.trim() && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="mt-2 text-sm underline text-accent hover:text-accent/80"
-            >
-              Clear search
-            </button>
-          )}
-        </div>
-      ) : (
-        <>
-          <DataTable<VersionDisplayRow>
-            columns={tableColumns}
-            data={filteredRows}
-            rowIdField="id"
-            initialSort={{ field: "version.createdDate", dir: "desc" }}
-            emptyMessage="No versions match the current filters"
-            pageSize={10}
-            pageSizeSelector={[5, 10, 20, 50]}
-            rowFormatter={rowFormatter}
-            onPaginationChange={setTablePagination}
-          />
-          <p className="text-sm text-muted-foreground text-center">
-            Showing{" "}
-            {Math.min(
-              tablePagination.pageSize,
-              Math.max(0, filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize)
-            )}{" "}
-            of {filteredRows.length} versions
-          </p>
-        </>
-      )}
+      <div className="mt-4 flex-1 min-h-0 overflow-auto">
+        {isLoading ? (
+          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
+            Loading versions…
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-border bg-card p-6 text-destructive">
+            Failed to load versions. Please try again.
+          </div>
+        ) : !filteredRows.length ? (
+          <div className="flex min-h-full flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
+            <p className="text-muted-foreground">
+              {searchQuery.trim()
+                ? `No versions found matching "${searchQuery}"`
+                : selectedRuleId || versionFilter
+                  ? "No versions match your filters."
+                  : "No rule versions yet. Create and activate rules to see version history."}
+            </p>
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="mt-2 text-sm underline text-accent hover:text-accent/80"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+        ) : (
+          <>
+            <DataTable<VersionDisplayRow>
+              columns={tableColumns}
+              data={filteredRows}
+              rowIdField="id"
+              initialSort={{ field: "version.createdDate", dir: "desc" }}
+              emptyMessage="No versions match the current filters"
+              pageSize={10}
+              pageSizeSelector={[5, 10, 20, 50]}
+              rowFormatter={rowFormatter}
+              onPaginationChange={setTablePagination}
+            />
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Showing{" "}
+              {Math.min(
+                tablePagination.pageSize,
+                Math.max(0, filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize)
+              )}{" "}
+              of {filteredRows.length} versions
+            </p>
+          </>
+        )}
+      </div>
 
       {/* Activate Confirmation Modal */}
       <ConfirmModal
@@ -544,6 +557,13 @@ export function RuleVersionsTab() {
           setEditingRule(null);
         }}
         rule={editingRule}
+        rulesInSet={
+          editingRule && rules
+            ? editingRule.ruleSetId
+              ? rules.filter((r) => r.ruleSetId === editingRule.ruleSetId)
+              : [editingRule]
+            : undefined
+        }
         createdBy={`${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`}
       />
 

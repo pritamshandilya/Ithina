@@ -7,12 +7,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Filter, Search, Eye, Pencil, Play, Archive, Copy } from "lucide-react";
+import { Plus, Filter, Search, Eye, Pencil, Play, Archive, Copy, History } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import {
   useActivateComplianceRule,
@@ -26,7 +27,7 @@ import { useToast } from "@/hooks/use-toast";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import type { ComplianceRule, RuleFilters, RuleStatus } from "@/types/checker";
+import type { ComplianceRule, RuleFilters, RuleStatus, RuleVersion } from "@/types/checker";
 
 import { RuleBuilderModal } from "./rule-builder-modal";
 
@@ -127,7 +128,19 @@ export function ComplianceRulesTab() {
     row: RuleSetDisplayRow;
     anchor: { x: number; y: number };
   } | null>(null);
+  const [historyRuleRow, setHistoryRuleRow] = useState<RuleSetDisplayRow | null>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleOpenMenu = useCallback((row: RuleSetDisplayRow, anchor: { x: number; y: number }) => {
+    const menuWidth = 192;
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const x =
+      anchor.x + menuWidth + padding > viewportWidth
+        ? viewportWidth - menuWidth - padding
+        : anchor.x;
+    setActionsMenu({ row, anchor: { ...anchor, x } });
+  }, []);
 
   const { data: rules, isLoading, error } = useComplianceRules(filters);
 
@@ -205,6 +218,11 @@ export function ComplianceRulesTab() {
     setEditingRule(rule);
     setShowRuleModal(true);
   }, []);
+
+  const historyVersions = useMemo<RuleVersion[]>(() => {
+    if (!historyRuleRow) return [];
+    return [...historyRuleRow.primaryRule.versions].sort((a, b) => b.version - a.version);
+  }, [historyRuleRow]);
 
   const handleActivate = useCallback((ruleId: string) => {
     setActivateConfirmRuleId(ruleId);
@@ -326,6 +344,16 @@ export function ComplianceRulesTab() {
         },
       },
       {
+        title: "Version",
+        field: "id",
+        width: 90,
+        headerFilter: false,
+        formatter: (c) => {
+          const row = (c as { getData: () => RuleSetDisplayRow }).getData();
+          return `<span class="text-sm font-medium tabular-nums">v${row.primaryRule.currentVersion}</span>`;
+        },
+      },
+      {
         title: "Status",
         field: "status",
         width: 100,
@@ -359,12 +387,12 @@ export function ComplianceRulesTab() {
           const row = cell.getData();
           if (action === "open-menu") {
             const rect = (btn as HTMLElement).getBoundingClientRect();
-            setActionsMenu({ row, anchor: { x: rect.left, y: rect.bottom + 4 } });
+            handleOpenMenu(row, { x: rect.left, y: rect.bottom + 4 });
           }
         },
       },
     ],
-    []
+    [handleOpenMenu]
   );
 
   const rowFormatter = useMemo(
@@ -381,14 +409,11 @@ export function ComplianceRulesTab() {
   );
 
   return (
-    <div className="space-y-6">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header with Create Rule */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold text-foreground">Compliance Rules</h2>
-          <p className="text-sm text-muted-foreground">
-            Create and manage rules that define audit compliance logic
-          </p>
         </div>
         <Button
           onClick={handleCreateRule}
@@ -400,7 +425,7 @@ export function ComplianceRulesTab() {
       </div>
 
       {/* Search and Filters - audit queue style */}
-      <div className="space-y-3">
+      <div className="mt-4 shrink-0 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[200px]">
             <Search
@@ -484,8 +509,8 @@ export function ComplianceRulesTab() {
             >
               <option value="lastUpdated-desc">Newest First</option>
               <option value="lastUpdated-asc">Oldest First</option>
-              <option value="ruleName-asc">Rule Name A–Z</option>
-              <option value="ruleName-desc">Rule Name Z–A</option>
+              <option value="ruleName-asc">Rule Name A-Z</option>
+              <option value="ruleName-desc">Rule Name Z-A</option>
               <option value="status-asc">Status</option>
             </Select>
           </div>
@@ -493,65 +518,67 @@ export function ComplianceRulesTab() {
       </div>
 
       {/* Rules Table - DataTable (Tabulator) */}
-      {isLoading ? (
-        <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
-          Loading rules…
-        </div>
-      ) : error ? (
-        <div className="rounded-lg border border-border bg-card p-6 text-destructive">
-          Failed to load rules. Please try again.
-        </div>
-      ) : !displayRows.length ? (
-        <div className="flex flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
-          <p className="text-muted-foreground">
-            {searchQuery.trim()
-              ? `No rules found matching "${searchQuery}"`
-              : "No compliance rules defined yet. Create your first rule to begin."}
-          </p>
-          {searchQuery.trim() && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="text-sm underline text-accent hover:text-accent/80"
-            >
-              Clear search
-            </button>
-          )}
-          {!searchQuery.trim() && (
-            <Button
-              onClick={handleCreateRule}
-              className="bg-chart-2 text-white hover:opacity-90"
-            >
-              <Plus className="size-4" />
-              New Rule Set
-            </Button>
-          )}
-        </div>
-      ) : (
-        <>
-          <DataTable<RuleSetDisplayRow>
-            key={filterKey}
-            columns={tableColumns}
-            data={displayRows}
-            rowIdField="id"
-            initialSort={{ field: "lastUpdated", dir: "desc" }}
-            emptyMessage="No rules match the current filters"
-            pageSize={10}
-            pageSizeSelector={[5, 10, 20, 50]}
-            rowFormatter={rowFormatter}
-            onPaginationChange={setTablePagination}
-            onRowClick={(row) => handleViewRule(row.primaryRule)}
-          />
-          <p className="text-sm text-muted-foreground text-center">
-            Showing{" "}
-            {Math.min(
-              tablePagination.pageSize,
-              Math.max(0, displayRows.length - (tablePagination.page - 1) * tablePagination.pageSize)
-            )}{" "}
-            of {displayRows.length} rule sets
-          </p>
-        </>
-      )}
+      <div className="mt-4 flex-1 min-h-0 overflow-auto">
+        {isLoading ? (
+          <div className="flex h-48 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground">
+            Loading rules...
+          </div>
+        ) : error ? (
+          <div className="rounded-lg border border-border bg-card p-6 text-destructive">
+            Failed to load rules. Please try again.
+          </div>
+        ) : !displayRows.length ? (
+          <div className="flex min-h-full flex-col items-center justify-center gap-4 rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
+            <p className="text-muted-foreground">
+              {searchQuery.trim()
+                ? `No rules found matching "${searchQuery}"`
+                : "No compliance rules defined yet. Create your first rule to begin."}
+            </p>
+            {searchQuery.trim() && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="text-sm underline text-accent hover:text-accent/80"
+              >
+                Clear search
+              </button>
+            )}
+            {!searchQuery.trim() && (
+              <Button
+                onClick={handleCreateRule}
+                className="bg-chart-2 text-white hover:opacity-90"
+              >
+                <Plus className="size-4" />
+                New Rule Set
+              </Button>
+            )}
+          </div>
+        ) : (
+          <>
+            <DataTable<RuleSetDisplayRow>
+              key={filterKey}
+              columns={tableColumns}
+              data={displayRows}
+              rowIdField="id"
+              initialSort={{ field: "lastUpdated", dir: "desc" }}
+              emptyMessage="No rules match the current filters"
+              pageSize={10}
+              pageSizeSelector={[5, 10, 20, 50]}
+              rowFormatter={rowFormatter}
+              onPaginationChange={setTablePagination}
+              onRowClick={(row) => handleViewRule(row.primaryRule)}
+            />
+            <p className="mt-2 text-center text-sm text-muted-foreground">
+              Showing{" "}
+              {Math.min(
+                tablePagination.pageSize,
+                Math.max(0, displayRows.length - (tablePagination.page - 1) * tablePagination.pageSize)
+              )}{" "}
+              of {displayRows.length} rule sets
+            </p>
+          </>
+        )}
+      </div>
 
       {/* Activate Confirmation Modal */}
       <ConfirmModal
@@ -594,9 +621,66 @@ export function ComplianceRulesTab() {
           setEditingRule(null);
         }}
         rule={editingRule}
+        rulesInSet={
+          editingRule && rules
+            ? editingRule.ruleSetId
+              ? rules.filter((r) => r.ruleSetId === editingRule.ruleSetId)
+              : [editingRule]
+            : undefined
+        }
         createdBy={`${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`}
-        onAddNewRuleSet={() => setEditingRule(null)}
       />
+
+      <Modal
+        isOpen={!!historyRuleRow}
+        onClose={() => setHistoryRuleRow(null)}
+        className="max-w-3xl"
+        showCloseButton
+      >
+        <div className="rounded-lg border border-border bg-card p-6 shadow-lg">
+          <h3 className="text-lg font-semibold text-foreground">Rule History</h3>
+          {historyRuleRow && (
+            <p className="mt-1 text-sm text-muted-foreground">
+              {historyRuleRow.primaryRule.ruleId} - {historyRuleRow.displayName}
+            </p>
+          )}
+
+          {historyVersions.length ? (
+            <div className="mt-4 overflow-hidden rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/20 text-left text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2 font-medium">Version</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Threshold</th>
+                    <th className="px-3 py-2 font-medium">Created</th>
+                    <th className="px-3 py-2 font-medium">Effective</th>
+                    <th className="px-3 py-2 font-medium">Change Summary</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historyVersions.map((version) => (
+                    <tr key={version.id} className="border-t border-border/70">
+                      <td className="px-3 py-2 font-medium tabular-nums">v{version.version}</td>
+                      <td className="px-3 py-2">{version.status}</td>
+                      <td className="px-3 py-2">{version.expectedValue || "-"}</td>
+                      <td className="px-3 py-2">
+                        {version.createdDate ? format(new Date(version.createdDate), "MMM d, yyyy") : "-"}
+                      </td>
+                      <td className="px-3 py-2">
+                        {version.effectiveDate ? format(new Date(version.effectiveDate), "MMM d, yyyy") : "-"}
+                      </td>
+                      <td className="px-3 py-2">{version.changeSummary || "-"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="mt-4 text-sm text-muted-foreground">No version history available.</p>
+          )}
+        </div>
+      </Modal>
 
       {/* Actions dropdown - positioned near the clicked "..." button */}
       {actionsMenu && (
@@ -618,6 +702,17 @@ export function ComplianceRulesTab() {
           >
             <Eye className="size-4 text-muted-foreground" />
             View rule
+          </button>
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:shrink-0 [&_svg]:size-4"
+            onClick={() => {
+              setHistoryRuleRow(actionsMenu.row);
+              setActionsMenu(null);
+            }}
+          >
+            <History className="size-4 text-muted-foreground" />
+            History
           </button>
           {actionsMenu.row.primaryRule.status !== "Retired" && (
             <button

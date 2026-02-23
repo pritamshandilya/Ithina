@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -160,10 +160,19 @@ const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
 ];
 
 function AdhocAnalysisPage() {
+  const navigate = useNavigate();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const { data: adhocAnalyses, isLoading } = useAdhocAnalyses(selectedStoreId);
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+
+  const handleRowClick = (row: AdhocAnalysis) => {
+    navigate({
+      to: "/maker/historical-analysis/$analysisId",
+      params: { analysisId: row.id },
+      search: { type: "adhoc" },
+    });
+  };
 
   const analyses = adhocAnalyses ?? [];
   const sortedAnalyses = useMemo(() => {
@@ -242,6 +251,7 @@ function AdhocAnalysisPage() {
                 headerFilters={false}
                 layout="fitData"
                 onPaginationChange={setTablePagination}
+                onRowClick={handleRowClick}
               />
             )}
           </div>

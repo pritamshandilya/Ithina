@@ -101,6 +101,7 @@ function AdhocReport() {
                         tableColumns={columns}
                         tableData={ADHOC_REPORT_MOCK_DATA}
                         tableProps={{
+                            layout: "fitData",
                             onRowClick: handleRowClick,
                         }}
                     />

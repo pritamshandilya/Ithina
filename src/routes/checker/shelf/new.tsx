@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useLocation } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
+import { z } from "zod";
 
 import { useToast } from "@/hooks/use-toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,13 +36,18 @@ const BLANK_SHELF_VALUE = "__blank__";
 
 export const Route = createFileRoute("/checker/shelf/new")({
   component: AddPlanogramPage,
+  validateSearch: (search) =>
+    z
+      .object({
+        associateShelfId: z.string().optional(),
+        associateShelfName: z.string().optional(),
+      })
+      .parse(search),
 });
-
-type AssociateState = { associateShelfId: string; associateShelfName: string } | undefined;
 
 function AddPlanogramPage() {
   const navigate = useNavigate();
-  const location = useLocation();
+  const { associateShelfId, associateShelfName } = Route.useSearch();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
@@ -49,8 +55,7 @@ function AddPlanogramPage() {
   const createShelfMutation = useCreateShelf();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
-  const associateState = (location.state as { associateShelfId?: string; associateShelfName?: string } | undefined) as AssociateState;
-  const isAssociateMode = !!associateState?.associateShelfId;
+  const isAssociateMode = !!associateShelfId;
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
   const [shelfName, setShelfName] = useState("");
@@ -58,10 +63,10 @@ function AddPlanogramPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (isAssociateMode && associateState?.associateShelfName) {
-      setShelfName(associateState.associateShelfName);
+    if (isAssociateMode && associateShelfName) {
+      setShelfName(associateShelfName);
     }
-  }, [isAssociateMode, associateState?.associateShelfName]);
+  }, [isAssociateMode, associateShelfName]);
 
   const { data: planogramPayload, isLoading: planogramLoading } =
     usePlanogramById(
@@ -72,12 +77,12 @@ function AddPlanogramPage() {
 
   const duplicateNameError = useMemo(() => {
     if (!shelfName.trim() || isSaving) return null;
-    const excludeId = isAssociateMode ? associateState?.associateShelfId : undefined;
+    const excludeId = isAssociateMode ? associateShelfId : undefined;
     const exists = (shelves ?? []).some(
       (s) => s.id !== excludeId && s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
     );
     return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
-  }, [shelves, shelfName, isSaving, isAssociateMode, associateState?.associateShelfId]);
+  }, [shelves, shelfName, isSaving, isAssociateMode, associateShelfId]);
 
   const isBlankShelf = selectedPlanogramId === BLANK_SHELF_VALUE;
   const canSave = useMemo(() => {
@@ -97,7 +102,7 @@ function AddPlanogramPage() {
     setIsSaving(true);
     setSaveError(null);
     try {
-      if (isAssociateMode && associateState?.associateShelfId && selectedPlanogramId) {
+      if (isAssociateMode && associateShelfId && selectedPlanogramId) {
         const arrangement: PlanogramArrangement = {
           planogramId: selectedPlanogramId,
           shelfOrder:
@@ -107,13 +112,13 @@ function AddPlanogramPage() {
             })) ?? [],
         };
         const shelf = await assignPlanogramToShelf(
-          associateState.associateShelfId,
+          associateShelfId,
           selectedPlanogramId,
           arrangement
         );
         await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
-        navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: shelf?.id ?? associateState.associateShelfId } });
+        navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: shelf?.id ?? associateShelfId } });
       } else if (isBlankShelf) {
         const shelf = await createShelfMutation.mutateAsync({
           aisleNumber: 1,
@@ -147,10 +152,10 @@ function AddPlanogramPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [
+  ], [
     canSave,
     isAssociateMode,
-    associateState,
+    associateShelfId,
     isBlankShelf,
     selectedPlanogramId,
     shelfName,

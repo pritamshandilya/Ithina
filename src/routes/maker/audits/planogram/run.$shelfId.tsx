@@ -4,6 +4,7 @@
  */
 
 import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { AnalysisFlowPage } from "@/components/maker";
 import { MOCK_IMAGE_COMPARISON } from "@/features/maker/analysis";
@@ -11,13 +12,18 @@ import { usePlanogramShelfPreview } from "@/features/maker/hooks";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId")({
   component: NewPlanogramAnalysisPage,
+  validateSearch: (search) =>
+    z
+      .object({
+        from: z.string().optional(),
+      })
+      .parse(search),
 });
 
 function NewPlanogramAnalysisPage() {
   const { shelfId } = Route.useParams();
-  const location = useLocation();
+  const { from } = Route.useSearch();
   const { data: preview } = usePlanogramShelfPreview(shelfId);
-  const from = (location.state as { from?: string } | undefined)?.from;
   const backTo = from ?? "/maker/audits/planogram";
 
   return (

@@ -404,7 +404,7 @@ function PlanogramAnalysisPage() {
       navigate({
         to: "/maker/audits/planogram/run/$shelfId",
         params: { shelfId },
-        state: { from: "/checker/shelf" },
+        search: { from: "/checker/shelf" },
       });
       setActionsMenu(null);
     },
@@ -415,7 +415,7 @@ function PlanogramAnalysisPage() {
     (shelfId: string, shelfName: string) => {
       navigate({
         to: "/checker/shelf/new",
-        state: { associateShelfId: shelfId, associateShelfName: shelfName },
+        search: { associateShelfId: shelfId, associateShelfName: shelfName },
       });
     },
     [navigate]

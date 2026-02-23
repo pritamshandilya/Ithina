@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
+import { z } from "zod";
 
 import { useToast } from "@/hooks/use-toast";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
   usePlanogramList,
 } from "@/features/maker/hooks";
 import { useStore } from "@/providers/store";
-import { saveShelfArrangement } from "@/features/maker/api/planogram";
+import { assignPlanogramToShelf, saveShelfArrangement } from "@/features/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
@@ -35,10 +36,18 @@ const BLANK_SHELF_VALUE = "__blank__";
 
 export const Route = createFileRoute("/checker/shelf/new")({
   component: AddPlanogramPage,
+  validateSearch: (search) =>
+    z
+      .object({
+        associateShelfId: z.string().optional(),
+        associateShelfName: z.string().optional(),
+      })
+      .parse(search),
 });
 
 function AddPlanogramPage() {
   const navigate = useNavigate();
+  const { associateShelfId, associateShelfName } = Route.useSearch();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
@@ -46,10 +55,18 @@ function AddPlanogramPage() {
   const createShelfMutation = useCreateShelf();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
+  const isAssociateMode = !!associateShelfId;
+
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
   const [shelfName, setShelfName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAssociateMode && associateShelfName) {
+      setShelfName(associateShelfName);
+    }
+  }, [isAssociateMode, associateShelfName]);
 
   const { data: planogramPayload, isLoading: planogramLoading } =
     usePlanogramById(
@@ -60,28 +77,49 @@ function AddPlanogramPage() {
 
   const duplicateNameError = useMemo(() => {
     if (!shelfName.trim() || isSaving) return null;
+    const excludeId = isAssociateMode ? associateShelfId : undefined;
     const exists = (shelves ?? []).some(
-      (s) => s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
+      (s) => s.id !== excludeId && s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
     );
     return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
-  }, [shelves, shelfName, isSaving]);
+  }, [shelves, shelfName, isSaving, isAssociateMode, associateShelfId]);
 
   const isBlankShelf = selectedPlanogramId === BLANK_SHELF_VALUE;
   const canSave = useMemo(() => {
+    if (isAssociateMode) {
+      return !!selectedPlanogramId && selectedPlanogramId !== BLANK_SHELF_VALUE && !isSaving;
+    }
     return (
       !!shelfName.trim() &&
       !duplicateNameError &&
       !isSaving &&
       (isBlankShelf || !!selectedPlanogramId)
     );
-  }, [selectedPlanogramId, shelfName, duplicateNameError, isSaving, isBlankShelf]);
+  }, [selectedPlanogramId, shelfName, duplicateNameError, isSaving, isBlankShelf, isAssociateMode]);
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
     setIsSaving(true);
     setSaveError(null);
     try {
-      if (isBlankShelf) {
+      if (isAssociateMode && associateShelfId && selectedPlanogramId) {
+        const arrangement: PlanogramArrangement = {
+          planogramId: selectedPlanogramId,
+          shelfOrder:
+            planogramPayload?.planogram.fixture.shelves.map((s) => ({
+              shelfId: `shelf-${s.shelfNumber}`,
+              productIds: s.products.map((p) => p.sku),
+            })) ?? [],
+        };
+        const shelf = await assignPlanogramToShelf(
+          associateShelfId,
+          selectedPlanogramId,
+          arrangement
+        );
+        await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+        toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
+        navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: shelf?.id ?? associateShelfId } });
+      } else if (isBlankShelf) {
         const shelf = await createShelfMutation.mutateAsync({
           aisleNumber: 1,
           bayNumber: 1,
@@ -116,6 +154,8 @@ function AddPlanogramPage() {
     }
   }, [
     canSave,
+    isAssociateMode,
+    associateShelfId,
     isBlankShelf,
     selectedPlanogramId,
     shelfName,
@@ -138,7 +178,7 @@ function AddPlanogramPage() {
 
           <header className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/checker/shelves">
+              <Link to="/checker/shelf">
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>
@@ -156,7 +196,9 @@ function AddPlanogramPage() {
                 <CardHeader>
                   <CardTitle className="text-base">Planogram details</CardTitle>
                   <CardDescription>
-                    Choose a planogram and give this shelf a name.
+                    {isAssociateMode
+                      ? "Select a planogram to associate with this shelf."
+                      : "Choose a planogram and give this shelf a name."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -172,7 +214,7 @@ function AddPlanogramPage() {
                         aria-label="Select planogram"
                       >
                         <option value="">Select a planogram...</option>
-                        <option value={BLANK_SHELF_VALUE}>Create blank shelf</option>
+                        {!isAssociateMode && <option value={BLANK_SHELF_VALUE}>Create blank shelf</option>}
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves · {p.productCount} SKUs)
@@ -189,7 +231,8 @@ function AddPlanogramPage() {
                       placeholder="e.g., Food & Beverage Shelf"
                       value={shelfName}
                       onChange={(e) => setShelfName(e.target.value)}
-                      className={cn(duplicateNameError && "border-destructive")}
+                      readOnly={isAssociateMode}
+                      className={cn(duplicateNameError && "border-destructive", isAssociateMode && "bg-muted/50")}
                       aria-invalid={!!duplicateNameError}
                       aria-describedby={duplicateNameError ? "shelf-name-error" : undefined}
                     />
@@ -221,7 +264,7 @@ function AddPlanogramPage() {
                     ) : (
                       <>
                         <Check className="size-4" aria-hidden />
-                        {isBlankShelf ? "Create Shelf" : "Save Planogram"}
+                        {isAssociateMode ? "Associate Planogram" : isBlankShelf ? "Create Shelf" : "Save Planogram"}
                       </>
                     )}
                   </Button>

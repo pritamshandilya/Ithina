@@ -385,7 +385,7 @@ function PlanogramAnalysisPage() {
 
   const handleRowClick = useCallback(
     (row: PlanogramShelfRow) => {
-      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: row.id } });
+      navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: row.id } });
     },
     [navigate]
   );
@@ -401,8 +401,22 @@ function PlanogramAnalysisPage() {
 
   const handleNewRun = useCallback(
     (shelfId: string) => {
-      navigate({ to: "/maker/audits/planogram/run/$shelfId", params: { shelfId } });
+      navigate({
+        to: "/maker/audits/planogram/run/$shelfId",
+        params: { shelfId },
+        search: { from: "/checker/shelf" },
+      });
       setActionsMenu(null);
+    },
+    [navigate]
+  );
+
+  const handleAssociatePlanogram = useCallback(
+    (shelfId: string, shelfName: string) => {
+      navigate({
+        to: "/checker/shelf/new",
+        search: { associateShelfId: shelfId, associateShelfName: shelfName },
+      });
     },
     [navigate]
   );
@@ -423,7 +437,10 @@ function PlanogramAnalysisPage() {
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
           <header className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Planogram Based Analysis</h1>
+              <h1 className="text-2xl font-bold text-foreground">Shelves</h1>
+              <p className="text-sm text-muted-foreground">
+                Create and manage shelves. Attach planograms to run compliance analysis.
+              </p>
             </div>
           </header>
 
@@ -439,7 +456,7 @@ function PlanogramAnalysisPage() {
               />
             </div>
             <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
-              <Link to="/maker/audits/planogram/new">
+              <Link to="/checker/shelf/new">
                 <Plus className="size-4" aria-hidden />
                 Add Shelf
               </Link>
@@ -474,7 +491,7 @@ function PlanogramAnalysisPage() {
                   Add shelves to run planogram-based compliance analysis.
                 </p>
                 <Button asChild className="mt-6 bg-chart-2 text-white hover:opacity-90">
-                  <Link to="/maker/audits/planogram/new">
+                  <Link to="/checker/shelf/new">
                     <Plus className="size-4" aria-hidden />
                     Add Shelf
                   </Link>
@@ -508,22 +525,38 @@ function PlanogramAnalysisPage() {
             className="fixed z-50 min-w-48 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
             style={{ left: actionsMenu.anchor.x, top: actionsMenu.anchor.y }}
           >
-            <button
-              type="button"
-              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
-              onClick={() => handleNewRun(actionsMenu.row.id)}
-            >
-              <Plus className="text-muted-foreground" />
-              New
-            </button>
-            <button
-              type="button"
-              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
-              onClick={() => handleViewComplianceRule(actionsMenu.row)}
-            >
-              <FileText className="text-muted-foreground" />
-              View Compliance Rule
-            </button>
+            {!actionsMenu.row.planogramId ? (
+              <button
+                type="button"
+                className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+                onClick={() => {
+                  handleAssociatePlanogram(actionsMenu.row.id, actionsMenu.row.shelfName ?? "");
+                  setActionsMenu(null);
+                }}
+              >
+                <LayoutGrid className="text-muted-foreground" />
+                Associate planogram and run analysis
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+                  onClick={() => handleNewRun(actionsMenu.row.id)}
+                >
+                  <Plus className="text-muted-foreground" />
+                  New
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
+                  onClick={() => handleViewComplianceRule(actionsMenu.row)}
+                >
+                  <FileText className="text-muted-foreground" />
+                  View Compliance Rule
+                </button>
+              </>
+            )}
             <div className="-mx-1 my-1 h-px bg-border" />
             <button
               type="button"

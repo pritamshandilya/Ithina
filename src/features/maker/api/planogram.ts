@@ -105,6 +105,44 @@ export async function saveShelfArrangement(
   return shelf;
 }
 
+/** Overlay for planogram assignments to existing shelves (mock wireframe) */
+const assignPlanogramOverlays = new Map<string, { planogramId: string; arrangement: PlanogramArrangement }>();
+
+/**
+ * Assign a planogram to an existing shelf (for shelves created without a planogram).
+ *
+ * @param shelfId - Shelf to update
+ * @param planogramId - Planogram to associate
+ * @param arrangement - Arrangement from the planogram
+ * @returns Promise<Shelf | null> - Updated shelf or null if not found
+ */
+export async function assignPlanogramToShelf(
+  shelfId: string,
+  planogramId: string,
+  arrangement: PlanogramArrangement
+): Promise<Shelf | null> {
+  await delay(400);
+
+  assignPlanogramOverlays.set(shelfId, { planogramId, arrangement });
+
+  // Also update in-memory shelves if present
+  const idx = createdPlanogramShelves.findIndex((s) => s.id === shelfId);
+  if (idx >= 0) {
+    createdPlanogramShelves[idx] = {
+      ...createdPlanogramShelves[idx],
+      planogramId,
+      arrangement,
+    };
+    return createdPlanogramShelves[idx];
+  }
+
+  return { id: shelfId, planogramId, arrangement } as Shelf;
+}
+
+export function getAssignPlanogramOverlays(): Map<string, { planogramId: string; arrangement: PlanogramArrangement }> {
+  return assignPlanogramOverlays;
+}
+
 /**
  * Update an existing shelf's arrangement (product order, removed items, product edits)
  *

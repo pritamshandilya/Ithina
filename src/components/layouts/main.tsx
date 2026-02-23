@@ -23,7 +23,11 @@ function isStickyTablePage(pathname: string): boolean {
   if (pathname === "/maker/audits/planogram" || pathname === "/maker/audits/planogram/")
     return true;
   if (pathname === "/checker/shelf" || pathname === "/checker/shelf/") return true;
+  if (pathname === "/checker/audit-review" || pathname === "/checker/audit-review/") return true;
+  if (pathname === "/checker/knowledge-center" || pathname === "/checker/knowledge-center/")
+    return true;
   if (pathname === "/maker/audits/adhoc" || pathname === "/maker/audits/adhoc/") return true;
+  if (pathname === "/maker/manual-audits" || pathname === "/maker/manual-audits/") return true;
   if (pathname.startsWith("/maker/historical-analysis")) return true;
   return false;
 }

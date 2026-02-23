@@ -3,7 +3,7 @@
  * Currently using mock data - these functions will be replaced with real API calls later
  */
 
-import { getCreatedPlanogramShelves } from "@/features/maker/api/planogram";
+import { getAssignPlanogramOverlays, getCreatedPlanogramShelves } from "@/features/maker/api/planogram";
 import {
   generateMakerDashboardStats,
   generateMockAdhocAnalyses,
@@ -63,7 +63,14 @@ export async function fetchAssignedShelves(): Promise<Shelf[]> {
   
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
-  return [...mockShelves, ...planogramShelves, ...createdShelves];
+  const all = [...mockShelves, ...planogramShelves, ...createdShelves];
+  const overlays = getAssignPlanogramOverlays();
+  if (overlays.size === 0) return all;
+  return all.map((s) => {
+    const overlay = overlays.get(s.id);
+    if (!overlay) return s;
+    return { ...s, planogramId: overlay.planogramId, arrangement: overlay.arrangement };
+  });
 }
 
 /**
@@ -206,7 +213,11 @@ export async function getShelfById(shelfId: string): Promise<Shelf | null> {
   const mockShelves = generateMockShelves();
   const planogramShelves = getCreatedPlanogramShelves();
   const all = [...mockShelves, ...planogramShelves, ...createdShelves];
-  return all.find((s) => s.id === shelfId) ?? null;
+  const shelf = all.find((s) => s.id === shelfId) ?? null;
+  if (!shelf) return null;
+  const overlay = getAssignPlanogramOverlays().get(shelfId);
+  if (overlay) return { ...shelf, planogramId: overlay.planogramId, arrangement: overlay.arrangement };
+  return shelf;
 }
 
 /**

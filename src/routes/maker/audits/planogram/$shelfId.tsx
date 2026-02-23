@@ -7,7 +7,7 @@
  * Access at: /maker/audits/planogram/:shelfId
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
@@ -76,13 +76,15 @@ function PlanogramPreviewPage() {
   const { toast } = useToast();
   const router = useRouter();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
+  const from = (location.state as { from?: string } | undefined)?.from;
 
   const handleBack = () => {
     if (window.history.length > 1) {
       router.history.back();
     } else {
-      navigate({ to: PLANOGRAM_FALLBACK });
+      navigate({ to: from ?? PLANOGRAM_FALLBACK });
     }
   };
   const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);

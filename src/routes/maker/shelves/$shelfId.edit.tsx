@@ -10,7 +10,7 @@
  */
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowLeft, Check, Info } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -733,22 +733,6 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              {fixture && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <Info
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="text-sm text-foreground">
-                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
-                    {fixture.units} · {fixture.type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove · Drag to reorder or move between shelves
-                  </span>
-                </div>
-              )}
-
               <div>
                 <p className="mb-2 text-xs font-medium text-foreground">
                   Categories (Click to hide/show)
@@ -778,6 +762,7 @@ function PlanogramPreviewPage() {
                         <ShelfRow
                           key={shelf.shelfNumber}
                           shelf={shelf}
+                          fixture={fixture}
                           highDemandSkus={highDemandSkus}
                           editHandlers={{
                             onEditName,
@@ -817,6 +802,7 @@ function PlanogramPreviewPage() {
                     <ProductDetailsTable
                       shelves={shelvesToShow}
                       highDemandSkus={highDemandSkus}
+                      units={fixture?.units}
                     />
                   </div>
                 </div>

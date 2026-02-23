@@ -32,6 +32,8 @@ export interface UseAnalysisPipelineReturn {
   currentStepIndex: number;
   pipelineSteps: typeof PIPELINE_STEPS;
   startAnalysis: () => void;
+  /** Reset pipeline state so user can run analysis again */
+  resetAnalysis: () => void;
 }
 
 export function useAnalysisPipeline(
@@ -122,6 +124,15 @@ export function useAnalysisPipeline(
     intervalRef.current = setInterval(advanceStep, stepIntervalMs);
   }, [onEnrichmentRequired, onComplete, stepIntervalMs, clearIntervals]);
 
+  const resetAnalysis = useCallback(() => {
+    clearIntervals();
+    setIsAnalyzing(false);
+    setCurrentStep(null);
+    setElapsedSeconds(0);
+    setAnalysisComplete(false);
+    setAwaitingEnrichment(false);
+  }, [clearIntervals]);
+
   const currentStepIndex = currentStep
     ? PIPELINE_STEPS.findIndex((s) => s.id === currentStep)
     : -1;
@@ -143,5 +154,6 @@ export function useAnalysisPipeline(
     currentStepIndex,
     pipelineSteps: PIPELINE_STEPS,
     startAnalysis,
+    resetAnalysis,
   };
 }

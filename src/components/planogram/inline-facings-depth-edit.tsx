@@ -106,7 +106,7 @@ export function InlineFacingsDepthEdit({
       onClick={startEditing}
       onDoubleClick={startEditing}
       className={cn(
-        "mt-1 cursor-text rounded px-1 py-0.5 text-left text-[10px] font-mono text-muted-foreground hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
+        "mt-0.5 cursor-text rounded px-1 py-0.5 text-left text-[10px] font-mono leading-tight text-muted-foreground hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1",
         className
       )}
       aria-label={`Edit facings and depth: ×${facings} D${depthCount} =${totalUnits}`}

@@ -71,6 +71,7 @@ export function generateMockShelves(): Shelf[] {
       description: "Carbonated drinks, soda, energy drinks",
       status: "never-audited",
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-002",
     },
     {
       id: "shelf-002",
@@ -81,6 +82,7 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(2),
       complianceScore: 95,
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-002",
     },
     {
       id: "shelf-003",
@@ -90,6 +92,7 @@ export function generateMockShelves(): Shelf[] {
       status: "draft", // Draft audit in progress
       lastAuditDate: randomPastDate(0), // Today
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-002",
     }
   );
 
@@ -105,6 +108,7 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(3),
       complianceScore: 72,
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-001",
     },
     {
       id: "shelf-005",
@@ -115,6 +119,7 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(1),
       complianceScore: 92,
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-001",
     },
     {
       id: "shelf-006",
@@ -124,6 +129,7 @@ export function generateMockShelves(): Shelf[] {
       status: "draft", // Another draft in progress
       lastAuditDate: randomPastDate(1),
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-001",
     }
   );
 
@@ -138,6 +144,7 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(2),
       complianceScore: 98,
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-002",
     },
     {
       id: "shelf-008",
@@ -148,6 +155,7 @@ export function generateMockShelves(): Shelf[] {
       lastAuditDate: randomPastDate(1),
       complianceScore: 85,
       assignedTo: mockUser.id,
+      planogramId: "PLN-SHELF-POC-002",
     },
     {
       id: "shelf-009",
@@ -204,6 +212,7 @@ export function generateMockShelves(): Shelf[] {
       assignedTo: mockUser.id,
       elevation: "Eye Level",
       notes: "Daily delivery at 6am.",
+      planogramId: "PLN-SHELF-POC-001",
     },
     {
       id: "shelf-014",
@@ -242,6 +251,7 @@ export function generateMockShelves(): Shelf[] {
       assignedTo: mockUser.id,
       elevation: "Eye Level",
       notes: "Primary promotional shelf for seasonal items.",
+      planogramId: "PLN-SHELF-POC-002",
     },
     {
       id: "shelf-017",
@@ -472,16 +482,32 @@ export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
     "Bakery End Cap",
   ];
   const statuses: AdhocAnalysis["status"][] = ["completed", "completed", "processing", "completed", "failed"];
-  return names.map((name, i) => ({
-    id: `adhoc-${targetStore.id}-${i + 1}`,
-    name,
-    storeId: targetStore.id,
-    storeName: targetStore.name,
-    createdAt: randomPastDate(7),
-    status: statuses[i],
-    complianceScore: statuses[i] === "completed" ? randomScore(72, 98) : undefined,
-    errorMessage: statuses[i] === "failed" ? "Image quality too low for analysis" : undefined,
-  }));
+  const fixtureContexts = [
+    { shelfId: "shelf-aisle3-bev-01", shelfName: "Aisle 3 Beverages", zone: "Grocery", section: "Beverages & Dairy", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { shelfId: "shelf-snacks-02", shelfName: "Snacks Bay", zone: "Grocery", section: "Snacks & Personal Care", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { shelfId: "shelf-dairy-03", shelfName: "Dairy Section", zone: "Dairy", section: "Milk & Yogurt", fixtureType: "cooler_shelving", dimensions: "800×1800 mm" },
+    { shelfId: "shelf-frozen-04", shelfName: "Frozen Foods", zone: "Frozen", section: "Ice Cream & Desserts", fixtureType: "freezer_shelving", dimensions: "1000×1900 mm" },
+    { shelfId: "shelf-bakery-05", shelfName: "Bakery End Cap", zone: "Bakery", section: "Bread & Pastries", fixtureType: "gondola", dimensions: "900×1600 mm" },
+  ];
+  return names.map((name, i) => {
+    const ctx = fixtureContexts[i % fixtureContexts.length];
+    return {
+      id: `adhoc-${targetStore.id}-${i + 1}`,
+      name,
+      storeId: targetStore.id,
+      storeName: targetStore.name,
+      createdAt: randomPastDate(7),
+      status: statuses[i],
+      complianceScore: statuses[i] === "completed" ? randomScore(72, 98) : undefined,
+      errorMessage: statuses[i] === "failed" ? "Image quality too low for analysis" : undefined,
+      shelfId: ctx.shelfId,
+      shelfName: ctx.shelfName,
+      zone: ctx.zone,
+      section: ctx.section,
+      fixtureType: ctx.fixtureType,
+      dimensions: ctx.dimensions,
+    };
+  });
 }
 
 // ============================================================================

@@ -30,22 +30,29 @@ export interface AuditReviewQueueProps {
    * List of pending audits
    */
   audits?: CheckerAudit[];
-  
+
   /**
    * Loading state
    */
   isLoading?: boolean;
-  
+
   /**
    * Error state
    */
   error?: Error | null;
-  
+
   /**
    * Click handler when an audit card is clicked
    */
-  onAuditClick?: (auditId: string) => void;
-  
+  onAuditClick?: (auditId: string, event?: any) => void;
+
+  /**
+   * Action handlers
+   */
+  onApprove?: (auditId: string) => void;
+  onReject?: (auditId: string) => void;
+  onDelete?: (auditId: string) => void;
+
   /**
    * Optional className for styling
    */
@@ -60,40 +67,40 @@ const filterOptions: {
   label: string;
   count?: (audits: CheckerAudit[]) => number;
 }[] = [
-  {
-    value: "all",
-    label: "All Pending",
-    count: (audits) => audits.length,
-  },
-  {
-    value: "critical",
-    label: "Critical",
-    count: (audits) => audits.filter((a) => (a.complianceScore || 0) < 50).length,
-  },
-  {
-    value: "attention",
-    label: "Needs Attention",
-    count: (audits) => audits.filter((a) => {
-      const score = a.complianceScore || 0;
-      return score >= 50 && score < 80;
-    }).length,
-  },
-  {
-    value: "good",
-    label: "Good",
-    count: (audits) => audits.filter((a) => (a.complianceScore || 0) >= 80).length,
-  },
-  {
-    value: "planogram",
-    label: "Planogram Based",
-    count: (audits) => audits.filter((a) => a.mode === "planogram-based" || a.mode === "vision-edge").length,
-  },
-  {
-    value: "adhoc",
-    label: "Adhoc Analysis",
-    count: (audits) => audits.filter((a) => a.mode === "adhoc" || a.mode === "assist-mode").length,
-  },
-];
+    {
+      value: "all",
+      label: "All Pending",
+      count: (audits) => audits.length,
+    },
+    {
+      value: "critical",
+      label: "Critical",
+      count: (audits) => audits.filter((a) => (a.complianceScore || 0) < 50).length,
+    },
+    {
+      value: "attention",
+      label: "Needs Attention",
+      count: (audits) => audits.filter((a) => {
+        const score = a.complianceScore || 0;
+        return score >= 50 && score < 80;
+      }).length,
+    },
+    {
+      value: "good",
+      label: "Good",
+      count: (audits) => audits.filter((a) => (a.complianceScore || 0) >= 80).length,
+    },
+    {
+      value: "planogram",
+      label: "Planogram Based",
+      count: (audits) => audits.filter((a) => a.mode === "planogram-based" || a.mode === "vision-edge").length,
+    },
+    {
+      value: "adhoc",
+      label: "Adhoc Analysis",
+      count: (audits) => audits.filter((a) => a.mode === "adhoc" || a.mode === "assist-mode").length,
+    },
+  ];
 
 type ViewMode = "table" | "card";
 const CARD_PAGE_SIZE = 9;
@@ -179,13 +186,23 @@ const AUDIT_BASE_TABLE_COLUMNS: DataTableColumn<CheckerAudit>[] = [
 const ACTIONS_COLUMN: DataTableColumn<CheckerAudit> = {
   title: "Actions",
   field: "id",
-  width: 110,
+  width: 180,
   headerSort: false,
   headerFilter: false,
   hozAlign: "center",
-  formatter: () =>
-    '<button type="button" class="rounded-md border border-border bg-accent px-3 py-1.5 text-xs font-medium text-accent-foreground hover:bg-accent/90 transition-colors">Review</button>',
-  cellClick: () => {},
+  formatter: () => `
+    <div class="flex items-center justify-center gap-2">
+      <button type="button" class="approve-btn p-1.5 rounded-md bg-green-500/10 text-green-500 hover:bg-green-500/20 transition-colors" title="Approve">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+      </button>
+      <button type="button" class="reject-btn p-1.5 rounded-md bg-orange-500/10 text-orange-500 hover:bg-orange-500/20 transition-colors" title="Reject/Return">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+      <button type="button" class="delete-btn p-1.5 rounded-md bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors" title="Delete">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2M10 11v6M14 11v6"/></svg>
+      </button>
+    </div>
+  `,
 };
 
 export function AuditReviewQueue({
@@ -193,6 +210,9 @@ export function AuditReviewQueue({
   isLoading,
   error,
   onAuditClick,
+  onApprove,
+  onReject,
+  onDelete,
   className,
 }: AuditReviewQueueProps) {
   const navigate = useNavigate();
@@ -204,9 +224,14 @@ export function AuditReviewQueue({
   const [cardPage, setCardPage] = useState(1);
 
   const handleReviewClick = useCallback(
-    (auditId: string) => {
+    (auditId: string, event?: any) => {
+      if (event && event.target && (event.target as HTMLElement).closest("button")) {
+        // If the click originated from an action button, don't trigger review navigation
+        return;
+      }
+
       if (onAuditClick) {
-        onAuditClick(auditId);
+        onAuditClick(auditId, event);
       } else {
         navigate({ to: "/checker/review/$auditId", params: { auditId } });
       }
@@ -219,13 +244,26 @@ export function AuditReviewQueue({
       ...AUDIT_BASE_TABLE_COLUMNS,
       {
         ...ACTIONS_COLUMN,
-        cellClick: (event: unknown, cell: { getData: () => CheckerAudit }) => {
-          (event as { stopPropagation?: () => void })?.stopPropagation?.();
-          handleReviewClick(cell.getData().id);
+        cellClick: (event: unknown, cell: { getData: () => CheckerAudit; getElement: () => HTMLElement }) => {
+          const e = event as MouseEvent;
+          e.stopPropagation();
+
+          const target = e.target as HTMLElement;
+          const audit = cell.getData();
+
+          if (target.closest(".approve-btn") && onApprove) {
+            onApprove(audit.id);
+          } else if (target.closest(".reject-btn") && onReject) {
+            onReject(audit.id);
+          } else if (target.closest(".delete-btn") && onDelete) {
+            onDelete(audit.id);
+          } else if (target.closest(".review-btn")) {
+            handleReviewClick(audit.id);
+          }
         },
       },
     ];
-  }, [handleReviewClick]);
+  }, [handleReviewClick, onApprove, onReject, onDelete]);
 
   // Filter and sort audits
   const filteredAndSortedAudits = useMemo(() => {
@@ -325,7 +363,7 @@ export function AuditReviewQueue({
             <Skeleton key={i} className="h-10 w-24" />
           ))}
         </div>
-        
+
         {/* Card skeletons */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
@@ -398,8 +436,8 @@ export function AuditReviewQueue({
 
         {/* Search */}
         <div className="relative">
-          <Search 
-            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" 
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
             aria-hidden="true"
           />
           <Input
@@ -496,7 +534,7 @@ export function AuditReviewQueue({
             pageSize={10}
             pageSizeSelector={[5, 10, 20, 50]}
             onPaginationChange={setTablePagination}
-            onRowClick={(row) => handleReviewClick(row.id)}
+            onRowClick={(row, event) => handleReviewClick(row.id, event)}
           />
 
           <p className="text-sm text-muted-foreground text-center">
@@ -511,6 +549,9 @@ export function AuditReviewQueue({
                 key={audit.id}
                 audit={audit}
                 onClick={onAuditClick}
+                onApprove={onApprove}
+                onReject={onReject}
+                onDelete={onDelete}
               />
             ))}
           </div>

@@ -41,8 +41,8 @@ export interface DataTableProps<T = object> {
   columns: DataTableColumn<T>[];
   /** Row data */
   data: T[];
-  /** Optional row click handler; receives row data */
-  onRowClick?: (row: T) => void;
+  /** Optional row click handler; receives row data and event */
+  onRowClick?: (row: T, event: any) => void;
   /** Optional field name used as unique row id (default: "id") */
   rowIdField?: keyof T | string;
   /** Optional class name for the wrapper div */
@@ -195,8 +195,8 @@ export function DataTable<T extends object>({
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (_e: unknown, row: { getData: () => T }) => {
-        onRowClick(row.getData());
+      (tableRef.current as any).on("rowClick", (e: any, row: any) => {
+        onRowClick(row.getData(), e);
       });
     }
 

@@ -60,6 +60,8 @@ export interface Audit {
   draftSavedAt?: Date; // Last save timestamp for drafts
   draftProgress?: number; // 0-100 percentage for draft completion
   approvedBy?: string; // Checker user ID
+  /** When mode is adhoc: ID of the adhoc analysis for report navigation */
+  adhocAnalysisId?: string;
 }
 
 /**

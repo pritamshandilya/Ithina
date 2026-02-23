@@ -1,7 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { ManualOverrideList, type ApprovalAction } from "@/components/maker";
+import { useHistoricalAnalyses } from "@/features/maker/hooks";
 
 export const Route = createFileRoute("/maker/manual-audits")({
   component: MakerManualAuditsPage,
@@ -9,21 +11,86 @@ export const Route = createFileRoute("/maker/manual-audits")({
 
 function MakerManualAuditsPage() {
   const navigate = useNavigate();
+  const { data: historicalAnalyses } = useHistoricalAnalyses();
 
-  const handleAction = (_auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => {
+  const APPROVALS_PATH = "/maker/manual-audits";
+  const adhocAnalyses = useMemo(
+    () => historicalAnalyses.filter((row) => row.type === "adhoc"),
+    [historicalAnalyses]
+  );
+
+  const resolveAdhocAnalysisId = (
+    explicitAnalysisId: string | undefined,
+    shelfId: string,
+    submittedAt?: Date
+  ): string | null => {
+    if (explicitAnalysisId) return explicitAnalysisId;
+    if (adhocAnalyses.length === 0) return null;
+
+    const shelfMatches = adhocAnalyses.filter((row) => row.shelfId === shelfId);
+    const candidates = shelfMatches.length > 0 ? shelfMatches : adhocAnalyses;
+
+    if (!submittedAt) return candidates[0]?.id ?? null;
+
+    const submittedMs = new Date(submittedAt).getTime();
+    let best = candidates[0];
+    let bestDelta = Math.abs(best.runDate.getTime() - submittedMs);
+    for (const row of candidates.slice(1)) {
+      const delta = Math.abs(row.runDate.getTime() - submittedMs);
+      if (delta < bestDelta) {
+        best = row;
+        bestDelta = delta;
+      }
+    }
+    return best?.id ?? null;
+  };
+
+  const handleAction = (
+    auditId: string,
+    shelfId: string,
+    action: ApprovalAction,
+    mode?: string,
+    adhocAnalysisId?: string,
+    submittedAt?: Date
+  ) => {
     const isPlanogram = mode === "planogram-based" || mode === "vision-edge";
+    void auditId;
 
     if (action === "fix") {
       if (isPlanogram) {
-        navigate({ to: "/maker/audits/planogram/run/$shelfId", params: { shelfId } });
+        navigate({
+          to: "/maker/audits/planogram/run/$shelfId",
+          params: { shelfId },
+          state: { from: APPROVALS_PATH },
+        });
       } else {
-        navigate({ to: "/maker/audits/adhoc/new" });
+        navigate({
+          to: "/maker/audits/adhoc/new",
+          state: { from: APPROVALS_PATH },
+        });
       }
     } else if (action === "view-report" || action === "view-details") {
       if (isPlanogram) {
-        navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
+        navigate({
+          to: "/maker/audits/planogram/$shelfId",
+          params: { shelfId },
+          state: { from: APPROVALS_PATH },
+        });
       } else {
-        navigate({ to: "/maker/audits/adhoc" });
+        const resolvedAnalysisId = resolveAdhocAnalysisId(adhocAnalysisId, shelfId, submittedAt);
+        if (!resolvedAnalysisId) {
+          navigate({
+            to: "/maker/historical-analysis",
+            state: { from: APPROVALS_PATH },
+          });
+          return;
+        }
+        navigate({
+          to: "/maker/historical-analysis/$analysisId",
+          params: { analysisId: resolvedAnalysisId },
+          search: { type: "adhoc" },
+          state: { from: APPROVALS_PATH },
+        });
       }
     }
   };

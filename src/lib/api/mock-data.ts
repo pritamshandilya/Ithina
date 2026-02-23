@@ -334,19 +334,27 @@ export function generateMockShelves(): Shelf[] {
  */
 export function generateMockAudits(): Audit[] {
   const shelves = generateMockShelves();
+  const adhocAnalyses = generateMockAdhocAnalyses(mockUser.storeId);
   const audits: Audit[] = [];
+  let adhocIndex = 0;
 
   // Generate audits for shelves that have been audited
   shelves.forEach((shelf) => {
     if (shelf.status !== "never-audited" && shelf.lastAuditDate) {
+      const mode: Audit["mode"] = Math.random() > 0.5 ? "planogram-based" : "adhoc";
       const audit: Audit = {
         id: `audit-${shelf.id}`,
         shelfId: shelf.id,
         submittedBy: mockUser.id,
-        mode: Math.random() > 0.5 ? "planogram-based" : "adhoc",
+        mode,
         status: shelf.status,
         complianceScore: shelf.complianceScore,
       };
+
+      if (mode === "adhoc" && adhocAnalyses[adhocIndex]) {
+        audit.adhocAnalysisId = adhocAnalyses[adhocIndex].id;
+        adhocIndex = (adhocIndex + 1) % adhocAnalyses.length;
+      }
 
       // Draft-specific fields
       if (shelf.status === "draft") {

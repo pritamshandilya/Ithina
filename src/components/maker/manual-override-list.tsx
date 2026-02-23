@@ -21,7 +21,14 @@ export type ApprovalAction = "view-report" | "view-details" | "fix" | "resume";
 
 export interface ApprovalStatusListProps {
   className?: string;
-  onAction?: (auditId: string, shelfId: string, action: ApprovalAction, mode?: string) => void;
+  onAction?: (
+    auditId: string,
+    shelfId: string,
+    action: ApprovalAction,
+    mode?: string,
+    adhocAnalysisId?: string,
+    submittedAt?: Date
+  ) => void;
 }
 
 type FilterType = "all" | "pending" | "approved" | "returned";
@@ -233,7 +240,7 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
           const audit = cell.getData();
           const action = (btn as HTMLElement).getAttribute("data-action") as ApprovalAction | null;
           if (action && onAction) {
-            onAction(audit.id, audit.shelfId, action, audit.mode);
+            onAction(audit.id, audit.shelfId, action, audit.mode, audit.adhocAnalysisId, audit.submittedAt);
           }
         },
       },

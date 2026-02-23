@@ -32,6 +32,8 @@ export function useHistoricalAnalyses(): {
       complianceScore: a.complianceScore,
       storeId: a.storeId,
       errorMessage: a.errorMessage,
+      shelfId: a.shelfId,
+      shelfName: a.shelfName,
     }));
 
     const planogramRows: HistoricalAnalysisRow[] = shelves

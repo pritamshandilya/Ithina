@@ -5,7 +5,7 @@
  * Replace and Send for Approval are hidden for historical runs.
  */
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useMemo } from "react";
 
@@ -26,7 +26,10 @@ export const Route = createFileRoute("/maker/historical-analysis/$analysisId")({
 
 function HistoricalAnalysisDetailPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { analysisId } = Route.useParams();
+  const from = (location.state as { from?: string } | undefined)?.from;
+  const backTo = from ?? "/maker/historical-analysis";
   const { data: analyses } = useHistoricalAnalyses();
 
   const analysis = useMemo(() => {
@@ -61,8 +64,8 @@ function HistoricalAnalysisDetailPage() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate({ to: "/maker/historical-analysis" })}
-              aria-label="Back to Historical Analysis"
+              onClick={() => navigate({ to: backTo })}
+              aria-label="Back"
             >
               <ArrowLeft className="size-4" aria-hidden />
             </Button>

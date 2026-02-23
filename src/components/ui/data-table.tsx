@@ -41,8 +41,8 @@ export interface DataTableProps<T = object> {
   columns: DataTableColumn<T>[];
   /** Row data */
   data: T[];
-  /** Optional row click handler; receives row data */
-  onRowClick?: (row: T) => void;
+  /** Optional row click handler; receives row data and event */
+  onRowClick?: (row: T, event: any) => void;
   /** Optional field name used as unique row id (default: "id") */
   rowIdField?: keyof T | string;
   /** Optional class name for the wrapper div */
@@ -190,9 +190,9 @@ export function DataTable<T extends object>({
 
     const effectiveRowFormatter = rowFormatter
       ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
-          rowFormatter(row);
-          if (onRowClick) row.getElement().classList.add("cursor-pointer");
-        }
+        rowFormatter(row);
+        if (onRowClick) row.getElement().classList.add("cursor-pointer");
+      }
       : onRowClick
         ? (row: { getElement: () => HTMLElement }) => row.getElement().classList.add("cursor-pointer")
         : undefined;
@@ -207,7 +207,7 @@ export function DataTable<T extends object>({
         const ev = e as { target?: EventTarget };
         const target = ev?.target as HTMLElement | null;
         if (target?.closest?.("button, select, [data-action], a[href]")) return;
-        onRowClick(row.getData());
+        onRowClick(row.getData(), e);
       });
     }
 
@@ -229,7 +229,7 @@ export function DataTable<T extends object>({
     movableColumns,
     onPaginationChange,
     rowFormatter,
-    data,
+    // data is excluded because it's handled by a separate setData useEffect to prevent flicker - added this comment cause this issue is present in some other table components too
     dataTree,
     dataTreeChildField,
     dataTreeStartExpanded,

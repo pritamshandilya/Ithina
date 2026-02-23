@@ -22,6 +22,9 @@ import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker"
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";
 
+const PAGE_SIZE_OPTIONS = [5, 10, 20];
+const INITIAL_SORT = { field: "submittedAt", dir: "desc" } as const;
+
 export interface MyAuditsSectionProps {
   onResume?: (auditId: string, shelfId: string) => void;
   onViewReport?: (auditId: string, shelfId: string) => void;
@@ -235,12 +238,12 @@ export function MyAuditsSection({
   const tableVisibleCount = isLimitedView
     ? filteredAudits.length
     : Math.max(
-        0,
-        Math.min(
-          tablePagination.pageSize,
-          filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
-        )
-      );
+      0,
+      Math.min(
+        tablePagination.pageSize,
+        filteredAudits.length - (tablePagination.page - 1) * tablePagination.pageSize
+      )
+    );
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -312,11 +315,11 @@ export function MyAuditsSection({
           columns={tableColumns}
           data={filteredAudits}
           rowIdField="id"
-          initialSort={{ field: "submittedAt", dir: "desc" }}
+          initialSort={INITIAL_SORT}
           emptyMessage="No audits match the current filter"
           pagination={!isLimitedView}
           pageSize={isLimitedView ? 5 : 10}
-          pageSizeSelector={isLimitedView ? [5] : [5, 10, 20]}
+          pageSizeSelector={PAGE_SIZE_OPTIONS}
           headerFilters={false}
           onPaginationChange={isLimitedView ? undefined : setTablePagination}
         />

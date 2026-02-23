@@ -373,7 +373,6 @@ export function ReferenceDocumentsTab() {
       {rules && rules.length > 0 && (
         <div className="mt-3 shrink-0 rounded-lg border border-border bg-card/50 p-3">
           <h3 className="mb-1 text-sm font-medium text-foreground">Link new uploads to rules (optional)</h3>
-          <p className="mb-2 text-xs text-muted-foreground">Pre-link the next upload for immediate traceability.</p>
           <RuleSelectorDropdown
             rules={rules.map((r) => ({ ruleId: r.ruleId, ruleName: r.ruleName }))}
             selectedIds={selectedRuleIds}

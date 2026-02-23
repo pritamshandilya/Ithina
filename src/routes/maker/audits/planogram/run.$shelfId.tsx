@@ -3,7 +3,7 @@
  * Accessed when clicking "+ New" in the planogram table for a shelf.
  */
 
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { AnalysisFlowPage } from "@/components/maker";

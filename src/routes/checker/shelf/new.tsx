@@ -152,7 +152,7 @@ function AddPlanogramPage() {
     } finally {
       setIsSaving(false);
     }
-  ], [
+  }, [
     canSave,
     isAssociateMode,
     associateShelfId,

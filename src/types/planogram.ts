@@ -106,6 +106,18 @@ export interface PlanogramSummary {
   productCount: number;
   dimensions?: string;
   location?: string;
+  /** From physicalLocation */
+  zone?: string;
+  aisle?: string;
+  bay?: string;
+  section?: string;
+  /** From fixture */
+  fixtureType?: string;
+  fixtureId?: string;
+  /** W×H×D in store units */
+  width?: number;
+  height?: number;
+  depth?: number;
 }
 
 /** User's edited arrangement (what gets saved) */

@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FileBarChart,
   FileSignature,
+  History,
   LayoutDashboard,
   LayoutGrid,
   Library,
@@ -218,6 +219,20 @@ export default function Sidenav() {
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   )}
+                </SidebarMenuItem>
+              )}
+              {role === "maker" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith("/maker/historical-analysis")}
+                    tooltip="Historical Analysis"
+                  >
+                    <Link to="/maker/historical-analysis">
+                      <History className="size-4 shrink-0" />
+                      Historical Analysis
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {roleItems.map((item) => {

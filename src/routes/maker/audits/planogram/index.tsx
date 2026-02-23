@@ -10,23 +10,30 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets } from "@/features/maker/hooks";
+import { useAssignedShelves, useComplianceRuleSets, usePlanogramList } from "@/features/maker/hooks";
 import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
+import { mockUser } from "@/lib/api/mock-data";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/maker/audits/planogram/")({
   component: PlanogramAnalysisPage,
 });
 
 /** Map shelf to planogram row with derived/mock planogram-specific fields */
-function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
+function toPlanogramRow(
+  shelf: Shelf,
+  planogramMap?: Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>
+): PlanogramShelfRow {
   const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
   const skuCount =
     arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ??
     8 + (shelf.id.charCodeAt(shelf.id.length - 1) % 12);
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
+  const planogramInfo = shelf.planogramId && planogramMap?.get(shelf.planogramId);
+  const aisle = planogramInfo?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -34,6 +41,11 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
+    aisle,
+    zone: planogramInfo?.zone,
+    section: planogramInfo?.section,
+    fixtureType: planogramInfo?.fixtureType,
+    dimensions: planogramInfo?.dimensions,
   };
 }
 
@@ -47,6 +59,27 @@ const PLANOGRAM_COLUMNS = (
   ruleSets: ComplianceRuleSetSummary[]
 ): DataTableColumn<PlanogramShelfRow>[] => [
   {
+    title: "Action",
+    field: "id",
+    width: 56,
+    headerSort: false,
+    headerFilter: false,
+    hozAlign: "center",
+    formatter: () => `
+      <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
+        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+    `,
+    cellClick: (event: unknown, cell: { getData: () => PlanogramShelfRow }) => {
+      (event as { stopPropagation?: () => void }).stopPropagation?.();
+      const target = (event as { target?: HTMLElement }).target as HTMLElement;
+      const btn = target?.closest?.("[data-action]");
+      if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
+      const rect = (btn as HTMLElement).getBoundingClientRect();
+      onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
+    },
+  },
+  {
     title: "Aisle",
     field: "aisleNumber",
     width: 70,
@@ -55,7 +88,57 @@ const PLANOGRAM_COLUMNS = (
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm tabular-nums text-foreground">${row.aisleNumber ?? "—"}</span>`;
+      const val = row.aisle ?? (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ?? "—";
+      return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
+    },
+  },
+  {
+    title: "Zone",
+    field: "zone",
+    width: 100,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Section",
+    field: "section",
+    minWidth: 140,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground truncate block">${row.section ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Fixture",
+    field: "fixtureType",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+    },
+  },
+  {
+    title: "Dimensions",
+    field: "dimensions",
+    width: 110,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
     },
   },
   {
@@ -179,33 +262,16 @@ const PLANOGRAM_COLUMNS = (
       return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusClass}">${label}</span>`;
     },
   },
-  {
-    title: "Action",
-    field: "id",
-    width: 56,
-    headerSort: false,
-    headerFilter: false,
-    hozAlign: "center",
-    formatter: () => `
-      <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
-        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
-      </button>
-    `,
-    cellClick: (event: unknown, cell: { getData: () => PlanogramShelfRow }) => {
-      (event as { stopPropagation?: () => void }).stopPropagation?.();
-      const target = (event as { target?: HTMLElement }).target as HTMLElement;
-      const btn = target?.closest?.("[data-action]");
-      if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
-      const rect = (btn as HTMLElement).getBoundingClientRect();
-      onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
-    },
-  },
 ];
 
 function PlanogramAnalysisPage() {
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: planogramList } = usePlanogramList();
+  const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
+  const _selectedStoreId = selectedStore?.id || mockUser.storeId;
+  void _selectedStoreId;
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [complianceOverrides, setComplianceOverrides] = useState<Record<string, string>>({});
@@ -220,9 +286,23 @@ function PlanogramAnalysisPage() {
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
+  const planogramMap = useMemo(() => {
+    const map = new Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>();
+    (planogramList ?? []).forEach((p) => {
+      map.set(p.id, {
+        aisle: p.aisle,
+        zone: p.zone,
+        section: p.section,
+        fixtureType: p.fixtureType,
+        dimensions: p.dimensions,
+      });
+    });
+    return map;
+  }, [planogramList]);
+
   const planogramRows = useMemo(() => {
-    return (shelves ?? []).map(toPlanogramRow);
-  }, [shelves]);
+    return (shelves ?? []).map((s) => toPlanogramRow(s, planogramMap));
+  }, [shelves, planogramMap]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -233,7 +313,11 @@ function PlanogramAnalysisPage() {
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
         String(r.aisleNumber).includes(q) ||
-        String(r.bayNumber).includes(q)
+        r.aisle?.toLowerCase().includes(q) ||
+        String(r.bayNumber).includes(q) ||
+        r.zone?.toLowerCase().includes(q) ||
+        r.section?.toLowerCase().includes(q) ||
+        r.fixtureType?.toLowerCase().includes(q)
     );
   }, [planogramRows, searchQuery]);
 
@@ -389,6 +473,7 @@ function PlanogramAnalysisPage() {
                   pageSize={10}
                   pageSizeSelector={PLANOGRAM_PAGE_SIZE_OPTIONS}
                   headerFilters={false}
+                  layout="fitData"
                   onPaginationChange={setTablePagination}
                   onRowClick={handleRowClick}
                 />
@@ -425,10 +510,7 @@ function PlanogramAnalysisPage() {
             <button
               type="button"
               className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
-              onClick={() => {
-                setActionsMenu(null);
-                /* TODO: Wire up delete */
-              }}
+              onClick={() => setActionsMenu(null)}
             >
               <Trash2 />
               Delete

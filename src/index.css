@@ -445,6 +445,11 @@
   border-right: 2px dotted var(--tabulator-border) !important;
 }
 
+.data-table-wrapper .tabulator-cell.tabulator-frozen.tabulator-frozen-right {
+  border-right: none !important;
+  border-left: 2px dotted var(--tabulator-border) !important;
+}
+
 /* Placeholder when no data */
 .data-table-wrapper .tabulator-placeholder {
   color: var(--muted-foreground);

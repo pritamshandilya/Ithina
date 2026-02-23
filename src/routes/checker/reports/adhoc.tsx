@@ -22,7 +22,44 @@ function AdhocReport() {
     const columns: DataTableColumn<AdhocAnalysis>[] = [
         { title: "S.NO", field: "sNo", width: 80 },
         { title: "NAME", field: "name", minWidth: 250 },
-        { title: "DATE", field: "date" },
+        {
+            title: "ZONE",
+            field: "zone",
+            width: 100,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+            },
+        },
+        {
+            title: "SECTION",
+            field: "section",
+            minWidth: 140,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.section ?? "—"}</span>`;
+            },
+        },
+        {
+            title: "FIXTURE",
+            field: "fixtureType",
+            width: 120,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+                return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+            },
+        },
+        {
+            title: "DIMENSIONS",
+            field: "dimensions",
+            width: 120,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
+            },
+        },
+        { title: "DATE", field: "date", width: 140 },
         { title: "PRODUCTS", field: "products", width: 120 },
         { title: "ISSUES", field: "issues", width: 120 },
         {

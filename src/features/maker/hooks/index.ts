@@ -34,3 +34,4 @@ export {
   planogramShelfPreviewKeys,
   type PlanogramShelfPreview,
 } from "./usePlanogramShelfPreview";
+export { useHistoricalAnalyses } from "./useHistoricalAnalyses";

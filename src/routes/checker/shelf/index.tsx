@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets } from "@/features/maker/hooks";
+import { useAssignedShelves, useComplianceRuleSets, usePlanogramList } from "@/features/maker/hooks";
 import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
@@ -23,12 +23,17 @@ export const Route = createFileRoute("/checker/shelf/")({
 });
 
 /** Map shelf to planogram row with derived/mock planogram-specific fields */
-function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
+function toPlanogramRow(
+  shelf: Shelf,
+  planogramMap?: Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>
+): PlanogramShelfRow {
   const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
   const skuCount =
     arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ??
     8 + (shelf.id.charCodeAt(shelf.id.length - 1) % 12);
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
+  const planogramInfo = shelf.planogramId && planogramMap?.get(shelf.planogramId);
+  const aisle = planogramInfo?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -36,6 +41,11 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
+    aisle,
+    zone: planogramInfo?.zone,
+    section: planogramInfo?.section,
+    fixtureType: planogramInfo?.fixtureType,
+    dimensions: planogramInfo?.dimensions,
   };
 }
 
@@ -57,7 +67,57 @@ const PLANOGRAM_COLUMNS = (
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm tabular-nums text-foreground">${row.aisleNumber ?? "—"}</span>`;
+      const val = row.aisle ?? (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ?? "—";
+      return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
+    },
+  },
+  {
+    title: "Zone",
+    field: "zone",
+    width: 100,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Section",
+    field: "section",
+    minWidth: 140,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground truncate block">${row.section ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Fixture",
+    field: "fixtureType",
+    width: 120,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+    },
+  },
+  {
+    title: "Dimensions",
+    field: "dimensions",
+    width: 110,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
     },
   },
   {
@@ -185,6 +245,7 @@ const PLANOGRAM_COLUMNS = (
     title: "Action",
     field: "id",
     width: 56,
+    frozen: true,
     headerSort: false,
     headerFilter: false,
     hozAlign: "center",
@@ -207,6 +268,7 @@ const PLANOGRAM_COLUMNS = (
 function PlanogramAnalysisPage() {
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: planogramList } = usePlanogramList();
   const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
   const _selectedStoreId = selectedStore?.id || mockUser.storeId;
@@ -225,9 +287,23 @@ function PlanogramAnalysisPage() {
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
 
+  const planogramMap = useMemo(() => {
+    const map = new Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>();
+    (planogramList ?? []).forEach((p) => {
+      map.set(p.id, {
+        aisle: p.aisle,
+        zone: p.zone,
+        section: p.section,
+        fixtureType: p.fixtureType,
+        dimensions: p.dimensions,
+      });
+    });
+    return map;
+  }, [planogramList]);
+
   const planogramRows = useMemo(() => {
-    return (shelves ?? []).map(toPlanogramRow);
-  }, [shelves]);
+    return (shelves ?? []).map((s) => toPlanogramRow(s, planogramMap));
+  }, [shelves, planogramMap]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -238,7 +314,11 @@ function PlanogramAnalysisPage() {
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
         String(r.aisleNumber).includes(q) ||
-        String(r.bayNumber).includes(q)
+        r.aisle?.toLowerCase().includes(q) ||
+        String(r.bayNumber).includes(q) ||
+        r.zone?.toLowerCase().includes(q) ||
+        r.section?.toLowerCase().includes(q) ||
+        r.fixtureType?.toLowerCase().includes(q)
     );
   }, [planogramRows, searchQuery]);
 
@@ -394,6 +474,7 @@ function PlanogramAnalysisPage() {
                   pageSize={10}
                   pageSizeSelector={PLANOGRAM_PAGE_SIZE_OPTIONS}
                   headerFilters={false}
+                  layout="fitData"
                   onPaginationChange={setTablePagination}
                   onRowClick={handleRowClick}
                 />

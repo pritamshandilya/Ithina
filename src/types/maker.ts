@@ -79,6 +79,33 @@ export interface AdhocAnalysis {
   status: AdhocAnalysisStatus;
   complianceScore?: number; // 0-100 when completed
   errorMessage?: string; // When status is failed
+  /** Zone from capture context (e.g. Grocery, Dairy) */
+  zone?: string;
+  /** Section from capture context */
+  section?: string;
+  /** Fixture type (e.g. wall_shelving) */
+  fixtureType?: string;
+  /** Fixture dimensions W×H */
+  dimensions?: string;
+}
+
+/**
+ * Unified row for Historical Analysis table (adhoc + planogram runs)
+ */
+export interface HistoricalAnalysisRow {
+  id: string;
+  type: "adhoc" | "planogram";
+  name: string;
+  storeName: string;
+  runDate: Date;
+  status: AdhocAnalysisStatus | "completed";
+  complianceScore?: number;
+  storeId?: string;
+  errorMessage?: string;
+  shelfId?: string;
+  shelfName?: string;
+  planogramName?: string;
+  imageUrl?: string;
 }
 
 /**
@@ -145,6 +172,16 @@ export interface PlanogramShelfRow extends Shelf {
   productsCount?: number;
   /** Issue count from last analysis */
   issuesCount?: number;
+  /** Aisle in planogram style (e.g. A3), from planogram or derived from aisleNumber */
+  aisle?: string;
+  /** From planogram physicalLocation */
+  zone?: string;
+  /** From planogram physicalLocation */
+  section?: string;
+  /** Fixture type (e.g. wall_shelving) */
+  fixtureType?: string;
+  /** Fixture dimensions W×H×D */
+  dimensions?: string;
 }
 
 /**

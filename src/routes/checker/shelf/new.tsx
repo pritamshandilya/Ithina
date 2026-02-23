@@ -175,7 +175,7 @@ function AddPlanogramPage() {
                         <option value={BLANK_SHELF_VALUE}>Create blank shelf</option>
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.shelfCount} shelves · {p.productCount} SKUs)
+                            {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves · {p.productCount} SKUs)
                           </option>
                         ))}
                       </Select>
@@ -289,15 +289,41 @@ function AddPlanogramPage() {
                           Dimensions
                         </p>
                         <p className="text-sm font-semibold tabular-nums text-foreground">
-                          {fixture.width}×{fixture.height} {fixture.units}
+                          {fixture.width}×{fixture.height}×{fixture.depth}{" "}
+                          {planogram.storeConfig?.units ?? "mm"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Fixture type
+                        </p>
+                        <p className="text-sm font-medium text-foreground capitalize">
+                          {fixture.type?.replace(/_/g, " ") ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Zone
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {planogram.physicalLocation?.zone ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Aisle · Bay
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {planogram.physicalLocation?.aisle ?? "—"} ·{" "}
+                          {planogram.physicalLocation?.bay ?? "—"}
                         </p>
                       </div>
                       <div className="col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:col-span-3">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Location
+                          Section
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {metadata?.location ?? "—"}
+                          {planogram.physicalLocation?.section ?? planogram.location ?? "—"}
                         </p>
                       </div>
                     </div>

@@ -35,6 +35,7 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
   return PLANOGRAMS.map((p) => {
     const { planogram, metadata } = p;
     const fixture = planogram.fixture;
+    const loc = planogram.physicalLocation;
     const productCount =
       metadata?.totalSKUs ??
       fixture.shelves.reduce((sum, s) => sum + s.products.length, 0);
@@ -43,8 +44,17 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
       name: planogram.name,
       shelfCount: fixture.shelves.length,
       productCount,
-      dimensions: metadata ? `${fixture.width}×${fixture.height} ${fixture.units}` : undefined,
-      location: metadata?.location,
+      dimensions: `${fixture.width}×${fixture.height} ${planogram.storeConfig?.units ?? "mm"}`,
+      location: planogram.location ?? metadata?.location,
+      zone: loc?.zone,
+      aisle: loc?.aisle,
+      bay: loc?.bay,
+      section: loc?.section,
+      fixtureType: fixture.type,
+      fixtureId: fixture.fixtureId,
+      width: fixture.width,
+      height: fixture.height,
+      depth: fixture.depth,
     };
   });
 }

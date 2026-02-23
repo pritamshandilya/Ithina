@@ -247,7 +247,7 @@ export function DataTable<T extends object>({
   return (
     <div
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-hidden",
+        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"

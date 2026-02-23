@@ -98,8 +98,9 @@ function PlanogramPreviewPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!preview?.planogramPayload.planogram.fixture.shelves) return;
-    const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
+    const payload = preview?.planogramPayload;
+    if (!preview || !payload?.planogram?.fixture?.shelves) return;
+    const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
     let shelves = deepCopyShelves(fixtureShelves);
     const removed: PlanogramProduct[] = [];
@@ -156,17 +157,17 @@ function PlanogramPreviewPage() {
     setRemovedItems(removed);
     setHasChanges(false);
     setSelectedCategories(new Set());
-  }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+  }, [preview?.planogramPayload?.planogram?.fixture?.shelves, preview?.shelf.arrangement]);
 
   const shelfCapacities = useMemo(() => {
-    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    const orig = preview?.planogramPayload?.planogram?.fixture?.shelves ?? [];
     return Object.fromEntries(
       orig.map((s) => [
         s.shelfNumber,
         s.products.reduce((sum, p) => sum + p.facings, 0),
       ])
     );
-  }, [preview?.planogramPayload.planogram.fixture.shelves]);
+  }, [preview?.planogramPayload?.planogram?.fixture?.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -381,10 +382,11 @@ function PlanogramPreviewPage() {
   }, [onRemoveProduct]);
 
   const handleSave = useCallback(async () => {
-    if (!preview || !hasChanges || !shelfId) return;
+    const payload = preview?.planogramPayload;
+    if (!preview || !payload || !hasChanges || !shelfId) return;
     setIsSaving(true);
     try {
-      const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
+      const originalShelves = payload.planogram.fixture.shelves;
       const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
 
       for (const shelf of localShelves) {
@@ -453,11 +455,11 @@ function PlanogramPreviewPage() {
     toast,
   ]);
 
-  const planogram = preview?.planogramPayload.planogram;
-  const metadata = preview?.planogramPayload.metadata;
+  const planogram = preview?.planogramPayload?.planogram;
+  const metadata = preview?.planogramPayload?.metadata;
   const fixture = planogram?.fixture;
   const highDemandSkus =
-    preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
+    preview?.planogramPayload?.stockingRules?.highDemandProducts ?? [];
 
   const baseShelves = useMemo(
     () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
@@ -688,7 +690,7 @@ function PlanogramPreviewPage() {
                 </div>
                 <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
-                    stockingRules={preview.planogramPayload.stockingRules}
+                    stockingRules={preview.planogramPayload?.stockingRules}
                   />
                 </div>
               </div>

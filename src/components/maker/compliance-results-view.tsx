@@ -48,8 +48,8 @@ export function ComplianceResultsView({
   onReplaceImage,
   onSubmitAudit,
   onSubmitAnyway,
-  highlightedIssueIndex = null,
-  onIssueClick,
+  highlightedIssueIndex: _highlightedIssueIndex = null,
+  onIssueClick: _onIssueClick,
 }: ComplianceResultsViewProps) {
   const [zoomLevel, setZoomLevel] = useState(1);
   const hasIssues = analysisResult.totalIssues > 0;

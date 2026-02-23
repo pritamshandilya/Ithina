@@ -76,8 +76,8 @@ export function ReportSnippetsView({
   imagePreview,
   report,
   onReplaceImage,
-  highlightedIssueIndex = null,
-  onIssueClick,
+  highlightedIssueIndex: _highlightedIssueIndex = null,
+  onIssueClick: _onIssueClick,
 }: ReportSnippetsViewProps) {
   const { toast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(1);

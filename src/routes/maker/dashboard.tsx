@@ -36,8 +36,8 @@ function MakerDashboard() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-8">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-5">
           {/* Header with welcome + primary CTA */}
           <MakerDashboardHeader hasAttentionItems={hasAttentionItems} />
 
@@ -48,7 +48,7 @@ function MakerDashboard() {
           <MakerPerformanceCharts />
 
           {/* Two-column layout: Attention + Assigned Shelves (same height) */}
-          <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 items-stretch">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-stretch">
             <MakerAttentionSection
               onResume={handleResume}
               onViewReport={handleViewReport}
@@ -72,9 +72,6 @@ function MakerDashboard() {
                 <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
                   Recent Audit History
                 </h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  History of the last 5 audits
-                </p>
               </div>
               <Link
                 to="/maker/audits/planogram"

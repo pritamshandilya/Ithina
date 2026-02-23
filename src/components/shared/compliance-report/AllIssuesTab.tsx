@@ -141,7 +141,7 @@ export function AllIssuesTab({
   ];
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("w-full min-w-0 space-y-4", className)}>
       {/* Search – hidden in PDF mode */}
       {!pdfMode && (
       <div className="relative">
@@ -284,7 +284,7 @@ export function AllIssuesTab({
       </div>
 
       {filteredCategories.length === 0 && (
-        <div className="rounded-xl border border-border bg-card/60 p-8 text-center text-muted-foreground">
+        <div className="rounded-xl border border-border bg-card/60 p-6 text-center text-muted-foreground">
           <p className="text-sm">No issues match your search.</p>
         </div>
       )}

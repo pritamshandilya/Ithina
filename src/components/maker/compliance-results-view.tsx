@@ -12,8 +12,8 @@ import { useState } from "react";
 import {
   Camera,
   Check,
-  ChevronDown,
-  ChevronUp,
+  Minus,
+  Plus,
   RefreshCw,
   Upload,
 } from "lucide-react";
@@ -59,7 +59,7 @@ export function ComplianceResultsView({
   const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(600px,calc(100vh-18rem))] lg:overflow-hidden">
+    <div className="grid gap-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(600px,calc(100vh-18rem))] lg:overflow-hidden">
       {/* Left: Observed Shelf */}
       <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-0">
         <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
@@ -72,7 +72,7 @@ export function ComplianceResultsView({
               disabled={zoomLevel >= 2}
               aria-label="Zoom in"
             >
-              <ChevronUp className="size-4" aria-hidden />
+              <Plus className="size-4" aria-hidden />
             </Button>
             <Button
               variant="outline"
@@ -81,7 +81,7 @@ export function ComplianceResultsView({
               disabled={zoomLevel <= 0.5}
               aria-label="Zoom out"
             >
-              <ChevronDown className="size-4" aria-hidden />
+              <Minus className="size-4" aria-hidden />
             </Button>
             <Button variant="outline" size="sm" onClick={onReplaceImage}>
               <Upload className="size-4" aria-hidden />
@@ -135,7 +135,7 @@ export function ComplianceResultsView({
           <h2 className="text-sm font-semibold text-foreground">Compliance Summary</h2>
         </div>
 
-        <div className="flex-1 min-h-0 overflow-auto p-4 space-y-6">
+        <div className="flex-1 min-h-0 overflow-auto p-4 space-y-4">
           {/* Overall Compliance Score */}
           <div className="text-center py-4 rounded-lg border border-border bg-card/40">
             <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -186,37 +186,6 @@ export function ComplianceResultsView({
               </p>
             </div>
           </div>
-
-          {/* Issues to Review */}
-          {analysisResult.issues.length > 0 && (
-            <div>
-              <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                Issues to Review
-              </h3>
-              <div className="space-y-2">
-                {analysisResult.issues.map((issue, idx) => (
-                  <button
-                    key={issue.id ?? idx}
-                    type="button"
-                    onClick={() => onIssueClick?.(idx)}
-                    className={cn(
-                      "w-full text-left rounded-lg border px-3 py-2.5 transition-colors",
-                      highlightedIssueIndex === idx
-                        ? "border-accent bg-accent/10"
-                        : "border-border bg-card/60 hover:bg-accent/5"
-                    )}
-                  >
-                    <p className="text-sm font-medium text-foreground">
-                      {issue.skuName ?? issue.description}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {issue.description}
-                    </p>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Actions */}
           <div className="pt-4 border-t border-border space-y-3">

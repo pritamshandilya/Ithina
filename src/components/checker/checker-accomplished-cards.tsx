@@ -28,9 +28,9 @@ export function CheckerAccomplishedCards({ className }: CheckerAccomplishedCards
 
   if (isLoading) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn("space-y-3", className)}>
         <Skeleton className="h-6 w-48" />
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[1, 2, 3, 4, 5].map((i) => (
             <div key={i} className="stat-card space-y-4">
               <Skeleton className="h-4 w-28" />
@@ -50,17 +50,14 @@ export function CheckerAccomplishedCards({ className }: CheckerAccomplishedCards
     avgScore >= 80 ? "success" : avgScore >= 50 ? "warning" : "default";
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-3", className)}>
       <div>
         <h2 className="text-lg font-semibold text-foreground">
           Store at a Glance
         </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Key governance metrics for {selectedStore?.name ?? "your store"}
-        </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatCard
           title="Pending Audits"
           value={data.totalPendingAudits}

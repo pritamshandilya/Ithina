@@ -258,9 +258,7 @@ export function MakerPerformanceCharts({ className }: MakerPerformanceChartsProp
         <h2 className="text-lg font-semibold text-foreground">
           My Performance Insights
         </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Audit activity and shelf status overview
-        </p>
+        
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -252,9 +252,7 @@ export function CheckerPerformanceCharts({
         <h2 className="text-lg font-semibold text-foreground">
           Store & Shelf Insights
         </h2>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          Compliance trends and shelf status at a glance
-        </p>
+        
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

@@ -93,8 +93,9 @@ function PlanogramPreviewPage() {
   const toggleInProgressRef = useRef(false);
 
   useEffect(() => {
-    if (!preview?.planogramPayload.planogram.fixture.shelves) return;
-    const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
+    const payload = preview?.planogramPayload;
+    if (!preview || !payload?.planogram.fixture.shelves) return;
+    const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
     let shelves = deepCopyShelves(fixtureShelves);
     const removed: PlanogramProduct[] = [];
@@ -159,17 +160,17 @@ function PlanogramPreviewPage() {
     setCategoryPositions(posMap);
     setHasChanges(false);
     setSelectedCategories(new Set());
-  }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+  }, [preview, preview?.planogramPayload?.planogram.fixture.shelves, preview?.shelf.arrangement]);
 
   const shelfCapacities = useMemo(() => {
-    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    const orig = preview?.planogramPayload?.planogram.fixture.shelves ?? [];
     return Object.fromEntries(
       orig.map((s) => [
         s.shelfNumber,
         s.products.reduce((sum, p) => sum + p.facings, 0),
       ])
     );
-  }, [preview?.planogramPayload.planogram.fixture.shelves]);
+  }, [preview?.planogramPayload?.planogram?.fixture?.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -405,7 +406,7 @@ function PlanogramPreviewPage() {
   }, [onRemoveProduct]);
 
   const handleSave = useCallback(async () => {
-    if (!preview || !hasChanges || !shelfId) return;
+    if (!preview || !preview.planogramPayload || !hasChanges || !shelfId) return;
     setIsSaving(true);
     try {
       const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
@@ -477,11 +478,12 @@ function PlanogramPreviewPage() {
     toast,
   ]);
 
-  const planogram = preview?.planogramPayload.planogram;
-  const metadata = preview?.planogramPayload.metadata;
+  const planogram = preview?.planogramPayload?.planogram;
+  const metadata = preview?.planogramPayload?.metadata;
   const fixture = planogram?.fixture;
   const highDemandSkus =
-    preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
+    preview?.planogramPayload?.stockingRules?.highDemandProducts ?? [];
+  const isBlankShelf = !!preview && !preview.planogramPayload;
 
   const baseShelves = useMemo(
     () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
@@ -611,8 +613,8 @@ function PlanogramPreviewPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-6xl space-y-6">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/checker/shelves">
@@ -633,8 +635,9 @@ function PlanogramPreviewPage() {
                     {preview.shelf.shelfName}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    v{planogram?.version ?? "1.0"} {metadata?.location ?? "—"} ·{" "}
-                    {metadata?.status ?? "active"}
+                    {isBlankShelf
+                      ? "Blank shelf · Add products in a future release"
+                      : `v${planogram?.version ?? "1.0"} ${metadata?.location ?? "—"} · ${metadata?.status ?? "active"}`}
                   </p>
                 </>
               ) : (
@@ -676,8 +679,20 @@ function PlanogramPreviewPage() {
             </div>
           )}
 
-          {preview && !isLoading && (
-            <div className="space-y-6">
+          {preview && !isLoading && isBlankShelf && (
+            <div className="rounded-xl border border-border bg-card/80 p-8 text-center">
+              <p className="font-medium text-foreground">Blank shelf</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This shelf has no planogram. Product arrangement and editing will be available in a future release.
+              </p>
+              <Button asChild variant="outline" className="mt-4">
+                <Link to="/checker/shelves">Back to shelves</Link>
+              </Button>
+            </div>
+          )}
+
+          {preview && !isLoading && !isBlankShelf && (
+            <div className="space-y-4">
               <div
                 className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
@@ -738,7 +753,7 @@ function PlanogramPreviewPage() {
               </div>
 
               <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                <div className="min-w-0 flex-1 space-y-6">
+                <div className="min-w-0 flex-1 space-y-4">
                   {shelvesToShow.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
                       <p className="text-sm font-medium text-muted-foreground">
@@ -796,7 +811,7 @@ function PlanogramPreviewPage() {
                 </div>
                 <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
                   <StockingRulesSection
-                    stockingRules={preview.planogramPayload.stockingRules}
+                    stockingRules={preview.planogramPayload?.stockingRules}
                   />
                 </div>
               </div>

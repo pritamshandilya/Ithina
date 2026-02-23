@@ -75,6 +75,8 @@ export interface DataTableProps<T = object> {
   dataTreeStartExpanded?: boolean;
   /** Column to show tree toggle (default: first column) */
   dataTreeElementColumn?: string;
+  /** Show serial number column "No." as first column (default: true) */
+  showRowNumber?: boolean;
 }
 
 /**
@@ -104,6 +106,7 @@ export function DataTable<T extends object>({
   dataTreeChildField = "_children",
   dataTreeStartExpanded = false,
   dataTreeElementColumn,
+  showRowNumber = true,
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -112,9 +115,6 @@ export function DataTable<T extends object>({
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    // eslint-disable-next-line no-console
-    console.log("DataTable useEffect - onRowClick:", onRowClick ? "defined" : "undefined");
 
     currentPageRef.current = 1;
     currentPageSizeRef.current = pageSize;
@@ -125,11 +125,32 @@ export function DataTable<T extends object>({
       field: col.field as string,
       headerSort: col.headerSort !== false,
       headerFilter: headerFilters ? (col.headerFilter ?? "input") : false,
+      hozAlign: col.hozAlign ?? ("center" as const),
+      vertAlign: col.vertAlign ?? ("middle" as const),
+      headerHozAlign: col.headerHozAlign ?? ("center" as const),
     }));
+
+    const serialColumn = {
+      title: "No.",
+      field: "__rowNum__",
+      width: 56,
+      minWidth: 48,
+      headerSort: false,
+      headerFilter: false,
+      headerHozAlign: "center" as const,
+      formatter: "rownum" as const,
+      formatterParams: { relativeToPage: true },
+      hozAlign: "center" as const,
+      vertAlign: "middle" as const,
+    };
+
+    const finalColumns = showRowNumber
+      ? [serialColumn, ...tabulatorColumns]
+      : tabulatorColumns;
 
     const options: Record<string, unknown> = {
       data: [...data],
-      columns: tabulatorColumns,
+      columns: finalColumns,
       layout,
       responsiveLayout: "hide",
       resizableColumns: true,
@@ -175,7 +196,6 @@ export function DataTable<T extends object>({
 
     if (onRowClick) {
       (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (_e: unknown, row: { getData: () => T }) => {
-        console.log("Tabulator rowClick fired", row.getData());
         onRowClick(row.getData());
       });
     }
@@ -203,6 +223,7 @@ export function DataTable<T extends object>({
     dataTreeChildField,
     dataTreeStartExpanded,
     dataTreeElementColumn,
+    showRowNumber,
   ]);
 
   // Keep row updates cheap when only data changes.

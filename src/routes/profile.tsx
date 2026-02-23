@@ -206,8 +206,8 @@ function ProfilePage() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="bg-primary min-h-screen p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-5xl space-y-6">
+        <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+          <div className="mx-auto max-w-screen-2xl space-y-4">
             <div className="flex items-center justify-center py-16">
               <div className="space-y-4 text-center">
                 <div className="border-accent mx-auto h-12 w-12 animate-spin rounded-full border-b-2" />
@@ -225,8 +225,8 @@ function ProfilePage() {
   if (!userInfo) {
     return (
       <MainLayout>
-        <div className="bg-primary min-h-screen p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-5xl space-y-6">
+        <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+          <div className="mx-auto max-w-screen-2xl space-y-4">
             <div className="flex items-center justify-center py-16">
               <div className="max-w-md space-y-4 text-center">
                 <div className="stat-card">
@@ -253,8 +253,8 @@ function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="bg-primary min-h-screen p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-5xl space-y-6">
+      <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
           {/* Page Header */}
           <div className="space-y-2">
             <h1 className="text-foreground text-2xl font-bold">Profile</h1>
@@ -273,7 +273,7 @@ function ProfilePage() {
 
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             {/* Left column - Profile Information */}
-            <div className="space-y-6 lg:col-span-2">
+            <div className="space-y-4 lg:col-span-2">
               <ProfileInfoCard
                 userInfo={userInfo}
                 onSave={handleProfileUpdate}
@@ -282,7 +282,7 @@ function ProfilePage() {
             </div>
 
             {/* Right column - Metadata and Actions */}
-            <div className="space-y-6">
+            <div className="space-y-4">
               <AccountMetadataCard userInfo={userInfo} />
 
               <AccountActionsCard

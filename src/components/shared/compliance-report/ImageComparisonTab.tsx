@@ -103,13 +103,13 @@ export function ImageComparisonTab({
   className,
 }: ImageComparisonTabProps) {
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("w-full min-w-0 space-y-4", className)}>
       <p className="text-sm text-muted-foreground">
         Side-by-side comparison: Planogram (expected layout) vs Real Shelf
         (captured image). Non-compliant items are highlighted.
       </p>
 
-      <div className="grid lg:grid-cols-2 gap-6 h-[calc(100vh-14rem)] min-h-[480px] overflow-hidden">
+      <div className="grid lg:grid-cols-2 gap-4 h-[calc(100vh-14rem)] min-h-[480px] overflow-hidden">
         {/* Left: Planogram (Expected) */}
         <PlanogramExpectedPanel data={data} className="min-h-0" />
 
@@ -128,7 +128,7 @@ export function ImageComparisonTab({
                 overlays={data.detectionOverlays}
               />
             ) : (
-              <div className="h-full min-h-[360px] flex flex-col items-center justify-center gap-4 p-8 text-center">
+              <div className="h-full min-h-[360px] flex flex-col items-center justify-center gap-4 p-6 text-center">
                 <div className="rounded-full bg-muted/50 p-4">
                   <ImageIcon className="size-12 text-muted-foreground" aria-hidden />
                 </div>

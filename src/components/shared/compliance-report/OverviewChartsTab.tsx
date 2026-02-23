@@ -322,9 +322,9 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
     report.issueDistribution.extra;
 
   return (
-    <div className={cn("space-y-6", className)}>
+    <div className={cn("w-full min-w-0 space-y-4", className)}>
       {/* Top row: Executive Summary + AI Recommendations */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         <ReportCard title="Executive Summary" icon={Info}>
           <p className="text-sm text-foreground leading-relaxed">
             {report.executiveSummary}
@@ -360,7 +360,7 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
       </div>
 
       {/* Charts row: Compliance by Shelf, Issue Distribution, All Issues Breakdown */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <ReportCard title="Compliance by Shelf" icon={BarChart3}>
           <div className="space-y-3">
             {report.shelfCompliance.map((s) => (
@@ -463,7 +463,7 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
 
       {/* Shelf-by-Shelf Breakdown */}
       <ReportCard title="Shelf-by-Shelf Breakdown" icon={Layers}>
-        <div className="space-y-6">
+        <div className="space-y-4">
           {report.shelfCompliance.map((shelf: ReportShelfCompliance) => {
             const products =
               PLACEHOLDER_SHELF_PRODUCTS[shelf.shelfName] ?? [];

@@ -91,7 +91,8 @@ export default function Sidenav() {
   }, [location.pathname]);
 
   const makerItems: NavItem[] = [
-    { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
+    // Shelves - commented out, no longer necessary for maker
+    // { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
     { label: "Approvals", to: "/maker/manual-audits", icon: FileSignature },
   ];
 

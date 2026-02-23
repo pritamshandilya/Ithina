@@ -55,6 +55,8 @@ export interface RuleBuilderModalProps {
   onClose: () => void;
   rule?: ComplianceRule | null;
   createdBy: string;
+  /** When editing, call this to switch to create-new-rule-set mode */
+  onAddNewRuleSet?: () => void;
 }
 
 export function RuleBuilderModal({
@@ -62,6 +64,7 @@ export function RuleBuilderModal({
   onClose,
   rule,
   createdBy,
+  onAddNewRuleSet,
 }: RuleBuilderModalProps) {
   const { toast } = useToast();
   const createRule = useCreateComplianceRule();
@@ -282,7 +285,7 @@ export function RuleBuilderModal({
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-4xl">
       <div className="rounded-lg border border-border bg-card shadow-lg max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-accent/10 p-2">
               <Settings className="size-5 text-accent" />
@@ -293,7 +296,20 @@ export function RuleBuilderModal({
               </CardTitle>
             </CardHeader>
           </div>
-          <button
+          <div className="flex items-center gap-2">
+            {isEdit && onAddNewRuleSet && !isRetired && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAddNewRuleSet}
+                className="shrink-0"
+              >
+                <Plus className="size-4" />
+                Add New Rule Set
+              </Button>
+            )}
+            <button
             type="button"
             onClick={handleClose}
             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -301,10 +317,11 @@ export function RuleBuilderModal({
           >
             <X className="size-4" />
           </button>
+          </div>
         </div>
 
         {/* Content - unified form for create and edit */}
-        <div className="flex-1 min-h-0 flex flex-col px-6 py-4">
+        <div className="flex-1 min-h-0 flex flex-col px-5 py-3">
           <div className="flex flex-col min-h-0 flex-1 gap-4">
             {isEdit && rule?.ruleId && (
               <p className="text-sm text-muted-foreground shrink-0">Rule ID: {rule.ruleId}</p>
@@ -467,7 +484,7 @@ export function RuleBuilderModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-border px-6 py-4 shrink-0">
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3 shrink-0">
           <Button
             variant="outline"
             onClick={handleClose}

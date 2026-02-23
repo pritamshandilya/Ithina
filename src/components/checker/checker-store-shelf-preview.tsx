@@ -94,11 +94,7 @@ export function CheckerStoreShelfPreview({
             <h2 className="text-lg font-semibold text-foreground">
               Store & Shelf Overview
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {compliance
-                ? `${storeName} · ${compliance.avgComplianceScore.toFixed(1)}% avg compliance`
-                : `${(shelves ?? []).length} shelf${(shelves ?? []).length !== 1 ? "s" : ""} in store`}
-            </p>
+            
           </div>
         </div>
 

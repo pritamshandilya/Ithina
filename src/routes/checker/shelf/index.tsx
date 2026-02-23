@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
-import { LayoutGrid, Plus, Search } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Eye, FileText, LayoutGrid, Plus, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
+import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,28 +41,37 @@ function toPlanogramRow(shelf: Shelf): PlanogramShelfRow {
 const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
 
 const PLANOGRAM_COLUMNS = (
-  onAction: (shelfId: string, action: "new" | "modify" | "delete" | "view") => void,
+  onOpenMenu: (row: PlanogramShelfRow, anchor: { x: number; y: number }) => void,
   ruleSets: ComplianceRuleSetSummary[]
 ): DataTableColumn<PlanogramShelfRow>[] => [
   {
+    title: "Aisle",
+    field: "aisleNumber",
+    width: 70,
+    sorter: "number",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm tabular-nums text-foreground">${row.aisleNumber ?? "—"}</span>`;
+    },
+  },
+  {
     title: "Shelf",
     field: "shelfName",
-    minWidth: 220,
+    minWidth: 180,
     sorter: "string",
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const subtitle = `Aisle ${row.aisleNumber} · ${row.productsCount ?? 0} SKUs · ${row.lastRun ? "1 run" : "0 runs"}`;
+      const skus = row.productsCount ?? 0;
+      const runs = row.lastRun ? "1 run" : "0 runs";
+      const suffix = `(${skus} SKUs · ${runs})`;
       return `
-        <div class="flex items-center gap-2 py-1">
-          <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-accent/20 text-accent">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
-          </div>
-          <div class="min-w-0">
-            <span class="font-medium text-foreground block truncate">${row.shelfName}</span>
-            <span class="text-xs text-muted-foreground block truncate">${subtitle}</span>
-          </div>
+        <div class="min-w-0 py-1">
+          <span class="font-medium text-foreground truncate">${row.shelfName}</span>
+          <span class="text-muted-foreground"> ${suffix}</span>
         </div>
       `;
     },
@@ -170,47 +180,22 @@ const PLANOGRAM_COLUMNS = (
   {
     title: "Action",
     field: "id",
-    width: 220,
+    width: 56,
     headerSort: false,
     headerFilter: false,
     hozAlign: "center",
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const hasPlanogram = !!row.planogramId;
-      const viewBtn = hasPlanogram
-        ? `<button type="button" class="rounded-md border border-chart-2 bg-chart-2/10 px-2.5 py-1 text-xs font-medium text-chart-2 hover:bg-chart-2/20 transition-colors inline-flex items-center gap-1" data-action="view">
-            <span class="sr-only">View</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
-            View
-          </button>`
-        : "";
-      return `
-        <div class="flex items-center justify-center gap-1">
-          ${viewBtn}
-          <button type="button" class="rounded-md bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground hover:opacity-90 transition-opacity inline-flex items-center gap-1" data-action="new">
-            <span class="sr-only">New</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-            New
-          </button>
-          <button type="button" class="rounded-md border border-border bg-transparent px-2.5 py-1 text-xs font-medium text-foreground hover:bg-accent/50 transition-colors inline-flex items-center gap-1" data-action="modify">
-            <span class="sr-only">Modify</span>
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-            Modify
-          </button>
-          <button type="button" class="rounded-md p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors" data-action="delete" aria-label="Delete">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-          </button>
-        </div>
-      `;
-    },
+    formatter: () => `
+      <button type="button" data-action="open-menu" title="Actions" class="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground flex items-center justify-center" aria-label="Open actions menu">
+        <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+      </button>
+    `,
     cellClick: (event: unknown, cell: { getData: () => PlanogramShelfRow }) => {
       (event as { stopPropagation?: () => void }).stopPropagation?.();
       const target = (event as { target?: HTMLElement }).target as HTMLElement;
       const btn = target?.closest?.("[data-action]");
-      if (!btn) return;
-      const action = btn.getAttribute("data-action") as "new" | "modify" | "delete" | "view";
-      const shelf = cell.getData();
-      onAction(shelf.id, action);
+      if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
+      const rect = (btn as HTMLElement).getBoundingClientRect();
+      onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
     },
   },
 ];
@@ -226,7 +211,15 @@ function PlanogramAnalysisPage() {
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [complianceOverrides, setComplianceOverrides] = useState<Record<string, string>>({});
   const [categorizeOverrides, setCategorizeOverrides] = useState<Record<string, string>>({});
+  const [actionsMenu, setActionsMenu] = useState<{
+    row: PlanogramShelfRow;
+    anchor: { x: number; y: number };
+  } | null>(null);
+  const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
+  const [complianceSheetRuleSet, setComplianceSheetRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
+  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<string | null>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
 
   const planogramRows = useMemo(() => {
     return (shelves ?? []).map(toPlanogramRow);
@@ -270,39 +263,71 @@ function PlanogramAnalysisPage() {
     return () => el.removeEventListener("change", handleChange);
   }, []);
 
-  const handlePlanogramAction = useMemo(
-    () => (shelfId: string, action: "new" | "modify" | "delete" | "view") => {
-      if (action === "view") {
-        navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
-        return;
+  useEffect(() => {
+    if (!actionsMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(target)) {
+        const tableEl = document.querySelector(".data-table-wrapper");
+        if (tableEl?.contains(target)) return;
+        setActionsMenu(null);
       }
-      // TODO: Wire up to actual flows (new run, modify config, delete)
-      void shelfId;
-      void action;
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [actionsMenu]);
+
+  const handleOpenMenu = useCallback((row: PlanogramShelfRow, anchor: { x: number; y: number }) => {
+    const menuWidth = 192;
+    const padding = 8;
+    const viewportWidth = window.innerWidth;
+    const x = anchor.x + menuWidth + padding > viewportWidth
+      ? viewportWidth - menuWidth - padding
+      : anchor.x;
+    setActionsMenu({ row, anchor: { ...anchor, x } });
+  }, []);
+
+  const handleViewPlanogram = useCallback(
+    (shelfId: string) => {
+      navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
+      setActionsMenu(null);
+    },
+    [navigate]
+  );
+
+  const handleViewComplianceRule = useCallback((row: PlanogramShelfRow) => {
+    const ruleSetName = row.complianceRuleSet ?? "Default Rules";
+    const set = (ruleSets ?? []).find((s) => s.name === ruleSetName) ?? null;
+    setComplianceSheetRuleSet(set);
+    setComplianceSheetRuleSetName(ruleSetName);
+    setComplianceSheetOpen(true);
+    setActionsMenu(null);
+  }, [ruleSets]);
+
+  const handleNewRun = useCallback(
+    (shelfId: string) => {
+      navigate({ to: "/maker/audits/planogram/run/$shelfId", params: { shelfId } });
+      setActionsMenu(null);
     },
     [navigate]
   );
 
   const tableColumns = useMemo(
-    () => PLANOGRAM_COLUMNS(handlePlanogramAction, ruleSets ?? []),
-    [handlePlanogramAction, ruleSets]
+    () => PLANOGRAM_COLUMNS(handleOpenMenu, ruleSets ?? []),
+    [handleOpenMenu, ruleSets]
   );
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
-
-          <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
+          <header className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl font-bold text-foreground">Planogram Based Analysis</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                {selectedStore?.name ?? "Select a store"}
-              </p>
             </div>
           </header>
 
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
               <Input
@@ -321,7 +346,19 @@ function PlanogramAnalysisPage() {
             </Button>
           </div>
 
-          <div className="min-h-[400px] space-y-4">
+          {filteredRows.length > 0 && (
+            <p className="mt-2 shrink-0 text-sm text-muted-foreground">
+              Showing{" "}
+              <span className="font-semibold text-foreground">
+                {Math.max(0, Math.min(tablePagination.pageSize, filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize))}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-foreground">{filteredRows.length}</span>{" "}
+              shelf{filteredRows.length !== 1 ? "s" : ""}
+            </p>
+          )}
+
+          <div className="mt-4 flex-1 min-h-0 overflow-auto">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -344,34 +381,74 @@ function PlanogramAnalysisPage() {
                 </Button>
               </div>
             ) : (
-              <>
-                <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  <span className="font-semibold text-foreground">
-                    {Math.max(0, Math.min(tablePagination.pageSize, filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize))}
-                  </span>{" "}
-                  of{" "}
-                  <span className="font-semibold text-foreground">{filteredRows.length}</span>{" "}
-                  shelf{filteredRows.length !== 1 ? "s" : ""}
-                </p>
-                <div ref={tableWrapperRef}>
-                  <DataTable<PlanogramShelfRow>
-                    columns={tableColumns}
-                    data={rowsWithOverrides}
-                    rowIdField="id"
-                    initialSort={{ field: "shelfName", dir: "asc" }}
-                    emptyMessage="No shelves match your search"
-                    pageSize={10}
-                    pageSizeSelector={[5, 10, 20, 50]}
-                    headerFilters={false}
-                    onPaginationChange={setTablePagination}
-                  />
-                </div>
-              </>
+              <div ref={tableWrapperRef}>
+                <DataTable<PlanogramShelfRow>
+                  columns={tableColumns}
+                  data={rowsWithOverrides}
+                  rowIdField="id"
+                  initialSort={{ field: "shelfName", dir: "asc" }}
+                  emptyMessage="No shelves match your search"
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  headerFilters={false}
+                  onPaginationChange={setTablePagination}
+                />
+              </div>
             )}
           </div>
         </div>
       </div>
+
+      {actionsMenu && (
+        <div
+          ref={actionsMenuRef}
+          className="fixed z-50 min-w-48 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
+          style={{ left: actionsMenu.anchor.x, top: actionsMenu.anchor.y }}
+        >
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+            onClick={() => handleNewRun(actionsMenu.row.id)}
+          >
+            <Plus className="text-muted-foreground" />
+            New
+          </button>
+          {actionsMenu.row.planogramId && (
+            <button
+              type="button"
+              className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+              onClick={() => handleViewPlanogram(actionsMenu.row.id)}
+            >
+              <Eye className="text-chart-2" />
+              View Planogram
+            </button>
+          )}
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
+            onClick={() => handleViewComplianceRule(actionsMenu.row)}
+          >
+            <FileText className="text-muted-foreground" />
+            View Compliance Rule
+          </button>
+          <div className="-mx-1 my-1 h-px bg-border" />
+          <button
+            type="button"
+            className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
+            onClick={() => setActionsMenu(null)}
+          >
+            <Trash2 />
+            Delete
+          </button>
+        </div>
+      )}
+
+      <ComplianceRuleViewSheet
+        open={complianceSheetOpen}
+        onOpenChange={setComplianceSheetOpen}
+        ruleSet={complianceSheetRuleSet}
+        ruleSetName={complianceSheetRuleSetName}
+      />
     </MainLayout>
   );
 }

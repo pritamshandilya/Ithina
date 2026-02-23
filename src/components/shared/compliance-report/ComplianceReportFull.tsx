@@ -52,52 +52,60 @@ export function ComplianceReportFull({
   return (
     <div
       className={cn(
-        "compliance-report-full print-report flex flex-col gap-6",
+        "compliance-report-full print-report flex min-h-0 flex-1 flex-col",
         className
       )}
     >
-      <ComplianceReportHeader
-        title="Combined Compliance & Analysis Report"
-        subtitle={subtitle}
-        backTo={backTo}
-        onExportPdf={onExportPdf}
-        isExporting={isExportingPdf}
-      />
+      {/* Static section: header, metrics, tabs - stays fixed when tab content scrolls */}
+      <div className="sticky top-0 z-10 shrink-0 space-y-4 bg-primary pb-4">
+        <ComplianceReportHeader
+          title="Combined Compliance & Analysis Report"
+          subtitle={subtitle}
+          backTo={backTo}
+          onExportPdf={onExportPdf}
+          isExporting={isExportingPdf}
+        />
 
-      <ComplianceReportMetrics
-        complianceScore={report.complianceScore}
-        matched={report.matched}
-        misplaced={report.misplaced}
-        missing={report.missing}
-        extra={report.extra}
-        issues={report.issues}
-        facings={report.facings}
-        units={report.units}
-        detected={report.detected}
-        gap={report.gap}
-      />
+        <ComplianceReportMetrics
+          complianceScore={report.complianceScore}
+          matched={report.matched}
+          misplaced={report.misplaced}
+          missing={report.missing}
+          extra={report.extra}
+          issues={report.issues}
+          facings={report.facings}
+          units={report.units}
+          detected={report.detected}
+          gap={report.gap}
+        />
 
-      <ComplianceReportTabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        issuesCount={
-          report.issuesToReview.length +
-          report.issueCategories.reduce((a, c) => a + c.count, 0)
-        }
-        itemsCount={report.detected + report.extra}
-      />
+        <ComplianceReportTabs
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          issuesCount={
+            report.issuesToReview.length +
+            report.issueCategories.reduce((a, c) => a + c.count, 0)
+          }
+          itemsCount={report.detected + report.extra}
+        />
+      </div>
 
-      {activeTab === "overview" && (
-        <OverviewChartsTab report={report} />
-      )}
+      {/* Scrollable tab content - fixed width; overflow-x-hidden keeps width consistent; scrollbar-gutter prevents layout shift */}
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]">
+        <div className="w-full min-w-0 max-w-full">
+          {activeTab === "overview" && (
+            <OverviewChartsTab report={report} />
+          )}
 
-      {activeTab === "image-comparison" && (
-        <ImageComparisonTab imageUrl={imageUrl} />
-      )}
+          {activeTab === "image-comparison" && (
+            <ImageComparisonTab imageUrl={imageUrl} />
+          )}
 
-      {activeTab === "issues" && <AllIssuesTab />}
+          {activeTab === "issues" && <AllIssuesTab />}
 
-      {activeTab === "items" && <AllItemsTab />}
+          {activeTab === "items" && <AllItemsTab />}
+        </div>
+      </div>
     </div>
   );
 }

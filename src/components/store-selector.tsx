@@ -116,7 +116,7 @@ export function StoreSelector() {
                   );
                 })
               ) : (
-                <div className="p-8 text-center text-sm text-gray-500 italic">
+                <div className="p-6 text-center text-sm text-gray-500 italic">
                   No stores found matching "{searchQuery}"
                 </div>
               )}

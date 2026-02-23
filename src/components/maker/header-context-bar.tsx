@@ -13,8 +13,8 @@ import type { Store } from "@/types/checker";
 export interface HeaderContextBarProps {
   className?: string;
   /**
-   * Show/hide sync status indicator
-   * @default true
+   * Show/hide sync status indicator (Online/Offline)
+   * @default false - hidden since profile is accessible via sidebar
    */
   showSyncStatus?: boolean;
   /**
@@ -71,7 +71,7 @@ function getInitials(firstName: string, lastName: string): string {
  */
 export function HeaderContextBar({
   className,
-  showSyncStatus = true,
+  showSyncStatus = false,
   stores = [],
   selectedStoreId,
   onStoreChange,

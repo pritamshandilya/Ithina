@@ -18,7 +18,7 @@ export interface StatusBadgeProps {
  * Maps each status to its display properties
  */
 const statusConfig: Record<
-  AuditStatus,
+  string,
   {
     label: string;
     icon: typeof CheckCircle2Icon;
@@ -49,6 +49,16 @@ const statusConfig: Record<
     label: "Returned",
     icon: XCircleIcon,
     className: "status-returned",
+  },
+  active: {
+    label: "Active",
+    icon: CheckCircle2Icon,
+    className: "status-approved",
+  },
+  inactive: {
+    label: "Inactive",
+    icon: AlertCircleIcon,
+    className: "status-neutral",
   },
 };
 
@@ -88,8 +98,12 @@ export function StatusBadge({
   showIcon = true,
   size = "md",
 }: StatusBadgeProps) {
-  const config = statusConfig[status];
-  const sizes = sizeConfig[size];
+  const config = statusConfig[status as AuditStatus] || {
+    label: status,
+    icon: AlertCircleIcon,
+    className: "status-neutral",
+  };
+  const sizes = sizeConfig[size] || sizeConfig.md;
   const Icon = config.icon;
 
   return (
@@ -103,7 +117,7 @@ export function StatusBadge({
       role="status"
       aria-label={`Status: ${config.label}`}
     >
-      {showIcon && <Icon className={cn("shrink-0", sizes.icon)} aria-hidden="true" />}
+      {showIcon && Icon && <Icon className={cn("shrink-0", sizes.icon)} aria-hidden="true" />}
       <span>{config.label}</span>
     </span>
   );

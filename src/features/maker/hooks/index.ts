@@ -26,6 +26,7 @@ export { useCreateShelf } from "./useCreateShelf";
 export { useMakerAudits, makerAuditsKeys } from "./useMakerAudits";
 export { useAdhocAnalyses, adhocAnalysesKeys } from "./useAdhocAnalyses";
 export { useComplianceRuleSets, complianceRuleSetsKeys } from "./useComplianceRuleSets";
+export { useRulesByRuleSetId, rulesByRuleSetIdKeys } from "./useRulesByRuleSetId";
 export { usePlanogramList, planogramListKeys } from "./usePlanogramList";
 export { usePlanogramById, planogramByIdKeys } from "./usePlanogramById";
 export {
@@ -33,3 +34,4 @@ export {
   planogramShelfPreviewKeys,
   type PlanogramShelfPreview,
 } from "./usePlanogramShelfPreview";
+export { useHistoricalAnalyses } from "./useHistoricalAnalyses";

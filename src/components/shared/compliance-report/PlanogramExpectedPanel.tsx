@@ -39,7 +39,7 @@ function ProductIcon({
   className?: string;
 }) {
   const { fill, accent } = COLOR_MAP[color ?? "slate"] ?? COLOR_MAP.slate;
-  const shared = cn("size-12 sm:size-14", className);
+  const shared = cn("size-9 sm:size-10", className);
   switch (shape) {
     case "bottle":
       return <BottleSVG fill={fill} accent={accent} className={shared} />;
@@ -84,7 +84,7 @@ function PlanogramSlotCard({
   return (
     <div
       className={cn(
-        "relative rounded-lg p-3 bg-card/80 flex flex-col items-center min-h-[100px]",
+        "relative flex min-h-[72px] flex-col items-center rounded-lg bg-card/80 p-2",
         borderByStatus[slot.status]
       )}
     >
@@ -110,10 +110,10 @@ function PlanogramSlotCard({
           {slot.expectedFacings} facings
         </span>
       )}
-      <div className="flex-1 flex items-center justify-center mt-4">
+      <div className="mt-1 flex flex-1 items-center justify-center">
         <ProductIcon shape={slot.shape} color={slot.color} />
       </div>
-      <p className="text-xs font-medium text-foreground truncate w-full text-center mt-1">
+      <p className="mt-0.5 w-full truncate text-center text-xs font-medium text-foreground">
         {slot.shortName}
       </p>
       <p
@@ -167,19 +167,19 @@ export function PlanogramExpectedPanel({
         className
       )}
     >
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
         <FileText className="size-4 text-accent shrink-0" aria-hidden />
         <h3 className="text-sm font-semibold text-foreground">
           Planogram (Expected)
         </h3>
       </div>
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
+      <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
         {data.planogramShelves.map((shelf) => (
-          <div key={shelf.shelfName} className="space-y-2">
-            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div key={shelf.shelfName} className="space-y-1.5">
+            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {shelf.shelfName}: {shelf.shelfLabel} — {shelf.units} units
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {shelf.slots.map((slot) => (
                 <PlanogramSlotCard key={slot.id} slot={slot} variant={variant} />
               ))}
@@ -188,7 +188,7 @@ export function PlanogramExpectedPanel({
         ))}
       </div>
       {showLegend && (
-        <div className="px-4 py-2 border-t border-border flex flex-wrap gap-4 text-[10px] text-muted-foreground shrink-0">
+        <div className="flex shrink-0 flex-wrap gap-3 border-t border-border px-3 py-1.5 text-[10px] text-muted-foreground">
           {variant === "comparison" ? (
             <>
               {PLANOGRAM_LEGEND.map((item) => (

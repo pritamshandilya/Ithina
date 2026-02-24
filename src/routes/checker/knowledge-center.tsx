@@ -9,7 +9,6 @@
  *
  * Sub-sections:
  * - Compliance Rules (catalog + rule builder)
- * - Rule Versions (version history)
  * - Reference Documents (policy grounding)
  */
 
@@ -24,7 +23,6 @@ import { cn } from "@/lib/utils";
 
 import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compliance-rules-tab";
 import { ReferenceDocumentsTab } from "@/components/checker/knowledge-center/reference-documents-tab";
-import { RuleVersionsTab } from "@/components/checker/knowledge-center/rule-versions-tab";
 
 export const Route = createFileRoute("/checker/knowledge-center")({
   beforeLoad: () => {
@@ -36,7 +34,7 @@ export const Route = createFileRoute("/checker/knowledge-center")({
   component: KnowledgeCenterPage,
 });
 
-type KnowledgeCenterTab = "rules" | "versions" | "documents";
+type KnowledgeCenterTab = "rules" | "documents";
 
 function KnowledgeCenterPage() {
   const [activeTab, setActiveTab] = useState<KnowledgeCenterTab>("rules");
@@ -46,17 +44,16 @@ function KnowledgeCenterPage() {
 
   const tabs: { id: KnowledgeCenterTab; label: string }[] = [
     { id: "rules", label: "Compliance Rules" },
-    { id: "versions", label: "Rule Versions" },
     { id: "documents", label: "Reference Documents" },
   ];
 
   return (
     <MainLayout>
-        <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 min-h-0 flex-col">
 
           {/* Page Header */}
-          <header className="space-y-1">
+          <header className="shrink-0 space-y-1">
             <h1 className="text-2xl font-bold text-foreground">Knowledge Center</h1>
             <p className="text-sm text-muted-foreground">
               Define and manage compliance logic used by the AI during audit evaluation
@@ -65,7 +62,7 @@ function KnowledgeCenterPage() {
 
           {/* Tab Navigation */}
           <nav
-            className="flex gap-1 rounded-lg border border-border bg-card/50 p-1"
+            className="mt-3 shrink-0 flex gap-1 rounded-lg border border-border bg-card/50 p-1"
             aria-label="Knowledge Center sections"
           >
             {tabs.map((tab) => (
@@ -87,9 +84,12 @@ function KnowledgeCenterPage() {
           </nav>
 
           {/* Tab Content */}
-          <div role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
+          <div
+            role="tabpanel"
+            aria-labelledby={`tab-${activeTab}`}
+            className="mt-3 flex-1 min-h-0 overflow-hidden"
+          >
             {activeTab === "rules" && <ComplianceRulesTab />}
-            {activeTab === "versions" && <RuleVersionsTab />}
             {activeTab === "documents" && <ReferenceDocumentsTab />}
           </div>
         </div>

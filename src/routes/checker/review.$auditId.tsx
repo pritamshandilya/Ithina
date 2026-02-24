@@ -206,8 +206,8 @@ function AuditReviewWorkspace() {
   if (auditLoading || violationsLoading) {
     return (
       <MainLayout>
-        <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl space-y-6">
+        <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+          <div className="mx-auto max-w-screen-2xl space-y-4">
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-40 w-full" />
             <Skeleton className="h-64 w-full" />
@@ -220,8 +220,8 @@ function AuditReviewWorkspace() {
   if (auditError || !audit) {
     return (
       <MainLayout>
-        <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-7xl space-y-6">
+        <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+          <div className="mx-auto max-w-screen-2xl space-y-4">
             <Button variant="ghost" asChild>
               <Link to="/checker/audit-review" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
                 <ArrowLeft className="h-4 w-4" />
@@ -251,8 +251,8 @@ function AuditReviewWorkspace() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
           {/* Header: Back + Title + View Full Report */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild size="sm">
@@ -273,7 +273,7 @@ function AuditReviewWorkspace() {
           </div>
 
           {/* Audit Summary Header (report-style) */}
-          <div className="rounded-xl border border-border bg-card p-6 shadow-sm">
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <header className="space-y-1">
                 <h1 className="text-2xl font-bold text-foreground">
@@ -452,7 +452,7 @@ function AuditReviewWorkspace() {
           </section>
 
           {/* Actions */}
-          <div className="rounded-lg border border-border bg-card p-6">
+          <div className="rounded-lg border border-border bg-card p-4">
             <h2 className="text-lg font-semibold text-foreground mb-4">Review Actions</h2>
             <div className="flex flex-wrap gap-3">
               <Button
@@ -486,7 +486,7 @@ function AuditReviewWorkspace() {
 
       {/* Approve Dialog */}
       <Modal isOpen={showApproveDialog} onClose={() => setShowApproveDialog(false)}>
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Approve Audit</h3>
           <p className="text-sm text-muted-foreground">
             Are you sure you want to approve this audit? This will mark it as compliant and complete the review.
@@ -508,7 +508,7 @@ function AuditReviewWorkspace() {
 
       {/* Return Dialog */}
       <Modal isOpen={showReturnDialog} onClose={() => setShowReturnDialog(false)}>
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Return Audit to Maker</h3>
           <p className="text-sm text-muted-foreground">
             Please provide a reason for returning this audit. The maker will see this message.
@@ -541,7 +541,7 @@ function AuditReviewWorkspace() {
 
       {/* Override Dialog */}
       <Modal isOpen={showOverrideDialog} onClose={() => setShowOverrideDialog(false)}>
-        <div className="rounded-lg border border-border bg-card p-6 space-y-4">
+        <div className="rounded-lg border border-border bg-card p-4 space-y-4">
           <h3 className="text-lg font-semibold text-foreground">Override AI Decision</h3>
           <p className="text-sm text-muted-foreground">
             You are about to override the AI decision and approve this audit manually. Please

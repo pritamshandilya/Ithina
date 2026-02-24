@@ -188,7 +188,7 @@ export function ShelfSelectionFlow({
                   </Button>
                 ) : (
                   <Button variant="outline" size="sm" asChild className="mt-2">
-                    <Link to="/maker/shelves">Go to Shelves</Link>
+                    <Link to="/maker/audits/planogram">Go to Planogram Audits</Link>
                   </Button>
                 )}
               </div>

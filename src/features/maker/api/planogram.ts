@@ -35,6 +35,7 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
   return PLANOGRAMS.map((p) => {
     const { planogram, metadata } = p;
     const fixture = planogram.fixture;
+    const loc = planogram.physicalLocation;
     const productCount =
       metadata?.totalSKUs ??
       fixture.shelves.reduce((sum, s) => sum + s.products.length, 0);
@@ -43,8 +44,17 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
       name: planogram.name,
       shelfCount: fixture.shelves.length,
       productCount,
-      dimensions: metadata ? `${fixture.width}×${fixture.height} ${fixture.units}` : undefined,
-      location: metadata?.location,
+      dimensions: `${fixture.width}×${fixture.height} ${planogram.storeConfig?.units ?? "mm"}`,
+      location: planogram.location ?? metadata?.location,
+      zone: loc?.zone,
+      aisle: loc?.aisle,
+      bay: loc?.bay,
+      section: loc?.section,
+      fixtureType: fixture.type,
+      fixtureId: fixture.fixtureId,
+      width: fixture.width,
+      height: fixture.height,
+      depth: fixture.depth,
     };
   });
 }
@@ -93,6 +103,44 @@ export async function saveShelfArrangement(
 
   createdPlanogramShelves.push(shelf);
   return shelf;
+}
+
+/** Overlay for planogram assignments to existing shelves (mock wireframe) */
+const assignPlanogramOverlays = new Map<string, { planogramId: string; arrangement: PlanogramArrangement }>();
+
+/**
+ * Assign a planogram to an existing shelf (for shelves created without a planogram).
+ *
+ * @param shelfId - Shelf to update
+ * @param planogramId - Planogram to associate
+ * @param arrangement - Arrangement from the planogram
+ * @returns Promise<Shelf | null> - Updated shelf or null if not found
+ */
+export async function assignPlanogramToShelf(
+  shelfId: string,
+  planogramId: string,
+  arrangement: PlanogramArrangement
+): Promise<Shelf | null> {
+  await delay(400);
+
+  assignPlanogramOverlays.set(shelfId, { planogramId, arrangement });
+
+  // Also update in-memory shelves if present
+  const idx = createdPlanogramShelves.findIndex((s) => s.id === shelfId);
+  if (idx >= 0) {
+    createdPlanogramShelves[idx] = {
+      ...createdPlanogramShelves[idx],
+      planogramId,
+      arrangement,
+    };
+    return createdPlanogramShelves[idx];
+  }
+
+  return { id: shelfId, planogramId, arrangement } as Shelf;
+}
+
+export function getAssignPlanogramOverlays(): Map<string, { planogramId: string; arrangement: PlanogramArrangement }> {
+  return assignPlanogramOverlays;
 }
 
 /**

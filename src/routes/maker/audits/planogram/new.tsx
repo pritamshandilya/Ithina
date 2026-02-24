@@ -21,14 +21,18 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   assignedShelvesKeys,
   useAssignedShelves,
+  useCreateShelf,
   usePlanogramById,
   usePlanogramList,
+  planogramShelfPreviewKeys,
 } from "@/features/maker/hooks";
 import { useStore } from "@/providers/store";
 import { saveShelfArrangement } from "@/features/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
+
+const BLANK_SHELF_VALUE = "__blank__";
 
 export const Route = createFileRoute("/maker/audits/planogram/new")({
   component: AddPlanogramPage,
@@ -40,6 +44,7 @@ function AddPlanogramPage() {
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useAssignedShelves();
+  const createShelfMutation = useCreateShelf();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
@@ -48,48 +53,65 @@ function AddPlanogramPage() {
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: planogramPayload, isLoading: planogramLoading } =
-    usePlanogramById(selectedPlanogramId || null);
+    usePlanogramById(
+      selectedPlanogramId && selectedPlanogramId !== BLANK_SHELF_VALUE
+        ? selectedPlanogramId
+        : null
+    );
 
   const duplicateNameError = useMemo(() => {
-    if (!shelfName.trim()) return null;
+    if (!shelfName.trim() || isSaving) return null;
     const exists = (shelves ?? []).some(
       (s) => s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
     );
     return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
-  }, [shelves, shelfName]);
+  }, [shelves, shelfName, isSaving]);
 
+  const isBlankShelf = selectedPlanogramId === BLANK_SHELF_VALUE;
   const canSave = useMemo(() => {
     return (
-      !!selectedPlanogramId &&
       !!shelfName.trim() &&
       !duplicateNameError &&
-      !isSaving
+      !isSaving &&
+      (isBlankShelf || !!selectedPlanogramId)
     );
-  }, [selectedPlanogramId, shelfName, duplicateNameError, isSaving]);
+  }, [selectedPlanogramId, shelfName, duplicateNameError, isSaving, isBlankShelf]);
 
   const handleSave = useCallback(async () => {
-    if (!canSave || !selectedPlanogramId) return;
+    if (!canSave) return;
     setIsSaving(true);
     setSaveError(null);
     try {
-      const arrangement: PlanogramArrangement = {
-        planogramId: selectedPlanogramId,
-        shelfOrder:
-          planogramPayload?.planogram.fixture.shelves.map((s) => ({
-            shelfId: `shelf-${s.shelfNumber}`,
-            productIds: s.products.map((p) => p.sku),
-          })) ?? [],
-      };
-      const shelf = await saveShelfArrangement(
-        shelfName.trim(),
-        selectedPlanogramId,
-        arrangement,
-        selectedStoreId
-      );
-      await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
-      toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
-      // navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId: shelf.id } });
-      navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: shelf.id } });
+      if (isBlankShelf) {
+        await createShelfMutation.mutateAsync({
+          aisleNumber: 1,
+          bayNumber: 1,
+          shelfName: shelfName.trim(),
+          description: "Blank shelf",
+        });
+        toast({ title: "Shelf created", description: "Your blank shelf has been created successfully." });
+        navigate({ to: "/maker/audits/planogram" });
+      } else if (selectedPlanogramId) {
+        const arrangement: PlanogramArrangement = {
+          planogramId: selectedPlanogramId,
+          shelfOrder:
+            planogramPayload?.planogram.fixture.shelves.map((s) => ({
+              shelfId: `shelf-${s.shelfNumber}`,
+              productIds: s.products.map((p) => p.sku),
+            })) ?? [],
+        };
+        const shelf = await saveShelfArrangement(
+          shelfName.trim(),
+          selectedPlanogramId,
+          arrangement,
+          selectedStoreId
+        );
+        await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+        // Prefetch shelf preview so edit page has data immediately (avoids brief error flash)
+        await queryClient.prefetchQuery({ queryKey: planogramShelfPreviewKeys.byShelfId(shelf.id) });
+        toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
+        navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: shelf.id } });
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
     } finally {
@@ -97,10 +119,12 @@ function AddPlanogramPage() {
     }
   }, [
     canSave,
+    isBlankShelf,
     selectedPlanogramId,
     shelfName,
     selectedStoreId,
     planogramPayload,
+    createShelfMutation,
     navigate,
     queryClient,
     toast,
@@ -112,10 +136,10 @@ function AddPlanogramPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
 
-          <header className="flex items-center gap-4">
+          <header className="flex items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
               <Link to="/maker/audits/planogram">
                 <ArrowLeft className="size-4" aria-hidden />
@@ -124,15 +148,13 @@ function AddPlanogramPage() {
             </Button>
             <div>
               <h1 className="text-2xl font-bold text-foreground">Add Planogram</h1>
-              <p className="text-sm text-muted-foreground">
-                Select a planogram from your provider, customize the arrangement, and save.
-              </p>
+              
             </div>
           </header>
 
-          <div className="grid gap-6 lg:grid-cols-2">
+          <div className="grid gap-3 lg:grid-cols-2">
             {/* Left: Inputs */}
-            <div className="space-y-6">
+            <div className="space-y-3">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Planogram details</CardTitle>
@@ -140,7 +162,7 @@ function AddPlanogramPage() {
                     Choose a planogram and give this shelf a name.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-3">
                   <div className="space-y-2">
                     <Label htmlFor="planogram-select">Planogram</Label>
                     {listLoading ? (
@@ -153,9 +175,10 @@ function AddPlanogramPage() {
                         aria-label="Select planogram"
                       >
                         <option value="">Select a planogram...</option>
+                        <option value={BLANK_SHELF_VALUE}>Create blank shelf</option>
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.shelfCount} shelves · {p.productCount} SKUs)
+                            {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves · {p.productCount} SKUs)
                           </option>
                         ))}
                       </Select>
@@ -201,7 +224,7 @@ function AddPlanogramPage() {
                     ) : (
                       <>
                         <Check className="size-4" aria-hidden />
-                        Save Planogram
+                        {isBlankShelf ? "Create Shelf" : "Save Planogram"}
                       </>
                     )}
                   </Button>
@@ -219,22 +242,32 @@ function AddPlanogramPage() {
               </CardHeader>
               <CardContent>
                 {!selectedPlanogramId ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-16 text-center">
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                       <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
                     </div>
                     <p className="font-medium text-foreground">No planogram loaded</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Select a planogram to preview and edit.
+                      Select a planogram to preview and edit, or create a blank shelf.
+                    </p>
+                  </div>
+                ) : isBlankShelf ? (
+                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center">
+                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
+                    </div>
+                    <p className="font-medium text-foreground">Blank shelf</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Create a shelf with no planogram. You can add products and configure it later.
                     </p>
                   </div>
                 ) : planogramLoading ? (
-                  <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Skeleton className="h-20 w-full" />
                     <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-32 w-full" />
                   </div>
                 ) : planogram && fixture ? (
-                  <div className="space-y-6">
+                  <div className="space-y-3">
                     {/* Summary stats */}
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -259,15 +292,41 @@ function AddPlanogramPage() {
                           Dimensions
                         </p>
                         <p className="text-sm font-semibold tabular-nums text-foreground">
-                          {fixture.width}×{fixture.height} {fixture.units}
+                          {fixture.width}×{fixture.height}×{fixture.depth}{" "}
+                          {planogram.storeConfig?.units ?? "mm"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Fixture type
+                        </p>
+                        <p className="text-sm font-medium text-foreground capitalize">
+                          {fixture.type?.replace(/_/g, " ") ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Zone
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {planogram.physicalLocation?.zone ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Aisle · Bay
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {planogram.physicalLocation?.aisle ?? "—"} ·{" "}
+                          {planogram.physicalLocation?.bay ?? "—"}
                         </p>
                       </div>
                       <div className="col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:col-span-3">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Location
+                          Section
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {metadata?.location ?? planogram.physicalLocation.bay}
+                          {planogram.physicalLocation?.section ?? planogram.location ?? "—"}
                         </p>
                       </div>
                     </div>

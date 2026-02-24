@@ -7,8 +7,8 @@
  * Access at: /maker/audits/planogram/:shelfId
  */
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check, Info } from "lucide-react";
+import { createFileRoute, Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
+import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
@@ -22,6 +22,7 @@ import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { updateShelfArrangement } from "@/features/maker/api/planogram";
+import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
   planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
@@ -67,11 +68,25 @@ function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
   }));
 }
 
+const PLANOGRAM_FALLBACK = "/maker/audits/planogram";
+
 function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const router = useRouter();
+  const navigate = useNavigate();
+  const location = useLocation();
   const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
+  const from = (location.state as { from?: string } | undefined)?.from;
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      router.history.back();
+    } else {
+      navigate({ to: from ?? PLANOGRAM_FALLBACK });
+    }
+  };
   const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -86,8 +101,10 @@ function PlanogramPreviewPage() {
   } | null>(null);
 
   useEffect(() => {
-    if (!preview?.planogramPayload.planogram.fixture.shelves) return;
-    const fixtureShelves = preview.planogramPayload.planogram.fixture.shelves;
+    if (!preview) return;
+    const payload = preview.planogramPayload ?? PLANOGRAM_POC_002;
+    if (!payload?.planogram?.fixture?.shelves) return;
+    const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
     let shelves = deepCopyShelves(fixtureShelves);
     const removed: PlanogramProduct[] = [];
@@ -144,17 +161,20 @@ function PlanogramPreviewPage() {
     setRemovedItems(removed);
     setHasChanges(false);
     setSelectedCategories(new Set());
-  }, [preview?.planogramPayload.planogram.fixture.shelves, preview?.shelf.arrangement]);
+  }, [preview]);
+
+  const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
+  const isPlaceholder = !!preview && !preview.planogramPayload;
 
   const shelfCapacities = useMemo(() => {
-    const orig = preview?.planogramPayload.planogram.fixture.shelves ?? [];
+    const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
     return Object.fromEntries(
       orig.map((s) => [
         s.shelfNumber,
         s.products.reduce((sum, p) => sum + p.facings, 0),
       ])
     );
-  }, [preview?.planogramPayload.planogram.fixture.shelves]);
+  }, [effectivePayload?.planogram?.fixture?.shelves]);
 
   const findProduct = useCallback(
     (shelfNumber: number, sku: string) => {
@@ -369,10 +389,11 @@ function PlanogramPreviewPage() {
   }, [onRemoveProduct]);
 
   const handleSave = useCallback(async () => {
-    if (!preview || !hasChanges || !shelfId) return;
+    const payload = preview?.planogramPayload;
+    if (!preview || !payload || !hasChanges || !shelfId) return;
     setIsSaving(true);
     try {
-      const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
+      const originalShelves = payload.planogram.fixture.shelves;
       const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
 
       for (const shelf of localShelves) {
@@ -441,11 +462,11 @@ function PlanogramPreviewPage() {
     toast,
   ]);
 
-  const planogram = preview?.planogramPayload.planogram;
-  const metadata = preview?.planogramPayload.metadata;
+  const planogram = effectivePayload?.planogram;
+  const metadata = effectivePayload?.metadata;
   const fixture = planogram?.fixture;
   const highDemandSkus =
-    preview?.planogramPayload.stockingRules?.highDemandProducts ?? [];
+    effectivePayload?.metadata?.stockingRules?.highDemandProducts ?? [];
 
   const baseShelves = useMemo(
     () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
@@ -487,14 +508,11 @@ function PlanogramPreviewPage() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-        <div className="mx-auto max-w-7xl space-y-6">
+      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
           <header className="flex flex-wrap items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/maker/audits/planogram">
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Back</span>
-              </Link>
+            <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
+              <ArrowLeft className="size-4" aria-hidden />
             </Button>
             <div className="min-w-0 flex-1">
               {isLoading ? (
@@ -519,7 +537,7 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
-            {hasChanges && (
+            {hasChanges && !isPlaceholder && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -547,15 +565,20 @@ function PlanogramPreviewPage() {
                 This shelf may not have planogram data, or it could not be loaded.
               </p>
               <Button asChild variant="outline" className="mt-4">
-                <Link to="/maker/audits/planogram">Back to list</Link>
+                <Link to={PLANOGRAM_FALLBACK}>Back to list</Link>
               </Button>
             </div>
           )}
 
           {preview && !isLoading && (
-            <div className="space-y-6">
+            <div className="space-y-3">
+              {isPlaceholder && (
+                <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
+                  Sample planogram for display. Assign a planogram to this shelf to save edits.
+                </div>
+              )}
               <div
-                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+                className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6"
                 role="region"
                 aria-label="Planogram summary metrics"
               >
@@ -583,24 +606,8 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              {fixture && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                  <Info
-                    className="size-4 shrink-0 text-muted-foreground"
-                    aria-hidden
-                  />
-                  <span className="text-sm text-foreground">
-                    Fixture: {fixture.width}×{fixture.height}×{fixture.depth}
-                    {fixture.units} · {fixture.type}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    Click name to edit · X to remove · Drag to reorder or move between shelves
-                  </span>
-                </div>
-              )}
-
               <div>
-                <p className="mb-2 text-xs font-medium text-foreground">
+                <p className="mb-0.5 text-xs font-medium text-foreground">
                   Categories
                 </p>
                 <CategoryFilterTags
@@ -614,8 +621,8 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                <div className="min-w-0 flex-1 space-y-6">
+              <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+                <div className="min-w-0 flex-1 space-y-2">
                   {shelvesToShow.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
                       <p className="text-sm font-medium text-muted-foreground">
@@ -632,6 +639,7 @@ function PlanogramPreviewPage() {
                         <ShelfRow
                           key={shelf.shelfNumber}
                           shelf={shelf}
+                          fixture={fixture}
                           highDemandSkus={highDemandSkus}
                           editHandlers={{
                             onEditName,
@@ -668,18 +676,19 @@ function PlanogramPreviewPage() {
                 />
               </div>
 
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+              <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
                 <div className="min-w-0 overflow-x-auto">
                   <div className="min-w-275">
                     <ProductDetailsTable
                       shelves={shelvesToShow}
                       highDemandSkus={highDemandSkus}
+                      units={fixture?.units}
                     />
                   </div>
                 </div>
-                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
+                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-3">
                   <StockingRulesSection
-                    stockingRules={preview.planogramPayload.stockingRules}
+                    stockingRules={effectivePayload?.metadata?.stockingRules}
                   />
                 </div>
               </div>
@@ -690,7 +699,7 @@ function PlanogramPreviewPage() {
             <div className="rounded-xl border border-border bg-card/80 p-6 text-center">
               <p className="text-muted-foreground">Planogram not found.</p>
               <Button asChild variant="outline" className="mt-4">
-                <Link to="/maker/audits/planogram">Back to list</Link>
+                <Link to={PLANOGRAM_FALLBACK}>Back to list</Link>
               </Button>
             </div>
           )}

@@ -38,8 +38,8 @@ function DetailedReportPage() {
 
     return (
         <MainLayout>
-            <div className="min-h-screen bg-[#070b14] text-slate-200 font-sans p-4 sm:p-6 lg:p-8">
-                <div className="mx-auto max-w-7xl flex flex-col gap-6">
+            <div className="min-h-screen bg-[#070b14] text-slate-200 font-sans pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+                <div className="mx-auto max-w-screen-2xl flex flex-col gap-6">
                 {/* Header */}
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-6">

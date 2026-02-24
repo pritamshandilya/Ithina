@@ -43,7 +43,7 @@ export function SendForApprovalModal({
   return (
     <Modal isOpen={isOpen} onClose={handleClose} showCloseButton>
       <div
-        className="rounded-xl border border-border bg-card p-6 shadow-lg"
+        className="rounded-xl border border-border bg-card p-4 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-3">

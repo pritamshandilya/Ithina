@@ -32,7 +32,7 @@ function TestHeader() {
           <p className="text-sm text-muted-foreground">
             Shows all information: User, Store, Date, and Online status
           </p>
-          <HeaderContextBar />
+          <HeaderContextBar showSyncStatus />
         </section>
 
         {/* Without Sync Status */}
@@ -61,7 +61,7 @@ function TestHeader() {
               <p className="text-sm font-medium text-card-foreground mb-2">
                 Desktop View (full width):
               </p>
-              <HeaderContextBar />
+              <HeaderContextBar showSyncStatus />
             </div>
 
             {/* Tablet simulation */}
@@ -70,7 +70,7 @@ function TestHeader() {
                 Tablet View (768px):
               </p>
               <div className="max-w-[768px]">
-                <HeaderContextBar />
+                <HeaderContextBar showSyncStatus />
               </div>
             </div>
 
@@ -80,7 +80,7 @@ function TestHeader() {
                 Mobile View (375px):
               </p>
               <div className="max-w-[375px]">
-                <HeaderContextBar />
+                <HeaderContextBar showSyncStatus />
               </div>
             </div>
           </div>

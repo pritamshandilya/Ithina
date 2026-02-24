@@ -71,7 +71,7 @@ export function MakerAssignedPreview({
 
         {hasMore && (
           <Link
-            to="/maker/shelves"
+            to="/maker/audits/planogram"
             className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/90 transition-colors"
           >
             View all
@@ -102,10 +102,10 @@ export function MakerAssignedPreview({
       {shelves.length > 0 && !hasMore && (
         <div className="flex justify-end">
           <Link
-            to="/maker/shelves"
+            to="/maker/audits/planogram"
             className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/90 transition-colors"
           >
-            Manage shelves
+            View planogram audits
             <ChevronRight className="size-4" aria-hidden />
           </Link>
         </div>

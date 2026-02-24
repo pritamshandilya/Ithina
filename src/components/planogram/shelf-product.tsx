@@ -54,7 +54,7 @@ export function ShelfProduct({
   return (
     <div
       className={cn(
-        "group relative flex min-w-0 flex-col border border-border p-2 transition-colors",
+        "group relative flex min-w-0 flex-col border border-border px-1 py-0.5 transition-colors",
         shapeClass,
         categoryColor,
         isHighDemand && "ring-[3px] ring-yellow-400/80 ring-offset-1",
@@ -85,11 +85,11 @@ export function ShelfProduct({
         </span>
       )}
       {/* SVG product shapes: facings columns × depth layers */}
-      <div className="flex items-end justify-center gap-0.5 py-1">
+      <div className="flex items-end justify-center gap-0.5">
         {Array.from({ length: product.facings }, (_, colIdx) => (
           <div
             key={colIdx}
-            className="relative flex h-14 flex-1 items-end justify-center"
+            className="relative flex h-10 flex-1 items-end justify-center"
           >
             {Array.from({ length: depthCount }, (_, depthIdx) => {
               const t = depthCount > 1 ? depthIdx / (depthCount - 1) : 1;
@@ -100,7 +100,7 @@ export function ShelfProduct({
               return (
                 <div
                   key={depthIdx}
-                  className="absolute bottom-0 left-1/2 h-12 w-6"
+                  className="absolute bottom-0 left-1/2 h-8 w-5"
                   style={{
                     opacity,
                     transform: `translateX(calc(-50% + ${translateX}px)) translateY(${-translateY}px) scale(${scale})`,
@@ -116,7 +116,7 @@ export function ShelfProduct({
       </div>
       <div
         className={cn(
-          "min-w-0 truncate text-xs font-medium text-slate-900 dark:text-foreground",
+          "min-w-0 truncate text-[11px] font-medium leading-tight text-slate-900 dark:text-foreground",
           isHighDemand && "pl-10",
           isEditable && "pr-8"
         )}
@@ -134,7 +134,7 @@ export function ShelfProduct({
       </div>
       <div
         className={cn(
-          "min-w-0 truncate text-[10px] text-stone-200 dark:text-muted-foreground",
+          "min-w-0 truncate text-[10px] leading-tight text-stone-200 dark:text-muted-foreground",
           isHighDemand && "pl-10"
         )}
       >
@@ -159,7 +159,7 @@ export function ShelfProduct({
           className="text-stone-300 dark:text-muted-foreground"
         />
       ) : (
-        <p className="mt-1 text-[10px] font-mono text-stone-300 dark:text-muted-foreground">
+        <p className="mt-0.5 text-[10px] font-mono leading-tight text-stone-300 dark:text-muted-foreground">
           ×{product.facings} D{product.depthCount} ={totalUnits}
         </p>
       )}

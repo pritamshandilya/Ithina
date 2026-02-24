@@ -22,7 +22,44 @@ function AdhocReport() {
     const columns: DataTableColumn<AdhocAnalysis>[] = [
         { title: "S.NO", field: "sNo", width: 80 },
         { title: "NAME", field: "name", minWidth: 250 },
-        { title: "DATE", field: "date" },
+        {
+            title: "ZONE",
+            field: "zone",
+            width: 100,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
+            },
+        },
+        {
+            title: "SECTION",
+            field: "section",
+            minWidth: 140,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.section ?? "—"}</span>`;
+            },
+        },
+        {
+            title: "FIXTURE",
+            field: "fixtureType",
+            width: 120,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
+                return `<span class="text-sm font-medium text-foreground">${type}</span>`;
+            },
+        },
+        {
+            title: "DIMENSIONS",
+            field: "dimensions",
+            width: 120,
+            formatter: (cell: unknown) => {
+                const row = (cell as { getData: () => AdhocAnalysis }).getData();
+                return `<span class="text-sm font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
+            },
+        },
+        { title: "DATE", field: "date", width: 140 },
         { title: "PRODUCTS", field: "products", width: 120 },
         { title: "ISSUES", field: "issues", width: 120 },
         {
@@ -54,8 +91,8 @@ function AdhocReport() {
 
     return (
         <MainLayout>
-            <div className="min-h-screen bg-primary p-4 sm:p-6 lg:p-8">
-                <div className="mx-auto max-w-7xl">
+            <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+                <div className="mx-auto w-full max-w-screen-2xl space-y-4">
                     <ReportPage
                         title="Adhoc Report"
                         subtitle="Downtown Flagship — Adhoc analyses not linked to any shelf"
@@ -64,6 +101,7 @@ function AdhocReport() {
                         tableColumns={columns}
                         tableData={ADHOC_REPORT_MOCK_DATA}
                         tableProps={{
+                            layout: "fitData",
                             onRowClick: handleRowClick,
                         }}
                     />

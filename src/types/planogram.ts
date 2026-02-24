@@ -31,6 +31,9 @@ export interface PlanogramShelfDef {
   name: string;
   verticalPosition: number;
   height: number;
+  /** Optional per-shelf dimensions from payloads that provide them */
+  width?: number;
+  depth?: number;
   products: PlanogramProduct[];
 }
 
@@ -106,6 +109,18 @@ export interface PlanogramSummary {
   productCount: number;
   dimensions?: string;
   location?: string;
+  /** From physicalLocation */
+  zone?: string;
+  aisle?: string;
+  bay?: string;
+  section?: string;
+  /** From fixture */
+  fixtureType?: string;
+  fixtureId?: string;
+  /** W×H×D in store units */
+  width?: number;
+  height?: number;
+  depth?: number;
 }
 
 /** User's edited arrangement (what gets saved) */

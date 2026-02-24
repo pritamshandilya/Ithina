@@ -1,4 +1,7 @@
-export { CategoryFilterTags, type CategoryFilterTagsProps } from "./category-filter-tags";
+export {
+  CategoryFilterTags,
+  type CategoryFilterTagsProps,
+} from "./category-filter-tags";
 export { InlineEdit, type InlineEditProps } from "./inline-edit";
 export {
   InlineFacingsDepthEdit,
@@ -36,3 +39,4 @@ export {
   StockingRulesSection,
   type StockingRulesSectionProps,
 } from "./stocking-rules-section";
+export { ShelfInfoModal } from "./shelf-info-modal";

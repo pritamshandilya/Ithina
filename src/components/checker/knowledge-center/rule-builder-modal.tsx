@@ -2,12 +2,12 @@
  * Rule Builder Modal
  *
  * Unified form for create and edit: Rule Set Name, rules with name, description, category (VISUAL, SAFETY, PROFITABILITY, EFFICIENCY), threshold.
- * + Add rule creates empty fields at the bottom (create mode only).
- * View/Edit: Same form, prepopulated with rule values.
+ * Add Rule and Delete rule available in both create and edit modes (when not retired).
+ * View/Edit: Same form, prepopulated with rule values. Supports multiple rules in a set.
  */
 
-import { useState, useCallback, useEffect } from "react";
-import { Plus, Trash2, X, Settings, Save } from "lucide-react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
+import { FileText, Link2, Plus, Save, Settings, Trash2, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +18,9 @@ import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import {
   useCreateComplianceRule,
+  useReferenceDocuments,
+  useUpdateReferenceDocumentLinks,
+  useUploadReferenceDocument,
   useUpdateComplianceRule,
 } from "@/features/checker/hooks";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +57,8 @@ export interface RuleBuilderModalProps {
   isOpen: boolean;
   onClose: () => void;
   rule?: ComplianceRule | null;
+  /** When editing a rule set, pass all rules in the set for pre-fill. Omit to use single rule. */
+  rulesInSet?: ComplianceRule[];
   createdBy: string;
 }
 
@@ -61,11 +66,16 @@ export function RuleBuilderModal({
   isOpen,
   onClose,
   rule,
+  rulesInSet,
   createdBy,
 }: RuleBuilderModalProps) {
   const { toast } = useToast();
   const createRule = useCreateComplianceRule();
   const updateRule = useUpdateComplianceRule();
+  const { data: documents } = useReferenceDocuments();
+  const updateLinks = useUpdateReferenceDocumentLinks();
+  const uploadDocument = useUploadReferenceDocument();
+  const docInputRef = useRef<HTMLInputElement>(null);
 
   const isEdit = Boolean(rule);
   const isRetired = rule?.status === "Retired";
@@ -76,22 +86,25 @@ export function RuleBuilderModal({
     createEmptyRule(crypto.randomUUID()),
   ]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [docSearch, setDocSearch] = useState("");
 
   // Sync form when rule prop changes (view/edit)
   useEffect(() => {
     const t = setTimeout(() => {
       if (rule) {
+        const rulesToLoad = rulesInSet && rulesInSet.length > 0 ? rulesInSet : [rule];
         setRuleSetName(rule.ruleSetName ?? rule.ruleName ?? "");
-        setRules([
-          {
-            id: rule.ruleId,
-            name: rule.ruleName,
-            description: rule.description ?? "",
-            category: rule.ruleType,
-            threshold: rule.expectedValue,
-            enabled: rule.enabled ?? true,
-          },
-        ]);
+        setRules(
+          rulesToLoad.map((r) => ({
+            id: r.ruleId,
+            name: r.ruleName,
+            description: r.description ?? "",
+            category: r.ruleType,
+            threshold: r.expectedValue,
+            enabled: r.enabled ?? true,
+          }))
+        );
       } else {
         setRuleSetName("");
         setRules([createEmptyRule(crypto.randomUUID())]);
@@ -99,7 +112,30 @@ export function RuleBuilderModal({
       setErrors({});
     }, 0);
     return () => clearTimeout(t);
-  }, [rule]);
+  }, [rule, rulesInSet]);
+
+  useEffect(() => {
+    if (!rule || !documents) {
+      if (!isOpen) {
+        setSelectedDocumentIds([]);
+        setDocSearch("");
+      }
+      return;
+    }
+
+    const idsInScope = new Set((rulesInSet ?? [rule]).map((r) => r.ruleId));
+    const linkedDocIds = documents
+      .filter((doc) => doc.linkedRuleIds.some((id) => idsInScope.has(id)))
+      .map((doc) => doc.id);
+    setSelectedDocumentIds(linkedDocIds);
+  }, [rule, rulesInSet, documents, isOpen]);
+
+  const filteredDocuments = useMemo(() => {
+    if (!documents) return [];
+    if (!docSearch.trim()) return documents;
+    const q = docSearch.toLowerCase();
+    return documents.filter((d) => d.name.toLowerCase().includes(q));
+  }, [documents, docSearch]);
 
   const addRule = useCallback(() => {
     setRules((prev) => [...prev, createEmptyRule(crypto.randomUUID())]);
@@ -125,6 +161,63 @@ export function RuleBuilderModal({
     setRuleSetName("");
     setRules([createEmptyRule(crypto.randomUUID())]);
     setErrors({});
+    setSelectedDocumentIds([]);
+    setDocSearch("");
+  };
+
+  const syncDocumentLinks = useCallback(
+    async (targetRuleIds: string[]) => {
+      if (!documents || targetRuleIds.length === 0) return;
+
+      for (const doc of documents) {
+        const shouldLink = selectedDocumentIds.includes(doc.id);
+        const hasAnyTargetLink = targetRuleIds.some((id) => doc.linkedRuleIds.includes(id));
+        if (shouldLink === hasAnyTargetLink) continue;
+
+        const nextRuleIds = shouldLink
+          ? [...new Set([...doc.linkedRuleIds, ...targetRuleIds])]
+          : doc.linkedRuleIds.filter((id) => !targetRuleIds.includes(id));
+
+        await updateLinks.mutateAsync({ documentId: doc.id, linkedRuleIds: nextRuleIds });
+      }
+    },
+    [documents, selectedDocumentIds, updateLinks]
+  );
+
+  const handleUploadReferenceDoc = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      toast({
+        title: "Invalid file type",
+        description: "Only PDF documents are supported.",
+        variant: "destructive",
+      });
+      e.target.value = "";
+      return;
+    }
+
+    uploadDocument.mutate(
+      { name: file.name, uploadedBy: createdBy, linkedRuleIds: [] },
+      {
+        onSuccess: (doc) => {
+          setSelectedDocumentIds((prev) => [...new Set([...prev, doc.id])]);
+          toast({
+            title: "Document uploaded",
+            description: "Document is ready and selected for this rule set.",
+          });
+          e.target.value = "";
+        },
+        onError: (err) => {
+          toast({
+            title: "Upload failed",
+            description: err instanceof Error ? err.message : "Could not upload document.",
+            variant: "destructive",
+          });
+          e.target.value = "";
+        },
+      }
+    );
   };
 
   const validateCreate = (): boolean => {
@@ -146,10 +239,11 @@ export function RuleBuilderModal({
   const validateEdit = (): boolean => {
     const next: Record<string, string> = {};
     if (!ruleSetName.trim()) next.ruleSetName = "Rule set name is required.";
-    const r = rules[0];
-    if (r) {
-      if (!r.name.trim()) next[`rule-${r.id}-name`] = "Rule name is required.";
-    }
+    const enabledRules = rules.filter((r) => r.enabled);
+    if (enabledRules.length === 0) next.rules = "At least one rule must be enabled.";
+    rules.forEach((r) => {
+      if (r.enabled && !r.name.trim()) next[`rule-${r.id}-name`] = "Rule name is required.";
+    });
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -168,6 +262,7 @@ export function RuleBuilderModal({
       const ruleSetId = crypto.randomUUID();
       let successCount = 0;
       let lastError: Error | null = null;
+      const createdRuleIds: string[] = [];
 
       for (const r of rulesToSave) {
         const payload: CreateRuleInput = {
@@ -183,7 +278,8 @@ export function RuleBuilderModal({
           enabled: r.enabled,
         };
         try {
-          await createRule.mutateAsync(payload);
+          const created = await createRule.mutateAsync(payload);
+          createdRuleIds.push(created.ruleId);
           successCount += 1;
         } catch (err) {
           lastError = err instanceof Error ? err : new Error(String(err));
@@ -191,6 +287,7 @@ export function RuleBuilderModal({
       }
 
       if (successCount > 0) {
+        await syncDocumentLinks(createdRuleIds);
         toast({
           title: "Saved as draft",
           description: `${successCount} rule(s) saved as Draft.`,
@@ -207,7 +304,7 @@ export function RuleBuilderModal({
       }
       return successCount > 0;
     },
-    [ruleSetName, rules, createdBy, createRule, onClose, toast]
+    [ruleSetName, rules, createdBy, createRule, onClose, syncDocumentLinks, toast]
   );
 
   const handleSubmitCreate = async () => {
@@ -215,48 +312,88 @@ export function RuleBuilderModal({
     await saveAsDraft(false);
   };
 
-  const handleSubmitEdit = () => {
+  const handleSubmitEdit = async () => {
     if (!validateEdit() || !rule || isRetired) return;
 
-    const r = rules[0];
-    if (!r) return;
+    const name = ruleSetName.trim();
+    const ruleSetId = rule.ruleSetId ?? rule.ruleId;
+    const ruleSetNameForCreate = rule.ruleSetName ?? rule.ruleName ?? name;
+    const rulesToSave = rules.filter((r) => r.enabled && r.name.trim());
+    if (rulesToSave.length === 0) return;
 
-    const payload: UpdateRuleInput = {
-      ruleName: r.name.trim(),
-      ruleType: r.category,
-      shelfType: rule.shelfType,
-      expectedValue: r.threshold.trim() || "N/A",
-      tolerance: rule.tolerance,
-      severity: rule.severity,
-      updatedBy: createdBy,
-      changeSummary: undefined,
-    };
-    updateRule.mutate(
-      { ruleId: rule.ruleId, payload },
-      {
-        onSuccess: () => {
-          toast({ title: "Rule updated", description: "The rule has been updated." });
-          resetForm();
-          onClose();
-        },
-        onError: (err) => {
-          toast({
-            title: "Update failed",
-            description: err instanceof Error ? err.message : "Could not update rule.",
-            variant: "destructive",
-          });
-        },
+    const existingRuleIds = new Set((rulesInSet ?? [rule]).map((r) => r.ruleId));
+    let successCount = 0;
+    let lastError: Error | null = null;
+    const syncedRuleIds: string[] = [];
+
+    for (const r of rulesToSave) {
+      const isExisting = existingRuleIds.has(r.id);
+      if (isExisting) {
+        const payload: UpdateRuleInput = {
+          ruleName: r.name.trim(),
+          ruleType: r.category,
+          shelfType: rule.shelfType,
+          expectedValue: r.threshold.trim() || "N/A",
+          tolerance: rule.tolerance,
+          severity: rule.severity,
+          updatedBy: createdBy,
+          changeSummary: undefined,
+        };
+        try {
+          await updateRule.mutateAsync({ ruleId: r.id, payload });
+          syncedRuleIds.push(r.id);
+          successCount += 1;
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
+      } else {
+        const payload: CreateRuleInput = {
+          ruleName: r.name.trim(),
+          ruleType: r.category,
+          shelfType: rule.shelfType,
+          expectedValue: r.threshold.trim() || "N/A",
+          severity: rule.severity,
+          createdBy,
+          description: r.description.trim() || undefined,
+          ruleSetId,
+          ruleSetName: ruleSetNameForCreate,
+          enabled: r.enabled,
+        };
+        try {
+          const created = await createRule.mutateAsync(payload);
+          syncedRuleIds.push(created.ruleId);
+          successCount += 1;
+        } catch (err) {
+          lastError = err instanceof Error ? err : new Error(String(err));
+        }
       }
-    );
+    }
+
+    if (successCount > 0) {
+      await syncDocumentLinks(syncedRuleIds);
+      toast({
+        title: "Rules saved",
+        description: `${successCount} rule(s) updated.`,
+      });
+      resetForm();
+      onClose();
+    }
+    if (lastError) {
+      toast({
+        title: "Some rules failed",
+        description: lastError.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = () => {
-    if (isEdit) handleSubmitEdit();
-    else handleSubmitCreate();
+    if (isEdit) void handleSubmitEdit();
+    else void handleSubmitCreate();
   };
 
   const handleClose = async () => {
-    if (createRule.isPending || updateRule.isPending) return;
+    if (createRule.isPending || updateRule.isPending || uploadDocument.isPending || updateLinks.isPending) return;
 
     if (isEdit) {
       resetForm();
@@ -276,13 +413,13 @@ export function RuleBuilderModal({
     }
   };
 
-  const isPending = createRule.isPending || updateRule.isPending;
+  const isPending = createRule.isPending || updateRule.isPending || uploadDocument.isPending || updateLinks.isPending;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose} className="max-w-4xl">
       <div className="rounded-lg border border-border bg-card shadow-lg max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-border shrink-0">
+        <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border shrink-0">
           <div className="flex items-center gap-2">
             <div className="rounded-lg bg-accent/10 p-2">
               <Settings className="size-5 text-accent" />
@@ -293,7 +430,8 @@ export function RuleBuilderModal({
               </CardTitle>
             </CardHeader>
           </div>
-          <button
+          <div className="flex items-center gap-2">
+            <button
             type="button"
             onClick={handleClose}
             className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -301,10 +439,11 @@ export function RuleBuilderModal({
           >
             <X className="size-4" />
           </button>
+          </div>
         </div>
 
         {/* Content - unified form for create and edit */}
-        <div className="flex-1 min-h-0 flex flex-col px-6 py-4">
+        <div className="flex-1 min-h-0 flex flex-col px-5 py-3">
           <div className="flex flex-col min-h-0 flex-1 gap-4">
             {isEdit && rule?.ruleId && (
               <p className="text-sm text-muted-foreground shrink-0">Rule ID: {rule.ruleId}</p>
@@ -324,11 +463,82 @@ export function RuleBuilderModal({
                 disabled={isRetired}
               />
             </FormField>
+
+            <div className="shrink-0 rounded-lg border border-border bg-card/40 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Reference Documents</p>
+                  <p className="text-xs text-muted-foreground">
+                    Attach policy docs used to define this rule set.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={docInputRef}
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleUploadReferenceDoc}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => docInputRef.current?.click()}
+                    disabled={uploadDocument.isPending}
+                  >
+                    <Upload className="size-4" />
+                    {uploadDocument.isPending ? "Uploading..." : "Upload PDF"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="mt-2 relative">
+                <Input
+                  placeholder="Search documents..."
+                  value={docSearch}
+                  onChange={(e) => setDocSearch(e.target.value)}
+                  className="h-8 text-sm"
+                />
+              </div>
+
+              <div className="mt-2 max-h-28 overflow-y-auto rounded-md border border-border/80">
+                {filteredDocuments.length === 0 ? (
+                  <p className="p-2 text-xs text-muted-foreground">No documents available.</p>
+                ) : (
+                  filteredDocuments.map((doc) => (
+                    <label
+                      key={doc.id}
+                      className="flex cursor-pointer items-center justify-between gap-2 border-b border-border/70 px-2 py-1.5 text-sm last:border-b-0 hover:bg-muted/40"
+                    >
+                      <span className="min-w-0 truncate flex items-center gap-1.5">
+                        <FileText className="size-3.5 shrink-0 text-muted-foreground" />
+                        {doc.name}
+                      </span>
+                      <Checkbox
+                        checked={selectedDocumentIds.includes(doc.id)}
+                        onCheckedChange={(checked: boolean | "indeterminate") => {
+                          setSelectedDocumentIds((prev) =>
+                            checked === true
+                              ? [...new Set([...prev, doc.id])]
+                              : prev.filter((id) => id !== doc.id)
+                          );
+                        }}
+                      />
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1">
+                <Link2 className="size-3" />
+                Links are saved when you save this rule set.
+              </p>
+            </div>
             <div className="flex items-center justify-between shrink-0">
               <h3 className="text-sm font-semibold text-foreground">
                 Rules ({rules.length})
               </h3>
-              {!isEdit && (
+              {!isRetired && (
                 <Button
                   type="button"
                   variant="outline"
@@ -361,11 +571,9 @@ export function RuleBuilderModal({
                     <th className="text-left p-2 font-medium text-foreground" scope="col">
                       Threshold
                     </th>
-                    {!isEdit && (
-                      <th className="text-left p-2 w-10" scope="col">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    )}
+                    <th className="text-left p-2 w-10" scope="col">
+                      <span className="sr-only">Actions</span>
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -379,10 +587,10 @@ export function RuleBuilderModal({
                           id={`enabled-${r.id}`}
                           checked={r.enabled}
                           onCheckedChange={(checked: boolean | "indeterminate") =>
-                            !isEdit && updateRuleItem(r.id, { enabled: checked === true })
+                            updateRuleItem(r.id, { enabled: checked === true })
                           }
                           className="mt-1"
-                          disabled={isEdit}
+                          disabled={isRetired}
                         />
                       </td>
                       <td className="p-2 align-top">
@@ -434,22 +642,20 @@ export function RuleBuilderModal({
                           disabled={isRetired}
                         />
                       </td>
-                      {!isEdit && (
-                        <td className="p-2 align-top">
-                          {rules.length > 1 ? (
-                            <button
-                              type="button"
-                              onClick={() => removeRule(r.id)}
-                              className="rounded p-2 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
-                              aria-label="Delete rule"
-                            >
-                              <Trash2 className="size-4" />
-                            </button>
-                          ) : (
-                            <span className="w-10 block" aria-hidden />
-                          )}
-                        </td>
-                      )}
+                      <td className="p-2 align-top">
+                        {!isRetired && rules.length > 1 ? (
+                          <button
+                            type="button"
+                            onClick={() => removeRule(r.id)}
+                            className="rounded p-2 text-muted-foreground hover:bg-destructive/20 hover:text-destructive transition-colors"
+                            aria-label="Delete rule"
+                          >
+                            <Trash2 className="size-4" />
+                          </button>
+                        ) : (
+                          <span className="w-10 block" aria-hidden />
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -467,7 +673,7 @@ export function RuleBuilderModal({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 border-t border-border px-6 py-4 shrink-0">
+        <div className="flex justify-end gap-2 border-t border-border px-5 py-3 shrink-0">
           <Button
             variant="outline"
             onClick={handleClose}

@@ -1,13 +1,16 @@
 /**
  * Checker Hooks - Barrel Export
- * 
+ *
  * Centralized exports for all checker-specific TanStack Query hooks.
  * Import these hooks in your components to fetch and mutate checker data.
  */
 
 // Query Hooks
 export { useStores, storesKeys } from "./useStores";
-export { useComplianceOverview, complianceOverviewKeys } from "./useComplianceOverview";
+export {
+  useComplianceOverview,
+  complianceOverviewKeys,
+} from "./useComplianceOverview";
 export {
   useCheckerDashboardStats,
   checkerDashboardStatsKeys,
@@ -20,7 +23,10 @@ export {
   notificationsKeys,
 } from "./useNotifications";
 export { useRuleInfo, ruleInfoKeys } from "./useRuleInfo";
-export { useOverrideActivity, overrideActivityKeys } from "./useOverrideActivity";
+export {
+  useOverrideActivity,
+  overrideActivityKeys,
+} from "./useOverrideActivity";
 export { usePublishedAudits, publishedAuditsKeys } from "./usePublishedAudits";
 
 // Mutation Hooks
@@ -28,6 +34,7 @@ export {
   useApproveAudit,
   useReturnAudit,
   useOverrideAndApprove,
+  useDeleteAudit,
 } from "./useAuditActions";
 
 // Audit Detail Hooks

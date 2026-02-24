@@ -4,6 +4,7 @@ import {
   ChevronRight,
   FileBarChart,
   FileSignature,
+  History,
   LayoutDashboard,
   LayoutGrid,
   Library,
@@ -51,6 +52,10 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
+  // Shelves: active on /checker/shelf and all sub-routes
+  if (item.to === "/checker/shelf") {
+    return pathname === "/checker/shelf" || pathname.startsWith("/checker/shelf/");
+  }
   // My Audits: active on /maker/audits/*
   if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
     return pathname.startsWith("/maker/audits");
@@ -91,13 +96,14 @@ export default function Sidenav() {
   }, [location.pathname]);
 
   const makerItems: NavItem[] = [
-    { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
+    // Shelves - commented out, no longer necessary for maker
+    // { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
     { label: "Approvals", to: "/maker/manual-audits", icon: FileSignature },
   ];
 
   const checkerItems: NavItem[] = [
     { label: "Audit Review", to: "/checker/audit-review", icon: ShieldCheck },
-    { label: "Shelves", to: "/checker/shelves", icon: Rows3 },
+    { label: "Shelves", to: "/checker/shelf", icon: Rows3 },
     { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
     {
       label: "Reports",
@@ -217,6 +223,20 @@ export default function Sidenav() {
                       </SidebarMenuSubItem>
                     </SidebarMenuSub>
                   )}
+                </SidebarMenuItem>
+              )}
+              {role === "maker" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith("/maker/historical-analysis")}
+                    tooltip="Historical Analysis"
+                  >
+                    <Link to="/maker/historical-analysis">
+                      <History className="size-4 shrink-0" />
+                      Historical Analysis
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
               {roleItems.map((item) => {

@@ -16,7 +16,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { Camera, ClipboardList, AlertCircle } from "lucide-react";
+import { Camera, ClipboardList, AlertCircle, Check, X, Trash2 } from "lucide-react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -28,12 +28,19 @@ export interface AuditQueueCardProps {
    * The audit to display
    */
   audit: CheckerAudit;
-  
+
   /**
    * Click handler for reviewing the audit
    */
-  onClick?: (auditId: string) => void;
-  
+  onClick?: (auditId: string, event?: React.MouseEvent | React.KeyboardEvent) => void;
+
+  /**
+   * Action handlers
+   */
+  onApprove?: (auditId: string) => void;
+  onReject?: (auditId: string) => void;
+  onDelete?: (auditId: string) => void;
+
   /**
    * Optional className for styling
    */
@@ -75,17 +82,24 @@ function getInitials(name: string): string {
  * Card displaying audit information in the review queue.
  * Entire card is clickable to open review workspace.
  */
-export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProps) {
+export function AuditQueueCard({
+  audit,
+  onClick,
+  onApprove,
+  onReject,
+  onDelete,
+  className
+}: AuditQueueCardProps) {
   const isClickable = Boolean(onClick);
   const complianceScore = audit.complianceScore || 0;
   const isCritical = complianceScore < 50;
   const hasViolations = audit.violationCount > 0;
   const complianceColor = getComplianceColor(complianceScore);
   const complianceBg = getComplianceBgColor(complianceScore);
-  
-  const handleClick = () => {
+
+  const handleClick = (e: React.MouseEvent) => {
     if (onClick) {
-      onClick(audit.id);
+      onClick(audit.id, e);
     }
   };
 
@@ -125,19 +139,19 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
             {audit.shelfInfo.shelfName}
           </p>
         </div>
-        
+
         {/* Compliance Score Badge - Shown when AI analysis has run */}
         {audit.complianceScore !== undefined ? (
-          <div 
+          <div
             className="flex flex-col items-center justify-center rounded-lg px-4 py-2 shrink-0"
-            style={{ 
+            style={{
               backgroundColor: complianceBg,
               borderWidth: "2px",
               borderStyle: "solid",
               borderColor: complianceColor,
             }}
           >
-            <span 
+            <span
               className="text-2xl font-bold tabular-nums"
               style={{ color: complianceColor }}
             >
@@ -173,7 +187,7 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
               : "Not submitted"}
           </p>
         </div>
-        
+
         {/* Audit Mode Badge */}
         <span
           className={cn(
@@ -205,8 +219,8 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
           </span>
           {hasViolations && (
             <span className="flex items-center gap-1">
-              <AlertCircle 
-                className="size-3" 
+              <AlertCircle
+                className="size-3"
                 style={{ color: complianceColor }}
                 aria-hidden="true"
               />
@@ -223,21 +237,56 @@ export function AuditQueueCard({ audit, onClick, className }: AuditQueueCardProp
         </div>
       </div>
 
-      {/* Review Button */}
-      {onClick && (
-        <div className="pt-2 border-t border-border">
-          <Button
-            className="w-full bg-accent text-white hover:bg-accent/90"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClick(audit.id);
-            }}
-            aria-label={`Review audit for ${audit.shelfInfo.shelfName}`}
-          >
-            Review Audit
-          </Button>
+      {/* Action Buttons */}
+      <div className="flex items-center gap-2 pt-2 border-t border-border">
+        <div className="grid grid-cols-3 gap-2 w-full">
+          {onApprove && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onApprove(audit.id);
+              }}
+              className="flex items-center justify-center gap-1.5 h-9 bg-green-500/5 text-green-600 border-green-500/20 hover:bg-green-500/10 hover:text-green-700 hover:border-green-500/30 transition-all font-semibold text-xs px-2"
+            >
+              <Check className="size-3.5" />
+              <span>Approve</span>
+            </Button>
+          )}
+          {onReject && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onReject(audit.id);
+              }}
+              className="flex items-center justify-center gap-1.5 h-9 bg-orange-500/5 text-orange-600 border-orange-500/20 hover:bg-orange-500/10 hover:text-orange-700 hover:border-orange-500/30 transition-all font-semibold text-xs px-2"
+            >
+              <X className="size-3.5" />
+              <span>Reject</span>
+            </Button>
+          )}
+          {onDelete && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(audit.id);
+              }}
+              className="flex items-center justify-center gap-1.5 h-9 bg-destructive/5 text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 transition-all font-semibold text-xs px-2"
+            >
+              <Trash2 className="size-3.5" />
+              <span>Delete</span>
+            </Button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -52,8 +52,8 @@ export function MakerDashboardHeader({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card p-6 shadow-sm",
-        "flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between",
+        "rounded-xl border border-border bg-card p-3 shadow-sm",
+        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
         className
       )}
       role="region"

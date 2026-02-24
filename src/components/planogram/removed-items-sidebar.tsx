@@ -214,8 +214,8 @@ export function RemovedItemsSidebar({
               ))}
             </ul>
           ) : (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <div className="flex flex-col items-center justify-center py-3 text-center">
+              <div className="mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 <PackageX className="size-6 text-muted-foreground" aria-hidden />
               </div>
               <p className="text-sm font-medium text-foreground">No removed items</p>

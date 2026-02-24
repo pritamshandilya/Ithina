@@ -17,7 +17,7 @@ export const planogramShelfPreviewKeys = {
 
 export interface PlanogramShelfPreview {
   shelf: NonNullable<Awaited<ReturnType<typeof getShelfById>>>;
-  planogramPayload: NonNullable<Awaited<ReturnType<typeof fetchPlanogramById>>>;
+  planogramPayload: Awaited<ReturnType<typeof fetchPlanogramById>>;
 }
 
 export function usePlanogramShelfPreview(shelfId: string | null) {
@@ -26,9 +26,10 @@ export function usePlanogramShelfPreview(shelfId: string | null) {
     queryFn: async (): Promise<PlanogramShelfPreview | null> => {
       if (!shelfId) return null;
       const shelf = await getShelfById(shelfId);
-      if (!shelf?.planogramId) return null;
+      if (!shelf) return null;
+      if (!shelf.planogramId) return { shelf, planogramPayload: null };
       const planogramPayload = await fetchPlanogramById(shelf.planogramId);
-      if (!planogramPayload) return null;
+      if (!planogramPayload) return { shelf, planogramPayload: null };
       return { shelf, planogramPayload };
     },
     enabled: !!shelfId,

@@ -25,7 +25,7 @@ function getComplianceColor(score: number): string {
 
 /**
  * Tabular preview of assigned shelves, matching height of What Needs Your Attention.
- * Shows up to 6 rows with View all link to /maker/shelves.
+ * Shows up to 6 rows with View all link to /maker/audits/planogram.
  */
 export function MakerAssignedTable({
   onShelfClick,
@@ -91,7 +91,7 @@ export function MakerAssignedTable({
         </div>
 
         <Link
-          to="/maker/shelves"
+          to="/maker/audits/planogram"
           className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
         >
           View all
@@ -182,7 +182,7 @@ export function MakerAssignedTable({
             {hasMore && (
               <div className="border-t border-border px-4 py-3 bg-muted/20 shrink-0">
                 <Link
-                  to="/maker/shelves"
+                  to="/maker/audits/planogram"
                   className="flex items-center justify-center gap-2 text-sm font-medium text-accent hover:text-accent/90 transition-colors py-1"
                 >
                   View all {shelves.length} shelves

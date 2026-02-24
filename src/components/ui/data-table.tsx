@@ -41,8 +41,8 @@ export interface DataTableProps<T = object> {
   columns: DataTableColumn<T>[];
   /** Row data */
   data: T[];
-  /** Optional row click handler; receives row data */
-  onRowClick?: (row: T) => void;
+  /** Optional row click handler; receives row data and event */
+  onRowClick?: (row: T, event: any) => void;
   /** Optional field name used as unique row id (default: "id") */
   rowIdField?: keyof T | string;
   /** Optional class name for the wrapper div */
@@ -75,6 +75,8 @@ export interface DataTableProps<T = object> {
   dataTreeStartExpanded?: boolean;
   /** Column to show tree toggle (default: first column) */
   dataTreeElementColumn?: string;
+  /** Show serial number column "No." as first column (default: true) */
+  showRowNumber?: boolean;
 }
 
 /**
@@ -104,6 +106,7 @@ export function DataTable<T extends object>({
   dataTreeChildField = "_children",
   dataTreeStartExpanded = false,
   dataTreeElementColumn,
+  showRowNumber = true,
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -112,9 +115,6 @@ export function DataTable<T extends object>({
 
   useEffect(() => {
     if (!containerRef.current) return;
-
-    // eslint-disable-next-line no-console
-    console.log("DataTable useEffect - onRowClick:", onRowClick ? "defined" : "undefined");
 
     currentPageRef.current = 1;
     currentPageSizeRef.current = pageSize;
@@ -125,15 +125,36 @@ export function DataTable<T extends object>({
       field: col.field as string,
       headerSort: col.headerSort !== false,
       headerFilter: headerFilters ? (col.headerFilter ?? "input") : false,
+      hozAlign: col.hozAlign ?? ("center" as const),
+      vertAlign: col.vertAlign ?? ("middle" as const),
+      headerHozAlign: col.headerHozAlign ?? ("center" as const),
     }));
+
+    const serialColumn = {
+      title: "No.",
+      field: "__rowNum__",
+      width: 56,
+      minWidth: 48,
+      headerSort: false,
+      headerFilter: false,
+      headerHozAlign: "center" as const,
+      formatter: "rownum" as const,
+      formatterParams: { relativeToPage: true },
+      hozAlign: "center" as const,
+      vertAlign: "middle" as const,
+    };
+
+    const finalColumns = showRowNumber
+      ? [serialColumn, ...tabulatorColumns]
+      : tabulatorColumns;
 
     const options: Record<string, unknown> = {
       data: [...data],
-      columns: tabulatorColumns,
+      columns: finalColumns,
       layout,
-      responsiveLayout: "hide",
+      responsiveLayout: false,
       resizableColumns: true,
-      resizableColumnFit: true,
+      resizableColumnFit: false,
       movableColumns,
       placeholder: emptyMessage,
       index: rowIdKey,
@@ -167,16 +188,26 @@ export function DataTable<T extends object>({
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
 
-    if (rowFormatter) {
-      options.rowFormatter = rowFormatter;
+    const effectiveRowFormatter = rowFormatter
+      ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
+        rowFormatter(row);
+        if (onRowClick) row.getElement().classList.add("cursor-pointer");
+      }
+      : onRowClick
+        ? (row: { getElement: () => HTMLElement }) => row.getElement().classList.add("cursor-pointer")
+        : undefined;
+    if (effectiveRowFormatter) {
+      options.rowFormatter = effectiveRowFormatter;
     }
 
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (_e: unknown, row: { getData: () => T }) => {
-        console.log("Tabulator rowClick fired", row.getData());
-        onRowClick(row.getData());
+      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+        const ev = e as { target?: EventTarget };
+        const target = ev?.target as HTMLElement | null;
+        if (target?.closest?.("button, select, [data-action], a[href]")) return;
+        onRowClick(row.getData(), e);
       });
     }
 
@@ -198,11 +229,12 @@ export function DataTable<T extends object>({
     movableColumns,
     onPaginationChange,
     rowFormatter,
-    data,
+    // data is excluded because it's handled by a separate setData useEffect to prevent flicker - added this comment cause this issue is present in some other table components too
     dataTree,
     dataTreeChildField,
     dataTreeStartExpanded,
     dataTreeElementColumn,
+    showRowNumber,
   ]);
 
   // Keep row updates cheap when only data changes.
@@ -215,7 +247,7 @@ export function DataTable<T extends object>({
   return (
     <div
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-hidden",
+        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"

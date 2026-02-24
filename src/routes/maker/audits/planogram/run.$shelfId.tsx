@@ -4,6 +4,7 @@
  */
 
 import { createFileRoute } from "@tanstack/react-router";
+import { z } from "zod";
 
 import { AnalysisFlowPage } from "@/components/maker";
 import { MOCK_IMAGE_COMPARISON } from "@/features/maker/analysis";
@@ -11,16 +12,24 @@ import { usePlanogramShelfPreview } from "@/features/maker/hooks";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId")({
   component: NewPlanogramAnalysisPage,
+  validateSearch: (search) =>
+    z
+      .object({
+        from: z.string().optional(),
+      })
+      .parse(search),
 });
 
 function NewPlanogramAnalysisPage() {
   const { shelfId } = Route.useParams();
+  const { from } = Route.useSearch();
   const { data: preview } = usePlanogramShelfPreview(shelfId);
+  const backTo = from ?? "/maker/audits/planogram";
 
   return (
     <AnalysisFlowPage
       title="New Planogram Based Analysis"
-      backTo="/maker/audits/planogram"
+      backTo={backTo}
       shelfName={preview?.shelf.shelfName}
       planogramName={preview?.planogramPayload?.planogram?.name}
       planogramExpectedData={MOCK_IMAGE_COMPARISON}

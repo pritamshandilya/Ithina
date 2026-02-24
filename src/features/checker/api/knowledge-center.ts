@@ -293,6 +293,33 @@ export async function fetchComplianceRuleSetsForAnalysis(): Promise<ComplianceRu
   return [defaultSet, ...sets].sort((a, b) => (a.isDefault ? -1 : b.isDefault ? 1 : a.name.localeCompare(b.name)));
 }
 
+/**
+ * Fetch rules in a rule set (read-only, for maker/checker view).
+ * For "default-rules", returns rules without ruleSetId or matching default.
+ * For single-rule sets (id = ruleId), returns that rule.
+ */
+export async function fetchRulesByRuleSetId(ruleSetId: string): Promise<ComplianceRule[]> {
+  await delay(200);
+
+  const rules = [...mockRules];
+
+  if (ruleSetId === "default-rules") {
+    return rules
+      .filter((r) => !r.ruleSetId || r.ruleSetId === "default-rules")
+      .sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+  }
+
+  // Rules grouped by ruleSetId
+  const byRuleSetId = rules.filter((r) => r.ruleSetId === ruleSetId);
+  if (byRuleSetId.length > 0) {
+    return byRuleSetId.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+  }
+
+  // Single-rule set: id is the rule's ruleId (e.g. Minimum Beverage Facings, Dairy Label Visibility, Frozen Spacing Margin)
+  const byRuleId = rules.find((r) => r.ruleId === ruleSetId);
+  return byRuleId ? [byRuleId] : [];
+}
+
 export async function fetchRuleVersions(ruleId?: string): Promise<RuleVersion[]> {
   ensureCheckerAccess();
   await delay(200);

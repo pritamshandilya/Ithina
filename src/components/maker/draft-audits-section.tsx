@@ -21,8 +21,10 @@
 
 import { FileEditIcon, TrashIcon, PlayIcon, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useState } from "react";
 import { useDraftAudits, useDeleteDraft } from "@/features/maker/hooks";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { cn } from "@/lib/utils";
 
 export interface DraftAuditsSectionProps {
@@ -44,6 +46,9 @@ export function DraftAuditsSection({
   const { data: drafts, isLoading, error } = useDraftAudits();
   const deleteDraftMutation = useDeleteDraft();
 
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [auditToDelete, setAuditToDelete] = useState<string | null>(null);
+
   const handleResume = (auditId: string, shelfId: string) => {
     if (onResume) {
       onResume(auditId, shelfId);
@@ -54,8 +59,18 @@ export function DraftAuditsSection({
   };
 
   const handleDelete = (auditId: string) => {
-    if (window.confirm("Are you sure you want to delete this draft? This cannot be undone.")) {
-      deleteDraftMutation.mutate(auditId);
+    setAuditToDelete(auditId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (auditToDelete) {
+      deleteDraftMutation.mutate(auditToDelete, {
+        onSuccess: () => {
+          setIsDeleteDialogOpen(false);
+          setAuditToDelete(null);
+        },
+      });
     }
   };
 
@@ -199,6 +214,17 @@ export function DraftAuditsSection({
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Draft Audit"
+        description="Are you sure you want to delete this draft? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        isLoading={deleteDraftMutation.isPending}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen } from "lucide-react";
 import { useState } from "react";
@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useHistoricalAnalyses } from "@/features/maker/hooks";
 import type { AdhocAnalysisStatus } from "@/types/maker";
 import type { HistoricalAnalysisRow } from "@/types/maker";
+import { getRelativePath } from "@/lib/utils";
 
 export const Route = createFileRoute("/maker/historical-analysis/")({
   component: HistoricalAnalysisPage,
@@ -127,6 +128,7 @@ const COLUMNS: DataTableColumn<HistoricalAnalysisRow>[] = [
 
 function HistoricalAnalysisPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: analyses, isLoading } = useHistoricalAnalyses();
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
@@ -134,7 +136,7 @@ function HistoricalAnalysisPage() {
     navigate({
       to: "/maker/historical-analysis/$analysisId",
       params: { analysisId: row.id },
-      search: { type: row.type },
+      search: { type: row.type, backTo: getRelativePath(location.pathname) },
     });
   };
 

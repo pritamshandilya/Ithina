@@ -12,6 +12,7 @@ import { FileEdit, AlertCircle, Search } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   useAssignedShelves,
   useDraftAudits,
@@ -52,6 +53,8 @@ export function MyAuditsSection({
   const [activeFilter, setActiveFilter] = useState<"all" | "draft" | "returned">("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [auditToDelete, setAuditToDelete] = useState<string | null>(null);
 
   const isLoading = isDraftsLoading || isReturnedLoading;
 
@@ -86,13 +89,23 @@ export function MyAuditsSection({
 
   const handleAction = (audit: Audit, action: "resume" | "fix" | "delete") => {
     if (action === "delete") {
-      if (window.confirm("Are you sure you want to delete this draft? This cannot be undone.")) {
-        deleteDraftMutation.mutate(audit.id);
-      }
+      setAuditToDelete(audit.id);
+      setIsDeleteDialogOpen(true);
       return;
     }
     if (action === "resume") onResume?.(audit.id, audit.shelfId);
     else onViewReport?.(audit.id, audit.shelfId);
+  };
+
+  const handleConfirmDelete = () => {
+    if (auditToDelete) {
+      deleteDraftMutation.mutate(auditToDelete, {
+        onSuccess: () => {
+          setIsDeleteDialogOpen(false);
+          setAuditToDelete(null);
+        },
+      });
+    }
   };
 
   const tableColumns: DataTableColumn<Audit>[] = useMemo(
@@ -324,6 +337,17 @@ export function MyAuditsSection({
           onPaginationChange={isLimitedView ? undefined : setTablePagination}
         />
       </div>
+
+      <ConfirmModal
+        isOpen={isDeleteDialogOpen}
+        onClose={() => setIsDeleteDialogOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Draft Audit"
+        description="Are you sure you want to delete this draft? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="destructive"
+        isLoading={deleteDraftMutation.isPending}
+      />
     </div>
   );
 }

@@ -14,13 +14,17 @@ import { ReportSnippetsView } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { MOCK_REPORT_SNIPPET } from "@/features/maker/analysis";
 import { useHistoricalAnalyses } from "@/features/maker/hooks";
+import { getRelativePath } from "@/lib/utils";
 
 import placeholderShelf from "@/assets/placeholder-shelf.jpg";
 
 export const Route = createFileRoute("/maker/historical-analysis/$analysisId")({
   component: HistoricalAnalysisDetailPage,
-  validateSearch: (search: Record<string, unknown>): { type?: "adhoc" | "planogram" } => ({
+  validateSearch: (
+    search: Record<string, unknown>
+  ): { type?: "adhoc" | "planogram"; backTo?: string } => ({
     type: search.type === "adhoc" || search.type === "planogram" ? search.type : undefined,
+    backTo: typeof search.backTo === "string" ? search.backTo : undefined,
   }),
 });
 
@@ -28,8 +32,8 @@ function HistoricalAnalysisDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { analysisId } = Route.useParams();
-  const from = (location.state as { from?: string } | undefined)?.from;
-  const backTo = from ?? "/maker/historical-analysis";
+  const { backTo: backToSearch } = Route.useSearch();
+  const backTo = getRelativePath(backToSearch ?? "/maker/historical-analysis");
   const { data: analyses } = useHistoricalAnalyses();
 
   const analysis = useMemo(() => {
@@ -86,7 +90,7 @@ function HistoricalAnalysisDetailPage() {
               viewFullReportState={{
                 imageUrl,
                 analysisId,
-                backTo: `/maker/historical-analysis/${analysisId}`,
+                backTo: `${getRelativePath(location.pathname)}${location.search}`,
               }}
             />
           </div>

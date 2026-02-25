@@ -17,6 +17,7 @@ import {
   MOCK_IMAGE_COMPARISON,
 } from "@/features/maker/analysis";
 import { exportReportToPdf } from "@/features/reports/services/pdfExport";
+import { getRelativePath } from "@/lib/utils";
 
 export const Route = createFileRoute("/maker/reports/view")({
   component: FullReportPage,
@@ -27,7 +28,7 @@ function FullReportPage() {
   const { toast } = useToast();
   const state = location.state as { imageUrl?: string; backTo?: string } | undefined;
   const imageUrl = state?.imageUrl;
-  const backTo = state?.backTo ?? "/maker/audits/planogram";
+  const backTo = getRelativePath(state?.backTo ?? "/maker/audits/planogram");
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportPdf = async () => {
@@ -65,12 +66,12 @@ function FullReportPage() {
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
           <ComplianceReportFull
-          report={MOCK_REPORT_SNIPPET}
-          imageUrl={imageUrl}
-          backTo={backTo}
-          onExportPdf={handleExportPdf}
-          isExportingPdf={isExporting}
-        />
+            report={MOCK_REPORT_SNIPPET}
+            imageUrl={imageUrl}
+            backTo={backTo}
+            onExportPdf={handleExportPdf}
+            isExportingPdf={isExporting}
+          />
         </div>
       </div>
     </MainLayout>

@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -11,6 +11,7 @@ import { useAdhocAnalyses } from "@/features/maker/hooks";
 import { mockUser } from "@/lib/api/mock-data";
 import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
 import { useStore } from "@/providers/store";
+import { getRelativePath } from "@/lib/utils";
 
 export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
@@ -173,6 +174,7 @@ const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
 
 function AdhocAnalysisPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const { data: adhocAnalyses, isLoading } = useAdhocAnalyses(selectedStoreId);
@@ -182,7 +184,7 @@ function AdhocAnalysisPage() {
     navigate({
       to: "/maker/historical-analysis/$analysisId",
       params: { analysisId: row.id },
-      search: { type: "adhoc" },
+      search: { type: "adhoc", backTo: getRelativePath(location.pathname) },
     });
   };
 

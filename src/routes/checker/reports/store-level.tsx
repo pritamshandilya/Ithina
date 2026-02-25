@@ -21,7 +21,7 @@ function StoreLevelReport() {
     ];
 
     const columns: DataTableColumn<ShelfSummary>[] = [
-        { title: "S.NO", field: "sNo", width: 80 },
+        // { title: "S.NO", field: "sNo", width: 80 },
         { title: "SHELF", field: "shelf" },
         { title: "LATEST ANALYSIS", field: "latestAnalysis" },
         { title: "LAST UPDATED", field: "lastUpdated" },

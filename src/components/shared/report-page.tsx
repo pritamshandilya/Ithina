@@ -74,6 +74,7 @@ export function ReportPage<T extends object>({
                     columns={tableColumns}
                     data={tableData}
                     pageSize={10}
+                    showRowNumber
                     className="min-h-[400px]"
                     {...tableProps}
                 />

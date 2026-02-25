@@ -20,7 +20,7 @@ function AdhocReport() {
     ];
 
     const columns: DataTableColumn<AdhocAnalysis>[] = [
-        { title: "S.NO", field: "sNo", width: 80 },
+        // { title: "S.NO", field: "sNo", width: 80 },
         { title: "NAME", field: "name", minWidth: 250 },
         {
             title: "ZONE",

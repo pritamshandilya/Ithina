@@ -9,25 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TestShelvesListRouteImport } from './routes/test-shelves-list'
-import { Route as TestReturnedAuditsRedesignRouteImport } from './routes/test-returned-audits-redesign'
-import { Route as TestReturnedAuditsRouteImport } from './routes/test-returned-audits'
-import { Route as TestQuickStatsRouteImport } from './routes/test-quick-stats'
-import { Route as TestPrimaryActionRouteImport } from './routes/test-primary-action'
-import { Route as TestOverridePublishingRouteImport } from './routes/test-override-publishing'
-import { Route as TestMakerAuditQueueRouteImport } from './routes/test-maker-audit-queue'
-import { Route as TestKnowledgeCenterRouteImport } from './routes/test-knowledge-center'
-import { Route as TestHeaderRouteImport } from './routes/test-header'
-import { Route as TestDraftAuditsRouteImport } from './routes/test-draft-audits'
-import { Route as TestDataLayerRouteImport } from './routes/test-data-layer'
-import { Route as TestComponentsRouteImport } from './routes/test-components'
-import { Route as TestComplianceOverviewRouteImport } from './routes/test-compliance-overview'
-import { Route as TestCheckerHooksRouteImport } from './routes/test-checker-hooks'
-import { Route as TestCheckerHeaderRouteImport } from './routes/test-checker-header'
-import { Route as TestCheckerFoundationRouteImport } from './routes/test-checker-foundation'
-import { Route as TestAuditReviewQueueRouteImport } from './routes/test-audit-review-queue'
-import { Route as TestAuditModeSelectorRouteImport } from './routes/test-audit-mode-selector'
-import { Route as SignupRouteImport } from './routes/signup'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
@@ -72,102 +53,6 @@ import { Route as MakerAuditsAdhocNewRouteImport } from './routes/maker/audits/a
 import { Route as CheckerReportsViewReportIdRouteImport } from './routes/checker/reports/view.$reportId'
 import { Route as MakerAuditsPlanogramRunShelfIdRouteImport } from './routes/maker/audits/planogram/run.$shelfId'
 
-const TestShelvesListRoute = TestShelvesListRouteImport.update({
-  id: '/test-shelves-list',
-  path: '/test-shelves-list',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestReturnedAuditsRedesignRoute =
-  TestReturnedAuditsRedesignRouteImport.update({
-    id: '/test-returned-audits-redesign',
-    path: '/test-returned-audits-redesign',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const TestReturnedAuditsRoute = TestReturnedAuditsRouteImport.update({
-  id: '/test-returned-audits',
-  path: '/test-returned-audits',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestQuickStatsRoute = TestQuickStatsRouteImport.update({
-  id: '/test-quick-stats',
-  path: '/test-quick-stats',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestPrimaryActionRoute = TestPrimaryActionRouteImport.update({
-  id: '/test-primary-action',
-  path: '/test-primary-action',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestOverridePublishingRoute = TestOverridePublishingRouteImport.update({
-  id: '/test-override-publishing',
-  path: '/test-override-publishing',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestMakerAuditQueueRoute = TestMakerAuditQueueRouteImport.update({
-  id: '/test-maker-audit-queue',
-  path: '/test-maker-audit-queue',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestKnowledgeCenterRoute = TestKnowledgeCenterRouteImport.update({
-  id: '/test-knowledge-center',
-  path: '/test-knowledge-center',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestHeaderRoute = TestHeaderRouteImport.update({
-  id: '/test-header',
-  path: '/test-header',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestDraftAuditsRoute = TestDraftAuditsRouteImport.update({
-  id: '/test-draft-audits',
-  path: '/test-draft-audits',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestDataLayerRoute = TestDataLayerRouteImport.update({
-  id: '/test-data-layer',
-  path: '/test-data-layer',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestComponentsRoute = TestComponentsRouteImport.update({
-  id: '/test-components',
-  path: '/test-components',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestComplianceOverviewRoute = TestComplianceOverviewRouteImport.update({
-  id: '/test-compliance-overview',
-  path: '/test-compliance-overview',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestCheckerHooksRoute = TestCheckerHooksRouteImport.update({
-  id: '/test-checker-hooks',
-  path: '/test-checker-hooks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestCheckerHeaderRoute = TestCheckerHeaderRouteImport.update({
-  id: '/test-checker-header',
-  path: '/test-checker-header',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestCheckerFoundationRoute = TestCheckerFoundationRouteImport.update({
-  id: '/test-checker-foundation',
-  path: '/test-checker-foundation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestAuditReviewQueueRoute = TestAuditReviewQueueRouteImport.update({
-  id: '/test-audit-review-queue',
-  path: '/test-audit-review-queue',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TestAuditModeSelectorRoute = TestAuditModeSelectorRouteImport.update({
-  id: '/test-audit-mode-selector',
-  path: '/test-audit-mode-selector',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -399,25 +284,6 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
-  '/signup': typeof SignupRoute
-  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
-  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
-  '/test-checker-foundation': typeof TestCheckerFoundationRoute
-  '/test-checker-header': typeof TestCheckerHeaderRoute
-  '/test-checker-hooks': typeof TestCheckerHooksRoute
-  '/test-compliance-overview': typeof TestComplianceOverviewRoute
-  '/test-components': typeof TestComponentsRoute
-  '/test-data-layer': typeof TestDataLayerRoute
-  '/test-draft-audits': typeof TestDraftAuditsRoute
-  '/test-header': typeof TestHeaderRoute
-  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
-  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
-  '/test-override-publishing': typeof TestOverridePublishingRoute
-  '/test-primary-action': typeof TestPrimaryActionRoute
-  '/test-quick-stats': typeof TestQuickStatsRoute
-  '/test-returned-audits': typeof TestReturnedAuditsRoute
-  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
-  '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
   '/maker/historical-analysis': typeof MakerHistoricalAnalysisRouteRouteWithChildren
@@ -463,25 +329,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
-  '/signup': typeof SignupRoute
-  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
-  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
-  '/test-checker-foundation': typeof TestCheckerFoundationRoute
-  '/test-checker-header': typeof TestCheckerHeaderRoute
-  '/test-checker-hooks': typeof TestCheckerHooksRoute
-  '/test-compliance-overview': typeof TestComplianceOverviewRoute
-  '/test-components': typeof TestComponentsRoute
-  '/test-data-layer': typeof TestDataLayerRoute
-  '/test-draft-audits': typeof TestDraftAuditsRoute
-  '/test-header': typeof TestHeaderRoute
-  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
-  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
-  '/test-override-publishing': typeof TestOverridePublishingRoute
-  '/test-primary-action': typeof TestPrimaryActionRoute
-  '/test-quick-stats': typeof TestQuickStatsRoute
-  '/test-returned-audits': typeof TestReturnedAuditsRoute
-  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
-  '/test-shelves-list': typeof TestShelvesListRoute
   '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/checker': typeof CheckerIndexRoute
   '/checker/audit-review': typeof CheckerAuditReviewRoute
@@ -520,25 +367,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
-  '/signup': typeof SignupRoute
-  '/test-audit-mode-selector': typeof TestAuditModeSelectorRoute
-  '/test-audit-review-queue': typeof TestAuditReviewQueueRoute
-  '/test-checker-foundation': typeof TestCheckerFoundationRoute
-  '/test-checker-header': typeof TestCheckerHeaderRoute
-  '/test-checker-hooks': typeof TestCheckerHooksRoute
-  '/test-compliance-overview': typeof TestComplianceOverviewRoute
-  '/test-components': typeof TestComponentsRoute
-  '/test-data-layer': typeof TestDataLayerRoute
-  '/test-draft-audits': typeof TestDraftAuditsRoute
-  '/test-header': typeof TestHeaderRoute
-  '/test-knowledge-center': typeof TestKnowledgeCenterRoute
-  '/test-maker-audit-queue': typeof TestMakerAuditQueueRoute
-  '/test-override-publishing': typeof TestOverridePublishingRoute
-  '/test-primary-action': typeof TestPrimaryActionRoute
-  '/test-quick-stats': typeof TestQuickStatsRoute
-  '/test-returned-audits': typeof TestReturnedAuditsRoute
-  '/test-returned-audits-redesign': typeof TestReturnedAuditsRedesignRoute
-  '/test-shelves-list': typeof TestShelvesListRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
   '/maker/historical-analysis': typeof MakerHistoricalAnalysisRouteRouteWithChildren
@@ -586,25 +414,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
-    | '/signup'
-    | '/test-audit-mode-selector'
-    | '/test-audit-review-queue'
-    | '/test-checker-foundation'
-    | '/test-checker-header'
-    | '/test-checker-hooks'
-    | '/test-compliance-overview'
-    | '/test-components'
-    | '/test-data-layer'
-    | '/test-draft-audits'
-    | '/test-header'
-    | '/test-knowledge-center'
-    | '/test-maker-audit-queue'
-    | '/test-override-publishing'
-    | '/test-primary-action'
-    | '/test-quick-stats'
-    | '/test-returned-audits'
-    | '/test-returned-audits-redesign'
-    | '/test-shelves-list'
     | '/checker/shelf'
     | '/maker/audits'
     | '/maker/historical-analysis'
@@ -650,25 +459,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
-    | '/signup'
-    | '/test-audit-mode-selector'
-    | '/test-audit-review-queue'
-    | '/test-checker-foundation'
-    | '/test-checker-header'
-    | '/test-checker-hooks'
-    | '/test-compliance-overview'
-    | '/test-components'
-    | '/test-data-layer'
-    | '/test-draft-audits'
-    | '/test-header'
-    | '/test-knowledge-center'
-    | '/test-maker-audit-queue'
-    | '/test-override-publishing'
-    | '/test-primary-action'
-    | '/test-quick-stats'
-    | '/test-returned-audits'
-    | '/test-returned-audits-redesign'
-    | '/test-shelves-list'
     | '/maker/reports'
     | '/checker'
     | '/checker/audit-review'
@@ -706,25 +496,6 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/profile'
-    | '/signup'
-    | '/test-audit-mode-selector'
-    | '/test-audit-review-queue'
-    | '/test-checker-foundation'
-    | '/test-checker-header'
-    | '/test-checker-hooks'
-    | '/test-compliance-overview'
-    | '/test-components'
-    | '/test-data-layer'
-    | '/test-draft-audits'
-    | '/test-header'
-    | '/test-knowledge-center'
-    | '/test-maker-audit-queue'
-    | '/test-override-publishing'
-    | '/test-primary-action'
-    | '/test-quick-stats'
-    | '/test-returned-audits'
-    | '/test-returned-audits-redesign'
-    | '/test-shelves-list'
     | '/checker/shelf'
     | '/maker/audits'
     | '/maker/historical-analysis'
@@ -771,25 +542,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
-  SignupRoute: typeof SignupRoute
-  TestAuditModeSelectorRoute: typeof TestAuditModeSelectorRoute
-  TestAuditReviewQueueRoute: typeof TestAuditReviewQueueRoute
-  TestCheckerFoundationRoute: typeof TestCheckerFoundationRoute
-  TestCheckerHeaderRoute: typeof TestCheckerHeaderRoute
-  TestCheckerHooksRoute: typeof TestCheckerHooksRoute
-  TestComplianceOverviewRoute: typeof TestComplianceOverviewRoute
-  TestComponentsRoute: typeof TestComponentsRoute
-  TestDataLayerRoute: typeof TestDataLayerRoute
-  TestDraftAuditsRoute: typeof TestDraftAuditsRoute
-  TestHeaderRoute: typeof TestHeaderRoute
-  TestKnowledgeCenterRoute: typeof TestKnowledgeCenterRoute
-  TestMakerAuditQueueRoute: typeof TestMakerAuditQueueRoute
-  TestOverridePublishingRoute: typeof TestOverridePublishingRoute
-  TestPrimaryActionRoute: typeof TestPrimaryActionRoute
-  TestQuickStatsRoute: typeof TestQuickStatsRoute
-  TestReturnedAuditsRoute: typeof TestReturnedAuditsRoute
-  TestReturnedAuditsRedesignRoute: typeof TestReturnedAuditsRedesignRoute
-  TestShelvesListRoute: typeof TestShelvesListRoute
   CheckerShelfRouteRoute: typeof CheckerShelfRouteRouteWithChildren
   MakerAuditsRouteRoute: typeof MakerAuditsRouteRouteWithChildren
   MakerHistoricalAnalysisRouteRoute: typeof MakerHistoricalAnalysisRouteRouteWithChildren
@@ -816,139 +568,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/test-shelves-list': {
-      id: '/test-shelves-list'
-      path: '/test-shelves-list'
-      fullPath: '/test-shelves-list'
-      preLoaderRoute: typeof TestShelvesListRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-returned-audits-redesign': {
-      id: '/test-returned-audits-redesign'
-      path: '/test-returned-audits-redesign'
-      fullPath: '/test-returned-audits-redesign'
-      preLoaderRoute: typeof TestReturnedAuditsRedesignRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-returned-audits': {
-      id: '/test-returned-audits'
-      path: '/test-returned-audits'
-      fullPath: '/test-returned-audits'
-      preLoaderRoute: typeof TestReturnedAuditsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-quick-stats': {
-      id: '/test-quick-stats'
-      path: '/test-quick-stats'
-      fullPath: '/test-quick-stats'
-      preLoaderRoute: typeof TestQuickStatsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-primary-action': {
-      id: '/test-primary-action'
-      path: '/test-primary-action'
-      fullPath: '/test-primary-action'
-      preLoaderRoute: typeof TestPrimaryActionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-override-publishing': {
-      id: '/test-override-publishing'
-      path: '/test-override-publishing'
-      fullPath: '/test-override-publishing'
-      preLoaderRoute: typeof TestOverridePublishingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-maker-audit-queue': {
-      id: '/test-maker-audit-queue'
-      path: '/test-maker-audit-queue'
-      fullPath: '/test-maker-audit-queue'
-      preLoaderRoute: typeof TestMakerAuditQueueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-knowledge-center': {
-      id: '/test-knowledge-center'
-      path: '/test-knowledge-center'
-      fullPath: '/test-knowledge-center'
-      preLoaderRoute: typeof TestKnowledgeCenterRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-header': {
-      id: '/test-header'
-      path: '/test-header'
-      fullPath: '/test-header'
-      preLoaderRoute: typeof TestHeaderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-draft-audits': {
-      id: '/test-draft-audits'
-      path: '/test-draft-audits'
-      fullPath: '/test-draft-audits'
-      preLoaderRoute: typeof TestDraftAuditsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-data-layer': {
-      id: '/test-data-layer'
-      path: '/test-data-layer'
-      fullPath: '/test-data-layer'
-      preLoaderRoute: typeof TestDataLayerRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-components': {
-      id: '/test-components'
-      path: '/test-components'
-      fullPath: '/test-components'
-      preLoaderRoute: typeof TestComponentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-compliance-overview': {
-      id: '/test-compliance-overview'
-      path: '/test-compliance-overview'
-      fullPath: '/test-compliance-overview'
-      preLoaderRoute: typeof TestComplianceOverviewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-checker-hooks': {
-      id: '/test-checker-hooks'
-      path: '/test-checker-hooks'
-      fullPath: '/test-checker-hooks'
-      preLoaderRoute: typeof TestCheckerHooksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-checker-header': {
-      id: '/test-checker-header'
-      path: '/test-checker-header'
-      fullPath: '/test-checker-header'
-      preLoaderRoute: typeof TestCheckerHeaderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-checker-foundation': {
-      id: '/test-checker-foundation'
-      path: '/test-checker-foundation'
-      fullPath: '/test-checker-foundation'
-      preLoaderRoute: typeof TestCheckerFoundationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-audit-review-queue': {
-      id: '/test-audit-review-queue'
-      path: '/test-audit-review-queue'
-      fullPath: '/test-audit-review-queue'
-      preLoaderRoute: typeof TestAuditReviewQueueRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/test-audit-mode-selector': {
-      id: '/test-audit-mode-selector'
-      path: '/test-audit-mode-selector'
-      fullPath: '/test-audit-mode-selector'
-      preLoaderRoute: typeof TestAuditModeSelectorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -1375,25 +994,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
-  SignupRoute: SignupRoute,
-  TestAuditModeSelectorRoute: TestAuditModeSelectorRoute,
-  TestAuditReviewQueueRoute: TestAuditReviewQueueRoute,
-  TestCheckerFoundationRoute: TestCheckerFoundationRoute,
-  TestCheckerHeaderRoute: TestCheckerHeaderRoute,
-  TestCheckerHooksRoute: TestCheckerHooksRoute,
-  TestComplianceOverviewRoute: TestComplianceOverviewRoute,
-  TestComponentsRoute: TestComponentsRoute,
-  TestDataLayerRoute: TestDataLayerRoute,
-  TestDraftAuditsRoute: TestDraftAuditsRoute,
-  TestHeaderRoute: TestHeaderRoute,
-  TestKnowledgeCenterRoute: TestKnowledgeCenterRoute,
-  TestMakerAuditQueueRoute: TestMakerAuditQueueRoute,
-  TestOverridePublishingRoute: TestOverridePublishingRoute,
-  TestPrimaryActionRoute: TestPrimaryActionRoute,
-  TestQuickStatsRoute: TestQuickStatsRoute,
-  TestReturnedAuditsRoute: TestReturnedAuditsRoute,
-  TestReturnedAuditsRedesignRoute: TestReturnedAuditsRedesignRoute,
-  TestShelvesListRoute: TestShelvesListRoute,
   CheckerShelfRouteRoute: CheckerShelfRouteRouteWithChildren,
   MakerAuditsRouteRoute: MakerAuditsRouteRouteWithChildren,
   MakerHistoricalAnalysisRouteRoute:

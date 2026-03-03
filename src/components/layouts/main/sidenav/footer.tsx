@@ -18,24 +18,28 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { AuthSessionService, getInitialsFromEmail } from "@/lib/auth/session";
 
 export default function SidenavFooter() {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
 
-  const currentUser = useMemo(() => SimulatedAuthService.getCurrentUser(), []);
+  const currentUser = useMemo(() => AuthSessionService.getCurrentUser(), []);
 
   const handleManageAccount = () => {
     navigate({ to: "/profile" });
   };
 
   const handleLogout = () => {
-    SimulatedAuthService.logout();
+    AuthSessionService.logout();
     navigate({ to: "/login" });
   };
 
   if (!currentUser) return null;
+
+  const fallbackNames = getInitialsFromEmail(currentUser.email);
+  const firstName = currentUser.firstName.trim() || fallbackNames.firstName;
+  const lastName = currentUser.lastName.trim() || fallbackNames.lastName;
 
   return (
     <SidebarMenu>
@@ -49,21 +53,24 @@ export default function SidenavFooter() {
               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage
                   src={undefined}
-                  alt={currentUser.firstName}
+                  alt={firstName}
                 />
 
                 <AvatarFallback className="rounded-lg">
-                  {currentUser.firstName.charAt(0)}
-                  {currentUser.lastName.charAt(0)}
+                  {firstName.charAt(0)}
+                  {lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
 
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {currentUser.firstName} {currentUser.lastName}
+                  {firstName} {lastName}
                 </span>
 
                 <span className="truncate text-xs">{currentUser.email}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {currentUser.organization.name}
+                </span>
               </div>
 
               <ChevronsUpDown className="ml-auto size-4" />
@@ -81,21 +88,24 @@ export default function SidenavFooter() {
                 <Avatar className="h-8 w-8 rounded-lg">
                   <AvatarImage
                     src={undefined}
-                    alt={currentUser.firstName}
+                    alt={firstName}
                   />
 
                   <AvatarFallback className="rounded-lg">
-                    {currentUser.firstName.charAt(0)}
-                    {currentUser.lastName.charAt(0)}
+                    {firstName.charAt(0)}
+                    {lastName.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
 
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">
-                    {currentUser.firstName} {currentUser.lastName}
+                    {firstName} {lastName}
                   </span>
 
                   <span className="truncate text-xs">{currentUser.email}</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    {currentUser.organization.name}
+                  </span>
                 </div>
               </div>
             </DropdownMenuLabel>

@@ -11,6 +11,8 @@ export interface UserInfo {
   locale?: string;
   profilePictureUrl?: string;
   externalId?: string;
+  organizationId?: string;
+  organizationName?: string;
   createdAt?: string;
   updatedAt?: string;
   lastSignInAt?: string;

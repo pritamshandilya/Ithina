@@ -1,10 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
-
-// Dummy authentication function
-const isAuthenticated = () => {
-  return localStorage.getItem("isLoggedIn") === "true";
-};
+import { AuthSessionService } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/")({
   component: RouteComponent,
@@ -14,8 +10,9 @@ function RouteComponent() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isAuthenticated()) {
-      navigate({ to: "/dashboard" });
+    const user = AuthSessionService.getCurrentUser();
+    if (user) {
+      navigate({ to: AuthSessionService.getDashboardRoute(user.role) });
     } else {
       navigate({ to: "/login" });
     }

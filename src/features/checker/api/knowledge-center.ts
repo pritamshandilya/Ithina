@@ -1,4 +1,4 @@
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { AuthSessionService } from "@/lib/auth/session";
 import type {
   ComplianceRule,
   CreateRuleInput,
@@ -163,8 +163,8 @@ const mockDocuments: ReferenceDocument[] = [
 ];
 
 function ensureCheckerAccess() {
-  const user = SimulatedAuthService.getCurrentUser();
-  if (!user || user.role !== "checker" || !SimulatedAuthService.isAuthenticated()) {
+  const user = AuthSessionService.getCurrentUser();
+  if (!user || user.role !== "checker") {
     throw new Error("Unauthorized: Knowledge Center is checker-only");
   }
 }

@@ -22,14 +22,21 @@ const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
  * Used by the query client's `shouldRetry` logic.
  */
 export class ApiError extends Error {
+  readonly status: number;
+  readonly statusText: string;
+  readonly data?: unknown;
+
   constructor(
-    public readonly status: number,
-    public readonly statusText: string,
+    status: number,
+    statusText: string,
     message: string,
-    public readonly data?: unknown,
+    data?: unknown,
   ) {
     super(message);
     this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.data = data;
   }
 }
 
@@ -44,7 +51,9 @@ async function parseResponse<T>(res: Response): Promise<T> {
     const message =
       data && typeof data === "object" && "message" in data
         ? String((data as { message: unknown }).message)
-        : res.statusText || "An unexpected error occurred";
+        : data && typeof data === "object" && "detail" in data
+          ? String((data as { detail: unknown }).detail)
+          : res.statusText || "An unexpected error occurred";
     throw new ApiError(res.status, res.statusText, message, data);
   }
   // 204 No Content

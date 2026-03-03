@@ -12,4 +12,4 @@
  */
 
 export type * from "./response";
-export type * from "./payload";
+export type * from "./request";

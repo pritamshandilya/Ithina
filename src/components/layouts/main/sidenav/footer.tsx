@@ -37,7 +37,9 @@ export default function SidenavFooter() {
 
   if (!currentUser) return null;
 
-  const { firstName, lastName } = getInitialsFromEmail(currentUser.email);
+  const fallbackNames = getInitialsFromEmail(currentUser.email);
+  const firstName = currentUser.firstName.trim() || fallbackNames.firstName;
+  const lastName = currentUser.lastName.trim() || fallbackNames.lastName;
 
   return (
     <SidebarMenu>

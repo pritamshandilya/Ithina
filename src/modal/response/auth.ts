@@ -15,6 +15,8 @@ export interface LoginResponse {
 export interface AuthUserResponse {
   id: string;
   email: string;
+  first_name?: string | null;
+  last_name?: string | null;
   role: "maker" | "checker";
   is_active: boolean;
   organization: OrganizationResponse;

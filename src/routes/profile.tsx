@@ -62,8 +62,14 @@ function ProfilePage() {
     if (!currentUser) return null;
 
     const fallbackNames = getInitialsFromEmail(currentUser.email);
-    const firstName = localProfile?.firstName || fallbackNames.firstName;
-    const lastName = localProfile?.lastName || fallbackNames.lastName;
+    const firstName =
+      localProfile?.firstName ||
+      currentUser.firstName.trim() ||
+      fallbackNames.firstName;
+    const lastName =
+      localProfile?.lastName ||
+      currentUser.lastName.trim() ||
+      fallbackNames.lastName;
 
     return {
       id: currentUser.id,

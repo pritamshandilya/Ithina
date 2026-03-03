@@ -10,6 +10,8 @@ export interface OrganizationInfo {
 export interface AuthSessionUser {
   id: string;
   email: string;
+  firstName: string;
+  lastName: string;
   role: UserRole;
   organization: OrganizationInfo;
   isActive: boolean;
@@ -26,6 +28,8 @@ interface LoginApiResponse {
 interface MeApiResponse {
   id: string;
   email: string;
+  first_name?: string | null;
+  last_name?: string | null;
   role: UserRole;
   organization: OrganizationInfo;
   is_active: boolean;
@@ -41,7 +45,42 @@ function loadUser(): AuthSessionUser | null {
   if (!rawUser) return null;
 
   try {
-    return JSON.parse(rawUser) as AuthSessionUser;
+    const parsed = JSON.parse(rawUser) as Partial<AuthSessionUser> & {
+      organization?: Partial<OrganizationInfo>;
+    };
+
+    if (!parsed || typeof parsed !== "object") return null;
+
+    const id = typeof parsed.id === "string" ? parsed.id : "";
+    const email = typeof parsed.email === "string" ? parsed.email : "";
+    const role =
+      parsed.role === "maker" || parsed.role === "checker" ? parsed.role : null;
+    const organizationId =
+      typeof parsed.organization?.id === "string" ? parsed.organization.id : "";
+    const organizationName =
+      typeof parsed.organization?.name === "string"
+        ? parsed.organization.name
+        : "";
+    const isActive = typeof parsed.isActive === "boolean" ? parsed.isActive : false;
+
+    if (!id || !email || !role || !organizationId || !organizationName) {
+      return null;
+    }
+
+    const fallbackNames = getInitialsFromEmail(email);
+
+    return {
+      id,
+      email,
+      role,
+      organization: {
+        id: organizationId,
+        name: organizationName,
+      },
+      isActive,
+      firstName: normalizeName(parsed.firstName) ?? fallbackNames.firstName,
+      lastName: normalizeName(parsed.lastName) ?? fallbackNames.lastName,
+    };
   } catch {
     return null;
   }
@@ -83,6 +122,11 @@ export function getInitialsFromEmail(email: string): {
   }
 
   return { firstName: "User", lastName: "Account" };
+}
+
+function normalizeName(name?: string | null): string | undefined {
+  const trimmed = name?.trim();
+  return trimmed ? trimmed : undefined;
 }
 
 export class AuthSessionService {
@@ -129,9 +173,12 @@ export class AuthSessionService {
   static async fetchUserInfo(): Promise<AuthSessionUser> {
     try {
       const me = await apiClient.get<MeApiResponse>("/auth/me");
+      const fallbackNames = getInitialsFromEmail(me.email);
       const mapped: AuthSessionUser = {
         id: me.id,
         email: me.email,
+        firstName: normalizeName(me.first_name) ?? fallbackNames.firstName,
+        lastName: normalizeName(me.last_name) ?? fallbackNames.lastName,
         role: me.role,
         organization: me.organization,
         isActive: me.is_active,
@@ -146,4 +193,3 @@ export class AuthSessionService {
     }
   }
 }
-

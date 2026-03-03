@@ -1,4 +1,4 @@
-import { Calendar, MapPin } from "lucide-react";
+import { Building2, Calendar, MapPin } from "lucide-react";
 import { format } from "date-fns";
 
 import {
@@ -34,7 +34,11 @@ export function AccountMetadataCard({ userInfo }: AccountMetadataCardProps) {
   const formattedCreatedAt = formatDate(userInfo.createdAt);
   const formattedLastSignInAt = formatDate(userInfo.lastSignInAt);
 
-  const hasMetadata = formattedCreatedAt || formattedLastSignInAt || userInfo.locale;
+  const hasMetadata =
+    formattedCreatedAt ||
+    formattedLastSignInAt ||
+    userInfo.locale ||
+    userInfo.organizationName;
 
   if (!hasMetadata) {
     return null;
@@ -79,6 +83,17 @@ export function AccountMetadataCard({ userInfo }: AccountMetadataCardProps) {
             <div className="flex-1">
               <p className="text-sm font-medium text-foreground">Locale</p>
               <p className="text-sm text-muted-foreground">{userInfo.locale}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Organization */}
+        {userInfo.organizationName && (
+          <div className="flex items-start gap-3">
+            <Building2 className="size-5 text-muted-foreground mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Organization</p>
+              <p className="text-sm text-muted-foreground">{userInfo.organizationName}</p>
             </div>
           </div>
         )}

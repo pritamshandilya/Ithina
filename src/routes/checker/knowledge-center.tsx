@@ -17,7 +17,7 @@ import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { useStore } from "@/providers/store";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { AuthSessionService } from "@/lib/auth/session";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -26,8 +26,8 @@ import { ReferenceDocumentsTab } from "@/components/checker/knowledge-center/ref
 
 export const Route = createFileRoute("/checker/knowledge-center")({
   beforeLoad: () => {
-    const user = SimulatedAuthService.getCurrentUser();
-    if (!user || user.role !== "checker" || !SimulatedAuthService.isAuthenticated()) {
+    const user = AuthSessionService.getCurrentUser();
+    if (!user || user.role !== "checker") {
       throw redirect({ to: "/checker/dashboard" });
     }
   },

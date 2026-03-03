@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
+  Building2,
   ChevronDown,
   ChevronRight,
   FileBarChart,
@@ -35,7 +36,7 @@ import {
   SidebarMenuSubItem,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { AuthSessionService } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import SidenavFooter from "./footer";
 
@@ -73,7 +74,7 @@ function isMyAuditsActive(pathname: string): boolean {
 
 export default function Sidenav() {
   const location = useLocation();
-  const currentUser = SimulatedAuthService.getCurrentUser();
+  const currentUser = AuthSessionService.getCurrentUser();
   const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
   const { selectedStore, setSelectedStore } = useStore();
 
@@ -143,8 +144,19 @@ export default function Sidenav() {
   return (
     <Sidebar collapsible="icon">
       <SidebarContent>
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden p-0 h-12 px-2">
-          <SidebarGroupContent className="pt-2">
+        <SidebarGroup className="group-data-[collapsible=icon]:hidden p-0 px-2">
+          <SidebarGroupContent className="pt-2 pb-2">
+            {currentUser?.organization.name && (
+              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-sm">
+                <Building2 className="size-4 text-muted-foreground shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-[11px] text-muted-foreground leading-none">Organization</p>
+                  <p className="truncate font-medium text-foreground leading-tight mt-1">
+                    {currentUser.organization.name}
+                  </p>
+                </div>
+              </div>
+            )}
             <StoreSelectorDropdown
               stores={stores ?? []}
               selectedStoreId={selectedStore?.id ?? ""}

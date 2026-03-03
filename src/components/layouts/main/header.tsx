@@ -9,11 +9,13 @@ import {
   useNotifications,
   
 } from "@/features/checker/hooks";
+import { AuthSessionService } from "@/lib/auth/session";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { Notification } from "@/types/checker";
 
 export default function Header() {
+  const currentUser = AuthSessionService.getCurrentUser();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
@@ -26,15 +28,6 @@ export default function Header() {
     (notification: Notification) => {
       if (!notification.read) {
         markAsRead.mutate(notification.id);
-      }
-
-      if (
-        notification.type === "new_audit" ||
-        notification.type === "critical_audit"
-      ) {
-        console.log("Navigate to audit:", notification.auditId);
-      } else if (notification.type === "rule_change") {
-       console.log("Navigate to rule change:", notification.auditId); 
       }
     },
     [markAsRead],
@@ -64,6 +57,14 @@ export default function Header() {
 
       {/* Right section: Date and Notifications */}
       <div className="flex items-center gap-3">
+        {currentUser?.organization.name && (
+          <>
+            <span className="hidden sm:inline-flex rounded-md border border-border bg-card px-2 py-1 text-xs font-medium text-muted-foreground">
+              {currentUser.organization.name}
+            </span>
+            <span className="h-5 w-px bg-border shrink-0 hidden sm:block" aria-hidden />
+          </>
+        )}
         <time
           dateTime={new Date().toISOString().slice(0, 10)}
           className="text-sm font-medium text-muted-foreground tabular-nums shrink-0"

@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 
@@ -12,12 +12,23 @@ import {
   ProfileInfoCard,
 } from "@/components/common";
 import { useToast } from "@/hooks/use-toast";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import {
+  AuthSessionService,
+  getInitialsFromEmail,
+} from "@/lib/auth/session";
 import type { UserInfo } from "@/providers/auth/context";
+
+interface LocalProfileData {
+  firstName?: string;
+  lastName?: string;
+  profilePictureUrl?: string;
+}
+
+const PROFILE_KEY = "auth_profile";
 
 export const Route = createFileRoute("/profile")({
   beforeLoad: () => {
-    if (!SimulatedAuthService.isAuthenticated()) {
+    if (!AuthSessionService.isAuthenticated()) {
       throw redirect({
         to: "/login",
         search: {
@@ -36,28 +47,41 @@ function ProfilePage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const simulatedUser = useMemo(
-    () => SimulatedAuthService.getCurrentUser(),
-    [],
-  );
+  const currentUser = useMemo(() => AuthSessionService.getCurrentUser(), []);
+  const localProfile = useMemo(() => {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw) as LocalProfileData;
+    } catch {
+      return null;
+    }
+  }, []);
 
   const userInfo: UserInfo | null = useMemo(() => {
-    if (!simulatedUser) return null;
+    if (!currentUser) return null;
+
+    const fallbackNames = getInitialsFromEmail(currentUser.email);
+    const firstName = localProfile?.firstName || fallbackNames.firstName;
+    const lastName = localProfile?.lastName || fallbackNames.lastName;
 
     return {
-      id: simulatedUser.id,
-      firstName: simulatedUser.firstName,
-      lastName: simulatedUser.lastName,
-      email: simulatedUser.email,
-      emailVerified: true, 
-      profilePictureUrl: undefined,
+      id: currentUser.id,
+      firstName,
+      lastName,
+      email: currentUser.email,
+      emailVerified: true,
+      profilePictureUrl: localProfile?.profilePictureUrl,
       createdAt: new Date().toISOString(),
       lastSignInAt: new Date().toISOString(),
+      organizationName: currentUser.organization.name,
+      organizationId: currentUser.organization.id,
     };
-  }, [simulatedUser]);
+  }, [currentUser, localProfile]);
 
-  useMemo(() => {
-    setTimeout(() => setIsLoading(false), 100);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 100);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleAvatarUpload = async (file: File) => {
@@ -88,14 +112,14 @@ function ProfilePage() {
 
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const currentUser = SimulatedAuthService.getCurrentUser();
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
+      const previous = localProfile ?? {};
+      localStorage.setItem(
+        PROFILE_KEY,
+        JSON.stringify({
+          ...previous,
           profilePictureUrl: URL.createObjectURL(file),
-        };
-        localStorage.setItem("simulated_user", JSON.stringify(updatedUser));
-      }
+        } satisfies LocalProfileData),
+      );
 
       window.location.reload();
 
@@ -143,15 +167,15 @@ function ProfilePage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const currentUser = SimulatedAuthService.getCurrentUser();
-      if (currentUser) {
-        const updatedUser = {
-          ...currentUser,
-          firstName: updates.firstName ?? currentUser.firstName,
-          lastName: updates.lastName ?? currentUser.lastName,
-        };
-        localStorage.setItem("simulated_user", JSON.stringify(updatedUser));
-      }
+      const previous = localProfile ?? {};
+      localStorage.setItem(
+        PROFILE_KEY,
+        JSON.stringify({
+          ...previous,
+          firstName: updates.firstName ?? userInfo.firstName,
+          lastName: updates.lastName ?? userInfo.lastName,
+        } satisfies LocalProfileData),
+      );
 
       window.location.reload();
 
@@ -200,7 +224,7 @@ function ProfilePage() {
   };
 
   const handleLogout = () => {
-    SimulatedAuthService.logout();
+    AuthSessionService.logout();
     navigate({ to: "/login" });
   };
   if (isLoading) {

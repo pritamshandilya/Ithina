@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logo from "@/assets/logo.avif";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { AuthSessionService } from "@/lib/auth/session";
+import { ApiError } from "@/query/api-client";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -27,14 +28,15 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const user = await SimulatedAuthService.login(formData.email, formData.password);
-      const destination = SimulatedAuthService.getDashboardRoute(user.role) as
-        | "/maker/dashboard"
-        | "/checker/dashboard"
-        | "/";
+      const user = await AuthSessionService.login(formData.email, formData.password);
+      const destination = AuthSessionService.getDashboardRoute(user.role);
       navigate({ to: destination });
-    } catch {
-      setErrors({ general: "Invalid credentials. Please try again." });
+    } catch (error) {
+      if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+        setErrors({ general: error.message || "Invalid credentials. Please try again." });
+      } else {
+        setErrors({ general: "Login failed. Please try again." });
+      }
     } finally {
       setIsLoading(false);
     }

@@ -2,6 +2,7 @@
   "name": "plannogram",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.24.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",

@@ -22,7 +22,7 @@ import {
   useUpdateReferenceDocumentLinks,
   useUploadReferenceDocument,
   useUpdateComplianceRule,
-} from "@/features/checker/hooks";
+} from "@/queries/checker";
 import { useToast } from "@/hooks/use-toast";
 import type {
   ComplianceRule,

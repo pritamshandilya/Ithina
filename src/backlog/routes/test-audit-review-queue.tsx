@@ -225,7 +225,7 @@ function TestAuditReviewQueuePage() {
           <div className="rounded-lg bg-card border border-border p-6">
             <pre className="overflow-x-auto text-sm text-muted-foreground">
               <code>{`import { AuditReviewQueue } from "@/components/checker";
-import { usePendingAudits } from "@/features/checker/hooks";
+import { usePendingAudits } from "@/queries/checker";
 
 function CheckerDashboard() {
   const { data: audits, isLoading, error } = usePendingAudits(storeId);

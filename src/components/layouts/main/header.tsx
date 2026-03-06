@@ -5,15 +5,12 @@ import {
   useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
   useNotifications,
-
-} from "@/features/checker/hooks";
-import { AuthSessionService } from "@/lib/auth/session";
+} from "@/queries/checker";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { Notification } from "@/types/checker";
 
 export default function Header() {
-  const currentUser = AuthSessionService.getCurrentUser();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 

@@ -20,7 +20,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { AnalysisResult } from "@/features/maker/analysis";
+import type { AnalysisResult } from "@/lib/analysis";
 
 export interface ComplianceResultsViewProps {
   /** Shelf image preview URL */

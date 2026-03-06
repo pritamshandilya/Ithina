@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Rows3, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/features/maker/hooks";
+import { useAssignedShelves } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { AuditStatus } from "@/types/maker";

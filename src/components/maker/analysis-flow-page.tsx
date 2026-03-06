@@ -22,12 +22,12 @@ import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
 import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
-import type { ImageComparisonData } from "@/features/maker/analysis/image-comparison-types";
+import type { ImageComparisonData } from "@/lib/analysis/image-comparison-types";
 import {
   useAnalysisPipeline,
   MOCK_REPORT_SNIPPET,
   SIMPLE_PROGRESS_STEPS,
-} from "@/features/maker/analysis";
+} from "@/lib/analysis";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];

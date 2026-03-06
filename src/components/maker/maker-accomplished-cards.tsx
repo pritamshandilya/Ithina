@@ -7,7 +7,7 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/shared";
-import { useQuickStats, useDraftAudits, useAssignedShelves } from "@/features/maker/hooks";
+import { useQuickStats, useDraftAudits, useAssignedShelves } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 export interface MakerAccomplishedCardsProps {

@@ -2,7 +2,7 @@ import { CheckCircleIcon, ClockIcon, AlertTriangleIcon } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/shared";
-import { useQuickStats } from "@/features/maker/hooks";
+import { useQuickStats } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 /**

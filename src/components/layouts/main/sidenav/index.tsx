@@ -22,8 +22,8 @@ import { TeamSwitcher } from "./header-switch";
 import logo from "@/assets/logo.avif";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/providers/store";
-import { useStores as useMakerStores } from "@/features/maker/hooks";
-import { useStores as useCheckerStores } from "@/features/checker/hooks";
+import { useStores as useMakerStores } from "@/queries/maker";
+import { useStores as useCheckerStores } from "@/queries/checker";
 import {
   Sidebar,
   SidebarContent,

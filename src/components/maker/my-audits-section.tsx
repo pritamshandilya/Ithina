@@ -18,7 +18,7 @@ import {
   useDraftAudits,
   useReturnedAudits,
   useDeleteDraft,
-} from "@/features/maker/hooks";
+} from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";

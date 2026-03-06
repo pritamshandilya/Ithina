@@ -4,7 +4,7 @@ import { LayoutGridIcon, TableIcon } from "lucide-react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/features/maker/hooks";
+import { useAssignedShelves } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { AuditStatus, Shelf } from "@/types/maker";

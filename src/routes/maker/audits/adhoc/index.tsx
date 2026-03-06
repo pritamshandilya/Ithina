@@ -7,7 +7,7 @@ import MainLayout from "@/components/layouts/main";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdhocAnalyses } from "@/features/maker/hooks";
+import { useAdhocAnalyses } from "@/queries/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
 import { useStore } from "@/providers/store";

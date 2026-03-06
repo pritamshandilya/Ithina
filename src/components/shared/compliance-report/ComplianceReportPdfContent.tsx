@@ -10,7 +10,7 @@ import { OverviewChartsTab } from "./OverviewChartsTab";
 import { AllItemsTab } from "./AllItemsTab";
 import { AllIssuesTab } from "./AllIssuesTab";
 import { ImageComparisonTab } from "./ImageComparisonTab";
-import type { ReportSnippet } from "@/features/maker/analysis";
+import type { ReportSnippet } from "@/lib/analysis";
 import { cn } from "@/lib/utils";
 
 export interface ComplianceReportPdfContentProps {

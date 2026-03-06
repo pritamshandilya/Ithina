@@ -1,4 +1,4 @@
-import { ApiError, apiClient } from "@/query/api-client";
+import { ApiError, apiClient } from "@/queries/shared";
 
 export type UserRole = "maker" | "checker";
 

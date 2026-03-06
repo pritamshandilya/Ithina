@@ -1,7 +1,7 @@
 import { BarChart3, PieChart } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCheckerDashboardStats } from "@/features/checker/hooks";
+import { useCheckerDashboardStats } from "@/queries/checker";
 import { cn } from "@/lib/utils";
 import type {
   CheckerDailyCompliance,

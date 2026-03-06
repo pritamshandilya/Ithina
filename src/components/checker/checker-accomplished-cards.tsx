@@ -8,7 +8,7 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/shared";
-import { useComplianceOverview } from "@/features/checker/hooks";
+import { useComplianceOverview } from "@/queries/checker";
 import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";

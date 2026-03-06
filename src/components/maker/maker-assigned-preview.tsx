@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Rows3, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/features/maker/hooks";
+import { useAssignedShelves } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 import { ShelfCard } from "./shelf-card";

@@ -13,7 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useMakerAudits } from "@/features/maker/hooks";
+import { useAssignedShelves, useMakerAudits } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";

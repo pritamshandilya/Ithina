@@ -2,7 +2,7 @@ import { AlertCircle, ClipboardList, ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { usePendingAudits } from "@/features/checker/hooks";
+import { usePendingAudits } from "@/queries/checker";
 import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";

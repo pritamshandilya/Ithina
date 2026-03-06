@@ -36,7 +36,7 @@ import {
   ArchiveIcon,
   ActivityIcon,
 } from "lucide-react";
-import { useRuleInfo } from "@/features/checker/hooks";
+import { useRuleInfo } from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";

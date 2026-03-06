@@ -4,7 +4,6 @@
  * The Checker role focuses on governance, oversight, and configuration control.
  * These types extend the base Maker types with checker-specific fields and functionality.
  */
-
 import type { Audit } from "./maker";
 
 /**
@@ -45,9 +44,9 @@ export interface CheckerAudit extends Audit {
  * Publishing status for approved audits
  */
 export type PublishingStatus =
-  | "pending"   // Awaiting publication
+  | "pending" // Awaiting publication
   | "published" // Successfully published to event bus
-  | "failed";   // Publication failed, needs retry
+  | "failed"; // Publication failed, needs retry
 
 /**
  * High-level compliance overview metrics for governance
@@ -142,18 +141,33 @@ export interface Store {
   created?: string;
 
   /**
+   * List of maker IDs assigned to this store
+   */
+  maker_ids?: string[];
+
+  /**
    * Store status
    */
   status?: "Active" | "Inactive";
+
+  /**
+   * Store currency
+   */
+  currency?: string;
+
+  /**
+   * Store dimension system
+   */
+  default_dimensions?: string;
 }
 
 /**
  * Notification types for checker alerts
  */
 export type NotificationType =
-  | "new_audit"      // New audit submitted
+  | "new_audit" // New audit submitted
   | "critical_audit" // Critical audit needs immediate attention
-  | "rule_change";   // Rule has been modified
+  | "rule_change"; // Rule has been modified
 
 /**
  * Notification for checker dashboard

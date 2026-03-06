@@ -9,8 +9,9 @@ import type { StoreSetting } from "../types";
 interface StoreFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (store: Omit<StoreSetting, "id" | "created" | "status">) => void;
+    onSubmit: (store: Omit<StoreSetting, "id" | "created" | "status" | "maker_ids">) => void;
     initialData?: StoreSetting;
+    isLoading?: boolean;
 }
 
 export function StoreFormModal({
@@ -18,11 +19,13 @@ export function StoreFormModal({
     onClose,
     onSubmit,
     initialData,
+    isLoading = false,
 }: StoreFormModalProps) {
     const [formData, setFormData] = useState({
         name: "",
         address: "",
-        region: "",
+        currency: "USD",
+        default_dimensions: "Metric",
     });
 
     useEffect(() => {
@@ -30,13 +33,15 @@ export function StoreFormModal({
             setFormData({
                 name: initialData.name,
                 address: initialData.address,
-                region: initialData.region,
+                currency: initialData.currency || "USD",
+                default_dimensions: initialData.default_dimensions || "Metric",
             });
         } else {
             setFormData({
                 name: "",
                 address: "",
-                region: "",
+                currency: "USD",
+                default_dimensions: "Metric",
             });
         }
     }, [initialData, isOpen]);
@@ -44,7 +49,6 @@ export function StoreFormModal({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         onSubmit(formData);
-        onClose();
     };
 
     return (
@@ -92,36 +96,58 @@ export function StoreFormModal({
                             value={formData.address}
                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
                             className="bg-background border-border focus:border-accent transition-all"
+                            required
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="region" className="text-sm font-medium text-muted-foreground">
-                            Region
-                        </Label>
-                        <Input
-                            id="region"
-                            placeholder="e.g. Northeast"
-                            value={formData.region}
-                            onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                            className="bg-background border-border focus:border-accent transition-all"
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="currency" className="text-sm font-medium text-muted-foreground">
+                                Currency <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                                id="currency"
+                                placeholder="e.g. USD, EUR"
+                                value={formData.currency}
+                                onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                                className="bg-background border-border focus:border-accent transition-all"
+                                required
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="default_dimensions" className="text-sm font-medium text-muted-foreground">
+                                Default Dimensions <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                                id="default_dimensions"
+                                placeholder="e.g. Metric, Imperial"
+                                value={formData.default_dimensions}
+                                onChange={(e) => setFormData({ ...formData, default_dimensions: e.target.value })}
+                                className="bg-background border-border focus:border-accent transition-all"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-end gap-3 pt-4">
-                        <Button
+                        <button
                             type="button"
-                            variant="outline"
                             onClick={onClose}
-                            className="px-6"
+                            className="px-6 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm font-medium"
                         >
                             Cancel
-                        </Button>
+                        </button>
                         <Button
                             type="submit"
+                            disabled={isLoading}
                             className="px-6 bg-accent hover:bg-accent/90 text-accent-foreground gap-2"
                         >
-                            <Check className="w-4 h-4" />
+                            {isLoading ? (
+                                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                            ) : (
+                                <Check className="w-4 h-4" />
+                            )}
                             {initialData ? "Save Changes" : "Create Store"}
                         </Button>
                     </div>

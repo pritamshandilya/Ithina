@@ -1,6 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  Building2,
   ChevronDown,
   ChevronRight,
   FileBarChart,
@@ -11,13 +10,16 @@ import {
   Library,
   ListChecks,
   Rows3,
-  Settings,
   ShieldCheck,
+  Settings,
+  Store,
+  Users,
   Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { StoreSelectorDropdown } from "@/components/checker/store-selector-dropdown";
+import { TeamSwitcher } from "./header-switch";
+import logo from "@/assets/logo.avif";
 import { Separator } from "@/components/ui/separator";
 import { useStore } from "@/providers/store";
 import { useStores as useMakerStores } from "@/features/maker/hooks";
@@ -28,14 +30,22 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
   SidebarMenuSubButton,
   SidebarMenuSubItem,
+  SidebarToggle,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { AuthSessionService } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import SidenavFooter from "./footer";
@@ -75,7 +85,7 @@ function isMyAuditsActive(pathname: string): boolean {
 export default function Sidenav() {
   const location = useLocation();
   const currentUser = AuthSessionService.getCurrentUser();
-  const { state: sidebarState, setOpen: setSidebarOpen } = useSidebar();
+  const { state: sidebarState } = useSidebar();
   const { selectedStore, setSelectedStore } = useStore();
 
   const role = useMemo(() => {
@@ -84,7 +94,13 @@ export default function Sidenav() {
     return "maker";
   }, [currentUser?.role, location.pathname]);
 
-  const dashboardTo = role === "checker" ? "/checker/dashboard" : "/maker/dashboard";
+  const isOrgContext = useMemo(() => {
+    if (role !== "checker") return false;
+    const orgPaths = ["/checker/org-", "/checker/stores"];
+    return orgPaths.some(p => location.pathname.startsWith(p)) || location.pathname === "/checker/org-dashboard";
+  }, [role, location.pathname]);
+
+  const dashboardTo = role === "checker" ? (isOrgContext ? "/checker/org-dashboard" : "/checker/dashboard") : "/maker/dashboard";
 
   const [myAuditsExpanded, setMyAuditsExpanded] = useState(() =>
     isMyAuditsActive(location.pathname)
@@ -102,7 +118,12 @@ export default function Sidenav() {
     { label: "Approvals", to: "/maker/manual-audits", icon: FileSignature },
   ];
 
-  const checkerItems: NavItem[] = [
+  const orgItems: NavItem[] = [
+    { label: "Stores", to: "/checker/stores", icon: Store },
+    { label: "Staff", to: "/checker/org-staff", icon: Users },
+  ];
+
+  const storeItems: NavItem[] = [
     { label: "Audit Review", to: "/checker/audit-review", icon: ShieldCheck },
     { label: "Shelves", to: "/checker/shelf", icon: Rows3 },
     { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
@@ -118,7 +139,12 @@ export default function Sidenav() {
     { label: "Store Settings", to: "/checker/store-settings", icon: Settings },
   ];
 
-  const roleItems = role === "checker" ? checkerItems : makerItems;
+
+  const roleItems = useMemo(() => {
+    if (role === "maker") return makerItems;
+    if (isOrgContext) return orgItems;
+    return storeItems;
+  }, [role, isOrgContext, makerItems, orgItems, storeItems]);
 
   const [reportsOpen, setReportsOpen] = useState(true);
 
@@ -133,38 +159,28 @@ export default function Sidenav() {
     }
   }, [stores, selectedStore, setSelectedStore]);
 
-  const handleStoreChange = (storeId: string) => {
-    if (!stores) return;
-    const store = stores.find((s) => s.id === storeId);
-    if (store) {
-      setSelectedStore(store);
-    }
-  };
-
   return (
     <Sidebar collapsible="icon">
+      <SidebarHeader>
+        <div className="flex items-center justify-center py-4">
+          <div className="relative h-12 w-full px-1 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-0.5">
+            <div className="relative h-full w-full overflow-hidden bg-black rounded-md flex items-center justify-center p-1">
+              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
+              <div className="absolute inset-0 -translate-x-full animate-shine bg-linear-to-r from-transparent via-white/30 to-transparent" />
+            </div>
+          </div>
+        </div>
+        {(currentUser || role === "checker") && (
+          <TeamSwitcher
+            organization={currentUser?.organization || { name: "My Organization", id: "default-org" }}
+            stores={stores ?? []}
+            currentRole={role as "maker" | "checker"}
+            isOrgDashboard={isOrgContext}
+          />
+        )}
+      </SidebarHeader>
+      <SidebarToggle />
       <SidebarContent>
-        <SidebarGroup className="group-data-[collapsible=icon]:hidden p-0 px-2">
-          <SidebarGroupContent className="pt-2 pb-2">
-            {currentUser?.organization.name && (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-border bg-card px-2.5 py-2 text-sm">
-                <Building2 className="size-4 text-muted-foreground shrink-0" />
-                <div className="min-w-0">
-                  <p className="text-[11px] text-muted-foreground leading-none">Organization</p>
-                  <p className="truncate font-medium text-foreground leading-tight mt-1">
-                    {currentUser.organization.name}
-                  </p>
-                </div>
-              </div>
-            )}
-            <StoreSelectorDropdown
-              stores={stores ?? []}
-              selectedStoreId={selectedStore?.id ?? ""}
-              onStoreChange={handleStoreChange}
-              className="w-full justify-between"
-            />
-          </SidebarGroupContent>
-        </SidebarGroup>
         <Separator className="group-data-[collapsible=icon]:hidden" />
         <SidebarGroup>
           <SidebarGroupContent>
@@ -185,58 +201,84 @@ export default function Sidenav() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               {role === "maker" && (
                 <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={isMyAuditsActive(location.pathname)}
-                    tooltip="My Audits"
-                    onClick={() => {
-                      if (sidebarState === "collapsed") {
-                        setSidebarOpen(true);
-                        setMyAuditsExpanded(true);
-                      } else {
-                        setMyAuditsExpanded((e) => !e);
-                      }
-                    }}
-                    className="cursor-pointer"
-                    asChild={false}
-                  >
-                    <span className="flex w-full items-center gap-2">
-                      <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
-                      <span className="flex-1 truncate">My Audits</span>
-                      <ChevronDown
-                        className={`size-4 shrink-0 transition-transform ${myAuditsExpanded ? "rotate-180" : ""}`}
-                      />
-                    </span>
-                  </SidebarMenuButton>
-                  {myAuditsExpanded && (
-                    <SidebarMenuSub>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={location.pathname.startsWith("/maker/audits/planogram")}
+                  {sidebarState === "collapsed" ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={isMyAuditsActive(location.pathname)}
+                          tooltip="My Audits"
+                          className="cursor-pointer"
                         >
-                          <Link to="/maker/audits/planogram">
-                            <LayoutGrid />
+                          <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
+                          <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">My Audits</span>
+                        </SidebarMenuButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent side="right" align="start" className="w-56">
+                        <DropdownMenuItem asChild>
+                          <Link to="/maker/audits/planogram" className="flex items-center gap-2">
+                            <LayoutGrid className="size-4" />
                             Planogram based analysis
                           </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                      <SidebarMenuSubItem>
-                        <SidebarMenuSubButton
-                          asChild
-                          isActive={location.pathname.startsWith("/maker/audits/adhoc")}
-                        >
-                          <Link to="/maker/audits/adhoc">
-                            <Zap />
+                        </DropdownMenuItem>
+                        <DropdownMenuItem asChild>
+                          <Link to="/maker/audits/adhoc" className="flex items-center gap-2">
+                            <Zap className="size-4" />
                             Adhoc Analysis
                           </Link>
-                        </SidebarMenuSubButton>
-                      </SidebarMenuSubItem>
-                    </SidebarMenuSub>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <>
+                      <SidebarMenuButton
+                        isActive={isMyAuditsActive(location.pathname)}
+                        tooltip="My Audits"
+                        onClick={() => setMyAuditsExpanded((e) => !e)}
+                        className="cursor-pointer"
+                        asChild={false}
+                      >
+                        <span className="flex w-full items-center gap-2">
+                          <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
+                          <span className="flex-1 truncate">My Audits</span>
+                          <ChevronDown
+                            className={`size-4 shrink-0 transition-transform ${myAuditsExpanded ? "rotate-180" : ""}`}
+                          />
+                        </span>
+                      </SidebarMenuButton>
+                      {myAuditsExpanded && (
+                        <SidebarMenuSub>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={location.pathname.startsWith("/maker/audits/planogram")}
+                            >
+                              <Link to="/maker/audits/planogram">
+                                <LayoutGrid />
+                                Planogram based analysis
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={location.pathname.startsWith("/maker/audits/adhoc")}
+                            >
+                              <Link to="/maker/audits/adhoc">
+                                <Zap />
+                                Adhoc Analysis
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        </SidebarMenuSub>
+                      )}
+                    </>
                   )}
                 </SidebarMenuItem>
               )}
+
               {role === "maker" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -251,6 +293,7 @@ export default function Sidenav() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
+
               {roleItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActiveItem(location.pathname, location.hash, item);
@@ -258,27 +301,51 @@ export default function Sidenav() {
                 if (item.items) {
                   return (
                     <SidebarMenuItem key={item.label}>
-                      <SidebarMenuButton
-                        tooltip={item.label}
-                        onClick={() => setReportsOpen(!reportsOpen)}
-                      >
-                        <Icon />
-                        <span>{item.label}</span>
-                        <ChevronRight className={cn(
-                          "ml-auto transition-transform duration-200",
-                          reportsOpen && "rotate-90"
-                        )} />
-                      </SidebarMenuButton>
-                      {reportsOpen && (
-                        <SidebarMenuSub>
-                          {item.items.map((subItem) => (
-                            <SidebarMenuSubItem key={subItem.label}>
-                              <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
+                      {sidebarState === "collapsed" ? (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <SidebarMenuButton
+                              tooltip={item.label}
+                              isActive={isActive}
+                            >
+                              <Icon />
+                              <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                            </SidebarMenuButton>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent side="right" align="start" className="w-56">
+                            {item.items.map((subItem) => (
+                              <DropdownMenuItem key={subItem.label} asChild>
                                 <Link to={subItem.to}>{subItem.label}</Link>
-                              </SidebarMenuSubButton>
-                            </SidebarMenuSubItem>
-                          ))}
-                        </SidebarMenuSub>
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      ) : (
+                        <>
+                          <SidebarMenuButton
+                            tooltip={item.label}
+                            onClick={() => setReportsOpen(!reportsOpen)}
+                            isActive={isActive}
+                          >
+                            <Icon />
+                            <span>{item.label}</span>
+                            <ChevronRight className={cn(
+                              "ml-auto transition-transform duration-200",
+                              reportsOpen && "rotate-90"
+                            )} />
+                          </SidebarMenuButton>
+                          {reportsOpen && (
+                            <SidebarMenuSub>
+                              {item.items.map((subItem) => (
+                                <SidebarMenuSubItem key={subItem.label}>
+                                  <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
+                                    <Link to={subItem.to}>{subItem.label}</Link>
+                                  </SidebarMenuSubButton>
+                                </SidebarMenuSubItem>
+                              ))}
+                            </SidebarMenuSub>
+                          )}
+                        </>
                       )}
                     </SidebarMenuItem>
                   );

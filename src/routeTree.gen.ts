@@ -18,8 +18,11 @@ import { Route as MakerShelvesRouteImport } from './routes/maker/shelves'
 import { Route as MakerManualAuditsRouteImport } from './routes/maker/manual-audits'
 import { Route as MakerDashboardRouteImport } from './routes/maker/dashboard'
 import { Route as MakerLayoutRouteImport } from './routes/maker/_layout'
+import { Route as CheckerStoresRouteImport } from './routes/checker/stores'
 import { Route as CheckerStoreSettingsRouteImport } from './routes/checker/store-settings'
 import { Route as CheckerShelvesRouteImport } from './routes/checker/shelves'
+import { Route as CheckerOrgStaffRouteImport } from './routes/checker/org-staff'
+import { Route as CheckerOrgDashboardRouteImport } from './routes/checker/org-dashboard'
 import { Route as CheckerKnowledgeCenterRouteImport } from './routes/checker/knowledge-center'
 import { Route as CheckerDashboardRouteImport } from './routes/checker/dashboard'
 import { Route as CheckerAuditReviewRouteImport } from './routes/checker/audit-review'
@@ -98,6 +101,11 @@ const MakerLayoutRoute = MakerLayoutRouteImport.update({
   path: '/maker',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CheckerStoresRoute = CheckerStoresRouteImport.update({
+  id: '/checker/stores',
+  path: '/checker/stores',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckerStoreSettingsRoute = CheckerStoreSettingsRouteImport.update({
   id: '/checker/store-settings',
   path: '/checker/store-settings',
@@ -106,6 +114,16 @@ const CheckerStoreSettingsRoute = CheckerStoreSettingsRouteImport.update({
 const CheckerShelvesRoute = CheckerShelvesRouteImport.update({
   id: '/checker/shelves',
   path: '/checker/shelves',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckerOrgStaffRoute = CheckerOrgStaffRouteImport.update({
+  id: '/checker/org-staff',
+  path: '/checker/org-staff',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckerOrgDashboardRoute = CheckerOrgDashboardRouteImport.update({
+  id: '/checker/org-dashboard',
+  path: '/checker/org-dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckerKnowledgeCenterRoute = CheckerKnowledgeCenterRouteImport.update({
@@ -292,8 +310,11 @@ export interface FileRoutesByFullPath {
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
+  '/checker/org-dashboard': typeof CheckerOrgDashboardRoute
+  '/checker/org-staff': typeof CheckerOrgStaffRoute
   '/checker/shelves': typeof CheckerShelvesRoute
   '/checker/store-settings': typeof CheckerStoreSettingsRoute
+  '/checker/stores': typeof CheckerStoresRoute
   '/maker': typeof MakerLayoutRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/manual-audits': typeof MakerManualAuditsRoute
@@ -334,8 +355,11 @@ export interface FileRoutesByTo {
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
+  '/checker/org-dashboard': typeof CheckerOrgDashboardRoute
+  '/checker/org-staff': typeof CheckerOrgStaffRoute
   '/checker/shelves': typeof CheckerShelvesRoute
   '/checker/store-settings': typeof CheckerStoreSettingsRoute
+  '/checker/stores': typeof CheckerStoresRoute
   '/maker': typeof MakerIndexRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/manual-audits': typeof MakerManualAuditsRoute
@@ -375,8 +399,11 @@ export interface FileRoutesById {
   '/checker/audit-review': typeof CheckerAuditReviewRoute
   '/checker/dashboard': typeof CheckerDashboardRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterRoute
+  '/checker/org-dashboard': typeof CheckerOrgDashboardRoute
+  '/checker/org-staff': typeof CheckerOrgStaffRoute
   '/checker/shelves': typeof CheckerShelvesRoute
   '/checker/store-settings': typeof CheckerStoreSettingsRoute
+  '/checker/stores': typeof CheckerStoresRoute
   '/maker/_layout': typeof MakerLayoutRoute
   '/maker/dashboard': typeof MakerDashboardRoute
   '/maker/manual-audits': typeof MakerManualAuditsRoute
@@ -422,8 +449,11 @@ export interface FileRouteTypes {
     | '/checker/audit-review'
     | '/checker/dashboard'
     | '/checker/knowledge-center'
+    | '/checker/org-dashboard'
+    | '/checker/org-staff'
     | '/checker/shelves'
     | '/checker/store-settings'
+    | '/checker/stores'
     | '/maker'
     | '/maker/dashboard'
     | '/maker/manual-audits'
@@ -464,8 +494,11 @@ export interface FileRouteTypes {
     | '/checker/audit-review'
     | '/checker/dashboard'
     | '/checker/knowledge-center'
+    | '/checker/org-dashboard'
+    | '/checker/org-staff'
     | '/checker/shelves'
     | '/checker/store-settings'
+    | '/checker/stores'
     | '/maker'
     | '/maker/dashboard'
     | '/maker/manual-audits'
@@ -504,8 +537,11 @@ export interface FileRouteTypes {
     | '/checker/audit-review'
     | '/checker/dashboard'
     | '/checker/knowledge-center'
+    | '/checker/org-dashboard'
+    | '/checker/org-staff'
     | '/checker/shelves'
     | '/checker/store-settings'
+    | '/checker/stores'
     | '/maker/_layout'
     | '/maker/dashboard'
     | '/maker/manual-audits'
@@ -550,8 +586,11 @@ export interface RootRouteChildren {
   CheckerAuditReviewRoute: typeof CheckerAuditReviewRoute
   CheckerDashboardRoute: typeof CheckerDashboardRoute
   CheckerKnowledgeCenterRoute: typeof CheckerKnowledgeCenterRoute
+  CheckerOrgDashboardRoute: typeof CheckerOrgDashboardRoute
+  CheckerOrgStaffRoute: typeof CheckerOrgStaffRoute
   CheckerShelvesRoute: typeof CheckerShelvesRoute
   CheckerStoreSettingsRoute: typeof CheckerStoreSettingsRoute
+  CheckerStoresRoute: typeof CheckerStoresRoute
   MakerLayoutRoute: typeof MakerLayoutRoute
   MakerDashboardRoute: typeof MakerDashboardRoute
   MakerManualAuditsRoute: typeof MakerManualAuditsRoute
@@ -631,6 +670,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerLayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/checker/stores': {
+      id: '/checker/stores'
+      path: '/checker/stores'
+      fullPath: '/checker/stores'
+      preLoaderRoute: typeof CheckerStoresRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/checker/store-settings': {
       id: '/checker/store-settings'
       path: '/checker/store-settings'
@@ -643,6 +689,20 @@ declare module '@tanstack/react-router' {
       path: '/checker/shelves'
       fullPath: '/checker/shelves'
       preLoaderRoute: typeof CheckerShelvesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checker/org-staff': {
+      id: '/checker/org-staff'
+      path: '/checker/org-staff'
+      fullPath: '/checker/org-staff'
+      preLoaderRoute: typeof CheckerOrgStaffRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/checker/org-dashboard': {
+      id: '/checker/org-dashboard'
+      path: '/checker/org-dashboard'
+      fullPath: '/checker/org-dashboard'
+      preLoaderRoute: typeof CheckerOrgDashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/checker/knowledge-center': {
@@ -1003,8 +1063,11 @@ const rootRouteChildren: RootRouteChildren = {
   CheckerAuditReviewRoute: CheckerAuditReviewRoute,
   CheckerDashboardRoute: CheckerDashboardRoute,
   CheckerKnowledgeCenterRoute: CheckerKnowledgeCenterRoute,
+  CheckerOrgDashboardRoute: CheckerOrgDashboardRoute,
+  CheckerOrgStaffRoute: CheckerOrgStaffRoute,
   CheckerShelvesRoute: CheckerShelvesRoute,
   CheckerStoreSettingsRoute: CheckerStoreSettingsRoute,
+  CheckerStoresRoute: CheckerStoresRoute,
   MakerLayoutRoute: MakerLayoutRoute,
   MakerDashboardRoute: MakerDashboardRoute,
   MakerManualAuditsRoute: MakerManualAuditsRoute,

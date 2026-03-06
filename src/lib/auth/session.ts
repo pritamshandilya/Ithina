@@ -1,4 +1,4 @@
-import { apiClient, ApiError } from "@/query/api-client";
+import { ApiError, apiClient } from "@/query/api-client";
 
 export type UserRole = "maker" | "checker";
 
@@ -56,14 +56,17 @@ function loadUser(): AuthSessionUser | null {
     const role =
       parsed.role === "maker" || parsed.role === "checker" ? parsed.role : null;
     const organizationId =
-      typeof parsed.organization?.id === "string" ? parsed.organization.id : "";
+      typeof parsed.organization?.id === "string"
+        ? parsed.organization.id
+        : "default-org";
     const organizationName =
       typeof parsed.organization?.name === "string"
         ? parsed.organization.name
-        : "";
-    const isActive = typeof parsed.isActive === "boolean" ? parsed.isActive : false;
+        : "My Organization";
+    const isActive =
+      typeof parsed.isActive === "boolean" ? parsed.isActive : false;
 
-    if (!id || !email || !role || !organizationId || !organizationName) {
+    if (!id || !email || !role) {
       return null;
     }
 
@@ -130,11 +133,30 @@ function normalizeName(name?: string | null): string | undefined {
 }
 
 export class AuthSessionService {
-  static async login(email: string, password: string): Promise<AuthSessionUser> {
+  static async login(
+    email: string,
+    password: string,
+  ): Promise<AuthSessionUser> {
     const login = await apiClient.post<LoginApiResponse>("/auth/login", {
       email,
       password,
     });
+
+    saveToken(login.access_token, login.expires_in);
+
+    const me = await this.fetchUserInfo();
+    return me;
+  }
+
+  static async token(
+    username: string,
+    password: string,
+  ): Promise<AuthSessionUser> {
+    const body = new URLSearchParams();
+    body.append("username", username);
+    body.append("password", password);
+
+    const login = await apiClient.post<LoginApiResponse>("/auth/token", body);
 
     saveToken(login.access_token, login.expires_in);
 
@@ -165,8 +187,10 @@ export class AuthSessionService {
     localStorage.removeItem(LEGACY_LOGIN_FLAG_KEY);
   }
 
-  static getDashboardRoute(role: UserRole): "/maker/dashboard" | "/checker/dashboard" {
-    if (role === "checker") return "/checker/dashboard";
+  static getDashboardRoute(
+    role: UserRole,
+  ): "/maker/dashboard" | "/checker/dashboard" | "/checker/org-dashboard" {
+    if (role === "checker") return "/checker/org-dashboard";
     return "/maker/dashboard";
   }
 
@@ -180,7 +204,10 @@ export class AuthSessionService {
         firstName: normalizeName(me.first_name) ?? fallbackNames.firstName,
         lastName: normalizeName(me.last_name) ?? fallbackNames.lastName,
         role: me.role,
-        organization: me.organization,
+        organization: me.organization || {
+          id: "default-org",
+          name: "My Organization",
+        },
         isActive: me.is_active,
       };
       saveUser(mapped);

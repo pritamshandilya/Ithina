@@ -14,9 +14,9 @@ import {
   generateMockPendingAudits,
   generateMockPublishedAudits,
   generateMockRuleInfo,
-  generateMockStores,
   generateMockViolations,
 } from "@/lib/api/mock-data";
+import { apiClient } from "@/query/api-client";
 import type {
   CheckerAudit,
   CheckerDashboardStats,
@@ -37,12 +37,11 @@ const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Fetch list of stores assigned to the checker
  *
- * @param userId - The checker's user ID
+ * @param _userId - The checker's user ID (currently handled by Bearer token)
  * @returns Promise resolving to array of stores
  */
 export async function fetchStores(_userId: string): Promise<Store[]> {
-  await delay(300);
-  return generateMockStores();
+  return apiClient.get<Store[]>("/stores");
 }
 
 /**

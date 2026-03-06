@@ -5,4 +5,8 @@
 
 export { StatusBadge, type StatusBadgeProps } from "./status-badge";
 export { StatCard, type StatCardProps } from "./stat-card";
-export { RuleStatusBadge, type RuleStatusBadgeProps } from "./rule-status-badge";
+export {
+  RuleStatusBadge,
+  type RuleStatusBadgeProps,
+} from "./rule-status-badge";
+export { PageHeader } from "./page-header";

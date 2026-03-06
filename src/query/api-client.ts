@@ -103,7 +103,11 @@ async function request<T>(
     method,
     headers: buildHeaders(options?.headers),
     body:
-      options?.body !== undefined ? JSON.stringify(options.body) : undefined,
+      options?.body instanceof URLSearchParams
+        ? options.body
+        : options?.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
   });
 
   return parseResponse<T>(res);

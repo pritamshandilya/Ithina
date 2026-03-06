@@ -35,11 +35,16 @@ export default function SidenavFooter() {
     navigate({ to: "/login" });
   };
 
-  if (!currentUser) return null;
+  const user = currentUser || {
+    firstName: "User",
+    lastName: "Account",
+    email: "user@example.com",
+    organization: { name: "Organization" },
+  };
 
-  const fallbackNames = getInitialsFromEmail(currentUser.email);
-  const firstName = currentUser.firstName.trim() || fallbackNames.firstName;
-  const lastName = currentUser.lastName.trim() || fallbackNames.lastName;
+  const fallbackNames = getInitialsFromEmail(user.email);
+  const firstName = (user.firstName || "").trim() || fallbackNames.firstName;
+  const lastName = (user.lastName || "").trim() || fallbackNames.lastName;
 
   return (
     <SidebarMenu>
@@ -67,9 +72,9 @@ export default function SidenavFooter() {
                   {firstName} {lastName}
                 </span>
 
-                <span className="truncate text-xs">{currentUser.email}</span>
+                <span className="truncate text-xs">{user.email}</span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {currentUser.organization.name}
+                  {user.organization.name}
                 </span>
               </div>
 
@@ -102,9 +107,9 @@ export default function SidenavFooter() {
                     {firstName} {lastName}
                   </span>
 
-                  <span className="truncate text-xs">{currentUser.email}</span>
+                  <span className="truncate text-xs">{user.email}</span>
                   <span className="truncate text-xs text-muted-foreground">
-                    {currentUser.organization.name}
+                    {user.organization.name}
                   </span>
                 </div>
               </div>

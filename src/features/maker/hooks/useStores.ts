@@ -2,12 +2,12 @@
  * useStores Hook
  *
  * TanStack Query hook for fetching stores assigned to the maker.
- * Makers can belong to more than one store.
+ * Uses real /stores API endpoint — Bearer token identifies the user.
  */
-
 import { useQuery } from "@tanstack/react-query";
+
 import { fetchStores } from "../api/maker";
-import { mockUser } from "@/lib/api/mock-data";
+import { AuthSessionService } from "@/lib/auth/session";
 
 export const storesKeys = {
   all: ["maker", "stores"] as const,
@@ -15,10 +15,14 @@ export const storesKeys = {
 };
 
 export function useStores() {
+  const currentUser = AuthSessionService.getCurrentUser();
+  const userId = currentUser?.id ?? "anonymous";
+
   return useQuery({
-    queryKey: storesKeys.byUser(mockUser.id),
-    queryFn: () => fetchStores(mockUser.id),
+    queryKey: storesKeys.byUser(userId),
+    queryFn: () => fetchStores(userId),
     staleTime: 10 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    enabled: !!currentUser,
   });
 }

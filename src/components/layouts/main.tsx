@@ -3,7 +3,7 @@ import { Outlet, useLocation } from "@tanstack/react-router";
 
 import Sidenav from "./main/sidenav";
 import Header from "./main/header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
 /** Full report views where header/metrics/tabs stay fixed and only tab content scrolls */
@@ -39,11 +39,7 @@ export default function MainLayout({ children }: PropsWithChildren) {
   const constrainedHeight = fullReportView || stickyTablePage;
 
   return (
-    <SidebarProvider
-      className={cn(
-        constrainedHeight && "h-svh overflow-hidden"
-      )}
-    >
+    <>
       <Sidenav />
 
       <SidebarInset className="flex min-h-0 flex-col">
@@ -59,6 +55,6 @@ export default function MainLayout({ children }: PropsWithChildren) {
           {children ?? <Outlet />}
         </div>
       </SidebarInset>
-    </SidebarProvider>
+    </>
   );
 }

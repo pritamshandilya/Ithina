@@ -1,17 +1,13 @@
 /**
  * useStores Hook
- * 
+ *
  * TanStack Query hook for fetching stores assigned to the checker.
- * 
- * Features:
- * - Automatic caching (10 minute stale time)
- * - Background refetching
- * - Type-safe with TypeScript
+ * Uses real /stores API endpoint — Bearer token identifies the user.
  */
-
 import { useQuery } from "@tanstack/react-query";
+
 import { fetchStores } from "../api/checker";
-import { mockCheckerUser } from "@/lib/api/mock-data";
+import { AuthSessionService } from "@/lib/auth/session";
 
 /**
  * Query key factory for stores
@@ -23,19 +19,16 @@ export const storesKeys = {
 
 /**
  * Hook to fetch stores assigned to the checker
- * 
- * @returns TanStack Query result with stores data
- * 
- * @example
- * ```tsx
- * const { data: stores, isLoading, error } = useStores();
- * ```
  */
 export function useStores() {
+  const currentUser = AuthSessionService.getCurrentUser();
+  const userId = currentUser?.id ?? "anonymous";
+
   return useQuery({
-    queryKey: storesKeys.byUser(mockCheckerUser.id),
-    queryFn: () => fetchStores(mockCheckerUser.id),
-    staleTime: 10 * 60 * 1000, // 10 minutes - stores don't change often
-    gcTime: 30 * 60 * 1000, // 30 minutes garbage collection
+    queryKey: storesKeys.byUser(userId),
+    queryFn: () => fetchStores(userId),
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    enabled: !!currentUser,
   });
 }

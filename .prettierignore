@@ -1,0 +1,10 @@
+.github
+.tanstack
+.vscode
+node_modules
+pnpm-lock.yaml
+index.html
+dist
+public
+src/components/ui
+routeTree.gen.ts

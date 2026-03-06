@@ -23,7 +23,7 @@
  */
 
 import { Send, CheckCircle, XCircle, Clock, RefreshCw } from "lucide-react";
-import { usePublishedAudits } from "@/features/checker/hooks";
+import { usePublishedAudits } from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";

@@ -1,7 +1,7 @@
 import { BarChart3, PieChart } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMakerDashboardStats } from "@/features/maker/hooks";
+import { useMakerDashboardStats } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 import type { MakerDailyAuditCount, MakerStatusBreakdown } from "@/types/maker";
 

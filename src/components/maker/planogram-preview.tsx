@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import planogramData from "@/lib/constants/planogram.json";
-import { usePlanogramById } from "@/features/maker/hooks";
+import { usePlanogramById } from "@/queries/maker";
 import type { PlanogramShelfDef } from "@/types/planogram";
 
 interface PlanogramPreviewProps {

@@ -33,7 +33,7 @@ import type {
   ReportSnippet,
   ReportKeyFinding,
   ReportIssueCategory,
-} from "@/features/maker/analysis";
+} from "@/lib/analysis";
 
 export interface ReportSnippetsViewProps {
   /** Shelf image preview URL */

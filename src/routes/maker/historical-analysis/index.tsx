@@ -6,7 +6,7 @@ import { useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useHistoricalAnalyses } from "@/features/maker/hooks";
+import { useHistoricalAnalyses } from "@/queries/maker";
 import type { AdhocAnalysisStatus } from "@/types/maker";
 import type { HistoricalAnalysisRow } from "@/types/maker";
 import { getRelativePath } from "@/lib/utils";

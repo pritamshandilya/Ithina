@@ -7,8 +7,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRulesByRuleSetId } from "@/features/maker/hooks";
-import type { ComplianceRuleSetSummary } from "@/features/checker/api/knowledge-center";
+import { useRulesByRuleSetId } from "@/queries/maker";
+import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
 import type { ComplianceRule, RuleSeverity } from "@/types/checker";
 
 export interface ComplianceRuleViewSheetProps {

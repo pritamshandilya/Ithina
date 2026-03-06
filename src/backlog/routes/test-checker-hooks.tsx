@@ -32,7 +32,7 @@ import {
   useOverrideAndApprove,
   useMarkNotificationAsRead,
   useMarkAllNotificationsAsRead,
-} from "@/features/checker/hooks";
+} from "@/queries/checker";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { format } from "date-fns";
 

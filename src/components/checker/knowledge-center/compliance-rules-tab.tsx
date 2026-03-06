@@ -21,8 +21,8 @@ import {
   useComplianceRules,
   useRetireComplianceRule,
   useValidateRuleActivation,
-} from "@/features/checker/hooks";
-import { KNOWLEDGE_SHELF_TYPES } from "@/features/checker/api/knowledge-center";
+} from "@/queries/checker";
+import { KNOWLEDGE_SHELF_TYPES } from "@/queries/checker/api/knowledge-center";
 import { useToast } from "@/hooks/use-toast";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";

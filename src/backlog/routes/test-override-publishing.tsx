@@ -23,7 +23,7 @@ import {
   OverrideActivityPanel,
   PublishingStatusPanel,
 } from "@/components/checker";
-import { useStores } from "@/features/checker/hooks";
+import { useStores } from "@/queries/checker";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 
 export const Route = createFileRoute("/test-override-publishing")({

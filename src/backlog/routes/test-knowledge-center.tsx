@@ -19,7 +19,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { KnowledgeCenterSection } from "@/components/checker";
-import { useStores } from "@/features/checker/hooks";
+import { useStores } from "@/queries/checker";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 
 export const Route = createFileRoute("/test-knowledge-center")({

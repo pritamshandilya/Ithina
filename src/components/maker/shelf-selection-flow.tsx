@@ -5,7 +5,7 @@ import { Search, Plus, ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useAssignedShelves } from "@/features/maker/hooks";
+import { useAssignedShelves } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 import type { Shelf } from "@/types/maker";
 

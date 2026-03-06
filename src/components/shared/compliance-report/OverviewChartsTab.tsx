@@ -25,7 +25,7 @@ import type {
   ReportKeyFinding,
   ReportShelfCompliance,
   ReportIssueDistribution,
-} from "@/features/maker/analysis";
+} from "@/lib/analysis";
 
 export interface OverviewChartsTabProps {
   report: ReportSnippet;

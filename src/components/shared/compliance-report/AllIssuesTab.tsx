@@ -16,13 +16,13 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { MOCK_ALL_ISSUES_REPORT } from "@/features/maker/analysis/mock-all-issues-report";
+import { MOCK_ALL_ISSUES_REPORT } from "@/lib/analysis/mock-all-issues-report";
 import type {
   AllIssuesReportData,
   IssueCategoryGroup,
   IssueEntry,
   IssueCategoryVariant,
-} from "@/features/maker/analysis/all-issues-report-types";
+} from "@/lib/analysis/all-issues-report-types";
 import { cn } from "@/lib/utils";
 
 const VARIANT_STYLES: Record<IssueCategoryVariant, string> = {

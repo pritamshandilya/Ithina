@@ -162,6 +162,14 @@ export interface Store {
 }
 
 /**
+ * Store configuration shape used by checker store management screens.
+ */
+export interface StoreSetting extends Store {
+  currency: string;
+  default_dimensions: string;
+}
+
+/**
  * Notification types for checker alerts
  */
 export type NotificationType =

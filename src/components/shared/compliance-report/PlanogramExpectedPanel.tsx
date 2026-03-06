@@ -16,7 +16,7 @@ import type {
   ImageComparisonData,
   PlanogramSlot,
   PlanogramSlotStatus,
-} from "@/features/maker/analysis/image-comparison-types";
+} from "@/lib/analysis/image-comparison-types";
 import { cn } from "@/lib/utils";
 
 const COLOR_MAP: Record<string, { fill: string; accent: string }> = {

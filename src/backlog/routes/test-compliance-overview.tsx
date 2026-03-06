@@ -345,7 +345,7 @@ function TestComplianceOverviewPage() {
           <div className="rounded-lg bg-card border border-border p-6">
             <pre className="overflow-x-auto text-sm text-muted-foreground">
               <code>{`import { ComplianceOverview } from "@/components/checker";
-import { useComplianceOverview } from "@/features/checker/hooks";
+import { useComplianceOverview } from "@/queries/checker";
 
 function CheckerDashboard() {
   const { data, isLoading, error } = useComplianceOverview(selectedStoreId);

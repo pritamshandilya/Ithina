@@ -3,8 +3,8 @@ import { formatDistanceToNow } from "date-fns";
 import { Rows3, Store, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/features/maker/hooks";
-import { useComplianceOverview } from "@/features/checker/hooks";
+import { useAssignedShelves } from "@/queries/maker";
+import { useComplianceOverview } from "@/queries/checker";
 import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";

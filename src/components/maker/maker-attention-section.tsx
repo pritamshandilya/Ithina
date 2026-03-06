@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   useDraftAudits,
   useReturnedAudits,
-} from "@/features/maker/hooks";
+} from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 export interface MakerAttentionSectionProps {

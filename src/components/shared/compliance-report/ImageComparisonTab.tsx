@@ -6,12 +6,12 @@
  */
 
 import { ImageIcon } from "lucide-react";
-import { MOCK_IMAGE_COMPARISON } from "@/features/maker/analysis/mock-image-comparison";
+import { MOCK_IMAGE_COMPARISON } from "@/lib/analysis/mock-image-comparison";
 import type {
   ImageComparisonData,
   DetectionOverlay,
   DetectionOverlayStatus,
-} from "@/features/maker/analysis/image-comparison-types";
+} from "@/lib/analysis/image-comparison-types";
 import { Fragment } from "react";
 import {
   Tooltip,

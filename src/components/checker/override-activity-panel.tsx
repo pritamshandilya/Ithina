@@ -23,7 +23,7 @@
  */
 
 import { ShieldAlert, TrendingUp, AlertCircle } from "lucide-react";
-import { useOverrideActivity } from "@/features/checker/hooks";
+import { useOverrideActivity } from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 

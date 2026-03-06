@@ -6,7 +6,7 @@ import {
   useAssignedShelves,
   useQuickStats,
   useReturnedAudits,
-} from "@/features/maker/hooks";
+} from "@/queries/maker";
 
 /**
  * Test page for verifying TanStack Query data layer

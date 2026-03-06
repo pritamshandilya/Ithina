@@ -22,7 +22,7 @@
 import { FileEditIcon, TrashIcon, PlayIcon, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { useDraftAudits, useDeleteDraft } from "@/features/maker/hooks";
+import { useDraftAudits, useDeleteDraft } from "@/queries/maker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { cn } from "@/lib/utils";

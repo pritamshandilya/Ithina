@@ -10,11 +10,11 @@ import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
-import { MOCK_ALL_ITEMS_REPORT } from "@/features/maker/analysis/mock-all-items-report";
+import { MOCK_ALL_ITEMS_REPORT } from "@/lib/analysis/mock-all-items-report";
 import type {
   PlanogramItemRow,
   SkuFacingRow,
-} from "@/features/maker/analysis/all-items-report-types";
+} from "@/lib/analysis/all-items-report-types";
 import { cn } from "@/lib/utils";
 
 const DEFAULT_PAGE_SIZE = 10;

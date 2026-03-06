@@ -3,7 +3,7 @@ import { AlertCircleIcon, FileTextIcon, ImageIcon, ChevronRightIcon, ClockIcon }
 
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useReturnedAudits } from "@/features/maker/hooks";
+import { useAssignedShelves, useReturnedAudits } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 /**

@@ -21,7 +21,7 @@ import { AuditQueueCard } from "@/components/checker/audit-queue-card";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { AuditQueueFilter, AuditQueueSort } from "@/features/checker/types";
+import type { AuditQueueFilter, AuditQueueSort } from "@/types/checker-ui";
 import { cn } from "@/lib/utils";
 import type { CheckerAudit } from "@/types/checker";
 

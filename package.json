@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "test": "node --import ./node_modules/.pnpm/tsx@*/node_modules/tsx/dist/loader.mjs --test test/*.test.ts",
     "preview": "vite preview",
     "lint": "eslint . --fix",
     "lint:check": "eslint .",

@@ -1,19 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import MainLayout from "@/components/layouts/main";
-import { StoresPage } from "@/components/checker/stores/StoresPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/checker/stores/")({
-  component: StoresRoute,
+  beforeLoad: () => {
+    throw redirect({ to: "/stores" });
+  },
 });
-
-function StoresRoute() {
-  return (
-    <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto w-full max-w-screen-2xl space-y-4">
-          <StoresPage />
-        </div>
-      </div>
-    </MainLayout>
-  );
-}

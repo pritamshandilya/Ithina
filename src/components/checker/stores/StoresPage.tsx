@@ -5,12 +5,14 @@ import { Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/shared";
+import { PageHeader } from "@/components/shared/page-header";
+import MainLayout from "@/components/layouts/main";
 
 import { StoreFormModal } from "./StoreFormModal";
 import { useOrgStores, useCreateStore } from "@/queries/checker";
 import { useStore as useGlobalStore } from "@/providers/store";
 import { useNavigate } from "@tanstack/react-router";
+import { AuthSessionService } from "@/lib/auth/session";
 import type { StoreSetting } from "@/types/checker";
 
 export function StoresPage() {
@@ -18,6 +20,7 @@ export function StoresPage() {
     const createStoreMutation = useCreateStore();
     const { setSelectedStore: setGlobalSelectedStore } = useGlobalStore();
     const navigate = useNavigate();
+    const currentUser = AuthSessionService.getCurrentUser();
 
     const [searchQuery, setSearchQuery] = useState("");
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -43,6 +46,10 @@ export function StoresPage() {
 
     const handleViewStore = (store: any) => {
         setGlobalSelectedStore(store);
+        if (currentUser?.role === "admin") {
+            navigate({ to: "/admin/organization-settings" });
+            return;
+        }
         navigate({ to: "/checker/dashboard" });
     };
 
@@ -105,16 +112,19 @@ export function StoresPage() {
             },
         },
         {
-            title: "Staff",
+            title: "Assignments",
             field: "maker_ids",
             width: 100,
             hozAlign: "center",
             headerHozAlign: "center",
             formatter: (cell: any) => {
-                const count = cell.getValue()?.length || 0;
+                const store = cell.getData() as StoreSetting;
+                const makerCount = store.maker_ids?.length || 0;
+                const userCount = (store as any).user_ids?.length || 0;
+                const count = userCount || makerCount;
                 return `
                     <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 border border-accent/20 text-accent">
-                        ${count} Members
+                        ${count} Users
                     </span>
                 `;
             },
@@ -146,40 +156,46 @@ export function StoresPage() {
     ];
 
     return (
-        <div className="space-y-6">
-            <PageHeader
-                title="Stores"
-                description="Monitor and manage all retail locations in your organization."
-                icon={StoreIcon}
-            >
-                <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
-                    <Plus className="mr-2 size-4" />
-                    Create Store
-                </Button>
-            </PageHeader>
+        <MainLayout
+            pageHeader={(
+                <PageHeader
+                    title="Stores"
+                    description="Monitor and manage all retail locations in your organization."
+                    icon={StoreIcon}
+                >
+                    <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
+                        <Plus className="mr-2 size-4" />
+                        Create Store
+                    </Button>
+                </PageHeader>
+            )}
+        >
+            <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+                <div className="mx-auto w-full max-w-screen-2xl space-y-4">
+                    <div className="relative group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
+                        <Input
+                            placeholder="Search by name or address..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-11 h-12 bg-card border-border hover:border-accent/50 focus:border-accent transition-all text-foreground placeholder:text-muted-foreground"
+                        />
+                    </div>
 
-            <div className="relative group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground group-focus-within:text-accent transition-colors" />
-                <Input
-                    placeholder="Search by name or address..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-11 h-12 bg-card border-border hover:border-accent/50 focus:border-accent transition-all text-foreground placeholder:text-muted-foreground"
-                />
-            </div>
-
-            <div className="flex-1 min-h-0">
-                {isLoading ? (
-                    <Skeleton className="h-[400px] w-full rounded-xl" />
-                ) : (
-                    <DataTable<StoreSetting>
-                        columns={columns}
-                        data={filteredStores}
-                        onRowClick={handleViewStore}
-                        pageSize={10}
-                        emptyMessage="No stores found matching your criteria"
-                    />
-                )}
+                    <div className="flex-1 min-h-0">
+                        {isLoading ? (
+                            <Skeleton className="h-[400px] w-full rounded-xl" />
+                        ) : (
+                            <DataTable<StoreSetting>
+                                columns={columns}
+                                data={filteredStores}
+                                onRowClick={handleViewStore}
+                                pageSize={10}
+                                emptyMessage="No stores found matching your criteria"
+                            />
+                        )}
+                    </div>
+                </div>
             </div>
 
             <StoreFormModal
@@ -205,6 +221,6 @@ export function StoresPage() {
                 confirmLabel="Delete"
                 variant="destructive"
             />
-        </div>
+        </MainLayout>
     );
 }

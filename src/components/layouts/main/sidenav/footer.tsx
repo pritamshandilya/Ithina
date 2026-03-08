@@ -1,6 +1,7 @@
 import { BadgeCheck, ChevronsUpDown, LogOut, User } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -19,12 +20,19 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { AuthSessionService, getInitialsFromEmail } from "@/lib/auth/session";
+import { useStore } from "@/providers/store";
 
 export default function SidenavFooter() {
   const { isMobile } = useSidebar();
   const navigate = useNavigate();
-
-  const currentUser = useMemo(() => AuthSessionService.getCurrentUser(), []);
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { setSelectedStore } = useStore();
+  const currentUser = useSyncExternalStore(
+    (onStoreChange) => AuthSessionService.subscribe(onStoreChange),
+    () => AuthSessionService.getSnapshot().user,
+    () => null,
+  );
 
   const handleManageAccount = () => {
     navigate({ to: "/profile" });
@@ -32,6 +40,9 @@ export default function SidenavFooter() {
 
   const handleLogout = () => {
     AuthSessionService.logout();
+    queryClient.clear();
+    setSelectedStore(null);
+    router.invalidate();
     navigate({ to: "/login" });
   };
 

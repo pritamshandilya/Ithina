@@ -2,7 +2,7 @@
 
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
-import { PanelLeftIcon, ChevronLeft, ChevronRight } from "lucide-react"
+import { PanelLeftClose, PanelLeftIcon, PanelLeftOpen } from "lucide-react"
 import * as React from "react"
 
 import { Button } from "@/components/ui/button"
@@ -297,10 +297,10 @@ function SidebarToggle({
   return (
     <Button
       data-sidebar="toggle"
-      variant="outline"
+      variant="ghost"
       size="icon"
       className={cn(
-        "absolute -right-3 top-20 z-10 size-6 rounded-full border border-sidebar-border bg-sidebar p-0 shadow-sm transition-transform hover:scale-110",
+        "absolute -right-3 top-20 z-10 size-6 rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground p-0 shadow-sm transition-transform hover:scale-110 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         className
       )}
       onClick={(event) => {
@@ -310,9 +310,9 @@ function SidebarToggle({
       {...props}
     >
       {state === "expanded" ? (
-        <ChevronLeft className="size-4" />
+        <PanelLeftClose className="size-4" />
       ) : (
-        <ChevronRight className="size-4" />
+        <PanelLeftOpen className="size-4" />
       )}
       <span className="sr-only">Toggle Sidebar</span>
     </Button>
@@ -764,4 +764,3 @@ export {
   SidebarTrigger,
   useSidebar
 }
-

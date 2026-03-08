@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/login/")({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -29,8 +30,12 @@ function LoginPage() {
 
     try {
       const user = await AuthSessionService.login(formData.email, formData.password);
-      const destination = AuthSessionService.getDashboardRoute(user.role);
-      navigate({ to: destination });
+      router.invalidate();
+      if (user.role === "admin") {
+        navigate({ to: "/admin/organization-settings" });
+      } else {
+        navigate({ to: AuthSessionService.getDashboardRoute(user.role) });
+      }
     } catch (error) {
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
         setErrors({ general: error.message || "Invalid credentials. Please try again." });

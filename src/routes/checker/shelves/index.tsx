@@ -5,6 +5,6 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
  */
 export const Route = createFileRoute("/checker/shelves/")({
   beforeLoad: () => {
-    throw redirect({ to: "/checker/shelf/" });
+    throw redirect({ to: "/checker/shelf" });
   },
 });

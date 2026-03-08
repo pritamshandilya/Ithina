@@ -1,4 +1,5 @@
-import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
@@ -16,7 +17,9 @@ import {
   AuthSessionService,
   getInitialsFromEmail,
 } from "@/lib/auth/session";
+import { requireAuth } from "@/routes/-guards/requireAuth";
 import type { UserInfo } from "@/providers/auth/context";
+import { useStore } from "@/providers/store";
 
 interface LocalProfileData {
   firstName?: string;
@@ -27,21 +30,17 @@ interface LocalProfileData {
 const PROFILE_KEY = "auth_profile";
 
 export const Route = createFileRoute("/profile/")({
-  beforeLoad: () => {
-    if (!AuthSessionService.isAuthenticated()) {
-      throw redirect({
-        to: "/login",
-        search: {
-          redirect: "/profile",
-        },
-      });
-    }
+  beforeLoad: ({ context, location }) => {
+    requireAuth(context, location);
   },
   component: ProfilePage,
 });
 
 function ProfilePage() {
   const navigate = useNavigate();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const { setSelectedStore } = useStore();
   const { toast } = useToast();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
@@ -231,6 +230,9 @@ function ProfilePage() {
 
   const handleLogout = () => {
     AuthSessionService.logout();
+    queryClient.clear();
+    setSelectedStore(null);
+    router.invalidate();
     navigate({ to: "/login" });
   };
   if (isLoading) {

@@ -1,6 +1,6 @@
 import { createFileRoute, useLocation } from "@tanstack/react-router";
 
-import { AnalysisFlowPage } from "@/components/maker";
+import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
 
 export const Route = createFileRoute("/maker/audits/adhoc/new/")({
   component: NewAdhocAnalysisPage,

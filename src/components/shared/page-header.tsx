@@ -1,5 +1,6 @@
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LayoutNotificationsAction } from "./layout-notifications-action";
 
 interface PageHeaderProps {
     title: string;
@@ -8,6 +9,7 @@ interface PageHeaderProps {
     iconColor?: string;
     children?: React.ReactNode;
     className?: string;
+    showNotifications?: boolean;
 }
 
 /**
@@ -23,25 +25,27 @@ export function PageHeader({
     iconColor = "text-accent",
     children,
     className,
+    showNotifications = true,
 }: PageHeaderProps) {
     return (
-        <div className={cn("flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between group mb-6", className)}>
-            <div className="space-y-1">
-                <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-2">
-                    {Icon && <Icon className={cn("size-8", iconColor)} />}
+        <section className={cn("rounded-xl border border-border/60 bg-card/70 px-4 py-4 shadow-sm backdrop-blur-sm sm:px-6 sm:py-5", className)}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0 space-y-1.5">
+                    <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+                        {Icon && <Icon className={cn("size-6 shrink-0 sm:size-7", iconColor)} />}
                     {title}
-                </h1>
-                {description && (
-                    <p className="text-muted-foreground text-sm">
-                        {description}
-                    </p>
-                )}
-            </div>
-            {children && (
-                <div className="flex items-center gap-2">
-                    {children}
+                    </h1>
+                    {description && (
+                        <p className="max-w-3xl text-sm text-muted-foreground">
+                            {description}
+                        </p>
+                    )}
                 </div>
-            )}
-        </div>
+                <div className="flex flex-wrap items-center gap-2">
+                    {children}
+                    {showNotifications ? <LayoutNotificationsAction /> : null}
+                </div>
+            </div>
+        </section>
     );
 }

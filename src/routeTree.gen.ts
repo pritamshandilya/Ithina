@@ -9,13 +9,22 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ForbiddenRouteImport } from './routes/forbidden'
+import { Route as AppRouteImport } from './routes/_app'
 import { Route as MakerRouteRouteImport } from './routes/maker/route'
 import { Route as CheckerRouteRouteImport } from './routes/checker/route'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileIndexRouteImport } from './routes/profile/index'
 import { Route as MakerIndexRouteImport } from './routes/maker/index'
 import { Route as LoginIndexRouteImport } from './routes/login/index'
 import { Route as CheckerIndexRouteImport } from './routes/checker/index'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AppUsersRouteImport } from './routes/_app/users'
+import { Route as AppStoresRouteImport } from './routes/_app/stores'
+import { Route as AppKnowledgeCenterRouteImport } from './routes/_app/knowledge-center'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppApprovalsRouteImport } from './routes/_app/approvals'
 import { Route as MakerShelvesRouteRouteImport } from './routes/maker/shelves/route'
 import { Route as MakerReportsRouteRouteImport } from './routes/maker/reports/route'
 import { Route as MakerHistoricalAnalysisRouteRouteImport } from './routes/maker/historical-analysis/route'
@@ -35,6 +44,11 @@ import { Route as CheckerOrgDashboardIndexRouteImport } from './routes/checker/o
 import { Route as CheckerKnowledgeCenterIndexRouteImport } from './routes/checker/knowledge-center/index'
 import { Route as CheckerDashboardIndexRouteImport } from './routes/checker/dashboard/index'
 import { Route as CheckerAuditReviewIndexRouteImport } from './routes/checker/audit-review/index'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminStoresIndexRouteImport } from './routes/admin/stores/index'
+import { Route as AdminStoreSettingsIndexRouteImport } from './routes/admin/store-settings/index'
+import { Route as AdminOrganizationSettingsIndexRouteImport } from './routes/admin/organization-settings/index'
+import { Route as AdminDashboardIndexRouteImport } from './routes/admin/dashboard/index'
 import { Route as MakerAuditsPlanogramRouteRouteImport } from './routes/maker/audits/planogram/route'
 import { Route as MakerAuditsAdhocRouteRouteImport } from './routes/maker/audits/adhoc/route'
 import { Route as MakerReportsViewIndexRouteImport } from './routes/maker/reports/view/index'
@@ -56,6 +70,15 @@ import { Route as MakerAuditsAdhocNewIndexRouteImport } from './routes/maker/aud
 import { Route as CheckerReportsViewReportIdIndexRouteImport } from './routes/checker/reports/view/$reportId/index'
 import { Route as MakerAuditsPlanogramRunShelfIdIndexRouteImport } from './routes/maker/audits/planogram/run/$shelfId/index'
 
+const ForbiddenRoute = ForbiddenRouteImport.update({
+  id: '/forbidden',
+  path: '/forbidden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MakerRouteRoute = MakerRouteRouteImport.update({
   id: '/maker',
   path: '/maker',
@@ -64,6 +87,11 @@ const MakerRouteRoute = MakerRouteRouteImport.update({
 const CheckerRouteRoute = CheckerRouteRouteImport.update({
   id: '/checker',
   path: '/checker',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRouteRoute = AdminRouteRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -90,6 +118,36 @@ const CheckerIndexRoute = CheckerIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => CheckerRouteRoute,
+} as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AppUsersRoute = AppUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStoresRoute = AppStoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppKnowledgeCenterRoute = AppKnowledgeCenterRouteImport.update({
+  id: '/knowledge-center',
+  path: '/knowledge-center',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppApprovalsRoute = AppApprovalsRouteImport.update({
+  id: '/approvals',
+  path: '/approvals',
+  getParentRoute: () => AppRoute,
 } as any)
 const MakerShelvesRouteRoute = MakerShelvesRouteRouteImport.update({
   id: '/shelves',
@@ -190,6 +248,32 @@ const CheckerAuditReviewIndexRoute = CheckerAuditReviewIndexRouteImport.update({
   id: '/audit-review/',
   path: '/audit-review/',
   getParentRoute: () => CheckerRouteRoute,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminStoresIndexRoute = AdminStoresIndexRouteImport.update({
+  id: '/stores/',
+  path: '/stores/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminStoreSettingsIndexRoute = AdminStoreSettingsIndexRouteImport.update({
+  id: '/store-settings/',
+  path: '/store-settings/',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOrganizationSettingsIndexRoute =
+  AdminOrganizationSettingsIndexRouteImport.update({
+    id: '/organization-settings/',
+    path: '/organization-settings/',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminDashboardIndexRoute = AdminDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
 const MakerAuditsPlanogramRouteRoute =
   MakerAuditsPlanogramRouteRouteImport.update({
@@ -309,19 +393,32 @@ const MakerAuditsPlanogramRunShelfIdIndexRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/checker': typeof CheckerRouteRouteWithChildren
   '/maker': typeof MakerRouteRouteWithChildren
+  '/forbidden': typeof ForbiddenRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
   '/maker/historical-analysis': typeof MakerHistoricalAnalysisRouteRouteWithChildren
   '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/maker/shelves': typeof MakerShelvesRouteRouteWithChildren
+  '/approvals': typeof AppApprovalsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/knowledge-center': typeof AppKnowledgeCenterRoute
+  '/stores': typeof AppStoresRoute
+  '/users': typeof AppUsersRoute
+  '/admin/': typeof AdminIndexRoute
   '/checker/': typeof CheckerIndexRoute
   '/login': typeof LoginIndexRoute
   '/maker/': typeof MakerIndexRoute
   '/profile': typeof ProfileIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
+  '/admin/dashboard': typeof AdminDashboardIndexRoute
+  '/admin/organization-settings': typeof AdminOrganizationSettingsIndexRoute
+  '/admin/store-settings': typeof AdminStoreSettingsIndexRoute
+  '/admin/stores': typeof AdminStoresIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
   '/checker/audit-review': typeof CheckerAuditReviewIndexRoute
   '/checker/dashboard': typeof CheckerDashboardIndexRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterIndexRoute
@@ -357,11 +454,23 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forbidden': typeof ForbiddenRoute
   '/maker/reports': typeof MakerReportsRouteRouteWithChildren
+  '/approvals': typeof AppApprovalsRoute
+  '/dashboard': typeof AppDashboardRoute
+  '/knowledge-center': typeof AppKnowledgeCenterRoute
+  '/stores': typeof AppStoresRoute
+  '/users': typeof AppUsersRoute
+  '/admin': typeof AdminIndexRoute
   '/checker': typeof CheckerIndexRoute
   '/login': typeof LoginIndexRoute
   '/maker': typeof MakerIndexRoute
   '/profile': typeof ProfileIndexRoute
+  '/admin/dashboard': typeof AdminDashboardIndexRoute
+  '/admin/organization-settings': typeof AdminOrganizationSettingsIndexRoute
+  '/admin/store-settings': typeof AdminStoreSettingsIndexRoute
+  '/admin/stores': typeof AdminStoresIndexRoute
+  '/admin/users': typeof AdminUsersIndexRoute
   '/checker/audit-review': typeof CheckerAuditReviewIndexRoute
   '/checker/dashboard': typeof CheckerDashboardIndexRoute
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterIndexRoute
@@ -398,19 +507,33 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin': typeof AdminRouteRouteWithChildren
   '/checker': typeof CheckerRouteRouteWithChildren
   '/maker': typeof MakerRouteRouteWithChildren
+  '/_app': typeof AppRouteWithChildren
+  '/forbidden': typeof ForbiddenRoute
   '/checker/shelf': typeof CheckerShelfRouteRouteWithChildren
   '/maker/audits': typeof MakerAuditsRouteRouteWithChildren
   '/maker/historical-analysis': typeof MakerHistoricalAnalysisRouteRouteWithChildren
   '/maker/reports': typeof MakerReportsRouteRouteWithChildren
   '/maker/shelves': typeof MakerShelvesRouteRouteWithChildren
+  '/_app/approvals': typeof AppApprovalsRoute
+  '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/knowledge-center': typeof AppKnowledgeCenterRoute
+  '/_app/stores': typeof AppStoresRoute
+  '/_app/users': typeof AppUsersRoute
+  '/admin/': typeof AdminIndexRoute
   '/checker/': typeof CheckerIndexRoute
   '/login/': typeof LoginIndexRoute
   '/maker/': typeof MakerIndexRoute
   '/profile/': typeof ProfileIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
+  '/admin/dashboard/': typeof AdminDashboardIndexRoute
+  '/admin/organization-settings/': typeof AdminOrganizationSettingsIndexRoute
+  '/admin/store-settings/': typeof AdminStoreSettingsIndexRoute
+  '/admin/stores/': typeof AdminStoresIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
   '/checker/audit-review/': typeof CheckerAuditReviewIndexRoute
   '/checker/dashboard/': typeof CheckerDashboardIndexRoute
   '/checker/knowledge-center/': typeof CheckerKnowledgeCenterIndexRoute
@@ -448,19 +571,32 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin'
     | '/checker'
     | '/maker'
+    | '/forbidden'
     | '/checker/shelf'
     | '/maker/audits'
     | '/maker/historical-analysis'
     | '/maker/reports'
     | '/maker/shelves'
+    | '/approvals'
+    | '/dashboard'
+    | '/knowledge-center'
+    | '/stores'
+    | '/users'
+    | '/admin/'
     | '/checker/'
     | '/login'
     | '/maker/'
     | '/profile'
     | '/maker/audits/adhoc'
     | '/maker/audits/planogram'
+    | '/admin/dashboard'
+    | '/admin/organization-settings'
+    | '/admin/store-settings'
+    | '/admin/stores'
+    | '/admin/users'
     | '/checker/audit-review'
     | '/checker/dashboard'
     | '/checker/knowledge-center'
@@ -496,11 +632,23 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/forbidden'
     | '/maker/reports'
+    | '/approvals'
+    | '/dashboard'
+    | '/knowledge-center'
+    | '/stores'
+    | '/users'
+    | '/admin'
     | '/checker'
     | '/login'
     | '/maker'
     | '/profile'
+    | '/admin/dashboard'
+    | '/admin/organization-settings'
+    | '/admin/store-settings'
+    | '/admin/stores'
+    | '/admin/users'
     | '/checker/audit-review'
     | '/checker/dashboard'
     | '/checker/knowledge-center'
@@ -536,19 +684,33 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin'
     | '/checker'
     | '/maker'
+    | '/_app'
+    | '/forbidden'
     | '/checker/shelf'
     | '/maker/audits'
     | '/maker/historical-analysis'
     | '/maker/reports'
     | '/maker/shelves'
+    | '/_app/approvals'
+    | '/_app/dashboard'
+    | '/_app/knowledge-center'
+    | '/_app/stores'
+    | '/_app/users'
+    | '/admin/'
     | '/checker/'
     | '/login/'
     | '/maker/'
     | '/profile/'
     | '/maker/audits/adhoc'
     | '/maker/audits/planogram'
+    | '/admin/dashboard/'
+    | '/admin/organization-settings/'
+    | '/admin/store-settings/'
+    | '/admin/stores/'
+    | '/admin/users/'
     | '/checker/audit-review/'
     | '/checker/dashboard/'
     | '/checker/knowledge-center/'
@@ -585,14 +747,31 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRouteRoute: typeof AdminRouteRouteWithChildren
   CheckerRouteRoute: typeof CheckerRouteRouteWithChildren
   MakerRouteRoute: typeof MakerRouteRouteWithChildren
+  AppRoute: typeof AppRouteWithChildren
+  ForbiddenRoute: typeof ForbiddenRoute
   LoginIndexRoute: typeof LoginIndexRoute
   ProfileIndexRoute: typeof ProfileIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/forbidden': {
+      id: '/forbidden'
+      path: '/forbidden'
+      fullPath: '/forbidden'
+      preLoaderRoute: typeof ForbiddenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_app': {
+      id: '/_app'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/maker': {
       id: '/maker'
       path: '/maker'
@@ -605,6 +784,13 @@ declare module '@tanstack/react-router' {
       path: '/checker'
       fullPath: '/checker'
       preLoaderRoute: typeof CheckerRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -641,6 +827,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/checker/'
       preLoaderRoute: typeof CheckerIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
+    }
+    '/admin/': {
+      id: '/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/_app/users': {
+      id: '/_app/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof AppUsersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/stores': {
+      id: '/_app/stores'
+      path: '/stores'
+      fullPath: '/stores'
+      preLoaderRoute: typeof AppStoresRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/knowledge-center': {
+      id: '/_app/knowledge-center'
+      path: '/knowledge-center'
+      fullPath: '/knowledge-center'
+      preLoaderRoute: typeof AppKnowledgeCenterRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/approvals': {
+      id: '/_app/approvals'
+      path: '/approvals'
+      fullPath: '/approvals'
+      preLoaderRoute: typeof AppApprovalsRouteImport
+      parentRoute: typeof AppRoute
     }
     '/maker/shelves': {
       id: '/maker/shelves'
@@ -774,6 +1002,41 @@ declare module '@tanstack/react-router' {
       fullPath: '/checker/audit-review'
       preLoaderRoute: typeof CheckerAuditReviewIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/stores/': {
+      id: '/admin/stores/'
+      path: '/stores'
+      fullPath: '/admin/stores'
+      preLoaderRoute: typeof AdminStoresIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/store-settings/': {
+      id: '/admin/store-settings/'
+      path: '/store-settings'
+      fullPath: '/admin/store-settings'
+      preLoaderRoute: typeof AdminStoreSettingsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/organization-settings/': {
+      id: '/admin/organization-settings/'
+      path: '/organization-settings'
+      fullPath: '/admin/organization-settings'
+      preLoaderRoute: typeof AdminOrganizationSettingsIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/dashboard/': {
+      id: '/admin/dashboard/'
+      path: '/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminDashboardIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
     '/maker/audits/planogram': {
       id: '/maker/audits/planogram'
@@ -917,6 +1180,28 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AdminRouteRouteChildren {
+  AdminIndexRoute: typeof AdminIndexRoute
+  AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
+  AdminOrganizationSettingsIndexRoute: typeof AdminOrganizationSettingsIndexRoute
+  AdminStoreSettingsIndexRoute: typeof AdminStoreSettingsIndexRoute
+  AdminStoresIndexRoute: typeof AdminStoresIndexRoute
+  AdminUsersIndexRoute: typeof AdminUsersIndexRoute
+}
+
+const AdminRouteRouteChildren: AdminRouteRouteChildren = {
+  AdminIndexRoute: AdminIndexRoute,
+  AdminDashboardIndexRoute: AdminDashboardIndexRoute,
+  AdminOrganizationSettingsIndexRoute: AdminOrganizationSettingsIndexRoute,
+  AdminStoreSettingsIndexRoute: AdminStoreSettingsIndexRoute,
+  AdminStoresIndexRoute: AdminStoresIndexRoute,
+  AdminUsersIndexRoute: AdminUsersIndexRoute,
+}
+
+const AdminRouteRouteWithChildren = AdminRouteRoute._addFileChildren(
+  AdminRouteRouteChildren,
+)
 
 interface CheckerShelfRouteRouteChildren {
   CheckerShelfIndexRoute: typeof CheckerShelfIndexRoute
@@ -1095,10 +1380,31 @@ const MakerRouteRouteWithChildren = MakerRouteRoute._addFileChildren(
   MakerRouteRouteChildren,
 )
 
+interface AppRouteChildren {
+  AppApprovalsRoute: typeof AppApprovalsRoute
+  AppDashboardRoute: typeof AppDashboardRoute
+  AppKnowledgeCenterRoute: typeof AppKnowledgeCenterRoute
+  AppStoresRoute: typeof AppStoresRoute
+  AppUsersRoute: typeof AppUsersRoute
+}
+
+const AppRouteChildren: AppRouteChildren = {
+  AppApprovalsRoute: AppApprovalsRoute,
+  AppDashboardRoute: AppDashboardRoute,
+  AppKnowledgeCenterRoute: AppKnowledgeCenterRoute,
+  AppStoresRoute: AppStoresRoute,
+  AppUsersRoute: AppUsersRoute,
+}
+
+const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRouteRoute: AdminRouteRouteWithChildren,
   CheckerRouteRoute: CheckerRouteRouteWithChildren,
   MakerRouteRoute: MakerRouteRouteWithChildren,
+  AppRoute: AppRouteWithChildren,
+  ForbiddenRoute: ForbiddenRoute,
   LoginIndexRoute: LoginIndexRoute,
   ProfileIndexRoute: ProfileIndexRoute,
 }

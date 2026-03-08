@@ -70,14 +70,14 @@
   --secondary: oklch(0.18 0.02 255); /* #262427 */
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.17 0.03 200); /* #0e2930 */
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.82 0 0);
   --accent: oklch(0.72 0.17 285); /* #a78bfa - Purple accent */
   --accent-foreground: oklch(0.145 0.025 264.5);
   --destructive: oklch(0.62 0.23 25); /* #ef4444 - Red for destructive actions */
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.25 0.02 264.5);
-  --input: oklch(0.35 0.04 264.5); /* Lighter border for better visibility */
-  --ring: oklch(0.72 0.17 285); /* Purple accent for focus rings */
+  --border: oklch(0.4 0.03 264.5);
+  --input: oklch(0.5 0.04 264.5); /* Higher-contrast borders for better field visibility */
+  --ring: oklch(0.8 0.16 285); /* Brighter focus ring for keyboard visibility */
   --chart-1: oklch(0.72 0.17 285); /* #a78bfa - Purple */
   --chart-2: oklch(0.68 0.17 165); /* #10b982 - Green */
   --chart-3: oklch(0.19 0.04 278); /* #1e1c41 */
@@ -94,7 +94,7 @@
 
   /* Unified semantic colors (light mode) */
   --action-primary: var(--accent);
-  --action-warning: oklch(0.72 0.16 65); /* Orange for warnings/overrides */
+  --action-warning: oklch(0.78 0.15 75); /* Brighter warning tone for stronger contrast */
   --action-critical: var(--destructive);
   --action-success: var(--chart-2);
 
@@ -118,14 +118,14 @@
   --secondary: oklch(0.18 0.02 255); /* #262427 */
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.17 0.03 200); /* #0e2930 */
-  --muted-foreground: oklch(0.708 0 0);
+  --muted-foreground: oklch(0.82 0 0);
   --accent: oklch(0.72 0.17 285); /* #a78bfa - Purple accent */
   --accent-foreground: oklch(0.145 0.025 264.5);
   --destructive: oklch(0.62 0.23 25); /* #ef4444 - Red for destructive actions */
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.25 0.02 264.5);
-  --input: oklch(0.22 0.02 264.5);
-  --ring: oklch(0.72 0.17 285);
+  --border: oklch(0.4 0.03 264.5);
+  --input: oklch(0.45 0.03 264.5);
+  --ring: oklch(0.8 0.16 285);
   --chart-1: oklch(0.72 0.17 285); /* #a78bfa - Purple */
   --chart-2: oklch(0.68 0.17 165); /* #10b982 - Green */
   --chart-3: oklch(0.19 0.04 278); /* #1e1c41 */
@@ -149,7 +149,7 @@
   
   /* Action Colors */
   --action-primary: var(--accent); /* Purple for primary actions */
-  --action-warning: oklch(0.72 0.16 65); /* #f59e0b - Orange for warnings/overrides */
+  --action-warning: oklch(0.78 0.15 75); /* Brighter warning for improved visibility */
   --action-critical: var(--destructive); /* Red for critical issues */
   --action-success: var(--chart-2); /* Green for success states */
   
@@ -273,43 +273,43 @@
 
   /* Unified Status Badge Styles */
   .status-pending {
-    background-color: color-mix(in oklch, var(--status-pending) 20%, transparent);
-    color: var(--status-pending);
-    border: 1px solid color-mix(in oklch, var(--status-pending) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-pending) 35%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--status-pending) 75%, transparent);
   }
 
   .status-approved {
-    background-color: color-mix(in oklch, var(--status-approved) 20%, transparent);
-    color: var(--status-approved);
-    border: 1px solid color-mix(in oklch, var(--status-approved) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-approved) 35%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--status-approved) 75%, transparent);
   }
 
   .status-returned,
   .status-rejected,
   .status-critical {
-    background-color: color-mix(in oklch, var(--status-rejected) 20%, transparent);
-    color: var(--status-rejected);
-    border: 1px solid color-mix(in oklch, var(--status-rejected) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-rejected) 35%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--status-rejected) 75%, transparent);
   }
 
   .status-never-audited,
   .status-neutral,
   .status-inactive {
-    background-color: color-mix(in oklch, var(--status-neutral) 20%, transparent);
-    color: var(--muted-foreground);
-    border: 1px solid color-mix(in oklch, var(--status-neutral) 50%, transparent);
+    background-color: color-mix(in oklch, var(--status-neutral) 40%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--status-neutral) 80%, transparent);
   }
 
   .status-warning {
-    background-color: color-mix(in oklch, var(--action-warning) 20%, transparent);
-    color: var(--action-warning);
-    border: 1px solid color-mix(in oklch, var(--action-warning) 50%, transparent);
+    background-color: color-mix(in oklch, var(--action-warning) 35%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--action-warning) 75%, transparent);
   }
 
   .status-draft {
-    background-color: color-mix(in oklch, var(--accent) 15%, transparent);
-    color: var(--accent);
-    border: 1px solid color-mix(in oklch, var(--accent) 40%, transparent);
+    background-color: color-mix(in oklch, var(--accent) 32%, var(--card));
+    color: var(--foreground);
+    border: 1px solid color-mix(in oklch, var(--accent) 70%, transparent);
   }
 
 }

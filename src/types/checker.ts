@@ -146,6 +146,11 @@ export interface Store {
   maker_ids?: string[];
 
   /**
+   * Optional generic list of assigned user IDs (maker/checker)
+   */
+  user_ids?: string[];
+
+  /**
    * Store status
    */
   status?: "Active" | "Inactive";

@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { StoreConfigurationPage } from "@/components/checker/stores/StoreConfigurationPage";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/checker/store-settings/")({
-  component: StoreConfigurationPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/stores" });
+  },
 });

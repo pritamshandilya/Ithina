@@ -15,20 +15,21 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 
+import { hasPermission } from "@/auth/authorization";
 import MainLayout from "@/components/layouts/main";
 import { useStore } from "@/providers/store";
-import { AuthSessionService } from "@/lib/auth/session";
 import { mockCheckerUser } from "@/lib/api/mock-data";
+import { requireAuth } from "@/routes/-guards/requireAuth";
 import { cn } from "@/lib/utils";
 
 import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compliance-rules-tab";
 import { ReferenceDocumentsTab } from "@/components/checker/knowledge-center/reference-documents-tab";
 
 export const Route = createFileRoute("/checker/knowledge-center/")({
-  beforeLoad: () => {
-    const user = AuthSessionService.getCurrentUser();
-    if (!user || user.role !== "checker") {
-      throw redirect({ to: "/checker/dashboard" });
+  beforeLoad: ({ context, location }) => {
+    const user = requireAuth(context, location);
+    if (!hasPermission(user, "knowledge-center:view")) {
+      throw redirect({ to: "/forbidden" });
     }
   },
   component: KnowledgeCenterPage,

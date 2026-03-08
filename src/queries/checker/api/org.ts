@@ -1,6 +1,44 @@
-import type { AuthSessionUser, OrganizationInfo } from "@/lib/auth/session";
+import type {
+  AuthSessionUser,
+  OrganizationInfo,
+  UserRole,
+} from "@/lib/auth/session";
 import { apiClient } from "@/queries/shared";
 import type { Store } from "@/types/checker";
+
+export type OrgUserType = UserRole;
+export type StoreAssignableUserRole = "maker" | "checker";
+
+interface OrgUserApiModel {
+  id: string;
+  email: string;
+  first_name?: string | null;
+  last_name?: string | null;
+  role: UserRole;
+  organization_id?: string;
+  organization?: {
+    id: string;
+    name: string;
+  };
+  is_active: boolean;
+  last_login_at?: string | null;
+}
+
+function mapOrgUser(user: OrgUserApiModel): AuthSessionUser {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.first_name ?? "",
+    lastName: user.last_name ?? "",
+    role: user.role,
+    organization: user.organization ?? {
+      id: user.organization_id ?? "",
+      name: "",
+    },
+    isActive: user.is_active,
+    lastLoginAt: user.last_login_at ?? undefined,
+  };
+}
 
 export async function fetchOrganization(): Promise<OrganizationInfo> {
   return apiClient.get<OrganizationInfo>("/organization");
@@ -14,60 +52,43 @@ export async function fetchStoreById(storeId: string): Promise<Store> {
   return apiClient.get<Store>(`/stores/${storeId}`);
 }
 
-export async function updateStoreMakers(
+export async function assignUserToStore(
   storeId: string,
-  makerIds: string[],
+  userId: string,
 ): Promise<void> {
-  return apiClient.put<void>(`/stores/${storeId}/makers`, {
-    maker_ids: makerIds,
-  });
+  return apiClient.post<void>(`/stores/${storeId}/users/${userId}`);
+}
+
+export async function removeUserFromStore(
+  storeId: string,
+  userId: string,
+): Promise<void> {
+  return apiClient.delete<void>(`/stores/${storeId}/users/${userId}`);
 }
 
 export async function fetchOrgUsers(
-  userType?: "maker" | "checker",
+  userType?: OrgUserType,
 ): Promise<AuthSessionUser[]> {
   const params: Record<string, string> = {};
   if (userType) params.user_type = userType;
 
-  const users = await apiClient.get<any[]>("/users", params);
-
-  return users.map((user) => ({
-    id: user.id,
-    email: user.email,
-    firstName: user.first_name,
-    lastName: user.last_name,
-    role: user.role,
-    organization: {
-      id: user.organization_id,
-      name: "",
-    },
-    isActive: user.is_active,
-    lastLoginAt: user.last_login_at,
-  }));
+  const users = await apiClient.get<OrgUserApiModel[]>("/users", params);
+  return users.map(mapOrgUser);
 }
 
 export async function fetchStoreUsers(
   storeId: string,
-  userType?: "maker" | "checker",
+  userType?: OrgUserType,
 ): Promise<AuthSessionUser[]> {
   const params: Record<string, string> = {};
   if (userType) params.user_type = userType;
 
-  const users = await apiClient.get<any[]>(`/stores/${storeId}/users`, params);
+  const users = await apiClient.get<OrgUserApiModel[]>(
+    `/stores/${storeId}/users`,
+    params,
+  );
 
-  return users.map((user) => ({
-    id: user.id,
-    email: user.email,
-    firstName: user.first_name,
-    lastName: user.last_name,
-    role: user.role,
-    organization: {
-      id: user.organization_id,
-      name: "",
-    },
-    isActive: user.is_active,
-    lastLoginAt: user.last_login_at,
-  }));
+  return users.map(mapOrgUser);
 }
 
 export async function createStore(data: {
@@ -77,6 +98,10 @@ export async function createStore(data: {
   default_dimensions: string;
 }): Promise<Store> {
   return apiClient.post<Store>("/stores", data);
+}
+
+export async function deleteStore(storeId: string): Promise<void> {
+  return apiClient.delete<void>(`/stores/${storeId}`);
 }
 
 export async function updateStore(
@@ -89,4 +114,44 @@ export async function updateStore(
   },
 ): Promise<Store> {
   return apiClient.patch<Store>(`/stores/${storeId}`, data);
+}
+
+export interface UpsertUserPayload {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+  role: OrgUserType;
+  is_active?: boolean;
+  store_ids?: string[];
+}
+
+export async function createUser(
+  payload: UpsertUserPayload,
+): Promise<AuthSessionUser> {
+  const user = await apiClient.post<OrgUserApiModel>("/users", payload);
+  return mapOrgUser(user);
+}
+
+export async function inviteUser(
+  payload: UpsertUserPayload,
+): Promise<AuthSessionUser> {
+  const user = await apiClient.post<OrgUserApiModel>("/users/invite", payload);
+  return mapOrgUser(user);
+}
+
+export async function fetchUserById(userId: string): Promise<AuthSessionUser> {
+  const user = await apiClient.get<OrgUserApiModel>(`/users/${userId}`);
+  return mapOrgUser(user);
+}
+
+export async function updateUser(
+  userId: string,
+  payload: Partial<UpsertUserPayload>,
+): Promise<AuthSessionUser> {
+  const user = await apiClient.patch<OrgUserApiModel>(`/users/${userId}`, payload);
+  return mapOrgUser(user);
+}
+
+export async function deactivateUser(userId: string): Promise<void> {
+  return apiClient.delete<void>(`/users/${userId}`);
 }

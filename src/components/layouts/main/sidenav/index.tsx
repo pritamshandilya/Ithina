@@ -10,20 +10,24 @@ import {
   Library,
   ListChecks,
   Rows3,
-  ShieldCheck,
   Settings,
+  ShieldCheck,
   Store,
   Users,
   Zap,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { TeamSwitcher } from "./header-switch";
+import { hasAnyPermission, hasPermission } from "@/auth/authorization";
+import { CORE_NAV } from "@/app/nav";
 import logo from "@/assets/logo.avif";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { useStore } from "@/providers/store";
-import { useStores as useMakerStores } from "@/queries/maker";
-import { useStores as useCheckerStores } from "@/queries/checker";
 import {
   Sidebar,
   SidebarContent,
@@ -40,15 +44,13 @@ import {
   SidebarToggle,
   useSidebar,
 } from "@/components/ui/sidebar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { AuthSessionService } from "@/lib/auth/session";
+import { AuthSessionService, type UserRole } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/providers/store";
+import { useStores as useCheckerStores, useOrgStores } from "@/queries/checker";
+import { useStores as useMakerStores } from "@/queries/maker";
 import SidenavFooter from "./footer";
+import { TeamSwitcher } from "./header-switch";
 
 type NavItem = {
   label: string;
@@ -59,6 +61,40 @@ type NavItem = {
 };
 
 function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
+  if (item.to === "/dashboard") {
+    return (
+      pathname === "/dashboard" ||
+      pathname.startsWith("/admin/dashboard") ||
+      pathname.startsWith("/maker/dashboard") ||
+      pathname.startsWith("/checker/dashboard")
+    );
+  }
+  if (item.to === "/stores") {
+    return (
+      pathname === "/stores" ||
+      pathname.startsWith("/admin/stores")
+    );
+  }
+  if (item.to === "/admin/organization-settings") {
+    return pathname.startsWith("/admin/organization-settings");
+  }
+  if (item.to === "/users") {
+    return pathname === "/users" || pathname.startsWith("/admin/users");
+  }
+  if (item.to === "/approvals") {
+    return (
+      pathname === "/approvals" ||
+      pathname.startsWith("/checker/audit-review") ||
+      pathname.startsWith("/checker/review/") ||
+      pathname.startsWith("/maker/manual-audits")
+    );
+  }
+  if (item.to === "/knowledge-center") {
+    return (
+      pathname === "/knowledge-center" ||
+      pathname.startsWith("/checker/knowledge-center")
+    );
+  }
   // Audit Review: active on /checker/audit-review and /checker/review/:id
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
@@ -84,23 +120,42 @@ function isMyAuditsActive(pathname: string): boolean {
 
 export default function Sidenav() {
   const location = useLocation();
-  const currentUser = AuthSessionService.getCurrentUser();
+  const currentUser = useSyncExternalStore(
+    (onStoreChange) => AuthSessionService.subscribe(onStoreChange),
+    () => AuthSessionService.getSnapshot().user,
+    () => null,
+  );
   const { state: sidebarState } = useSidebar();
   const { selectedStore, setSelectedStore } = useStore();
 
-  const role = useMemo(() => {
-    if (currentUser?.role) return currentUser.role;
-    if (location.pathname.startsWith("/checker")) return "checker";
-    return "maker";
-  }, [currentUser?.role, location.pathname]);
+  const role: UserRole = currentUser?.role ?? "maker";
 
   const isOrgContext = useMemo(() => {
-    if (role !== "checker") return false;
-    const orgPaths = ["/checker/org-", "/checker/stores"];
-    return orgPaths.some(p => location.pathname.startsWith(p)) || location.pathname === "/checker/org-dashboard";
+    if (role !== "admin") return false;
+    return (
+      location.pathname === "/admin/organization-settings" ||
+      location.pathname === "/admin/organization-settings/" ||
+      location.pathname === "/admin/dashboard" ||
+      location.pathname === "/admin/dashboard/"
+    );
   }, [role, location.pathname]);
 
-  const dashboardTo = role === "checker" ? (isOrgContext ? "/checker/org-dashboard" : "/checker/dashboard") : "/maker/dashboard";
+  const enabledCoreNav = useMemo(() => {
+    const nav = new Set<string>();
+
+    for (const item of CORE_NAV) {
+      if (item.requires && hasPermission(currentUser, item.requires)) {
+        nav.add(item.key);
+        continue;
+      }
+
+      if (item.requiresAny && hasAnyPermission(currentUser, item.requiresAny)) {
+        nav.add(item.key);
+      }
+    }
+
+    return nav;
+  }, [currentUser]);
 
   const [myAuditsExpanded, setMyAuditsExpanded] = useState(() =>
     isMyAuditsActive(location.pathname)
@@ -112,22 +167,50 @@ export default function Sidenav() {
     return () => clearTimeout(t);
   }, [location.pathname]);
 
-  const makerItems: NavItem[] = [
-    // Shelves - commented out, no longer necessary for maker
-    // { label: "Shelves", to: "/maker/shelves", icon: Rows3 },
-    { label: "Approvals", to: "/maker/manual-audits", icon: FileSignature },
-  ];
+  const roleItems = useMemo<NavItem[]>(() => {
+    if (role === "admin") {
+      const items: NavItem[] = [];
+      if (enabledCoreNav.has("stores")) {
+        items.push({ label: "Stores", to: "/stores", icon: Store });
+      }
+      if (enabledCoreNav.has("users")) {
+        items.push({ label: "Users", to: "/users", icon: Users });
+      }
+      if (enabledCoreNav.has("dashboard")) {
+        items.push({
+          label: "Organization Settings",
+          to: "/admin/organization-settings",
+          icon: Settings,
+        });
+      }
+      return items;
+    }
 
-  const orgItems: NavItem[] = [
-    { label: "Stores", to: "/checker/stores", icon: Store },
-    { label: "Staff", to: "/checker/org-staff", icon: Users },
-  ];
+    if (role === "maker") {
+      const items: NavItem[] = [];
+      if (enabledCoreNav.has("approvals")) {
+        items.push({
+          label: "Approvals",
+          to: "/approvals",
+          icon: FileSignature,
+        });
+      }
+      return items;
+    }
 
-  const storeItems: NavItem[] = [
-    { label: "Audit Review", to: "/checker/audit-review", icon: ShieldCheck },
-    { label: "Shelves", to: "/checker/shelf", icon: Rows3 },
-    { label: "Knowledge Center", to: "/checker/knowledge-center", icon: Library },
-    {
+    const items: NavItem[] = [];
+    if (enabledCoreNav.has("approvals")) {
+      items.push({ label: "Audit Review", to: "/approvals", icon: ShieldCheck });
+    }
+    items.push({ label: "Shelves", to: "/checker/shelf", icon: Rows3 });
+    if (enabledCoreNav.has("knowledge-center")) {
+      items.push({
+        label: "Knowledge Center",
+        to: "/knowledge-center",
+        icon: Library,
+      });
+    }
+    items.push({
       label: "Reports",
       icon: FileBarChart,
       items: [
@@ -135,29 +218,29 @@ export default function Sidenav() {
         { label: "Shelf Level", to: "/checker/reports/shelf-level" },
         { label: "Adhoc Report", to: "/checker/reports/adhoc" },
       ],
-    },
-    { label: "Store Settings", to: "/checker/store-settings", icon: Settings },
-  ];
-
-
-  const roleItems = useMemo(() => {
-    if (role === "maker") return makerItems;
-    if (isOrgContext) return orgItems;
-    return storeItems;
-  }, [role, isOrgContext, makerItems, orgItems, storeItems]);
+    });
+    return items;
+  }, [enabledCoreNav, role]);
 
   const [reportsOpen, setReportsOpen] = useState(true);
 
   const { data: makerStores } = useMakerStores();
   const { data: checkerStores } = useCheckerStores();
+  const { data: orgStores } = useOrgStores();
 
-  const stores = role === "checker" ? checkerStores : makerStores;
+  const stores =
+    role === "maker"
+      ? makerStores
+      : role === "admin"
+        ? orgStores
+        : checkerStores;
 
   useEffect(() => {
+    if (role === "admin") return;
     if (stores && stores.length > 0 && !selectedStore) {
       setSelectedStore(stores[0]);
     }
-  }, [stores, selectedStore, setSelectedStore]);
+  }, [role, stores, selectedStore, setSelectedStore]);
 
   return (
     <Sidebar collapsible="icon">
@@ -166,20 +249,20 @@ export default function Sidenav() {
           <div className="relative h-12 w-full px-1 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-0.5">
             <div className="relative h-full w-full overflow-hidden bg-black rounded-md flex items-center justify-center p-1">
               <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-              <div className="absolute inset-0 -translate-x-full animate-shine bg-linear-to-r from-transparent via-white/30 to-transparent" />
+              <div className="absolute inset-0 -translate-x-ful border border-grey-50/30 m-1 from-transparent via-white/30 to-transparent" />
             </div>
           </div>
+          <SidebarToggle className="static inset-auto right-auto top-auto ml-2 size-8 rounded-md border-sidebar-border bg-sidebar shadow-none group-data-[collapsible=icon]:ml-1" />
         </div>
-        {(currentUser || role === "checker") && (
+        {currentUser && (
           <TeamSwitcher
             organization={currentUser?.organization || { name: "My Organization", id: "default-org" }}
             stores={stores ?? []}
-            currentRole={role as "maker" | "checker"}
+            currentRole={role}
             isOrgDashboard={isOrgContext}
           />
         )}
       </SidebarHeader>
-      <SidebarToggle />
       <SidebarContent>
         <Separator className="group-data-[collapsible=icon]:hidden" />
         <SidebarGroup>
@@ -191,11 +274,11 @@ export default function Sidenav() {
                   tooltip="Dashboard"
                   isActive={isActiveItem(location.pathname, location.hash, {
                     label: "Dashboard",
-                    to: dashboardTo,
+                    to: "/dashboard",
                     icon: LayoutDashboard,
                   })}
                 >
-                  <Link to={dashboardTo}>
+                  <Link to="/dashboard">
                     <LayoutDashboard />
                     Dashboard
                   </Link>

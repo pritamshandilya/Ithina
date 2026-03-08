@@ -1,15 +1,17 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 
+import type { RouterAuthState } from "@/auth/state";
 import { Toaster } from "@/components/ui/toaster";
 
 import { SidebarProvider } from "@/components/ui/sidebar";
 
-interface RouteContext {
+export interface AppRouterContext {
   queryClient: QueryClient;
+  auth: RouterAuthState;
 }
 
-export const Route = createRootRouteWithContext<RouteContext>()({
+export const Route = createRootRouteWithContext<AppRouterContext>()({
   component: () => {
     return (
       <SidebarProvider defaultOpen={true}>

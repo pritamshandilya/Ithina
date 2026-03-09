@@ -122,11 +122,9 @@ export function NotificationsDropdown({
           <Bell className="size-5" aria-hidden="true" />
           {unreadCount > 0 && (
             <span
-              className="absolute -top-1 -right-1 inline-flex items-center justify-center size-5 rounded-full text-xs font-bold bg-destructive text-white"
+              className="absolute top-2 right-2 flex h-2 w-2 rounded-full bg-destructive border border-background shadow-xs"
               aria-label={`${unreadCount} unread notifications`}
-            >
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            />
           )}
         </Button>
       </DropdownMenuTrigger>

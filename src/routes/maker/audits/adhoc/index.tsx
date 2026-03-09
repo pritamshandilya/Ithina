@@ -10,8 +10,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAdhocAnalyses } from "@/queries/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
-import { useStore } from "@/providers/store";
 import { getRelativePath } from "@/lib/utils";
+import { PageHeader } from "@/components/shared/page-header";
+import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
@@ -206,20 +207,23 @@ function AdhocAnalysisPage() {
   );
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Adhoc Analysis"
+          description="Upload a shelf image and let AI analyze your retail space without a planogram."
+        >
+          <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
+            <Link to="/maker/audits/adhoc/new">
+              <Plus className="size-4" aria-hidden />
+              New Adhoc Analysis
+            </Link>
+          </Button>
+        </PageHeader>
+      }
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <header className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Adhoc Analysis</h1>
-            </div>
-            <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
-              <Link to="/maker/audits/adhoc/new">
-                <Plus className="size-4" aria-hidden />
-                New Adhoc Analysis
-              </Link>
-            </Button>
-          </header>
 
           {sortedAnalyses.length > 0 && (
             <p className="mt-4 shrink-0 text-sm text-muted-foreground">

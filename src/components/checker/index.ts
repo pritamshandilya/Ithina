@@ -39,10 +39,6 @@ export {
   type PublishingStatusPanelProps,
 } from "./publishing-status-panel";
 export {
-  CheckerDashboardHeader,
-  type CheckerDashboardHeaderProps,
-} from "./checker-dashboard-header";
-export {
   CheckerAccomplishedCards,
   type CheckerAccomplishedCardsProps,
 } from "./checker-accomplished-cards";

@@ -9,6 +9,7 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import MainLayout from "@/components/layouts/main";
+import { PageHeader } from "@/components/shared/page-header";
 import {
   // useMarkNotificationAsRead,
   // useNotifications,
@@ -117,12 +118,16 @@ function CheckerAuditReviewPage() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Audit Review"
+          description="Review and approve store audits to maintain planogram compliance."
+        />
+      }
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <header className="shrink-0 space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">Audit Review</h1>
-          </header>
 
           <AuditReviewQueue
             className="mt-3 flex-1 min-h-0 rounded-lg border border-border bg-card p-3 shadow-sm sm:p-4"

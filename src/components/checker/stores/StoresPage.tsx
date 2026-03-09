@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Search, Store as StoreIcon } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -161,7 +161,6 @@ export function StoresPage() {
                 <PageHeader
                     title="Stores"
                     description="Monitor and manage all retail locations in your organization."
-                    icon={StoreIcon}
                 >
                     <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
                         <Plus className="mr-2 size-4" />

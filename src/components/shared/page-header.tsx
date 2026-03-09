@@ -28,24 +28,37 @@ export function PageHeader({
     showNotifications = true,
 }: PageHeaderProps) {
     return (
-        <section className={cn("rounded-xl border border-border/60 bg-card/70 px-4 py-4 shadow-sm backdrop-blur-sm sm:px-6 sm:py-5", className)}>
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0 space-y-1.5">
-                    <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                        {Icon && <Icon className={cn("size-6 shrink-0 sm:size-7", iconColor)} />}
-                    {title}
-                    </h1>
-                    {description && (
-                        <p className="max-w-3xl text-sm text-muted-foreground">
-                            {description}
-                        </p>
+        <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between", className)}>
+            <div className="min-w-0">
+                <div className="flex items-center gap-3">
+                    {Icon && (
+                        <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10 shrink-0">
+                            <Icon className={cn("size-5", iconColor)} />
+                        </div>
                     )}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    {children}
-                    {showNotifications ? <LayoutNotificationsAction /> : null}
+                    <div className="space-y-0.5">
+                        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                            {title}
+                        </h1>
+                        {description && (
+                            <p className="text-sm font-medium text-muted-foreground/70">
+                                {description}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
-        </section>
+            <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                    {children}
+                </div>
+                {showNotifications && (
+                    <div className="flex items-center pl-3 border-l border-border/50 h-8">
+                        <LayoutNotificationsAction />
+                    </div>
+                )}
+            </div>
+        </div>
     );
 }
+

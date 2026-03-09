@@ -1,9 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import MainLayout from "@/components/layouts/main";
 import { ReportPage } from "@/components/shared/report-page";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
 import { SHELF_LEVEL_MOCK_DATA } from "@/lib/constants/reports-mock-data";
 import type { ShelfSummary } from "@/lib/constants/reports-mock-data";
-import { FileBarChart, Package, AlertTriangle } from "lucide-react";
+import { FileBarChart, Package, AlertTriangle, Download } from "lucide-react";
 import type { DataTableColumn } from "@/components/ui/data-table";
 
 export const Route = createFileRoute("/checker/reports/shelf-level/")({
@@ -45,12 +47,22 @@ function ShelfLevelReport() {
     };
 
     return (
-        <MainLayout>
+        <MainLayout
+            pageHeader={
+                <PageHeader
+                    title="Shelf Level Report"
+                    description="Downtown Flagship — Detailed analysis per shelf"
+                >
+                    <Button variant="outline" size="sm" className="gap-2 shrink-0">
+                        <Download className="size-4" />
+                        Export PDF
+                    </Button>
+                </PageHeader>
+            }
+        >
             <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
                 <div className="mx-auto w-full max-w-screen-2xl space-y-4">
                     <ReportPage
-                        title="Shelf Level Report"
-                        subtitle="Downtown Flagship — Detailed analysis per shelf"
                         stats={stats}
                         tableTitle="Shelf level Summary"
                         tableColumns={columns}

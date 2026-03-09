@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Users, Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -113,7 +113,6 @@ function AdminUsersPage() {
         <PageHeader
           title="Users"
           description="Manage organization users and role assignments."
-          icon={Users}
         >
           <Button variant="accent">
             <UserPlus className="mr-2 size-4" />

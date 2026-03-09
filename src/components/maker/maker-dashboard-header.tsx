@@ -1,7 +1,6 @@
 import { useNavigate } from "@tanstack/react-router";
 import {
   ChevronDownIcon,
-  ClipboardCheckIcon,
   FileImageIcon,
   PlusIcon,
   ScanSearchIcon,
@@ -34,8 +33,6 @@ const AUDIT_MODES = [
 ] as const;
 
 export interface MakerDashboardHeaderProps {
-  /** Whether user has items needing attention (returned or drafts) */
-  hasAttentionItems?: boolean;
   className?: string;
 }
 
@@ -44,66 +41,27 @@ export interface MakerDashboardHeaderProps {
  * Combines app context with the main action for a simplified, focused layout.
  */
 export function MakerDashboardHeader({
-  hasAttentionItems = false,
   className,
 }: MakerDashboardHeaderProps) {
   const navigate = useNavigate();
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-border bg-card p-3 shadow-sm",
-        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
-        className
-      )}
-      role="region"
-      aria-label="Dashboard header"
-    >
-      <div className="space-y-1">
-        <div className="flex items-center gap-2">
-          <ClipboardCheckIcon
-            className="size-8 shrink-0"
-            style={{ color: "var(--maker-primary)" }}
-            aria-hidden
-          />
-          <h1 className="text-xl font-bold text-foreground sm:text-2xl">
-            Planogram Assistant
-          </h1>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {hasAttentionItems
-            ? "You have audits that need your attention"
-            : "Here's how your shelf audits are going"}
-        </p>
-        {!hasAttentionItems && (
-          <div
-            className="flex items-center gap-2 text-sm"
-            style={{ color: "var(--maker-approved)" }}
-            aria-label="All caught up"
-          >
-            <span className="size-2 rounded-full bg-current" aria-hidden />
-            <span className="font-medium">All caught up</span>
-          </div>
-        )}
-      </div>
-
+    <div className={cn("flex items-center", className)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
             size="lg"
             className={cn(
-              "h-11 px-5 gap-2 font-semibold shrink-0",
-              "shadow-md hover:shadow-lg transition-all"
+              "h-11 px-5 gap-2 font-semibold shrink-0 shadow-md hover:shadow-lg transition-all"
             )}
             style={{
               backgroundColor: "var(--maker-primary)",
               color: "var(--accent-foreground)",
             }}
-            aria-label="Start new shelf audit"
           >
-            <PlusIcon className="size-5" aria-hidden />
+            <PlusIcon className="size-5" />
             Start New Audit
-            <ChevronDownIcon className="size-4" aria-hidden />
+            <ChevronDownIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[260px]">

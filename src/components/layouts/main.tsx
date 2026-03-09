@@ -53,9 +53,15 @@ export default function MainLayout({
     return (
       <>
         {pageHeader ? (
-          <div className={cn("mb-4", pageHeaderClassName)}>{pageHeader}</div>
+          <div className={cn("shrink-0 border-b border-border/40 bg-background/50 px-3 py-3 backdrop-blur-md sm:px-4 lg:px-6", pageHeaderClassName)}>
+            <div className="mx-auto w-full max-w-screen-2xl">
+              {pageHeader}
+            </div>
+          </div>
         ) : null}
-        {children ?? <Outlet />}
+        <div className="mt-4 flex-1">
+          {children ?? <Outlet />}
+        </div>
       </>
     );
   }
@@ -66,7 +72,7 @@ export default function MainLayout({
 
       <SidebarInset className="flex min-h-0 flex-col">
         {pageHeader ? (
-          <div className="shrink-0 border-b border-border/50 bg-background/70 px-3 py-3 sm:px-4 lg:px-6">
+          <div className="shrink-0 border-b border-border/40 bg-background/50 px-3 py-3 backdrop-blur-md sm:px-4 lg:px-6">
             <div className={cn("mx-auto w-full max-w-screen-2xl", pageHeaderClassName)}>
               {pageHeader}
             </div>

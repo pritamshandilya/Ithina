@@ -14,8 +14,8 @@ interface ReportStat {
 }
 
 interface ReportPageProps<T extends object> {
-    title: string;
-    subtitle: string;
+    title?: string;
+    subtitle?: string;
     stats: ReportStat[];
     tableTitle: string;
     tableColumns: DataTableColumn<T>[];
@@ -36,17 +36,19 @@ export function ReportPage<T extends object>({
 }: ReportPageProps<T>) {
     return (
         <div className={cn("flex flex-col gap-4", className)}>
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-                    <p className="text-sm text-muted-foreground">{subtitle}</p>
+            {/* Header - Only show if title is provided */}
+            {title && (
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+                        <p className="text-sm text-muted-foreground">{subtitle}</p>
+                    </div>
+                    <Button variant="outline" size="sm" className="gap-2">
+                        <Download className="size-4" />
+                        Export PDF
+                    </Button>
                 </div>
-                <Button variant="outline" size="sm" className="gap-2">
-                    <Download className="size-4" />
-                    Export PDF
-                </Button>
-            </div>
+            )}
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">

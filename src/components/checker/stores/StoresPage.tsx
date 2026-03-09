@@ -9,7 +9,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import MainLayout from "@/components/layouts/main";
 
 import { StoreFormModal } from "./StoreFormModal";
-import { useOrgStores, useCreateStore } from "@/queries/checker";
+import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
+import { useOrgStores, useCreateStore, useUpdateStore, useDeleteStore } from "@/queries/checker";
 import { useStore as useGlobalStore } from "@/providers/store";
 import { useNavigate } from "@tanstack/react-router";
 import { AuthSessionService } from "@/lib/auth/session";
@@ -18,6 +19,8 @@ import type { StoreSetting } from "@/types/checker";
 export function StoresPage() {
     const { data: stores = [], isLoading } = useOrgStores();
     const createStoreMutation = useCreateStore();
+    const updateStoreMutation = useUpdateStore();
+    const deleteStoreMutation = useDeleteStore();
     const { setSelectedStore: setGlobalSelectedStore } = useGlobalStore();
     const navigate = useNavigate();
     const currentUser = AuthSessionService.getCurrentUser();
@@ -26,6 +29,7 @@ export function StoresPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [selectedStore, setSelectedStore] = useState<StoreSetting | null>(null);
 
     const filteredStores = useMemo(() => {
@@ -44,10 +48,35 @@ export function StoresPage() {
         }
     };
 
+    const handleEditStore = async (updatedStore: any) => {
+        if (!selectedStore) return;
+        try {
+            await updateStoreMutation.mutateAsync({
+                storeId: selectedStore.id,
+                data: updatedStore,
+            });
+            setIsEditModalOpen(false);
+            setSelectedStore(null);
+        } catch (error) {
+            console.error("Failed to update store:", error);
+        }
+    };
+
+    const handleDeleteStore = async () => {
+        if (!selectedStore) return;
+        try {
+            await deleteStoreMutation.mutateAsync(selectedStore.id);
+            setIsDeleteModalOpen(false);
+            setSelectedStore(null);
+        } catch (error) {
+            console.error("Failed to delete store:", error);
+        }
+    };
+
     const handleViewStore = (store: any) => {
         setGlobalSelectedStore(store);
         if (currentUser?.role === "admin") {
-            navigate({ to: "/admin/organization-settings" });
+            navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.name } });
             return;
         }
         navigate({ to: "/checker/dashboard" });
@@ -141,6 +170,12 @@ export function StoresPage() {
                         <button class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                         </button>
+                        <button class="staff-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-users"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                        </button>
+                        <button class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                        </button>
                     </div>
                 `;
             },
@@ -150,6 +185,12 @@ export function StoresPage() {
                 if (target?.classList.contains("edit-btn")) {
                     setSelectedStore(store);
                     setIsEditModalOpen(true);
+                } else if (target?.classList.contains("staff-btn")) {
+                    setSelectedStore(store);
+                    setIsStaffModalOpen(true);
+                } else if (target?.classList.contains("delete-btn")) {
+                    setSelectedStore(store);
+                    setIsDeleteModalOpen(true);
                 }
             },
         },
@@ -207,19 +248,27 @@ export function StoresPage() {
 
             <StoreFormModal
                 isOpen={isEditModalOpen}
+                isLoading={updateStoreMutation.isPending}
                 onClose={() => setIsEditModalOpen(false)}
-                onSubmit={() => { }} // Not implemented yet per API
+                onSubmit={handleEditStore}
                 initialData={selectedStore || undefined}
             />
 
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
+                isLoading={deleteStoreMutation.isPending}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => { }}
+                onConfirm={handleDeleteStore}
                 title="Delete Store"
                 description={`Are you sure you want to delete "${selectedStore?.name}"? This action cannot be undone.`}
                 confirmLabel="Delete"
                 variant="destructive"
+            />
+
+            <StoreUserAssignmentModal
+                isOpen={isStaffModalOpen}
+                onClose={() => setIsStaffModalOpen(false)}
+                store={selectedStore}
             />
         </MainLayout>
     );

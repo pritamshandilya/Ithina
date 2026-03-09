@@ -20,6 +20,7 @@ export const ROLE_PERMISSIONS: Record<AppRole, readonly Permission[]> = {
     "stores:manage",
     "users:manage",
     "approvals:review",
+    "knowledge-center:view",
     "profile:view",
   ],
   maker: [

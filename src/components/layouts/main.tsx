@@ -53,7 +53,7 @@ export default function MainLayout({
     return (
       <>
         {pageHeader ? (
-          <div className={cn("mb-4", pageHeaderClassName)}>{pageHeader}</div>
+          <div className={cn("mb-4 shrink-0 px-3 py-3 sm:px-4 lg:px-6", pageHeaderClassName)}>{pageHeader}</div>
         ) : null}
         {children ?? <Outlet />}
       </>

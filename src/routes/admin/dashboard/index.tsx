@@ -28,7 +28,7 @@ function AdminDashboard() {
 
   const handleStoreClick = (store: StoreType) => {
     setSelectedStore(store);
-    navigate({ to: "/admin/stores" });
+    navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.name } });
   };
 
   const stats: Array<{

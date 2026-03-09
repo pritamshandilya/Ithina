@@ -36,7 +36,7 @@ import type {
 } from "@/types/planogram";
 
 export const Route = createFileRoute("/checker/shelf/$shelfId/")({
-  component: PlanogramPreviewPage,
+  component: PlanogramAnalysisViewPage,
 });
 
 function derivePlanogramStats(
@@ -69,7 +69,7 @@ function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
   }));
 }
 
-function PlanogramPreviewPage() {
+export function PlanogramAnalysisViewPage() {
   const { shelfId } = Route.useParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();

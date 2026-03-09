@@ -277,7 +277,7 @@ const PLANOGRAM_COLUMNS = (
   },
 ];
 
-function PlanogramAnalysisPage() {
+export function PlanogramAnalysisPage() {
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useAssignedShelves();
   const { data: planogramList } = usePlanogramList();

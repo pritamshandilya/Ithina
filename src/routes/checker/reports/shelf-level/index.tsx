@@ -10,7 +10,7 @@ export const Route = createFileRoute("/checker/reports/shelf-level/")({
     component: ShelfLevelReport,
 });
 
-function ShelfLevelReport() {
+export function ShelfLevelReport() {
     const navigate = useNavigate();
 
     const stats = [

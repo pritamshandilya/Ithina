@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Settings, Save, Store as StoreIcon, MapPin, Globe, Maximize } from "lucide-react";
-import { PageHeader } from "@/components/shared";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,14 +66,15 @@ export function StoreConfigurationPage() {
     };
 
     return (
-        <MainLayout>
-            <div className="space-y-6 max-w-4xl mx-auto pb-10 pt-4 px-4">
+        <MainLayout
+            pageHeader={(
                 <PageHeader
                     title="Store Settings"
-                    // description={`Configure settings and details for ${selectedStore.name}.`}
                     icon={Settings}
                 />
-
+            )}
+        >
+            <div className="space-y-6 max-w-4xl mx-auto pb-10 pt-4 px-4">
                 <form onSubmit={handleSave} className="space-y-6">
                     <Card className="bg-card border-border shadow-xl glassmorphism">
                         <CardHeader>

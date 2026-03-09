@@ -15,30 +15,10 @@
  *  const data = await apiClient.get<UserResponse>("/users/me");
  */
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+import { ApiError } from "@/exceptions/ApiError";
+import { getHttpConfig } from "@/lib/api/config";
 
-/**
- * Structured API error with HTTP status code.
- * Used by the query client's `shouldRetry` logic.
- */
-export class ApiError extends Error {
-  readonly status: number;
-  readonly statusText: string;
-  readonly data?: unknown;
-
-  constructor(
-    status: number,
-    statusText: string,
-    message: string,
-    data?: unknown,
-  ) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.statusText = statusText;
-    this.data = data;
-  }
-}
+export { ApiError };
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -69,7 +49,7 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
   };
 
   // Attach auth token when available (JWT stored in memory by auth provider)
-  const token = sessionStorage.getItem("auth_token");
+  const token = sessionStorage.getItem(getHttpConfig().tokenStorageKey);
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -86,7 +66,7 @@ async function request<T>(
     headers?: HeadersInit;
   },
 ): Promise<T> {
-  let url = `${BASE_URL}${path}`;
+  let url = `${getHttpConfig().baseUrl}${path}`;
 
   if (options?.params) {
     const qs = new URLSearchParams();

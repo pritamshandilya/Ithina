@@ -1,10 +1,16 @@
-import type { PropsWithChildren } from "react";
+import { createContext, type PropsWithChildren, useContext } from "react";
 import { Outlet, useLocation } from "@tanstack/react-router";
 
 import Sidenav from "./main/sidenav";
-import Header from "./main/header";
 import { SidebarInset } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+
+const MainLayoutContext = createContext(false);
+
+interface MainLayoutProps extends PropsWithChildren {
+  pageHeader?: React.ReactNode;
+  pageHeaderClassName?: string;
+}
 
 /** Full report views where header/metrics/tabs stay fixed and only tab content scrolls */
 function isFullReportView(pathname: string): boolean {
@@ -32,18 +38,40 @@ function isStickyTablePage(pathname: string): boolean {
   return false;
 }
 
-export default function MainLayout({ children }: PropsWithChildren) {
+export default function MainLayout({
+  children,
+  pageHeader,
+  pageHeaderClassName,
+}: MainLayoutProps) {
+  const isNestedMainLayout = useContext(MainLayoutContext);
   const location = useLocation();
   const fullReportView = isFullReportView(location.pathname);
   const stickyTablePage = isStickyTablePage(location.pathname);
   const constrainedHeight = fullReportView || stickyTablePage;
 
+  if (isNestedMainLayout) {
+    return (
+      <>
+        {pageHeader ? (
+          <div className={cn("mb-4", pageHeaderClassName)}>{pageHeader}</div>
+        ) : null}
+        {children ?? <Outlet />}
+      </>
+    );
+  }
+
   return (
-    <>
+    <MainLayoutContext.Provider value={true}>
       <Sidenav />
 
       <SidebarInset className="flex min-h-0 flex-col">
-        <Header />
+        {pageHeader ? (
+          <div className="shrink-0 border-b border-border/50 bg-background/70 px-3 py-3 sm:px-4 lg:px-6">
+            <div className={cn("mx-auto w-full max-w-screen-2xl", pageHeaderClassName)}>
+              {pageHeader}
+            </div>
+          </div>
+        ) : null}
         <div
           className={cn(
             "min-h-0 flex-1",
@@ -55,6 +83,6 @@ export default function MainLayout({ children }: PropsWithChildren) {
           {children ?? <Outlet />}
         </div>
       </SidebarInset>
-    </>
+    </MainLayoutContext.Provider>
   );
 }

@@ -1,22 +1,10 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { AuthSessionService } from "@/lib/auth/session";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+import { requireAuth } from "./-guards/requireAuth";
 
 export const Route = createFileRoute("/")({
-  component: RouteComponent,
+  beforeLoad: ({ context, location }) => {
+    requireAuth(context, location);
+    throw redirect({ to: "/dashboard" });
+  },
 });
-
-function RouteComponent() {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const user = AuthSessionService.getCurrentUser();
-    if (user) {
-      navigate({ to: AuthSessionService.getDashboardRoute(user.role) });
-    } else {
-      navigate({ to: "/login" });
-    }
-  }, [navigate]);
-
-  return null;
-}

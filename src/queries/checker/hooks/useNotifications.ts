@@ -24,8 +24,8 @@ import type { Notification } from "@/types/checker";
  */
 export const notificationsKeys = {
   all: ["checker", "notifications"] as const,
-  byUser: (userId: string) => [...notificationsKeys.all, userId] as const,
-  byStore: (userId: string, storeId: string) => [...notificationsKeys.all, userId, storeId] as const,
+  byScope: (userId: string, storeId?: string) =>
+    [...notificationsKeys.all, userId, storeId ?? "all"] as const,
 };
 
 /**
@@ -41,9 +41,7 @@ export const notificationsKeys = {
  */
 export function useNotifications(storeId?: string) {
   return useQuery({
-    queryKey: storeId 
-      ? notificationsKeys.byStore(mockCheckerUser.id, storeId)
-      : notificationsKeys.byUser(mockCheckerUser.id),
+    queryKey: notificationsKeys.byScope(mockCheckerUser.id, storeId),
     queryFn: () => fetchNotifications(mockCheckerUser.id, storeId),
     staleTime: 30 * 1000, // 30 seconds
     gcTime: 5 * 60 * 1000, // 5 minutes
@@ -65,6 +63,7 @@ export function useNotifications(storeId?: string) {
  */
 export function useMarkNotificationAsRead() {
   const queryClient = useQueryClient();
+  const userScopeKey = notificationsKeys.byScope(mockCheckerUser.id);
 
   return useMutation({
     mutationFn: markNotificationAsRead,
@@ -74,14 +73,13 @@ export function useMarkNotificationAsRead() {
       await queryClient.cancelQueries({ queryKey: notificationsKeys.all });
 
       // Snapshot the previous value
-      const previousNotifications = queryClient.getQueryData(
-        notificationsKeys.byUser(mockCheckerUser.id)
-      );
+      const previousNotifications = queryClient.getQueryData(userScopeKey);
 
       // Optimistically update to the new value
       queryClient.setQueryData<Notification[]>(
-        notificationsKeys.byUser(mockCheckerUser.id),
-        (old) => old?.map((n) => (n.id === notificationId ? { ...n, read: true } : n))
+        userScopeKey,
+        (old) =>
+          old?.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
       );
 
       return { previousNotifications };
@@ -89,10 +87,7 @@ export function useMarkNotificationAsRead() {
     // On error, rollback
     onError: (_err, _notificationId, context) => {
       if (context?.previousNotifications) {
-        queryClient.setQueryData(
-          notificationsKeys.byUser(mockCheckerUser.id),
-          context.previousNotifications
-        );
+        queryClient.setQueryData(userScopeKey, context.previousNotifications);
       }
     },
     // Always refetch after error or success
@@ -115,6 +110,7 @@ export function useMarkNotificationAsRead() {
  */
 export function useMarkAllNotificationsAsRead() {
   const queryClient = useQueryClient();
+  const userScopeKey = notificationsKeys.byScope(mockCheckerUser.id);
 
   return useMutation({
     mutationFn: () => markAllNotificationsAsRead(mockCheckerUser.id),
@@ -122,24 +118,19 @@ export function useMarkAllNotificationsAsRead() {
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: notificationsKeys.all });
 
-      const previousNotifications = queryClient.getQueryData(
-        notificationsKeys.byUser(mockCheckerUser.id)
-      );
+      const previousNotifications = queryClient.getQueryData(userScopeKey);
 
       // Mark all as read
       queryClient.setQueryData<Notification[]>(
-        notificationsKeys.byUser(mockCheckerUser.id),
-        (old) => old?.map((n) => ({ ...n, read: true }))
+        userScopeKey,
+        (old) => old?.map((n) => ({ ...n, read: true })),
       );
 
       return { previousNotifications };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousNotifications) {
-        queryClient.setQueryData(
-          notificationsKeys.byUser(mockCheckerUser.id),
-          context.previousNotifications
-        );
+        queryClient.setQueryData(userScopeKey, context.previousNotifications);
       }
     },
     onSettled: () => {

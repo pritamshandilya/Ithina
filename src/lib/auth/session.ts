@@ -1,6 +1,10 @@
+import type { Permission } from "@/auth/permissions";
+import { isPermission } from "@/auth/permissions";
+import type { RouterAuthSnapshot } from "@/auth/state";
 import { ApiError, apiClient } from "@/queries/shared";
+import { getHttpConfig } from "@/lib/api/config";
 
-export type UserRole = "maker" | "checker";
+export type UserRole = "admin" | "maker" | "checker";
 
 export interface OrganizationInfo {
   id: string;
@@ -15,6 +19,9 @@ export interface AuthSessionUser {
   role: UserRole;
   organization: OrganizationInfo;
   isActive: boolean;
+  lastLoginAt?: string;
+  permissions?: Permission[];
+  storeIds?: string[];
 }
 
 interface LoginApiResponse {
@@ -33,12 +40,34 @@ interface MeApiResponse {
   role: UserRole;
   organization: OrganizationInfo;
   is_active: boolean;
+  permissions?: Permission[];
+  store_ids?: string[];
 }
 
-const TOKEN_KEY = "auth_token";
 const TOKEN_EXPIRY_KEY = "auth_token_expiry";
 const USER_KEY = "auth_user";
-const LEGACY_LOGIN_FLAG_KEY = "isLoggedIn";
+
+function getTokenStorageKey(): string {
+  return getHttpConfig().tokenStorageKey;
+}
+
+function isUserRole(role: unknown): role is UserRole {
+  return role === "admin" || role === "maker" || role === "checker";
+}
+
+function parsePermissions(value: unknown): Permission[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const permissions = value.filter(isPermission);
+  return permissions.length ? permissions : undefined;
+}
+
+function parseStoreIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const storeIds = value.filter(
+    (storeId): storeId is string => typeof storeId === "string" && !!storeId,
+  );
+  return storeIds.length ? storeIds : undefined;
+}
 
 function loadUser(): AuthSessionUser | null {
   const rawUser = localStorage.getItem(USER_KEY);
@@ -47,14 +76,15 @@ function loadUser(): AuthSessionUser | null {
   try {
     const parsed = JSON.parse(rawUser) as Partial<AuthSessionUser> & {
       organization?: Partial<OrganizationInfo>;
+      store_ids?: unknown;
+      permissions?: unknown;
     };
 
     if (!parsed || typeof parsed !== "object") return null;
 
     const id = typeof parsed.id === "string" ? parsed.id : "";
     const email = typeof parsed.email === "string" ? parsed.email : "";
-    const role =
-      parsed.role === "maker" || parsed.role === "checker" ? parsed.role : null;
+    const role = isUserRole(parsed.role) ? parsed.role : null;
     const organizationId =
       typeof parsed.organization?.id === "string"
         ? parsed.organization.id
@@ -65,6 +95,11 @@ function loadUser(): AuthSessionUser | null {
         : "My Organization";
     const isActive =
       typeof parsed.isActive === "boolean" ? parsed.isActive : false;
+    const lastLoginAt =
+      typeof parsed.lastLoginAt === "string" ? parsed.lastLoginAt : undefined;
+    const permissions = parsePermissions(parsed.permissions);
+    const storeIds =
+      parseStoreIds(parsed.storeIds) ?? parseStoreIds(parsed.store_ids);
 
     if (!id || !email || !role) {
       return null;
@@ -81,8 +116,11 @@ function loadUser(): AuthSessionUser | null {
         name: organizationName,
       },
       isActive,
+      lastLoginAt,
       firstName: normalizeName(parsed.firstName) ?? fallbackNames.firstName,
       lastName: normalizeName(parsed.lastName) ?? fallbackNames.lastName,
+      permissions,
+      storeIds,
     };
   } catch {
     return null;
@@ -94,10 +132,9 @@ function saveUser(user: AuthSessionUser): void {
 }
 
 function saveToken(accessToken: string, expiresInSeconds: number): void {
-  sessionStorage.setItem(TOKEN_KEY, accessToken);
+  sessionStorage.setItem(getTokenStorageKey(), accessToken);
   const expiryEpochMs = Date.now() + expiresInSeconds * 1000;
   localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiryEpochMs));
-  localStorage.setItem(LEGACY_LOGIN_FLAG_KEY, "true");
 }
 
 export function getInitialsFromEmail(email: string): {
@@ -132,7 +169,57 @@ function normalizeName(name?: string | null): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
+function hasSameSnapshot(
+  left: RouterAuthSnapshot,
+  right: RouterAuthSnapshot,
+): boolean {
+  return (
+    left.isAuthenticated === right.isAuthenticated &&
+    left.user?.id === right.user?.id &&
+    left.user?.role === right.user?.role &&
+    left.user?.permissions?.join("|") === right.user?.permissions?.join("|")
+  );
+}
+
 export class AuthSessionService {
+  private static listeners = new Set<() => void>();
+  private static snapshot: RouterAuthSnapshot | null = null;
+
+  private static computeSnapshot(): RouterAuthSnapshot {
+    if (!this.isAuthenticated()) {
+      return {
+        isAuthenticated: false,
+        user: null,
+      };
+    }
+
+    const user = loadUser();
+    return {
+      isAuthenticated: !!user,
+      user,
+    };
+  }
+
+  private static emitAuthChanged(): void {
+    this.snapshot = this.computeSnapshot();
+    this.listeners.forEach((listener) => listener());
+  }
+
+  static subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  static getSnapshot(): RouterAuthSnapshot {
+    const next = this.computeSnapshot();
+    if (!this.snapshot || !hasSameSnapshot(this.snapshot, next)) {
+      this.snapshot = next;
+    }
+    return this.snapshot;
+  }
+
   static async login(
     email: string,
     password: string,
@@ -170,7 +257,7 @@ export class AuthSessionService {
   }
 
   static isAuthenticated(): boolean {
-    const token = sessionStorage.getItem(TOKEN_KEY);
+    const token = sessionStorage.getItem(getTokenStorageKey());
     const expiryRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
 
     if (!token || !expiryRaw) return false;
@@ -181,16 +268,17 @@ export class AuthSessionService {
   }
 
   static logout(): void {
-    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(getTokenStorageKey());
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
     localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(LEGACY_LOGIN_FLAG_KEY);
+    this.emitAuthChanged();
   }
 
   static getDashboardRoute(
     role: UserRole,
-  ): "/maker/dashboard" | "/checker/dashboard" | "/checker/org-dashboard" {
-    if (role === "checker") return "/checker/org-dashboard";
+  ): "/admin/dashboard" | "/maker/dashboard" | "/checker/dashboard" {
+    if (role === "admin") return "/admin/dashboard";
+    if (role === "checker") return "/checker/dashboard";
     return "/maker/dashboard";
   }
 
@@ -209,8 +297,11 @@ export class AuthSessionService {
           name: "My Organization",
         },
         isActive: me.is_active,
+        permissions: parsePermissions(me.permissions),
+        storeIds: parseStoreIds(me.store_ids),
       };
       saveUser(mapped);
+      this.emitAuthChanged();
       return mapped;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {

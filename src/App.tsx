@@ -1,13 +1,16 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useSyncExternalStore } from "react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
+import type { RouterAuthState } from "./auth/state";
+import { AuthSessionService } from "./lib/auth/session";
+import { queryClient } from "./queries/client";
 import { routeTree } from "./routeTree.gen";
-import { StoreProvider } from "./providers/store";
 
-const queryClient = new QueryClient();
 const normalizedBasePath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+
+const ready = () => Promise.resolve();
 
 const router = createRouter({
   routeTree,
@@ -17,16 +20,50 @@ const router = createRouter({
   defaultPreloadStaleTime: 0,
   context: {
     queryClient,
+    auth: undefined!,
   },
 });
 
-export default function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <StoreProvider>
-        <RouterProvider router={router} />
-      </StoreProvider>
+declare module "@tanstack/react-router" {
+  interface Register {
+    router: typeof router;
+  }
+}
 
+function useRouterAuthState(): RouterAuthState {
+  const snapshot = useSyncExternalStore(
+    (onStoreChange) => AuthSessionService.subscribe(onStoreChange),
+    () => AuthSessionService.getSnapshot(),
+    () => AuthSessionService.getSnapshot(),
+  );
+
+  return {
+    status: "ready",
+    isAuthenticated: snapshot.isAuthenticated,
+    user: snapshot.user,
+    ready,
+  };
+}
+
+export default function App() {
+  const auth = useRouterAuthState();
+  const authUserId = auth.user?.id ?? null;
+  const authUserRole = auth.user?.role ?? null;
+  const permissionFingerprint = auth.user?.permissions?.join("|") ?? "";
+
+  useEffect(() => {
+    router.invalidate();
+  }, [auth.isAuthenticated, authUserId, authUserRole, permissionFingerprint]);
+
+  return (
+    <>
+      <RouterProvider
+        router={router}
+        context={{
+          queryClient,
+          auth,
+        }}
+      />
       {Boolean(import.meta.env.VITE_DEBUG) && (
         <>
           <ReactQueryDevtools />
@@ -34,6 +71,6 @@ export default function App() {
           <TanStackRouterDevtools router={router} />
         </>
       )}
-    </QueryClientProvider>
+    </>
   );
 }

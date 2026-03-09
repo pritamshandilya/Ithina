@@ -34,7 +34,7 @@ function StoreLevelReport() {
     const handleRowClick = (row: ShelfSummary) => {
         // eslint-disable-next-line no-console
         console.log("Store level row clicked:", row);
-        navigate({ to: "/checker/reports/view/1" });
+        navigate({ to: "/checker/reports/view/$reportId", params: { reportId: "1" } });
     };
 
     return (

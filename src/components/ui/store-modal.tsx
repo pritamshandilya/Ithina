@@ -24,24 +24,24 @@ export function StoreModal({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose}>
-      <Card className="border-white/10 bg-gray-900/90 backdrop-blur-xl text-white shadow-2xl overflow-hidden">
-        <CardHeader className="border-b border-white/5 pb-6">
+      <Card className="border-border bg-card/95 text-card-foreground shadow-2xl backdrop-blur-xl overflow-hidden">
+        <CardHeader className="border-border/80 border-b pb-6">
           <div className="flex items-center gap-3 mb-1">
-            <div className="p-2 bg-blue-500/20 rounded-lg">
-              <Store className="h-5 w-5 text-blue-400" />
+            <div className="rounded-lg bg-accent/20 p-2">
+              <Store className="h-5 w-5 text-accent" />
             </div>
             <CardTitle className="text-2xl font-bold tracking-tight">Select a Store</CardTitle>
           </div>
-          <p className="text-gray-400 text-sm">Choose a location to continue to your dashboard</p>
+          <p className="text-muted-foreground text-sm">Choose a location to continue to your dashboard</p>
         </CardHeader>
         <CardContent className="pt-6">
           <div className="relative mb-6">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
             <Input
               placeholder="Search stores..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-gray-500 focus:ring-blue-500/50 transition-all"
+              className="bg-background/70 border-input placeholder:text-muted-foreground/80 focus-visible:ring-ring/70 pl-10 transition-all"
             />
           </div>
           <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent font-sans">
@@ -56,12 +56,12 @@ export function StoreModal({
                 >
                   <button
                     onClick={() => onSelect(store.name)}
-                    className="w-full group flex flex-col items-start p-4 rounded-xl border border-white/5 bg-white/5 hover:bg-blue-600/20 hover:border-blue-500/30 transition-all text-left"
+                    className="bg-secondary/35 border-border hover:bg-accent/22 hover:border-accent/55 w-full group flex flex-col items-start rounded-xl border p-4 text-left transition-all"
                   >
-                    <span className="font-semibold text-gray-100 group-hover:text-blue-400 transition-colors">
+                    <span className="text-foreground group-hover:text-accent font-semibold transition-colors">
                       {store.name}
                     </span>
-                    <span className="text-xs text-gray-500 group-hover:text-gray-400">
+                    <span className="text-muted-foreground group-hover:text-foreground/90 text-xs">
                       {store.city ?? ""}, {store.country ?? ""}
                     </span>
                   </button>
@@ -70,7 +70,7 @@ export function StoreModal({
             </AnimatePresence>
             {filteredStores.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500 italic">No stores found matching your search.</p>
+                <p className="text-muted-foreground italic">No stores found matching your search.</p>
               </div>
             )}
           </div>

@@ -159,7 +159,7 @@ export interface MockUserContext {
   firstName: string;
   lastName: string;
   email: string;
-  role: "maker" | "checker";
+  role: "admin" | "maker" | "checker";
   storeId: string;
   storeName: string;
 }

@@ -6,7 +6,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { AnalysisFlowPage } from "@/components/maker";
+import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
 import { MOCK_IMAGE_COMPARISON } from "@/lib/analysis";
 import { usePlanogramShelfPreview } from "@/queries/maker";
 

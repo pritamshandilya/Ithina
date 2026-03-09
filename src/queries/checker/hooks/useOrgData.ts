@@ -1,14 +1,23 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  assignUserToStore,
+  createUser,
   createStore,
+  deactivateUser,
+  deleteStore,
   fetchOrgStores,
   fetchOrgUsers,
   fetchOrganization,
   fetchStoreById,
   fetchStoreUsers,
+  fetchUserById,
+  inviteUser,
+  removeUserFromStore,
+  updateUser,
+  type OrgUserType,
+  type UpsertUserPayload,
   updateStore,
-  updateStoreMakers,
 } from "../api/org";
 import { storesKeys as checkerStoresKeys } from "./useStores";
 
@@ -58,9 +67,9 @@ export function useStoreById(storeId: string) {
 /**
  * Hook to fetch all users (staff) in the organization
  */
-export function useOrgUsers(userType?: "maker" | "checker") {
+export function useOrgUsers(userType?: OrgUserType) {
   return useQuery({
-    queryKey: userType ? [...orgKeys.users(), userType] : orgKeys.users(),
+    queryKey: [...orgKeys.users(), { userType: userType ?? "all" }],
     queryFn: () => fetchOrgUsers(userType),
   });
 }
@@ -68,11 +77,12 @@ export function useOrgUsers(userType?: "maker" | "checker") {
 /**
  * Hook to fetch users assigned to a specific store
  */
-export function useStoreUsers(storeId: string, userType?: "maker" | "checker") {
+export function useStoreUsers(storeId: string, userType?: OrgUserType) {
   return useQuery({
-    queryKey: userType
-      ? [...orgKeys.storeUsers(storeId), userType]
-      : orgKeys.storeUsers(storeId),
+    queryKey: [
+      ...orgKeys.storeUsers(storeId),
+      { storeId, userType: userType ?? "all" },
+    ],
     queryFn: () => fetchStoreUsers(storeId, userType),
     enabled: !!storeId,
   });
@@ -104,6 +114,20 @@ export function useCreateStore() {
 }
 
 /**
+ * Mutation to delete a store
+ */
+export function useDeleteStore() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (storeId: string) => deleteStore(storeId),
+    onSuccess: () => {
+      invalidateAllStoreQueries(queryClient);
+    },
+  });
+}
+
+/**
  * Mutation to update a store
  */
 export function useUpdateStore() {
@@ -125,23 +149,104 @@ export function useUpdateStore() {
 }
 
 /**
- * Mutation to update store makers
+ * Mutation to assign a user to a store
  */
-export function useUpdateStoreMakers() {
+export function useAssignStoreUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: ({
       storeId,
-      makerIds,
+      userId,
     }: {
       storeId: string;
-      makerIds: string[];
-    }) => updateStoreMakers(storeId, makerIds),
+      userId: string;
+    }) => assignUserToStore(storeId, userId),
     onSuccess: (_, { storeId }) => {
       invalidateAllStoreQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });
       queryClient.invalidateQueries({ queryKey: orgKeys.storeUsers(storeId) });
+    },
+  });
+}
+
+/**
+ * Mutation to remove a user from a store
+ */
+export function useRemoveStoreUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      storeId,
+      userId,
+    }: {
+      storeId: string;
+      userId: string;
+    }) => removeUserFromStore(storeId, userId),
+    onSuccess: (_, { storeId }) => {
+      invalidateAllStoreQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });
+      queryClient.invalidateQueries({ queryKey: orgKeys.storeUsers(storeId) });
+    },
+  });
+}
+
+export function useCreateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UpsertUserPayload) => createUser(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgKeys.users() });
+    },
+  });
+}
+
+export function useInviteUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: UpsertUserPayload) => inviteUser(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgKeys.users() });
+    },
+  });
+}
+
+export function useUserById(userId: string) {
+  return useQuery({
+    queryKey: [...orgKeys.users(), userId],
+    queryFn: () => fetchUserById(userId),
+    enabled: !!userId,
+  });
+}
+
+export function useUpdateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      userId,
+      payload,
+    }: {
+      userId: string;
+      payload: Partial<UpsertUserPayload>;
+    }) => updateUser(userId, payload),
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: orgKeys.users() });
+      queryClient.invalidateQueries({ queryKey: [...orgKeys.users(), userId] });
+    },
+  });
+}
+
+export function useDeactivateUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userId: string) => deactivateUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: orgKeys.users() });
     },
   });
 }

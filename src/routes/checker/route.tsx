@@ -5,10 +5,21 @@
  * Wraps routes with MainLayout and applies consistent background styling.
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
+
+import { hasPermission } from "@/auth/authorization";
 import MainLayout from "@/components/layouts/main";
+import { AuthSessionService } from "@/lib/auth/session";
+import { requireAuth } from "@/routes/-guards/requireAuth";
 
 export const Route = createFileRoute("/checker")({
+  beforeLoad: ({ context, location }) => {
+    const user = requireAuth(context, location);
+
+    if (!hasPermission(user, "approvals:review")) {
+      throw redirect({ to: AuthSessionService.getDashboardRoute(user.role) });
+    }
+  },
   component: CheckerLayout,
 });
 

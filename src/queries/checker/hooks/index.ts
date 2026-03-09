@@ -58,13 +58,20 @@ export {
   useValidateRuleActivation,
 } from "./useKnowledgeCenter";
 export {
+  useAssignStoreUser,
+  useCreateUser,
   orgKeys,
+  useDeactivateUser,
+  useDeleteStore,
   useOrganization,
+  useInviteUser,
+  useRemoveStoreUser,
   useOrgStores,
   useStoreById,
   useOrgUsers,
   useStoreUsers,
   useCreateStore,
   useUpdateStore,
-  useUpdateStoreMakers,
+  useUpdateUser,
+  useUserById,
 } from "./useOrgData";

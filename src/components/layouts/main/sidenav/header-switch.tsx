@@ -25,7 +25,7 @@ interface TeamSwitcherProps {
         id?: string
     }
     stores: StoreType[]
-    currentRole: "maker" | "checker"
+    currentRole: "admin" | "maker" | "checker"
     isOrgDashboard?: boolean
 }
 
@@ -35,9 +35,13 @@ export function TeamSwitcher({ organization, stores, currentRole, isOrgDashboard
     const navigate = useNavigate()
 
     const handleOrgClick = () => {
-        // Makers don't have org dashboard, they go to maker dashboard
+        if (currentRole === "admin") {
+            navigate({ to: "/admin/organization-settings" })
+            return;
+        }
+
         if (currentRole === "checker") {
-            navigate({ to: "/checker/org-dashboard" })
+            navigate({ to: "/checker/dashboard" })
         } else {
             navigate({ to: "/maker/dashboard" })
         }
@@ -45,6 +49,11 @@ export function TeamSwitcher({ organization, stores, currentRole, isOrgDashboard
 
     const handleStoreClick = (store: StoreType) => {
         setSelectedStore(store)
+        if (currentRole === "admin") {
+            navigate({ to: "/admin/stores" })
+            return;
+        }
+
         if (currentRole === "checker") {
             navigate({ to: "/checker/dashboard" })
         } else {
@@ -95,7 +104,9 @@ export function TeamSwitcher({ organization, stores, currentRole, isOrgDashboard
                                 <LayoutDashboard className="size-3.5 shrink-0" />
                             </div>
                             <div className="flex flex-1 items-center justify-between">
-                                <span className="font-medium">{currentRole === "checker" ? "Organization Overview" : organization.name}</span>
+                                <span className="font-medium">
+                                    {currentRole === "admin" ? "Organization Settings" : organization.name}
+                                </span>
                                 {isOrgDashboard && <Check className="size-3.5" />}
                             </div>
                         </DropdownMenuItem>

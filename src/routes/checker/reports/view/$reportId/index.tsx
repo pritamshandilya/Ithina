@@ -19,7 +19,7 @@ export const Route = createFileRoute("/checker/reports/view/$reportId/")({
     component: DetailedReportPage,
 });
 
-function DetailedReportPage() {
+export function DetailedReportPage() {
     const data: DetailedReport = ANALYSIS_REPORT_MOCK_DATA;
     const [activeTab, setActiveTab] = useState("compliance");
 

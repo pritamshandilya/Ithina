@@ -271,6 +271,7 @@ export class AuthSessionService {
     sessionStorage.removeItem(getTokenStorageKey());
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
     localStorage.removeItem(USER_KEY);
+    localStorage.removeItem("selected_store");
     this.emitAuthChanged();
   }
 

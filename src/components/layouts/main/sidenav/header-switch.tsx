@@ -50,7 +50,7 @@ export function TeamSwitcher({ organization, stores, currentRole, isOrgDashboard
     const handleStoreClick = (store: StoreType) => {
         setSelectedStore(store)
         if (currentRole === "admin") {
-            navigate({ to: "/admin/stores" })
+            navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.id } })
             return;
         }
 

@@ -37,7 +37,7 @@ export const Route = createFileRoute("/checker/knowledge-center/")({
 
 type KnowledgeCenterTab = "rules" | "documents";
 
-function KnowledgeCenterPage() {
+export function KnowledgeCenterPage() {
   const [activeTab, setActiveTab] = useState<KnowledgeCenterTab>("rules");
   const { selectedStore } = useStore();
   const _selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;

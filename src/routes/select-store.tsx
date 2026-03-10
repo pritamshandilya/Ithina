@@ -208,11 +208,7 @@ function SelectStorePage() {
           </AnimatePresence>
         </div>
 
-        <div className="pt-8 border-t border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Server Online</span>
-          </div>
+        <div className="pt-8 border-t border-white/5 flex items-center justify-end">
           <button 
             onClick={() => AuthSessionService.logout()}
             className="text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.2em] transition-colors"

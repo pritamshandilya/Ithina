@@ -22,6 +22,7 @@ import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
 import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import type { ImageComparisonData } from "@/lib/analysis/image-comparison-types";
 import {
   useAnalysisPipeline,
@@ -49,6 +50,14 @@ export interface AnalysisFlowPageProps {
   expectedLayoutPreview?: React.ReactNode;
   /** Planogram expected data – planogram-based only. When provided, shows PlanogramExpectedPanel on the right. Not used in adhoc flow (upload stays full width). */
   planogramExpectedData?: ImageComparisonData;
+  /** Whether to show a shelf selection dropdown */
+  showShelfSelection?: boolean;
+  /** Currently selected shelf id */
+  selectedShelfId?: string;
+  /** Callback when shelf changes */
+  onShelfSelect?: (id: string) => void;
+  /** Available shelves for selection */
+  shelves?: Array<{ id: string; shelfName: string }>;
 }
 
 export function AnalysisFlowPage({
@@ -56,6 +65,10 @@ export function AnalysisFlowPage({
   backTo,
   expectedLayoutPreview,
   planogramExpectedData,
+  showShelfSelection,
+  selectedShelfId,
+  onShelfSelect,
+  shelves,
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -146,19 +159,39 @@ export function AnalysisFlowPage({
     <MainLayout>
       <div className="flex min-h-full flex-col bg-primary pt-2 px-2 pb-2 sm:pt-3 sm:px-2 sm:pb-3 lg:pt-4 lg:px-2 lg:pb-4">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-2 lg:gap-3">
-          <header className="flex shrink-0 items-center gap-2">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={backTo}>
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Back</span>
-              </Link>
-            </Button>
-            <div className="space-y-0.5">
-              <h1 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h1>
-              <p className="text-xs text-muted-foreground">
-                Upload your shelf image to begin analysis
-              </p>
+          <header className="flex shrink-0 items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Button variant="ghost" size="icon" asChild>
+                <Link to={backTo}>
+                  <ArrowLeft className="size-4" aria-hidden />
+                  <span className="sr-only">Back</span>
+                </Link>
+              </Button>
+              <div className="space-y-0.5">
+                <h1 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h1>
+                <p className="text-xs text-muted-foreground">
+                  Upload your shelf image to begin analysis
+                </p>
+              </div>
             </div>
+            {showShelfSelection && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-foreground">Select Shelf:</span>
+                <Select
+                  className="w-[200px] h-9"
+                  value={selectedShelfId || ""}
+                  onChange={(e) => onShelfSelect?.(e.target.value)}
+                  aria-label="Select shelf"
+                >
+                  <option value="">No shelf selected (Adhoc)</option>
+                  {shelves?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.shelfName}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
           </header>
 
           {state === "results" ? (

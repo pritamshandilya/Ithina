@@ -40,6 +40,14 @@ export interface Shelf {
   planogramId?: string;
   /** User's edited arrangement when shelf is from planogram */
   arrangement?: unknown;
+  /** Zone of the store */
+  zone?: string;
+  /** Section within the zone */
+  section?: string;
+  /** Type of fixture (e.g., Gondola, Wall Shelving) */
+  fixtureType?: string;
+  /** Dimensions of the fixture */
+  dimensions?: string;
 }
 
 /**

@@ -99,9 +99,9 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
-  // Shelves: active on /checker/shelf and all sub-routes
-  if (item.to === "/checker/shelf") {
-    return pathname === "/checker/shelf" || pathname.startsWith("/checker/shelf/");
+  // Shelves: active on /checker/shelf, /maker/shelf and all sub-routes
+  if (item.to === "/checker/shelf" || item.to === "/maker/shelf") {
+    return pathname === item.to || pathname.startsWith(`${item.to}/`);
   }
   // My Audits: active on /maker/audits/*
   if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
@@ -297,6 +297,25 @@ export default function Sidenav() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {role === "maker" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActiveItem(location.pathname, location.hash, {
+                      label: "Shelves",
+                      to: "/maker/shelf",
+                      icon: Rows3,
+                    })}
+                    tooltip="Shelves"
+                  >
+                    <Link to="/maker/shelf">
+                      <Rows3 className="size-4 shrink-0" />
+                      Shelves
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
               {role === "maker" && (
                 <SidebarMenuItem>

@@ -33,6 +33,7 @@ import { Route as MakerHistoricalAnalysisRouteRouteImport } from './routes/maker
 import { Route as MakerAuditsRouteRouteImport } from './routes/maker/audits/route'
 import { Route as CheckerShelfRouteRouteImport } from './routes/checker/shelf/route'
 import { Route as MakerShelvesIndexRouteImport } from './routes/maker/shelves/index'
+import { Route as MakerShelfIndexRouteImport } from './routes/maker/shelf/index'
 import { Route as MakerManualAuditsIndexRouteImport } from './routes/maker/manual-audits/index'
 import { Route as MakerHistoricalAnalysisIndexRouteImport } from './routes/maker/historical-analysis/index'
 import { Route as MakerDashboardIndexRouteImport } from './routes/maker/dashboard/index'
@@ -200,6 +201,11 @@ const MakerShelvesIndexRoute = MakerShelvesIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => MakerShelvesRouteRoute,
+} as any)
+const MakerShelfIndexRoute = MakerShelfIndexRouteImport.update({
+  id: '/shelf/',
+  path: '/shelf/',
+  getParentRoute: () => MakerRouteRoute,
 } as any)
 const MakerManualAuditsIndexRoute = MakerManualAuditsIndexRouteImport.update({
   id: '/manual-audits/',
@@ -510,6 +516,7 @@ export interface FileRoutesByFullPath {
   '/maker/dashboard/': typeof MakerDashboardIndexRoute
   '/maker/historical-analysis/': typeof MakerHistoricalAnalysisIndexRoute
   '/maker/manual-audits/': typeof MakerManualAuditsIndexRoute
+  '/maker/shelf/': typeof MakerShelfIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
@@ -573,6 +580,7 @@ export interface FileRoutesByTo {
   '/maker/dashboard': typeof MakerDashboardIndexRoute
   '/maker/historical-analysis': typeof MakerHistoricalAnalysisIndexRoute
   '/maker/manual-audits': typeof MakerManualAuditsIndexRoute
+  '/maker/shelf': typeof MakerShelfIndexRoute
   '/maker/shelves': typeof MakerShelvesIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
@@ -647,6 +655,7 @@ export interface FileRoutesById {
   '/maker/dashboard/': typeof MakerDashboardIndexRoute
   '/maker/historical-analysis/': typeof MakerHistoricalAnalysisIndexRoute
   '/maker/manual-audits/': typeof MakerManualAuditsIndexRoute
+  '/maker/shelf/': typeof MakerShelfIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
@@ -721,6 +730,7 @@ export interface FileRouteTypes {
     | '/maker/dashboard/'
     | '/maker/historical-analysis/'
     | '/maker/manual-audits/'
+    | '/maker/shelf/'
     | '/maker/shelves/'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
@@ -784,6 +794,7 @@ export interface FileRouteTypes {
     | '/maker/dashboard'
     | '/maker/historical-analysis'
     | '/maker/manual-audits'
+    | '/maker/shelf'
     | '/maker/shelves'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
@@ -857,6 +868,7 @@ export interface FileRouteTypes {
     | '/maker/dashboard/'
     | '/maker/historical-analysis/'
     | '/maker/manual-audits/'
+    | '/maker/shelf/'
     | '/maker/shelves/'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
@@ -1064,6 +1076,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/maker/shelves/'
       preLoaderRoute: typeof MakerShelvesIndexRouteImport
       parentRoute: typeof MakerShelvesRouteRoute
+    }
+    '/maker/shelf/': {
+      id: '/maker/shelf/'
+      path: '/shelf'
+      fullPath: '/maker/shelf/'
+      preLoaderRoute: typeof MakerShelfIndexRouteImport
+      parentRoute: typeof MakerRouteRoute
     }
     '/maker/manual-audits/': {
       id: '/maker/manual-audits/'
@@ -1618,6 +1637,7 @@ interface MakerRouteRouteChildren {
   MakerIndexRoute: typeof MakerIndexRoute
   MakerDashboardIndexRoute: typeof MakerDashboardIndexRoute
   MakerManualAuditsIndexRoute: typeof MakerManualAuditsIndexRoute
+  MakerShelfIndexRoute: typeof MakerShelfIndexRoute
 }
 
 const MakerRouteRouteChildren: MakerRouteRouteChildren = {
@@ -1629,6 +1649,7 @@ const MakerRouteRouteChildren: MakerRouteRouteChildren = {
   MakerIndexRoute: MakerIndexRoute,
   MakerDashboardIndexRoute: MakerDashboardIndexRoute,
   MakerManualAuditsIndexRoute: MakerManualAuditsIndexRoute,
+  MakerShelfIndexRoute: MakerShelfIndexRoute,
 }
 
 const MakerRouteRouteWithChildren = MakerRouteRoute._addFileChildren(

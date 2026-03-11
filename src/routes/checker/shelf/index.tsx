@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useLocation, useParams } from "@tanstack/react-router";
 import { format } from "date-fns";
 import { createPortal } from "react-dom";
 import { FileText, LayoutGrid, Plus, Search, Trash2 } from "lucide-react";
@@ -10,7 +10,8 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets, usePlanogramList } from "@/queries/maker";
+import { useToast } from "@/hooks/use-toast";
+import { useAssignedShelves, useComplianceRuleSets, useDeleteShelf, usePlanogramList } from "@/queries/maker";
 import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
@@ -114,7 +115,7 @@ const PLANOGRAM_COLUMNS = (
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.id}</span>`;
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.shelf_id}</span>`;
     },
   },
   {
@@ -280,7 +281,21 @@ const PLANOGRAM_COLUMNS = (
 
 export function PlanogramAnalysisPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams({ strict: false }) as any;
+  const { toast } = useToast();
+
+  // Determine route prefix
+  const isAdmin = location.pathname.includes("/admin/");
+  const storeId = params.storeId as string | undefined;
+
+  const shelfDetailPath = isAdmin ? "/admin/$storeId/shelf/$shelfId" : "/checker/shelf/$shelfId";
+  const shelfNewPath = isAdmin ? "/admin/$storeId/shelf/new" : "/checker/shelf/new";
+  const adhocNewPath = isAdmin ? "/admin/$storeId/audits/adhoc/new" : "/maker/audits/adhoc/new";
+  const pogNewPath = isAdmin ? "/admin/$storeId/audits/planogram/new" : "/maker/audits/planogram/new";
+
   const { data: shelves, isLoading } = useAssignedShelves();
+  const deleteShelfMutation = useDeleteShelf();
   const { data: planogramList } = usePlanogramList();
   const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
@@ -386,9 +401,9 @@ export function PlanogramAnalysisPage() {
 
   const handleRowClick = useCallback(
     (row: PlanogramShelfRow) => {
-      navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: row.id } });
+      navigate({ to: shelfDetailPath as any, params: { shelfId: row.id, storeId } as any });
     },
-    [navigate]
+    [navigate, shelfDetailPath, storeId]
   );
 
   const handleViewComplianceRule = useCallback((row: PlanogramShelfRow) => {
@@ -403,23 +418,43 @@ export function PlanogramAnalysisPage() {
   const handleNewRun = useCallback(
     (shelfId: string) => {
       navigate({
-        to: "/maker/audits/planogram/run/$shelfId",
-        params: { shelfId },
-        search: { from: "/checker/shelf" },
+        to: adhocNewPath as any,
+        params: { storeId } as any,
+        search: { shelfId, from: location.pathname } as any,
       });
       setActionsMenu(null);
     },
-    [navigate]
+    [navigate, adhocNewPath, storeId, location.pathname]
   );
 
   const handleAssociatePlanogram = useCallback(
-    (shelfId: string, shelfName: string) => {
+    (shelfId: string) => {
       navigate({
-        to: "/checker/shelf/new",
-        search: { associateShelfId: shelfId, associateShelfName: shelfName },
+        to: pogNewPath as any,
+        params: { storeId } as any,
+        search: { shelfId } as any,
       });
     },
-    [navigate]
+    [navigate, pogNewPath, storeId]
+  );
+
+  const handleDeleteShelf = useCallback(
+    async (shelfId: string) => {
+      if (!confirm("Are you sure you want to delete this shelf? This action cannot be undone.")) return;
+      try {
+        await deleteShelfMutation.mutateAsync(shelfId);
+        toast({ title: "Shelf deleted", description: "The shelf has been removed successfully." });
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: err instanceof Error ? err.message : "Failed to delete shelf",
+          variant: "destructive",
+        });
+      } finally {
+        setActionsMenu(null);
+      }
+    },
+    [deleteShelfMutation, toast]
   );
 
   const tableColumns = useMemo(
@@ -440,7 +475,7 @@ export function PlanogramAnalysisPage() {
           description="Manage and monitor store shelf compliance."
         >
           <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
-            <Link to="/checker/shelf/new">
+            <Link to={shelfNewPath as any} params={{ storeId } as any}>
               <Plus className="size-4" aria-hidden />
               Add Shelf
             </Link>
@@ -491,7 +526,7 @@ export function PlanogramAnalysisPage() {
                   Add shelves to run planogram-based compliance analysis.
                 </p>
                 <Button asChild className="mt-6 bg-chart-2 text-white hover:opacity-90">
-                  <Link to="/checker/shelf/new">
+                  <Link to={shelfNewPath as any} params={{ storeId } as any}>
                     <Plus className="size-4" aria-hidden />
                     Add Shelf
                   </Link>
@@ -530,7 +565,7 @@ export function PlanogramAnalysisPage() {
                 type="button"
                 className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
                 onClick={() => {
-                  handleAssociatePlanogram(actionsMenu.row.id, actionsMenu.row.shelfName ?? "");
+                  handleAssociatePlanogram(actionsMenu.row.id);
                   setActionsMenu(null);
                 }}
               >
@@ -561,7 +596,7 @@ export function PlanogramAnalysisPage() {
             <button
               type="button"
               className="flex w-full cursor-pointer items-center gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive outline-none hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
-              onClick={() => setActionsMenu(null)}
+              onClick={() => handleDeleteShelf(actionsMenu.row.id)}
             >
               <Trash2 />
               Delete

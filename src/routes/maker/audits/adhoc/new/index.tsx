@@ -5,16 +5,22 @@ import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
 import { useAssignedShelves } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/adhoc/new/")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      shelfId: (search.shelfId as string) || undefined,
+    };
+  },
   component: NewAdhocAnalysisPage,
 });
 
-function NewAdhocAnalysisPage() {
+export function NewAdhocAnalysisPage() {
   const location = useLocation();
+  const { shelfId } = Route.useSearch();
   const from = (location.state as { from?: string } | undefined)?.from;
   const backTo = from ?? "/maker/audits/adhoc";
   
   const { data: shelves } = useAssignedShelves();
-  const [selectedShelfId, setSelectedShelfId] = useState<string>("");
+  const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
 
   return (
     <AnalysisFlowPage

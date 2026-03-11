@@ -9,48 +9,149 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as InviteIndexRouteImport } from './routes/invite/index'
+import { Route as AuthenticatedWizardRouteImport } from './routes/_authenticated/wizard'
+import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedFleetRouteImport } from './routes/_authenticated/fleet'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedApprovalRouteImport } from './routes/_authenticated/approval'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const InviteIndexRoute = InviteIndexRouteImport.update({
-  id: '/invite/',
-  path: '/invite/',
-  getParentRoute: () => rootRouteImport,
+const AuthenticatedWizardRoute = AuthenticatedWizardRouteImport.update({
+  id: '/wizard',
+  path: '/wizard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
+  id: '/studio',
+  path: '/studio',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedFleetRoute = AuthenticatedFleetRouteImport.update({
+  id: '/fleet',
+  path: '/fleet',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedApprovalRoute = AuthenticatedApprovalRouteImport.update({
+  id: '/approval',
+  path: '/approval',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/invite': typeof InviteIndexRoute
+  '/login': typeof LoginRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/approval': typeof AuthenticatedApprovalRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fleet': typeof AuthenticatedFleetRoute
+  '/studio': typeof AuthenticatedStudioRoute
+  '/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/invite': typeof InviteIndexRoute
+  '/login': typeof LoginRoute
+  '/admin': typeof AuthenticatedAdminRoute
+  '/approval': typeof AuthenticatedApprovalRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/fleet': typeof AuthenticatedFleetRoute
+  '/studio': typeof AuthenticatedStudioRoute
+  '/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/invite/': typeof InviteIndexRoute
+  '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/login': typeof LoginRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRoute
+  '/_authenticated/approval': typeof AuthenticatedApprovalRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/fleet': typeof AuthenticatedFleetRoute
+  '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/invite'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/admin'
+    | '/approval'
+    | '/dashboard'
+    | '/fleet'
+    | '/studio'
+    | '/wizard'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/invite'
-  id: '__root__' | '/' | '/invite/'
+  to:
+    | '/'
+    | '/login'
+    | '/admin'
+    | '/approval'
+    | '/dashboard'
+    | '/fleet'
+    | '/studio'
+    | '/wizard'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/login'
+    | '/_authenticated/admin'
+    | '/_authenticated/approval'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/fleet'
+    | '/_authenticated/studio'
+    | '/_authenticated/wizard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  InviteIndexRoute: typeof InviteIndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  LoginRoute: typeof LoginRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -58,19 +159,77 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/invite/': {
-      id: '/invite/'
-      path: '/invite'
-      fullPath: '/invite'
-      preLoaderRoute: typeof InviteIndexRouteImport
-      parentRoute: typeof rootRouteImport
+    '/_authenticated/wizard': {
+      id: '/_authenticated/wizard'
+      path: '/wizard'
+      fullPath: '/wizard'
+      preLoaderRoute: typeof AuthenticatedWizardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/studio': {
+      id: '/_authenticated/studio'
+      path: '/studio'
+      fullPath: '/studio'
+      preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/fleet': {
+      id: '/_authenticated/fleet'
+      path: '/fleet'
+      fullPath: '/fleet'
+      preLoaderRoute: typeof AuthenticatedFleetRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/approval': {
+      id: '/_authenticated/approval'
+      path: '/approval'
+      fullPath: '/approval'
+      preLoaderRoute: typeof AuthenticatedApprovalRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
   }
 }
 
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedApprovalRoute: typeof AuthenticatedApprovalRoute
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedFleetRoute: typeof AuthenticatedFleetRoute
+  AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedWizardRoute: typeof AuthenticatedWizardRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedApprovalRoute: AuthenticatedApprovalRoute,
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedFleetRoute: AuthenticatedFleetRoute,
+  AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedWizardRoute: AuthenticatedWizardRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  InviteIndexRoute: InviteIndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

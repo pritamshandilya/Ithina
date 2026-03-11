@@ -1,112 +1,101 @@
-import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react";
+import { ChevronsUpDown, LogOut } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useNavigate } from "@tanstack/react-router";
+
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
-} from "@/components/ui/sidebar";
-import { useAuth } from "@/providers/auth";
+import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 export default function SidenavFooter() {
-  const { isMobile } = useSidebar();
+  const navigate = useNavigate();
+  const user = SimulatedAuthService.getCurrentUser();
 
-  const { userInfo, isFetchingUserInfo, manageAccount, startLogout } =
-    useAuth();
+  if (!user) {
+    return (
+      <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="size-10 shrink-0 rounded-full border border-ithina-border bg-ithina-panel" />
+          <div className="overflow-hidden">
+            <p className="truncate text-sm font-medium text-white">Guest</p>
+            <p className="truncate font-mono text-[10px] text-slate-500">
+              Not signed in
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
-  if (isFetchingUserInfo || !userInfo) return null;
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+
+  const handleLogout = () => {
+    SimulatedAuthService.logout();
+    navigate({ to: "/login" });
+  };
 
   return (
-    <SidebarMenu>
-      <SidebarMenuItem>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage
-                  src={userInfo.profilePictureUrl}
-                  alt={userInfo.firstName}
-                />
+    <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button className="flex w-full items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-white/[0.04]">
+            <Avatar className="size-10 shrink-0 rounded-full border border-ithina-border">
+              <AvatarFallback className="rounded-full bg-ithina-panel text-sm">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
 
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="truncate text-sm font-medium text-white">
+                {user.firstName} {user.lastName}
+              </p>
+              <p className="truncate font-mono text-[10px] text-slate-500">
+                {user.email}
+              </p>
+            </div>
+
+            <ChevronsUpDown className="ml-auto size-4 shrink-0 text-slate-500" />
+          </button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent
+          className="w-56 rounded-lg"
+          side="right"
+          align="end"
+          sideOffset={8}
+        >
+          <DropdownMenuLabel className="p-0 font-normal">
+            <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
+              <Avatar className="size-8 rounded-lg">
                 <AvatarFallback className="rounded-lg">
-                  {userInfo.firstName.charAt(0)}
-                  {userInfo.lastName.charAt(0)}
+                  {initials}
                 </AvatarFallback>
               </Avatar>
 
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">
-                  {userInfo.firstName} {userInfo.lastName}
+                  {user.firstName} {user.lastName}
                 </span>
-
-                <span className="truncate text-xs">{userInfo.email}</span>
+                <span className="truncate text-xs">{user.email}</span>
               </div>
+            </div>
+          </DropdownMenuLabel>
 
-              <ChevronsUpDown className="ml-auto size-4" />
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
+          <DropdownMenuSeparator />
 
-          <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-            side={isMobile ? "bottom" : "right"}
-            align="end"
-            sideOffset={4}
-          >
-            <DropdownMenuLabel className="p-0 font-normal">
-              <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage
-                    src={userInfo.profilePictureUrl}
-                    alt={userInfo.firstName}
-                  />
-
-                  <AvatarFallback className="rounded-lg">
-                    {userInfo.firstName.charAt(0)}
-                    {userInfo.lastName.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">
-                    {userInfo.firstName} {userInfo.lastName}
-                  </span>
-
-                  <span className="truncate text-xs">{userInfo.email}</span>
-                </div>
-              </div>
-            </DropdownMenuLabel>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={manageAccount}>
-                <BadgeCheck />
-                Account
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator />
-
-            <DropdownMenuItem onClick={startLogout}>
-              <LogOut />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </SidebarMenuItem>
-    </SidebarMenu>
+          <DropdownMenuItem onClick={handleLogout}>
+            <LogOut />
+            Log out
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   );
 }
+

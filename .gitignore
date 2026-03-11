@@ -28,6 +28,12 @@ dist-ssr
 *.sln
 *.sw?
 
+# Documentation (local only, not pushed to repo)
+docs/
+
+# HTML prototypes
+ithina*.html
+
 # We are using pnpm, so we don't need these lock files
 package-lock.json
 yarn.lock

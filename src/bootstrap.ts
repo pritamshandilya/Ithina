@@ -18,7 +18,8 @@ axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(
   (config) => {
-    const id = store.getState().profile?.id;
+    const state = store.getState() as Record<string, unknown>;
+    const id = (state.profile as { id?: string } | undefined)?.id;
 
     if (id) {
       // Add the ID to the request headers if it exists

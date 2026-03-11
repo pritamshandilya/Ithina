@@ -21,6 +21,7 @@ import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
 import { requireAuth } from "@/routes/-guards/requireAuth";
 import { cn } from "@/lib/utils";
+import { PageHeader } from "@/components/shared/page-header";
 
 import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compliance-rules-tab";
 import { ReferenceDocumentsTab } from "@/components/checker/knowledge-center/reference-documents-tab";
@@ -49,17 +50,16 @@ export function KnowledgeCenterPage() {
   ];
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Knowledge Center"
+          description="Access training materials, guides, and compliance standards."
+        />
+      }
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 min-h-0 flex-col">
-
-          {/* Page Header */}
-          <header className="shrink-0 space-y-1">
-            <h1 className="text-2xl font-bold text-foreground">Knowledge Center</h1>
-            <p className="text-sm text-muted-foreground">
-              Define and manage compliance logic used by the AI during audit evaluation
-            </p>
-          </header>
 
           {/* Tab Navigation */}
           <nav

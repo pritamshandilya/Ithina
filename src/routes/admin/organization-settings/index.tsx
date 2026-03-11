@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Building2, Settings, Store, Users } from "lucide-react";
+import { Building2, Store, Users } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
@@ -23,8 +23,6 @@ function OrganizationSettingsPage() {
         <PageHeader
           title="Organization Settings"
           description="View and manage organization-wide information."
-          icon={Settings}
-          iconColor="text-blue-500"
         />
       }
     >

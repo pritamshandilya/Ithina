@@ -28,6 +28,7 @@ function isFullReportView(pathname: string): boolean {
 function isStickyTablePage(pathname: string): boolean {
   if (pathname === "/maker/audits/planogram" || pathname === "/maker/audits/planogram/")
     return true;
+  if (pathname === "/maker/shelf" || pathname === "/maker/shelf/") return true;
   if (pathname === "/checker/shelf" || pathname === "/checker/shelf/") return true;
   if (pathname === "/checker/audit-review" || pathname === "/checker/audit-review/") return true;
   if (pathname === "/checker/knowledge-center" || pathname === "/checker/knowledge-center/")
@@ -53,9 +54,11 @@ export default function MainLayout({
     return (
       <>
         {pageHeader ? (
-          <div className={cn("mb-4 shrink-0 px-3 py-3 sm:px-4 lg:px-6", pageHeaderClassName)}>{pageHeader}</div>
+          <div className={cn("mb-4 shrink-0 border-b border-border px-3 py-3 sm:px-4 lg:px-6", pageHeaderClassName)}>{pageHeader}</div>
         ) : null}
-        {children ?? <Outlet />}
+        <div className="mt-4 flex-1">
+          {children ?? <Outlet />}
+        </div>
       </>
     );
   }
@@ -66,7 +69,7 @@ export default function MainLayout({
 
       <SidebarInset className="flex min-h-0 flex-col">
         {pageHeader ? (
-          <div className="shrink-0 border-b border-border/50 bg-background/70 px-3 py-3 sm:px-4 lg:px-6">
+          <div className="shrink-0 border-b border-border bg-background/50 px-3 py-3 backdrop-blur-md sm:px-4 lg:px-6">
             <div className={cn("mx-auto w-full max-w-screen-2xl", pageHeaderClassName)}>
               {pageHeader}
             </div>

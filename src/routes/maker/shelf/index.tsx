@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAssignedShelves, usePlanogramList } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
+import { PageHeader } from "@/components/shared/page-header";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
 
@@ -272,17 +273,17 @@ export function MakerShelfPage() {
   );
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Shelves Overview"
+          description="View current shelves and planograms assigned to the store."
+          showNotifications={false}
+        />
+      }
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <header className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Shelves Overview</h1>
-              <p className="text-sm text-muted-foreground">
-                View current shelves and planograms assigned to the store.
-              </p>
-            </div>
-          </header>
 
           <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative w-full sm:w-80">

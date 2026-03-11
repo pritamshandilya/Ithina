@@ -2,6 +2,7 @@ import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-route
 import { format } from "date-fns";
 import { FolderOpen } from "lucide-react";
 import { useState } from "react";
+import { PageHeader } from "@/components/shared/page-header";
 
 import MainLayout from "@/components/layouts/main";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -149,17 +150,16 @@ function HistoricalAnalysisPage() {
   );
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Historical Analysis"
+          description="Compare current shelf state with past audits to track performance over time."
+        />
+      }
+    >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <header className="shrink-0 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">Historical Analysis</h1>
-              <p className="text-sm text-muted-foreground mt-0.5">
-                View past analyses from adhoc and planogram runs
-              </p>
-            </div>
-          </header>
 
           {analyses.length > 0 && (
             <p className="mt-4 shrink-0 text-sm text-muted-foreground">

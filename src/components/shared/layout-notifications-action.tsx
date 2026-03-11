@@ -41,7 +41,7 @@ export function LayoutNotificationsAction() {
 
   return (
     <NotificationsDropdown
-      className="h-10 w-10 rounded-md border border-border/70 bg-background/70 hover:bg-accent/10"
+      className="h-9 w-9 text-muted-foreground hover:text-foreground hover:bg-accent/10"
       notifications={notifications || []}
       onNotificationClick={handleNotificationClick}
       onMarkAsRead={handleMarkAsRead}

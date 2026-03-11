@@ -6,10 +6,11 @@ import {
   MakerAccomplishedCards,
   MakerAssignedTable,
   MakerAttentionSection,
-  MakerDashboardHeader,
   MakerPerformanceCharts,
   MyAuditsSection,
 } from "@/components/maker";
+import { MakerDashboardHeader } from "@/components/maker/maker-dashboard-header";
+import { PageHeader } from "@/components/shared/page-header";
 import { useDraftAudits, useReturnedAudits } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/dashboard/")({
@@ -35,11 +36,20 @@ function MakerDashboard() {
   };
 
   return (
-    <MainLayout>
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title="Planogram Assistant"
+          description={hasAttentionItems
+            ? "You have audits that need your attention"
+            : "Here's how your shelf audits are going"}
+        >
+          <MakerDashboardHeader />
+        </PageHeader>
+      }
+    >
       <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto max-w-screen-2xl space-y-5">
-          {/* Header with welcome + primary CTA */}
-          <MakerDashboardHeader hasAttentionItems={hasAttentionItems} />
 
           {/* Key metrics - My Work at a Glance */}
           <MakerAccomplishedCards />

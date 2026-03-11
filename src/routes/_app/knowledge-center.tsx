@@ -6,7 +6,7 @@ export const Route = createFileRoute("/_app/knowledge-center")({
   beforeLoad: ({ context }) => {
     const user = requirePermission(context, "knowledge-center:view");
 
-    if (user.role !== "checker") {
+    if (user.role !== "checker" && user.role !== "admin") {
       throw redirect({ to: "/forbidden" });
     }
 

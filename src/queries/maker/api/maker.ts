@@ -99,6 +99,10 @@ export async function createShelf(shelfData: {
   bayNumber: number;
   shelfName: string;
   description?: string;
+  zone?: string;
+  section?: string;
+  fixtureType?: string;
+  dimensions?: string;
 }): Promise<Shelf> {
   await simulateNetworkDelay(600);
 

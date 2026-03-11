@@ -12,7 +12,7 @@ export const Route = createFileRoute("/checker/reports/adhoc/")({
     component: AdhocReport,
 });
 
-function AdhocReport() {
+export function AdhocReport() {
     const navigate = useNavigate();
 
     const stats = [

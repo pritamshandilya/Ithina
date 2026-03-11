@@ -12,7 +12,7 @@ export const Route = createFileRoute("/checker/reports/store-level/")({
     component: StoreLevelReport,
 });
 
-function StoreLevelReport() {
+export function StoreLevelReport() {
     const navigate = useNavigate();
 
     const stats = [

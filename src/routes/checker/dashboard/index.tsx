@@ -18,7 +18,7 @@ export const Route = createFileRoute("/checker/dashboard/")({
   component: CheckerDashboard,
 });
 
-function CheckerDashboard() {
+export function CheckerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedStore } = useStore();

@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, redirect } from "@tanstack/react-router";
 import { Lock, Mail } from "lucide-react";
 import { useState } from "react";
 import { motion } from "framer-motion";
@@ -10,6 +10,14 @@ import { AuthSessionService } from "@/lib/auth/session";
 import { ApiError } from "@/queries/shared";
 
 export const Route = createFileRoute("/login/")({
+  beforeLoad: () => {
+    if (AuthSessionService.isAuthenticated()) {
+      const user = AuthSessionService.getCurrentUser();
+      if (user) {
+        throw redirect({ to: AuthSessionService.getDashboardRoute(user.role), replace: true });
+      }
+    }
+  },
   component: LoginPage,
 });
 
@@ -32,9 +40,9 @@ function LoginPage() {
       const user = await AuthSessionService.login(formData.email, formData.password);
       router.invalidate();
       if (user.role === "admin") {
-        navigate({ to: "/admin/organization-settings" });
+        navigate({ to: "/admin/organization-settings", replace: true });
       } else {
-        navigate({ to: AuthSessionService.getDashboardRoute(user.role) });
+        navigate({ to: "/select-store", replace: true });
       }
     } catch (error) {
       if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {

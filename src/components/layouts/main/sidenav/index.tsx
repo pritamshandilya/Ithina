@@ -99,9 +99,9 @@ function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
   if (item.to === "/checker/audit-review") {
     return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
   }
-  // Shelves: active on /checker/shelf and all sub-routes
-  if (item.to === "/checker/shelf") {
-    return pathname === "/checker/shelf" || pathname.startsWith("/checker/shelf/");
+  // Shelves: active on /checker/shelf, /maker/shelf and all sub-routes
+  if (item.to === "/checker/shelf" || item.to === "/maker/shelf") {
+    return pathname === item.to || pathname.startsWith(`${item.to}/`);
   }
   // My Audits: active on /maker/audits/*
   if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
@@ -132,12 +132,14 @@ export default function Sidenav() {
 
   const isOrgContext = useMemo(() => {
     if (role !== "admin") return false;
-    return (
-      location.pathname === "/admin/organization-settings" ||
-      location.pathname === "/admin/organization-settings/" ||
-      location.pathname === "/admin/dashboard" ||
-      location.pathname === "/admin/dashboard/"
-    );
+    const segments = location.pathname.split("/").filter(Boolean);
+    // If it's just /admin or /admin/dashboard or /dashboard, it's org context
+    // If it's /admin/something/... where something is NOT stores/users/organization-settings, it's store context
+    if (location.pathname === "/dashboard" || location.pathname === "/admin" || segments[1] === "dashboard") return true;
+    if (segments[0] === "admin" && (segments[1] === "stores" || segments[1] === "users" || segments[1] === "organization-settings")) return true;
+    if (location.pathname === "/stores" || location.pathname === "/users") return true;
+    
+    return false;
   }, [role, location.pathname]);
 
   const enabledCoreNav = useMemo(() => {
@@ -168,7 +170,9 @@ export default function Sidenav() {
   }, [location.pathname]);
 
   const roleItems = useMemo<NavItem[]>(() => {
-    if (role === "admin") {
+    const isStoreContext = location.pathname.startsWith("/checker") || (role === "admin" && selectedStore && !isOrgContext);
+
+    if (role === "admin" && !isStoreContext) {
       const items: NavItem[] = [];
       if (enabledCoreNav.has("stores")) {
         items.push({ label: "Stores", to: "/stores", icon: Store });
@@ -198,15 +202,24 @@ export default function Sidenav() {
       return items;
     }
 
+    // Checker role or Admin in store context
     const items: NavItem[] = [];
+    const isAdminStoreView = role === "admin" && selectedStore;
+    // We use the store name as the ID in the URL as requested
+    const storePrefix = isAdminStoreView ? `/admin/${selectedStore.name}` : "/checker";
+
     if (enabledCoreNav.has("approvals")) {
-      items.push({ label: "Audit Review", to: "/approvals", icon: ShieldCheck });
+      items.push({ 
+        label: "Audit Review", 
+        to: (isAdminStoreView ? `${storePrefix}/audit-review` : "/approvals") as any, 
+        icon: ShieldCheck 
+      });
     }
-    items.push({ label: "Shelves", to: "/checker/shelf", icon: Rows3 });
+    items.push({ label: "Shelves", to: `${storePrefix}/shelf` as any, icon: Rows3 });
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
-        to: "/knowledge-center",
+        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any, 
         icon: Library,
       });
     }
@@ -214,13 +227,13 @@ export default function Sidenav() {
       label: "Reports",
       icon: FileBarChart,
       items: [
-        { label: "Store Level", to: "/checker/reports/store-level" },
-        { label: "Shelf Level", to: "/checker/reports/shelf-level" },
-        { label: "Adhoc Report", to: "/checker/reports/adhoc" },
+        { label: "Store Level", to: `${storePrefix}/reports/store-level` as any },
+        { label: "Shelf Level", to: `${storePrefix}/reports/shelf-level` as any },
+        { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as any },
       ],
     });
     return items;
-  }, [enabledCoreNav, role]);
+  }, [enabledCoreNav, role, isOrgContext, selectedStore, location.pathname]);
 
   const [reportsOpen, setReportsOpen] = useState(true);
 
@@ -278,12 +291,31 @@ export default function Sidenav() {
                     icon: LayoutDashboard,
                   })}
                 >
-                  <Link to="/dashboard">
+                  <Link to={(role === "admin" && selectedStore && !isOrgContext ? `/admin/${selectedStore.name}/dashboard` : "/dashboard") as any}>
                     <LayoutDashboard />
                     Dashboard
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
+              {role === "maker" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={isActiveItem(location.pathname, location.hash, {
+                      label: "Shelves",
+                      to: "/maker/shelf",
+                      icon: Rows3,
+                    })}
+                    tooltip="Shelves"
+                  >
+                    <Link to="/maker/shelf">
+                      <Rows3 className="size-4 shrink-0" />
+                      Shelves
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
 
               {role === "maker" && (
                 <SidebarMenuItem>

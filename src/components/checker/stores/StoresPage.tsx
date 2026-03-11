@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Store, MapPin, Globe, Maximize, Edit2, Users, Trash2 } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -9,7 +10,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import MainLayout from "@/components/layouts/main";
 
 import { StoreFormModal } from "./StoreFormModal";
-import { useOrgStores, useCreateStore } from "@/queries/checker";
+import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
+import { useOrgStores, useCreateStore, useUpdateStore, useDeleteStore } from "@/queries/checker";
 import { useStore as useGlobalStore } from "@/providers/store";
 import { useNavigate } from "@tanstack/react-router";
 import { AuthSessionService } from "@/lib/auth/session";
@@ -18,6 +20,8 @@ import type { StoreSetting } from "@/types/checker";
 export function StoresPage() {
     const { data: stores = [], isLoading } = useOrgStores();
     const createStoreMutation = useCreateStore();
+    const updateStoreMutation = useUpdateStore();
+    const deleteStoreMutation = useDeleteStore();
     const { setSelectedStore: setGlobalSelectedStore } = useGlobalStore();
     const navigate = useNavigate();
     const currentUser = AuthSessionService.getCurrentUser();
@@ -26,6 +30,7 @@ export function StoresPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
     const [selectedStore, setSelectedStore] = useState<StoreSetting | null>(null);
 
     const filteredStores = useMemo(() => {
@@ -44,10 +49,35 @@ export function StoresPage() {
         }
     };
 
+    const handleEditStore = async (updatedStore: any) => {
+        if (!selectedStore) return;
+        try {
+            await updateStoreMutation.mutateAsync({
+                storeId: selectedStore.id,
+                data: updatedStore,
+            });
+            setIsEditModalOpen(false);
+            setSelectedStore(null);
+        } catch (error) {
+            console.error("Failed to update store:", error);
+        }
+    };
+
+    const handleDeleteStore = async () => {
+        if (!selectedStore) return;
+        try {
+            await deleteStoreMutation.mutateAsync(selectedStore.id);
+            setIsDeleteModalOpen(false);
+            setSelectedStore(null);
+        } catch (error) {
+            console.error("Failed to delete store:", error);
+        }
+    };
+
     const handleViewStore = (store: any) => {
         setGlobalSelectedStore(store);
         if (currentUser?.role === "admin") {
-            navigate({ to: "/admin/organization-settings" });
+            navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.id } });
             return;
         }
         navigate({ to: "/checker/dashboard" });
@@ -62,10 +92,11 @@ export function StoresPage() {
             headerHozAlign: "left",
             formatter: (cell: any) => {
                 const store = cell.getData() as StoreSetting;
+                const storeIcon = renderToStaticMarkup(<Store size={20} />);
                 return `
                     <div class="flex items-center gap-3">
                         <div class="size-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-store"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/><path d="M22 7v3a2 2 0 0 1-2 2v0a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 10V7"/></svg>
+                            ${storeIcon}
                         </div>
                         <div class="text-left">
                             <p class="font-semibold text-foreground">${store.name}</p>
@@ -83,9 +114,10 @@ export function StoresPage() {
             headerHozAlign: "left",
             formatter: (cell: any) => {
                 const value = cell.getValue() || "—";
+                const pinIcon = renderToStaticMarkup(<MapPin size={14} />);
                 return `
                     <div class="flex items-center gap-2 text-muted-foreground">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg>
+                        ${pinIcon}
                         <span class="text-sm truncate">${value}</span>
                     </div>
                 `;
@@ -97,14 +129,16 @@ export function StoresPage() {
             width: 150,
             formatter: (cell: any) => {
                 const store = cell.getData() as StoreSetting;
+                const globeIcon = renderToStaticMarkup(<Globe size={12} className="opacity-70" />);
+                const dimensionsIcon = renderToStaticMarkup(<Maximize size={12} className="opacity-70" />);
                 return `
                     <div class="flex flex-col gap-1">
                         <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                            ${globeIcon}
                             <span>${store.currency || 'USD'}</span>
                         </div>
                         <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="opacity-70"><path d="m10 2 2 2 2-2"/><path d="M12 4v16"/><path d="M10 22h4"/><path d="m22 10-2 2 2 2"/><path d="M20 12H4"/><path d="m2 10 2 2-2 2"/></svg>
+                            ${dimensionsIcon}
                             <span>${store.default_dimensions || 'Metric'}</span>
                         </div>
                     </div>
@@ -136,10 +170,19 @@ export function StoresPage() {
             headerSort: false,
             hozAlign: "right",
             formatter: () => {
+                const editIcon = renderToStaticMarkup(<Edit2 size={16} />);
+                const staffIcon = renderToStaticMarkup(<Users size={16} />);
+                const deleteIcon = renderToStaticMarkup(<Trash2 size={16} />);
                 return `
                     <div class="flex items-center justify-end gap-2">
                         <button class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                            ${editIcon}
+                        </button>
+                        <button class="staff-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
+                            ${staffIcon}
+                        </button>
+                        <button class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
+                            ${deleteIcon}
                         </button>
                     </div>
                 `;
@@ -150,6 +193,12 @@ export function StoresPage() {
                 if (target?.classList.contains("edit-btn")) {
                     setSelectedStore(store);
                     setIsEditModalOpen(true);
+                } else if (target?.classList.contains("staff-btn")) {
+                    setSelectedStore(store);
+                    setIsStaffModalOpen(true);
+                } else if (target?.classList.contains("delete-btn")) {
+                    setSelectedStore(store);
+                    setIsDeleteModalOpen(true);
                 }
             },
         },
@@ -161,6 +210,7 @@ export function StoresPage() {
                 <PageHeader
                     title="Stores"
                     description="Monitor and manage all retail locations in your organization."
+                    // icon={StoreIcon}
                 >
                     <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
                         <Plus className="mr-2 size-4" />
@@ -206,19 +256,27 @@ export function StoresPage() {
 
             <StoreFormModal
                 isOpen={isEditModalOpen}
+                isLoading={updateStoreMutation.isPending}
                 onClose={() => setIsEditModalOpen(false)}
-                onSubmit={() => { }} // Not implemented yet per API
+                onSubmit={handleEditStore}
                 initialData={selectedStore || undefined}
             />
 
             <ConfirmModal
                 isOpen={isDeleteModalOpen}
+                isLoading={deleteStoreMutation.isPending}
                 onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={() => { }}
+                onConfirm={handleDeleteStore}
                 title="Delete Store"
                 description={`Are you sure you want to delete "${selectedStore?.name}"? This action cannot be undone.`}
                 confirmLabel="Delete"
                 variant="destructive"
+            />
+
+            <StoreUserAssignmentModal
+                isOpen={isStaffModalOpen}
+                onClose={() => setIsStaffModalOpen(false)}
+                store={selectedStore}
             />
         </MainLayout>
     );

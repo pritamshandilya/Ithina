@@ -448,6 +448,12 @@ function PlanogramAnalysisPage() {
                 aria-label="Search shelves"
               />
             </div>
+            <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
+              <Link to="/maker/audits/planogram/new">
+                <Plus className="size-4" aria-hidden />
+                Add POG Analysis
+              </Link>
+            </Button>
           </div>
 
           {filteredRows.length > 0 && (
@@ -480,7 +486,7 @@ function PlanogramAnalysisPage() {
                 <Button asChild className="mt-6 bg-chart-2 text-white hover:opacity-90">
                   <Link to="/maker/audits/planogram/new">
                     <Plus className="size-4" aria-hidden />
-                    Add Shelf
+                    Add POG Analysis
                   </Link>
                 </Button>
               </div>

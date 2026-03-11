@@ -14,117 +14,75 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Label } from "@/components/ui/label";
 import {
   assignedShelvesKeys,
   useAssignedShelves,
-  useCreateShelf,
   usePlanogramById,
   usePlanogramList,
   planogramShelfPreviewKeys,
 } from "@/queries/maker";
-import { useStore } from "@/providers/store";
-import { saveShelfArrangement } from "@/queries/maker/api/planogram";
+import { assignPlanogramToShelf } from "@/queries/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
-import { mockUser } from "@/lib/api/mock-data";
-import { cn } from "@/lib/utils";
-
-const BLANK_SHELF_VALUE = "__blank__";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
-  component: AddPlanogramPage,
+  component: AddPOGAnalysisPage,
 });
 
-function AddPlanogramPage() {
+function AddPOGAnalysisPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
-  const { data: shelves } = useAssignedShelves();
-  const createShelfMutation = useCreateShelf();
-  const { selectedStore } = useStore();
-  const selectedStoreId = selectedStore?.id || mockUser.storeId;
+  const { data: shelves, isLoading: shelvesLoading } = useAssignedShelves();
+
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
-  const [shelfName, setShelfName] = useState("");
+  const [selectedShelfId, setSelectedShelfId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const { data: planogramPayload, isLoading: planogramLoading } =
-    usePlanogramById(
-      selectedPlanogramId && selectedPlanogramId !== BLANK_SHELF_VALUE
-        ? selectedPlanogramId
-        : null
-    );
+    usePlanogramById(selectedPlanogramId ? selectedPlanogramId : null);
 
-  const duplicateNameError = useMemo(() => {
-    if (!shelfName.trim() || isSaving) return null;
-    const exists = (shelves ?? []).some(
-      (s) => s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
-    );
-    return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
-  }, [shelves, shelfName, isSaving]);
-
-  const isBlankShelf = selectedPlanogramId === BLANK_SHELF_VALUE;
   const canSave = useMemo(() => {
-    return (
-      !!shelfName.trim() &&
-      !duplicateNameError &&
-      !isSaving &&
-      (isBlankShelf || !!selectedPlanogramId)
-    );
-  }, [selectedPlanogramId, shelfName, duplicateNameError, isSaving, isBlankShelf]);
+    return !!selectedPlanogramId && !!selectedShelfId && !isSaving;
+  }, [selectedPlanogramId, selectedShelfId, isSaving]);
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
     setIsSaving(true);
     setSaveError(null);
     try {
-      if (isBlankShelf) {
-        await createShelfMutation.mutateAsync({
-          aisleNumber: 1,
-          bayNumber: 1,
-          shelfName: shelfName.trim(),
-          description: "Blank shelf",
-        });
-        toast({ title: "Shelf created", description: "Your blank shelf has been created successfully." });
-        navigate({ to: "/maker/audits/planogram" });
-      } else if (selectedPlanogramId) {
-        const arrangement: PlanogramArrangement = {
-          planogramId: selectedPlanogramId,
-          shelfOrder:
-            planogramPayload?.planogram.fixture.shelves.map((s) => ({
-              shelfId: `shelf-${s.shelfNumber}`,
-              productIds: s.products.map((p) => p.sku),
-            })) ?? [],
-        };
-        const shelf = await saveShelfArrangement(
-          shelfName.trim(),
-          selectedPlanogramId,
-          arrangement,
-          selectedStoreId
-        );
-        await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
-        // Prefetch shelf preview so edit page has data immediately (avoids brief error flash)
-        await queryClient.prefetchQuery({ queryKey: planogramShelfPreviewKeys.byShelfId(shelf.id) });
-        toast({ title: "Planogram saved", description: "Your planogram has been saved successfully." });
-        navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: shelf.id } });
-      }
+      const arrangement: PlanogramArrangement = {
+        planogramId: selectedPlanogramId,
+        shelfOrder:
+          planogramPayload?.planogram.fixture.shelves.map((s) => ({
+            shelfId: `shelf-${s.shelfNumber}`,
+            productIds: s.products.map((p) => p.sku),
+          })) ?? [],
+      };
+      const shelf = await assignPlanogramToShelf(
+        selectedShelfId,
+        selectedPlanogramId,
+        arrangement
+      );
+      await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+      // Prefetch shelf preview so edit page has data immediately
+      await queryClient.prefetchQuery({ queryKey: planogramShelfPreviewKeys.byShelfId(shelf!.id) });
+      toast({ title: "Analysis configured", description: "POG Analysis is now ready for the selected shelf." });
+      navigate({ to: "/maker/audits/planogram" });
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to save");
+      setSaveError(err instanceof Error ? err.message : "Failed to configure analysis");
     } finally {
       setIsSaving(false);
     }
   }, [
     canSave,
-    isBlankShelf,
     selectedPlanogramId,
-    shelfName,
-    selectedStoreId,
+    selectedShelfId,
     planogramPayload,
-    createShelfMutation,
     navigate,
     queryClient,
     toast,
@@ -147,8 +105,7 @@ function AddPlanogramPage() {
               </Link>
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Add Planogram</h1>
-              
+              <h1 className="text-2xl font-bold text-foreground">Add POG Analysis</h1>
             </div>
           </header>
 
@@ -157,12 +114,12 @@ function AddPlanogramPage() {
             <div className="space-y-3">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Planogram details</CardTitle>
+                  <CardTitle className="text-base">Configure analysis</CardTitle>
                   <CardDescription>
-                    Choose a planogram and give this shelf a name.
+                    Select an existing planogram and an existing shelf to pair them together for analysis.
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="planogram-select">Planogram</Label>
                     {listLoading ? (
@@ -175,7 +132,6 @@ function AddPlanogramPage() {
                         aria-label="Select planogram"
                       >
                         <option value="">Select a planogram...</option>
-                        <option value={BLANK_SHELF_VALUE}>Create blank shelf</option>
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves · {p.productCount} SKUs)
@@ -186,24 +142,24 @@ function AddPlanogramPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shelf-name">Shelf name</Label>
-                    <Input
-                      id="shelf-name"
-                      placeholder="e.g., Food & Beverage Shelf"
-                      value={shelfName}
-                      onChange={(e) => setShelfName(e.target.value)}
-                      className={cn(duplicateNameError && "border-destructive")}
-                      aria-invalid={!!duplicateNameError}
-                      aria-describedby={duplicateNameError ? "shelf-name-error" : undefined}
-                    />
-                    {duplicateNameError && (
-                      <p
-                        id="shelf-name-error"
-                        className="flex items-center gap-1.5 text-sm text-destructive"
+                    <Label htmlFor="shelf-select">Shelf to analyze</Label>
+                    {shelvesLoading ? (
+                      <Skeleton className="h-9 w-full" />
+                    ) : (
+                      <Select
+                        id="shelf-select"
+                        value={selectedShelfId}
+                        onChange={(e) => setSelectedShelfId(e.target.value)}
+                        aria-label="Select shelf"
                       >
-                        <AlertCircle className="size-4 shrink-0" />
-                        {duplicateNameError}
-                      </p>
+                        <option value="">Select a shelf...</option>
+                        {(shelves ?? []).map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.shelfName}
+                            {s.planogramId ? ` (Already has a planogram mapped)` : ""}
+                          </option>
+                        ))}
+                      </Select>
                     )}
                   </div>
 
@@ -224,7 +180,7 @@ function AddPlanogramPage() {
                     ) : (
                       <>
                         <Check className="size-4" aria-hidden />
-                        {isBlankShelf ? "Create Shelf" : "Save Planogram"}
+                        Save Analysis Setup
                       </>
                     )}
                   </Button>
@@ -237,7 +193,7 @@ function AddPlanogramPage() {
               <CardHeader>
                 <CardTitle className="text-base">Planogram preview</CardTitle>
                 <CardDescription>
-                  Summary of the selected planogram. Edit arrangement in a future release.
+                  Summary of the selected planogram structure.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -246,19 +202,9 @@ function AddPlanogramPage() {
                     <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                       <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
                     </div>
-                    <p className="font-medium text-foreground">No planogram loaded</p>
+                    <p className="font-medium text-foreground">No planogram selected</p>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Select a planogram to preview and edit, or create a blank shelf.
-                    </p>
-                  </div>
-                ) : isBlankShelf ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                      <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
-                    </div>
-                    <p className="font-medium text-foreground">Blank shelf</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      Create a shelf with no planogram. You can add products and configure it later.
+                      Choose a planogram from the list to preview its structure.
                     </p>
                   </div>
                 ) : planogramLoading ? (

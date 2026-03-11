@@ -53,11 +53,7 @@ export default function MainLayout({
     return (
       <>
         {pageHeader ? (
-          <div className={cn("shrink-0 border-b border-border/40 bg-background/50 px-3 py-3 backdrop-blur-md sm:px-4 lg:px-6", pageHeaderClassName)}>
-            <div className="mx-auto w-full max-w-screen-2xl">
-              {pageHeader}
-            </div>
-          </div>
+          <div className={cn("mb-4 shrink-0 px-3 py-3 sm:px-4 lg:px-6", pageHeaderClassName)}>{pageHeader}</div>
         ) : null}
         <div className="mt-4 flex-1">
           {children ?? <Outlet />}

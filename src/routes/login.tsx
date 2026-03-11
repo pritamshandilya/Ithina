@@ -218,9 +218,12 @@ function LoginPage() {
             </Button>
 
             <p className="text-center text-xs text-gray-500">
-              Demo accounts:
+              Demo accounts (all use <span className="font-mono">password123</span>):
               <br />
-              maker@displaydata.com / checker@displaydata.com — password123
+              <span className="font-mono">
+                sarah@displaydata.com (Initiator), marcus@displaydata.com
+                (Approver), david@displaydata.com (Store Ops)
+              </span>
             </p>
           </form>
         </div>

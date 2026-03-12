@@ -1,4 +1,5 @@
 import { Plus } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ComplianceRule, GlobalDisplayRules } from "@/types/admin";
@@ -10,7 +11,7 @@ interface ComplianceTabProps {
   onOpenModal: () => void;
 }
 
-export default function ComplianceTab({ rules, globalRules, onGlobalChange, onOpenModal }: ComplianceTabProps) {
+function ComplianceTab({ rules, globalRules, onGlobalChange, onOpenModal }: ComplianceTabProps) {
   return (
     <div className="flex animate-[fadeIn_0.3s_ease-out] flex-col gap-6">
       {/* Global Display Rules */}
@@ -119,3 +120,5 @@ export default function ComplianceTab({ rules, globalRules, onGlobalChange, onOp
     </div>
   );
 }
+
+export default memo(ComplianceTab);

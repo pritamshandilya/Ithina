@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { QueueRow } from "@/types/fleet";
@@ -10,7 +11,7 @@ interface PublishingQueueProps {
   isComplete: boolean;
 }
 
-export default function PublishingQueue({ rows, progressCount, totalCount, isComplete }: PublishingQueueProps) {
+function PublishingQueue({ rows, progressCount, totalCount, isComplete }: PublishingQueueProps) {
   return (
     <div className="flex flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl xl:col-span-2">
       <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-5">
@@ -79,3 +80,5 @@ export default function PublishingQueue({ rows, progressCount, totalCount, isCom
     </div>
   );
 }
+
+export default memo(PublishingQueue);

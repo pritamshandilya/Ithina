@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { PayloadRow } from "@/types/approval";
 
@@ -5,7 +7,7 @@ interface PayloadManifestProps {
   rows: PayloadRow[];
 }
 
-export default function PayloadManifest({ rows }: PayloadManifestProps) {
+function PayloadManifest({ rows }: PayloadManifestProps) {
   return (
     <div className="flex min-h-[150px] flex-1 flex-col">
       <h3 className="mb-3 shrink-0 font-mono text-xs uppercase tracking-widest text-ithina-muted">
@@ -60,3 +62,5 @@ export default function PayloadManifest({ rows }: PayloadManifestProps) {
     </div>
   );
 }
+
+export default memo(PayloadManifest);

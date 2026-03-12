@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
 
@@ -7,7 +9,7 @@ interface TaskInboxProps {
   onSelect: (index: number) => void;
 }
 
-export default function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
+function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
   return (
     <aside className="z-10 flex w-80 shrink-0 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl" aria-label="Task inbox">
       <div className="flex items-center justify-between border-b border-ithina-border bg-white/[0.01] p-5">
@@ -52,3 +54,5 @@ export default function TaskInbox({ items, activeIndex, onSelect }: TaskInboxPro
     </aside>
   );
 }
+
+export default memo(TaskInbox);

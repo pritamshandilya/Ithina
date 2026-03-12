@@ -1,14 +1,16 @@
 import { AlertTriangle, CheckCircle, Image, Loader2, Zap } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { cn } from "@/lib/utils";
-import type { AdminTab, NewRuleForm } from "@/types/admin";
+import type { AdminTab, AdminTabDefinition, NewRuleForm } from "@/types/admin";
 import {
   useAddComplianceRule,
+  useAdminTabs,
   useBrandTone,
   useComplianceRulesQuery,
+  useEmptyRuleTemplate,
   useGlobalDisplayRules,
   useHwPalettes,
   useLcdRules,
@@ -20,31 +22,27 @@ import BrandAssetsTab from "./components/brand-assets-tab";
 import ComplianceTab from "./components/compliance-tab";
 import RuleModal from "./components/rule-modal";
 
-const TABS: { id: AdminTab; label: string; icon: typeof Image }[] = [
-  { id: "assets", label: "Brand & Assets", icon: Image },
-  { id: "ai", label: "AI Calibration", icon: Zap },
-  { id: "compliance", label: "Compliance Rules", icon: CheckCircle },
-];
-
-const EMPTY_RULE: NewRuleForm = {
-  category: "",
-  badge: true,
-  priceDisplay: "FULL",
-  colorRestrict: "None",
-  special: "",
-  disclaimer: "",
+const ICON_MAP: Record<AdminTabDefinition["iconName"], typeof Image> = {
+  Image,
+  Zap,
+  CheckCircle,
 };
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState<AdminTab>("assets");
   const [showRuleModal, setShowRuleModal] = useState(false);
-  const [newRule, setNewRule] = useState<NewRuleForm>({ ...EMPTY_RULE });
 
+  const { data: tabs = [], isLoading: tabsLoading } = useAdminTabs();
+  const { data: emptyRule, isLoading: emptyRuleLoading } = useEmptyRuleTemplate();
   const { data: palettes = [], isLoading: palLoading, isError: palError } = useHwPalettes();
   const { data: tone, isLoading: toneLoading } = useBrandTone();
   const { data: lcdRules = [], isLoading: lcdLoading } = useLcdRules();
   const { data: complianceRules = [], isLoading: compLoading } = useComplianceRulesQuery();
   const { data: globalRules, isLoading: globalLoading } = useGlobalDisplayRules();
+
+  const defaultRule = useMemo<NewRuleForm>(() => emptyRule ?? { category: "", badge: true, priceDisplay: "FULL", colorRestrict: "None", special: "", disclaimer: "" }, [emptyRule]);
+  const [newRule, setNewRule] = useState<NewRuleForm>(defaultRule);
+  useEffect(() => { setNewRule(defaultRule); }, [defaultRule]);
 
   const addRuleMutation = useAddComplianceRule();
   const saveMutation = useSaveProfile();
@@ -59,7 +57,7 @@ export default function Admin() {
   useEffect(() => { if (complianceRules.length > 0 && localComplianceRules.length === 0) setLocalComplianceRules(complianceRules); }, [complianceRules, localComplianceRules.length]);
   useEffect(() => { if (globalRules && !localGlobalRules) setLocalGlobalRules(globalRules); }, [globalRules, localGlobalRules]);
 
-  const isLoading = palLoading || toneLoading || lcdLoading || compLoading || globalLoading;
+  const isLoading = tabsLoading || emptyRuleLoading || palLoading || toneLoading || lcdLoading || compLoading || globalLoading;
   const hasError = palError;
 
   const handleToggleLcd = useCallback((key: string) => {
@@ -73,7 +71,7 @@ export default function Admin() {
     const rule = await addRuleMutation.mutateAsync(newRule);
     setLocalComplianceRules((prev) => [...prev, rule]);
     setShowRuleModal(false);
-    setNewRule({ ...EMPTY_RULE });
+    setNewRule({ ...defaultRule });
   }, [newRule, addRuleMutation]);
 
   const handleSave = useCallback(async () => {
@@ -117,8 +115,8 @@ export default function Admin() {
             </header>
 
             <div className="mb-6 flex shrink-0 items-center gap-8 border-b border-ithina-border" role="tablist" aria-label="Admin settings tabs">
-              {TABS.map((tab) => {
-                const Icon = tab.icon;
+              {tabs.map((tab) => {
+                const Icon = ICON_MAP[tab.iconName];
                 const isActive = activeTab === tab.id;
                 return (
                   <button

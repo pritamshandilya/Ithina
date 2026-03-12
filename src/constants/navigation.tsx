@@ -1,10 +1,12 @@
 import {
+  Archive,
   CheckCircle,
   LayoutDashboard,
+  LayoutGrid,
   Megaphone,
+  Plus,
   Settings,
   SquareKanban,
-  Wand2,
   Zap,
 } from "lucide-react";
 
@@ -15,32 +17,50 @@ export interface NavItem {
   path: string;
   title: string;
   subtitle: string;
+  badge?: string;
+  divider?: undefined;
 }
 
-export const NAV_ITEMS: NavItem[] = [
+export interface NavDivider {
+  divider: true;
+}
+
+export type NavEntry = NavItem | NavDivider;
+
+export const NAV_ITEMS: NavEntry[] = [
   {
     id: "dashboard",
-    label: "Assistant Dashboard",
+    label: "Dashboard",
     icon: <LayoutDashboard className="size-4" />,
     path: "/dashboard",
     title: "Overview & Insights",
-    subtitle: "Assistant Dashboard",
+    subtitle: "Dashboard",
   },
   {
+    id: "campaigns",
+    label: "Campaigns",
+    icon: <Archive className="size-4" />,
+    path: "/campaigns",
+    title: "Campaign History & Schedule",
+    subtitle: "Campaigns",
+    badge: "2",
+  },
+  { divider: true },
+  {
     id: "wizard",
-    label: "Campaign Wizard",
-    icon: <Wand2 className="size-4" />,
+    label: "New Campaign",
+    icon: <Plus className="size-4" />,
     path: "/wizard",
     title: "Intent & Data Staging",
     subtitle: "Campaign Wizard",
   },
   {
     id: "studio",
-    label: "ESL Studio",
+    label: "Campaign Studio",
     icon: <SquareKanban className="size-4" />,
     path: "/studio",
     title: "Creative Layout Editor",
-    subtitle: "ESL Studio",
+    subtitle: "Campaign Studio",
   },
   {
     id: "approval",
@@ -58,9 +78,18 @@ export const NAV_ITEMS: NavItem[] = [
     title: "Live Network Tracking",
     subtitle: "Fleet Execution",
   },
+  { divider: true },
+  {
+    id: "templates",
+    label: "Template Manager",
+    icon: <LayoutGrid className="size-4" />,
+    path: "/templates",
+    title: "Manage Layouts & Styles",
+    subtitle: "Template Manager",
+  },
   {
     id: "admin",
-    label: "Brand Profile Settings",
+    label: "Brand & Settings",
     icon: <Settings className="size-4" />,
     path: "/admin",
     title: "System Guardrails",

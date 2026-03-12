@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import SidenavFooter from "./footer";
 import { NAV_ITEMS, SIDEBAR_HEADER } from "@/constants/navigation";
+import type { NavItem } from "@/constants/navigation";
 import { cn } from "@/lib/utils";
 
 export default function Sidenav() {
@@ -23,7 +24,12 @@ export default function Sidenav() {
           </div>
 
           <div className="mt-2 space-y-1 pl-2">
-            {NAV_ITEMS.map((item) => {
+            {NAV_ITEMS.map((entry, idx) => {
+              if ("divider" in entry && entry.divider) {
+                return <div key={`divider-${idx}`} className="mx-1 my-2 border-t border-ithina-border/50" />;
+              }
+
+              const item = entry as NavItem;
               const isActive = location.pathname === item.path;
 
               return (
@@ -37,10 +43,20 @@ export default function Sidenav() {
                       : "border-transparent text-slate-400 hover:bg-slate-800/50 hover:text-white",
                   )}
                 >
-                  <div className={cn(!isActive && "opacity-70")}>
-                    {item.icon}
-                  </div>
-                  {item.label}
+                  <div className={cn(!isActive && "opacity-70")}>{item.icon}</div>
+                  <span className="flex-1">{item.label}</span>
+                  {item.badge && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                        isActive
+                          ? "bg-ithina-purple/30 text-ithina-purple"
+                          : "bg-amber-400/20 text-amber-400",
+                      )}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
                 </button>
               );
             })}

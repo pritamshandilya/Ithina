@@ -3,6 +3,7 @@ import type {
   ComplianceCheck,
   HwOption,
   LayoutVariant,
+  RecentCampaign,
   RendererSpec,
 } from "@/types/studio";
 import type { ChatMessage, HardwareDeviceId } from "@/types/wizard";
@@ -50,6 +51,13 @@ export const MOCK_INITIAL_MESSAGE: ChatMessage = {
   role: "ai",
   text: "The Promo Assistant has composed 3 layout variants for the Sushi Clearance campaign.<br><br>Please select a starting point on the right.",
 };
+
+export const MOCK_RECENT_CAMPAIGNS: RecentCampaign[] = [
+  { id: "CMP-9941-A", name: "Weekend Beverage Promo", skus: 42, hw: "Chroma 42", status: "Active", statusCls: "text-ithina-purple bg-ithina-purple/10 border border-ithina-purple/20" },
+  { id: "CMP-9940-B", name: "Sushi Clearance — Urgent", skus: 4, hw: "Chroma 42", status: "Completed", statusCls: "text-emerald-400 bg-emerald-400/10 border border-emerald-400/20" },
+  { id: "CMP-9938-D", name: "Spring Produce Launch", skus: 76, hw: "LCD Banner", status: "Scheduled", statusCls: "text-amber-400 bg-amber-400/10 border border-amber-400/20" },
+  { id: "CMP-9939-C", name: "Electronics Flash Sale", skus: 18, hw: "LCD Banner", status: "Draft", statusCls: "text-slate-400 bg-white/5 border border-white/10" },
+];
 
 export function getMockChatRefineReply(hw: HardwareDeviceId): ChatMessage {
   const replies: Record<HardwareDeviceId, string> = {

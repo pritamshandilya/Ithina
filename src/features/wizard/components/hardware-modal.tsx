@@ -1,5 +1,5 @@
 import { Check, X } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
@@ -17,7 +17,7 @@ const previewStyles: Record<HardwareDeviceId, string> = {
   lcd: "aspect-video border border-slate-600 bg-gradient-to-br from-blue-900 to-slate-900 text-white text-[10px]",
 };
 
-export default function HardwareModal({ open, onClose, onConfirm }: HardwareModalProps) {
+function HardwareModal({ open, onClose, onConfirm }: HardwareModalProps) {
   const { data: devices = [] } = useHardwareDevices();
   const [selected, setSelected] = useState<HardwareDeviceId[]>(["chroma42", "lcd"]);
 
@@ -101,3 +101,5 @@ export default function HardwareModal({ open, onClose, onConfirm }: HardwareModa
     </div>
   );
 }
+
+export default memo(HardwareModal);

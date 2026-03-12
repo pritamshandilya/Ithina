@@ -1,4 +1,5 @@
 import { ArrowRight, MessageCircle } from "lucide-react";
+import { memo } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
 import { cn } from "@/lib/utils";
@@ -15,7 +16,7 @@ interface ChatPanelProps {
   children?: React.ReactNode;
 }
 
-export default function ChatPanel({
+function ChatPanel({
   messages,
   isTyping,
   inputText,
@@ -78,3 +79,5 @@ export default function ChatPanel({
     </div>
   );
 }
+
+export default memo(ChatPanel);

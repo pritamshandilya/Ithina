@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId, HwOption, LayoutVariant, VariantId } from "@/types/studio";
 
@@ -11,7 +13,7 @@ interface VariantChooserProps {
   onVariantSelect: (id: VariantId) => void;
 }
 
-export default function VariantChooser({ variants, hwOptions, activeHw, onHwSelect, onVariantSelect }: VariantChooserProps) {
+function VariantChooser({ variants, hwOptions, activeHw, onHwSelect, onVariantSelect }: VariantChooserProps) {
   return (
     <section className="flex flex-1 flex-col items-center overflow-y-auto py-6 animate-[fadeIn_0.5s_ease-out_0.2s_both]">
       <div className="mb-6 text-center">
@@ -33,6 +35,8 @@ export default function VariantChooser({ variants, hwOptions, activeHw, onHwSele
     </section>
   );
 }
+
+export default memo(VariantChooser);
 
 function VariantCard({ variant, hw, onSelect }: { variant: LayoutVariant; hw: HardwareDeviceId; onSelect: (id: VariantId) => void }) {
   return (

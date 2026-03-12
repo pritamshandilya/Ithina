@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { InsightCardData, InsightSeverity } from "@/types/dashboard";
@@ -32,7 +33,7 @@ interface InsightCardProps {
   onAction?: () => void;
 }
 
-export default function InsightCard({ data, onAction }: InsightCardProps) {
+function InsightCard({ data, onAction }: InsightCardProps) {
   const config = severityConfig[data.severity];
 
   return (
@@ -68,3 +69,5 @@ export default function InsightCard({ data, onAction }: InsightCardProps) {
     </div>
   );
 }
+
+export default memo(InsightCard);

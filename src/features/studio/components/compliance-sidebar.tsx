@@ -1,4 +1,5 @@
 import { Check, CheckCircle, Code } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ComplianceCheck, HardwareDeviceId, RendererSpec } from "@/types/studio";
@@ -11,7 +12,7 @@ interface ComplianceSidebarProps {
   onSendToApproval: () => void;
 }
 
-export default function ComplianceSidebar({ checks, spec, hw, isScanning, onSendToApproval }: ComplianceSidebarProps) {
+function ComplianceSidebar({ checks, spec, hw, isScanning, onSendToApproval }: ComplianceSidebarProps) {
   const visibleChecks = checks.filter((c) => !c.eslOnly || hw !== "lcd");
 
   return (
@@ -85,6 +86,8 @@ export default function ComplianceSidebar({ checks, spec, hw, isScanning, onSend
     </aside>
   );
 }
+
+export default memo(ComplianceSidebar);
 
 function SpecRow({ label, value }: { label: string; value: string }) {
   return (

@@ -37,4 +37,13 @@ export interface AssetInfo {
   emoji: string;
 }
 
+export interface RecentCampaign {
+  id: string;
+  name: string;
+  skus: number;
+  hw: string;
+  status: string;
+  statusCls: string;
+}
+
 export type { ChatMessage, HardwareDeviceId };

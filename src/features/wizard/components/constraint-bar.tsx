@@ -1,5 +1,5 @@
 import { Building2, ChevronDown, Clock, Shield } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type {
@@ -40,7 +40,7 @@ const riskBadge: Record<MarginRisk, string> = {
   Strict: "text-rose-400 bg-rose-900/30",
 };
 
-export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
+function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
   const { data: stores = [] } = useWizardStores();
   const { data: margins = [] } = useWizardMargins();
   const { data: durations = [] } = useWizardDurations();
@@ -260,3 +260,5 @@ export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps
     </div>
   );
 }
+
+export default memo(ConstraintBar);

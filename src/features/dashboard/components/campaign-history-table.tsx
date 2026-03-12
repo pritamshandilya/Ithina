@@ -1,5 +1,5 @@
 import { Search } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import StatusBadge from "@/components/shared/status-badge";
 import type { CampaignRow, CampaignStatus } from "@/types/dashboard";
@@ -14,7 +14,7 @@ interface CampaignHistoryTableProps {
   campaigns: CampaignRow[];
 }
 
-export default function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
+function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredCampaigns = campaigns.filter(
@@ -73,7 +73,9 @@ export default function CampaignHistoryTable({ campaigns }: CampaignHistoryTable
   );
 }
 
-function CampaignTableRow({ campaign }: { campaign: CampaignRow }) {
+export default memo(CampaignHistoryTable);
+
+const CampaignTableRow = memo(function CampaignTableRow({ campaign }: { campaign: CampaignRow }) {
   return (
     <tr
       className={`group cursor-pointer transition-colors hover:bg-white/[0.02] ${
@@ -94,4 +96,4 @@ function CampaignTableRow({ campaign }: { campaign: CampaignRow }) {
       <td className="px-6 py-4 text-right font-mono text-xs text-slate-500">{campaign.lastUpdated}</td>
     </tr>
   );
-}
+});

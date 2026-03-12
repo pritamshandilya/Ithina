@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import type { HardwareDeviceId } from "@/types/studio";
 
 interface EslPreviewProps {
@@ -93,7 +95,7 @@ function LcdPreview({ lcdBgUrl, isScanning }: { lcdBgUrl: string; isScanning: bo
   );
 }
 
-export default function EslPreview({ hw, headerText, headerClass, product29Text, price29Text, lcdBgUrl, isScanning }: EslPreviewProps) {
+function EslPreview({ hw, headerText, headerClass, product29Text, price29Text, lcdBgUrl, isScanning }: EslPreviewProps) {
   return (
     <>
       {hw === "chroma42" && <Chroma42Preview headerText={headerText} headerClass={headerClass} isScanning={isScanning} />}
@@ -102,3 +104,5 @@ export default function EslPreview({ hw, headerText, headerClass, product29Text,
     </>
   );
 }
+
+export default memo(EslPreview);

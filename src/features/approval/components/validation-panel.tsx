@@ -1,4 +1,5 @@
 import { AlertTriangle, Check, Shield } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { ValidationCheck } from "@/types/approval";
@@ -7,7 +8,7 @@ interface ValidationPanelProps {
   checks: ValidationCheck[];
 }
 
-export default function ValidationPanel({ checks }: ValidationPanelProps) {
+function ValidationPanel({ checks }: ValidationPanelProps) {
   return (
     <div className="shrink-0 rounded-xl border border-emerald-500/20 bg-ithina-bg p-5 shadow-[0_0_20px_rgba(16,185,129,0.05)]">
       <div className="mb-4 flex items-center gap-2 text-emerald-400">
@@ -48,3 +49,5 @@ export default function ValidationPanel({ checks }: ValidationPanelProps) {
     </div>
   );
 }
+
+export default memo(ValidationPanel);

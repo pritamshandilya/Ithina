@@ -1,4 +1,5 @@
 import { ArrowRight, MessageCircle } from "lucide-react";
+import { memo } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
 import type { ChatMessage, StudioState } from "@/types/studio";
@@ -12,7 +13,7 @@ interface StudioChatProps {
   state: StudioState;
 }
 
-export default function StudioChat({ messages, isTyping, inputText, onInputChange, onSubmit, state }: StudioChatProps) {
+function StudioChat({ messages, isTyping, inputText, onInputChange, onSubmit, state }: StudioChatProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit();
@@ -54,3 +55,5 @@ export default function StudioChat({ messages, isTyping, inputText, onInputChang
     </div>
   );
 }
+
+export default memo(StudioChat);

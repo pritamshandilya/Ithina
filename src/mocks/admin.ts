@@ -1,9 +1,11 @@
 import type {
+  AdminTabDefinition,
   BrandToneConfig,
   ComplianceRule,
   GlobalDisplayRules,
   HwPalette,
   LcdRule,
+  NewRuleForm,
 } from "@/types/admin";
 
 export const MOCK_HW_PALETTES: HwPalette[] = [
@@ -34,4 +36,19 @@ export const MOCK_GLOBAL_RULES: GlobalDisplayRules = {
   minMarginFloor: 15,
   minFontSize: 12,
   discountVisible: true,
+};
+
+export const MOCK_ADMIN_TABS: AdminTabDefinition[] = [
+  { id: "assets", label: "Brand & Assets", iconName: "Image" },
+  { id: "ai", label: "AI Calibration", iconName: "Zap" },
+  { id: "compliance", label: "Compliance Rules", iconName: "CheckCircle" },
+];
+
+export const MOCK_EMPTY_RULE: NewRuleForm = {
+  category: "",
+  badge: true,
+  priceDisplay: "FULL",
+  colorRestrict: "None",
+  special: "",
+  disclaimer: "",
 };

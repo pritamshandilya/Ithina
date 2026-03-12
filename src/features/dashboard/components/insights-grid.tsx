@@ -1,4 +1,5 @@
 import { Zap } from "lucide-react";
+import { memo } from "react";
 
 import type { InsightCardData } from "@/types/dashboard";
 
@@ -8,7 +9,7 @@ interface InsightsGridProps {
   insights: InsightCardData[];
 }
 
-export default function InsightsGrid({ insights }: InsightsGridProps) {
+function InsightsGrid({ insights }: InsightsGridProps) {
   return (
     <div className="shrink-0">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
@@ -23,3 +24,5 @@ export default function InsightsGrid({ insights }: InsightsGridProps) {
     </div>
   );
 }
+
+export default memo(InsightsGrid);

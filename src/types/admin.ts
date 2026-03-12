@@ -15,12 +15,19 @@ export interface LcdRule {
 }
 
 export interface ComplianceRule {
+  id?: string;
   category: string;
   badge: boolean;
   priceDisplay: string;
   colorRestrict: string;
   special: string;
   disclaimer: string;
+}
+
+export interface AdminTabDefinition {
+  id: AdminTab;
+  label: string;
+  iconName: "Image" | "Zap" | "CheckCircle";
 }
 
 export interface NewRuleForm {

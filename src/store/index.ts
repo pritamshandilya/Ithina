@@ -1,9 +1,11 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 
+import campaignReducer from "./slices/campaign-slice";
 import uiReducer from "./slices/ui-slice";
 
 const rootReducer = combineReducers({
   ui: uiReducer,
+  campaign: campaignReducer,
 });
 
 const store = configureStore({

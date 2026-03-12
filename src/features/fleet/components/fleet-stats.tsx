@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { FleetStat } from "@/types/fleet";
 
@@ -10,7 +12,7 @@ interface FleetStatsProps {
   successRate: number;
 }
 
-export default function FleetStats({ stats, batchStartedAt, alertCount, hasAlert, tagsInTransit, successRate }: FleetStatsProps) {
+function FleetStats({ stats, batchStartedAt, alertCount, hasAlert, tagsInTransit, successRate }: FleetStatsProps) {
   const dynamicValues: Record<string, { value: string; trend: string }> = {
     "Active Batches": { value: "1", trend: "Running" },
     "Tags In Transit (RF)": { value: tagsInTransit.toLocaleString(), trend: "Queued" },
@@ -61,3 +63,5 @@ export default function FleetStats({ stats, batchStartedAt, alertCount, hasAlert
     </div>
   );
 }
+
+export default memo(FleetStats);

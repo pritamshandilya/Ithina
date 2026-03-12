@@ -35,3 +35,6 @@ export {
   type PlanogramShelfPreview,
 } from "./usePlanogramShelfPreview";
 export { useHistoricalAnalyses } from "./useHistoricalAnalyses";
+export { useShelves, useShelf } from "./useShelves";
+export { useUpdateShelf } from "./useUpdateShelf";
+export { useDeleteShelf } from "./useDeleteShelf";

@@ -15,7 +15,9 @@ import {
   getDraftAudits,
   getReturnedAudits,
 } from "@/lib/api/mock-data";
-import { apiClient } from "@/queries/shared";
+import { apiClient, ApiError } from "@/queries/shared";
+import { getShelf } from "./shelves";
+import type { ShelfResponse } from "@/models/response/shelves";
 import type { Store } from "@/types/checker";
 import type {
   AdhocAnalysis,
@@ -191,47 +193,57 @@ export async function fetchAudits(): Promise<Audit[]> {
 }
 
 /**
- * Fetch a single shelf by ID
+ * Fetch a single shelf by ID using the real API
  *
  * @param shelfId - The unique identifier of the shelf
  * @returns Promise<Shelf | null> - Shelf object or null if not found
- *
- * @example
- * ```ts
- * const shelf = await fetchShelfById('shelf-001');
- * ```
  */
 export async function fetchShelfById(shelfId: string): Promise<Shelf | null> {
-  await simulateNetworkDelay(200);
-
-  // In production, this would be:
-  // const response = await api.get(`/maker/shelves/${shelfId}`);
-  // return response.data;
-
-  const shelves = generateMockShelves();
-  return shelves.find((shelf) => shelf.id === shelfId) || null;
+  try {
+    const res = await getShelf(shelfId);
+    return mapShelfResponseToShelf(res);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 /**
- * Get shelf by ID from all sources (mock shelves + planogram-created shelves).
- * Used for planogram preview and other shelf detail views.
+ * Get shelf by ID from all sources.
+ * Prefers real API, falls back to planogram-created shelves if needed.
  */
 export async function getShelfById(shelfId: string): Promise<Shelf | null> {
-  await simulateNetworkDelay(150);
+  const shelf = await fetchShelfById(shelfId);
+  if (shelf) return shelf;
 
-  const mockShelves = generateMockShelves();
+  // Fallback to planogram-created in-memory shelves for visual builder previews
   const planogramShelves = getCreatedPlanogramShelves();
-  const all = [...mockShelves, ...planogramShelves, ...createdShelves];
-  const shelf = all.find((s) => s.id === shelfId) ?? null;
-  if (!shelf) return null;
-  const overlay = getAssignPlanogramOverlays().get(shelfId);
-  if (overlay)
-    return {
-      ...shelf,
-      planogramId: overlay.planogramId,
-      arrangement: overlay.arrangement,
-    };
-  return shelf;
+  const found = planogramShelves.find((s) => s.id === shelfId) ?? null;
+  return found;
+}
+
+/**
+ * Maps a real API ShelfResponse to the internal Shelf type used by the UI.
+ * (Duplicate of mapping in useAssignedShelves for use in this API module)
+ */
+function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
+  const aisleMatch = res.fixture.physical_location.aisle.match(/\d+/);
+  const aisleNumber = aisleMatch ? Number(aisleMatch[0]) : 0;
+
+  return {
+    id: res.id,
+    aisleNumber,
+    bayNumber: 1, 
+    shelfName: res.name,
+    status: "never-audited",
+    zone: res.fixture.physical_location.zone,
+    section: res.fixture.physical_location.section,
+    fixtureType: res.fixture.type,
+    dimensions: `${res.fixture.dimensions.width}x${res.fixture.dimensions.height}`,
+    planogramId: undefined, 
+  };
 }
 
 /**

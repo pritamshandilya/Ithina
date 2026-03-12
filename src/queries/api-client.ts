@@ -54,6 +54,19 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
+  // Attach selected store ID when available (stored in localStorage by StoreProvider)
+  const storedStore = localStorage.getItem("selected_store");
+  if (storedStore) {
+    try {
+      const store = JSON.parse(storedStore);
+      if (store?.id) {
+        headers["X-Store-Id"] = store.id;
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
   return headers;
 }
 

@@ -1,839 +1,504 @@
 /**
- * Planogram Preview Route
- *
- * Visual preview of a saved planogram shelf.
- * Editable: product name, category, facings/depth; remove products.
- * Drag-and-drop: reorder within shelf, move between shelves, restore from removed.
- * Access at: /maker/audits/planogram/:shelfId
+ * Shelf Detail Page
+ * 
+ * Provides a comprehensive view of a specific shelf:
+ * - Metadata (Aisle, Bay, Zone, Section)
+ * - Fixture information
+ * - Planogram association status
+ * - Actions: Edit, Run Analysis, Run Adhoc
  */
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, Check } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, useNavigate, useLocation, useParams } from "@tanstack/react-router";
+import { ArrowLeft, Edit3, Play, Scan, Settings, Info, Save, X } from "lucide-react";
+import { useState } from "react";
+
 import MainLayout from "@/components/layouts/main";
-import {
-  CategoryFilterTags,
-  ProductDetailsTable,
-  RemovedItemsSidebar,
-  ShelfRow,
-  StockingRulesSection,
-  ShelfInfoModal,
-} from "@/components/planogram";
-import { StatCard } from "@/components/shared";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { updateShelfArrangement } from "@/queries/maker/api/planogram";
-import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
-import {
-  planogramShelfPreviewKeys,
-  usePlanogramShelfPreview,
-} from "@/queries/maker";
+import { Badge } from "@/components/ui/badge";
+import { useShelf } from "@/queries/maker";
+import { cn } from "@/lib/utils";
+import { EditableField } from "@/components/common";
+import { useUpdateShelf } from "@/queries/maker/hooks/useUpdateShelf";
 import { useToast } from "@/hooks/use-toast";
-import type {
-  PlanogramArrangement,
-  PlanogramProduct,
-  PlanogramShelfDef,
-} from "@/types/planogram";
 
 export const Route = createFileRoute("/checker/shelf/$shelfId/")({
-  component: PlanogramAnalysisViewPage,
+  component: ShelfDetailPage,
 });
 
-function derivePlanogramStats(
-  shelves: PlanogramShelfDef[],
-  removedItems: PlanogramProduct[]
-) {
-  const allProducts = shelves.flatMap((s) => s.products);
-  const uniqueSkus = new Set([...allProducts, ...removedItems].map((p) => p.sku)).size;
-  const frontFacings = allProducts.reduce((sum, p) => sum + p.facings, 0);
-  const totalUnits = allProducts.reduce(
-    (sum, p) => sum + p.facings * (p.depthCount || 1),
-    0
-  );
-  const categorySet = new Set([...allProducts, ...removedItems].map((p) => p.category));
-  return {
-    shelves: shelves.length,
-    skus: uniqueSkus,
-    frontFacings,
-    totalUnits,
-    categories: categorySet.size,
-    categoryList: Array.from(categorySet).sort(),
-    removed: removedItems.length,
-  };
-}
-
-function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
-  return shelves.map((s) => ({
-    ...s,
-    products: s.products.map((p) => ({ ...p })),
-  }));
-}
-
-export function PlanogramAnalysisViewPage() {
-  const { shelfId } = Route.useParams();
-  const queryClient = useQueryClient();
+export function ShelfDetailPage() {
+  const params = useParams({ strict: false }) as any;
+  const shelfId = params.shelfId as string;
+  const storeId = params.storeId as string | undefined;
+  
+  const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
-  const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
-  const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
-  const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
-  const [hasChanges, setHasChanges] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isInfoModalOpen, setIsInfoModalOpen] = useState(false);
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
-    () => new Set()
-  );
+  const updateShelfMutation = useUpdateShelf();
 
-  const [categoryPositions, setCategoryPositions] = useState<Map<string, {
-    shelfNumber: number;
-    position: number; // index in products array
-  }>>(new Map());
+  const [isEditing, setIsEditing] = useState(false);
 
-  const dragRef = useRef<{
-    sku: string;
-    fromShelf: number | "removed";
-  } | null>(null);
+  const [shelfName, setShelfName] = useState<string>();
+  const [shelfCode, setShelfCode] = useState<string>();
+  const [aisle, setAisle] = useState<string>();
+  const [zone, setZone] = useState<string>();
+  const [section, setSection] = useState<string>();
+  const [fixtureType, setFixtureType] = useState<string>();
+  const [dimWidth, setDimWidth] = useState<string>();
+  const [dimHeight, setDimHeight] = useState<string>();
+  const [dimDepth, setDimDepth] = useState<string>();
 
-  const toggleInProgressRef = useRef(false);
+  const isAdmin = location.pathname.includes("/admin/");
 
-  useEffect(() => {
-    if (!preview) return;
-    const payload = preview.planogramPayload ?? PLANOGRAM_POC_002;
-    if (!payload?.planogram?.fixture?.shelves) return;
-    const fixtureShelves = payload.planogram.fixture.shelves;
-    const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
-    let shelves = deepCopyShelves(fixtureShelves);
-    const removed: PlanogramProduct[] = [];
+  const backToShelvesPath = isAdmin ? `/admin/${storeId}/shelf/` : "/checker/shelf/";
+  
+  const { data: shelf, isLoading, error } = useShelf(shelfId);
 
-    if (arrangement?.productEdits) {
-      shelves = shelves.map((s) => ({
-        ...s,
-        products: s.products.map((p) => {
-          const edits = arrangement.productEdits![p.sku];
-          if (!edits) return p;
-          return {
-            ...p,
-            ...(edits.name != null && { name: edits.name }),
-            ...(edits.category != null && { category: edits.category }),
-            ...(edits.facings != null && { facings: edits.facings }),
-            ...(edits.depthCount != null && { depthCount: edits.depthCount }),
-          };
-        }),
-      }));
-    }
-
-    if (arrangement?.removedProductIds?.length) {
-      const removedSet = new Set(arrangement.removedProductIds);
-      for (const shelf of shelves) {
-        for (const p of shelf.products) {
-          if (removedSet.has(p.sku)) removed.push(p);
-        }
-      }
-      shelves = shelves.map((s) => ({
-        ...s,
-        products: s.products.filter((p) => !removedSet.has(p.sku)),
-      }));
-    }
-
-    if (arrangement?.shelfOrder?.length) {
-      const orderMap = new Map(
-        arrangement.shelfOrder.map((o) => [
-          o.shelfId.replace("shelf-", ""),
-          o.productIds,
-        ])
-      );
-      shelves = shelves.map((s) => {
-        const productIds = orderMap.get(String(s.shelfNumber));
-        if (!productIds?.length) return s;
-        const bySku = new Map(s.products.map((p) => [p.sku, p]));
-        const ordered = productIds
-          .map((id) => bySku.get(id))
-          .filter((p): p is PlanogramProduct => p != null);
-        return { ...s, products: ordered.length ? ordered : s.products };
-      });
-    }
-
-    const posMap = new Map<string, { shelfNumber: number; position: number }>();
-    shelves.forEach((shelf) => {
-      shelf.products.forEach((product, idx) => {
-        posMap.set(product.sku, { shelfNumber: shelf.shelfNumber, position: idx });
-      });
-    });
-
-    setLocalShelves(shelves);
-    setRemovedItems(removed);
-    setCategoryPositions(posMap);
-    setHasChanges(false);
-    setSelectedCategories(new Set());
-  }, [preview]);
-
-  const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
-  const isBlankShelf = !!preview && !preview.planogramPayload;
-
-  const shelfCapacities = useMemo(() => {
-    const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
-    return Object.fromEntries(
-      orig.map((s) => [
-        s.shelfNumber,
-        s.products.reduce((sum, p) => sum + p.facings, 0),
-      ])
+  if (isLoading) {
+    return (
+      <MainLayout>
+        <div className="p-6 space-y-6">
+          <Skeleton className="h-12 w-1/3" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+            <Skeleton className="h-48 rounded-xl" />
+          </div>
+        </div>
+      </MainLayout>
     );
-  }, [effectivePayload?.planogram?.fixture?.shelves]);
+  }
 
-  const findProduct = useCallback(
-    (shelfNumber: number, sku: string) => {
-      const shelf = localShelves.find((s) => s.shelfNumber === shelfNumber);
-      return shelf?.products.find((p) => p.sku === sku);
-    },
-    [localShelves]
-  );
+  if (error || !shelf) {
+    return (
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center p-12 text-center h-[60vh]">
+          <Info className="size-12 text-muted-foreground mb-4" />
+          <h2 className="text-xl font-semibold">Shelf not found</h2>
+          <p className="text-muted-foreground mt-2">The shelf you're looking for doesn't exist or you don't have access.</p>
+          <Button asChild className="mt-6" variant="outline">
+          <Button asChild className="mt-6" variant="outline" onClick={() => navigate({ to: backToShelvesPath as any })}>
+            <span>
+              <ArrowLeft className="size-4 mr-2" />
+              Back to Shelves
+            </span>
+          </Button>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
-  const onEditName = useCallback(
-    (shelfNumber: number, sku: string, newName: string) => {
-      setLocalShelves((prev) =>
-        prev.map((s) =>
-          s.shelfNumber === shelfNumber
-            ? {
-              ...s,
-              products: s.products.map((p) =>
-                p.sku === sku ? { ...p, name: newName } : p
-              ),
-            }
-            : s
-        )
-      );
-      setHasChanges(true);
-    },
-    []
-  );
+  const effectiveShelfName = shelfName ?? shelf.shelfName;
+  const effectiveShelfCode = shelfCode ?? shelf.shelfCode;
+  const effectiveAisle = aisle ?? shelf.aisle ?? (shelf.aisleNumber ? `A${shelf.aisleNumber}` : "");
+  const effectiveZone = zone ?? shelf.zone ?? "";
+  const effectiveSection = section ?? shelf.section ?? "";
+  const effectiveFixtureType = fixtureType ?? shelf.fixtureType ?? "";
+  const [baseWidth = "", baseHeight = "", baseDepth = ""] = (shelf.dimensions ?? "")
+    .split("x")
+    .map((v) => v?.trim() ?? "");
 
-  const onEditCategory = useCallback(
-    (shelfNumber: number, sku: string, newCategory: string) => {
-      setLocalShelves((prev) =>
-        prev.map((s) =>
-          s.shelfNumber === shelfNumber
-            ? {
-              ...s,
-              products: s.products.map((p) =>
-                p.sku === sku ? { ...p, category: newCategory } : p
-              ),
-            }
-            : s
-        )
-      );
-      setHasChanges(true);
-    },
-    []
-  );
+  const handleStartEditing = () => {
+    setIsEditing(true);
+    setShelfName(shelf.shelfName);
+    setShelfCode(shelf.shelfCode);
+    setAisle(shelf.aisle ?? (shelf.aisleNumber ? `A${shelf.aisleNumber}` : ""));
+    setZone(shelf.zone ?? "");
+    setSection(shelf.section ?? "");
+    setFixtureType(shelf.fixtureType ?? "");
+    const [w = "", h = "", d = ""] = (shelf.dimensions ?? "")
+      .split("x")
+      .map((v) => v?.trim() ?? "");
+    setDimWidth(w);
+    setDimHeight(h);
+    setDimDepth(d);
+  };
 
-  const onEditFacingsDepth = useCallback(
-    (
-      shelfNumber: number,
-      sku: string,
-      updates: { facings?: number; depthCount?: number }
-    ) => {
-      setLocalShelves((prev) =>
-        prev.map((s) =>
-          s.shelfNumber === shelfNumber
-            ? {
-              ...s,
-              products: s.products.map((p) => {
-                if (p.sku !== sku) return p;
-                const facings = updates.facings ?? p.facings;
-                const depthCount = updates.depthCount ?? p.depthCount;
-                return { ...p, facings, depthCount };
-              }),
-            }
-            : s
-        )
-      );
-      setHasChanges(true);
-    },
-    []
-  );
+  const handleCancelEditing = () => {
+    setIsEditing(false);
+    setShelfName(undefined);
+    setShelfCode(undefined);
+    setAisle(undefined);
+    setZone(undefined);
+    setSection(undefined);
+    setFixtureType(undefined);
+    setDimWidth(undefined);
+    setDimHeight(undefined);
+    setDimDepth(undefined);
+  };
 
-  const onRemoveProduct = useCallback(
-    (shelfNumber: number, sku: string) => {
-      const product = findProduct(shelfNumber, sku);
-      if (!product) return;
-      setLocalShelves((prev) =>
-        prev.map((s) =>
-          s.shelfNumber === shelfNumber
-            ? {
-              ...s,
-              products: s.products.filter((p) => p.sku !== sku),
-            }
-            : s
-        )
-      );
-      setRemovedItems((prev) => [...prev, product]);
-      setHasChanges(true);
-    },
-    [findProduct]
-  );
+  const handleSave = () => {
+    const trimmedName = (shelfName ?? shelf.shelfName).trim();
+    const trimmedCode = (shelfCode ?? shelf.shelfCode).trim();
 
-  const onRestoreProduct = useCallback(
-    (shelfNumber: number, product: PlanogramProduct) => {
-      setLocalShelves((prev) =>
-        prev.map((s) =>
-          s.shelfNumber === shelfNumber
-            ? { ...s, products: [...s.products, { ...product }] }
-            : s
-        )
-      );
-      setRemovedItems((prev) => prev.filter((p) => p.sku !== product.sku));
-      setHasChanges(true);
-    },
-    []
-  );
-
-  const onReorderProducts = useCallback(
-    (shelfNumber: number, productIds: string[]) => {
-      setLocalShelves((prev) =>
-        prev.map((s) => {
-          if (s.shelfNumber !== shelfNumber) return s;
-          const bySku = new Map(s.products.map((p) => [p.sku, p]));
-          const reordered = productIds
-            .map((id) => bySku.get(id))
-            .filter((p): p is PlanogramProduct => p != null);
-          return { ...s, products: reordered };
-        })
-      );
-
-      // Update position tracking
-      setCategoryPositions((prev) => {
-        const next = new Map(prev);
-        productIds.forEach((sku, idx) => {
-          next.set(sku, { shelfNumber, position: idx });
-        });
-        return next;
-      });
-
-      setHasChanges(true);
-    },
-    []
-  );
-
-  const onMoveProduct = useCallback(
-    (from: number | "removed", to: number, sku: string, targetSku?: string) => {
-      let productToMove: PlanogramProduct | undefined;
-      if (from === "removed") {
-        productToMove = removedItems.find((p) => p.sku === sku);
-      } else {
-        productToMove = localShelves
-          .find((s) => s.shelfNumber === from)
-          ?.products.find((p) => p.sku === sku);
-      }
-      if (!productToMove) return;
-
-      if (from !== to) {
-        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
-        if (targetShelf) {
-          const currentFacings = targetShelf.products.reduce(
-            (sum, p) => sum + p.facings,
-            0
-          );
-          const capacity = shelfCapacities[to] ?? 0;
-          if (currentFacings + productToMove.facings > capacity) {
-            toast({
-              title: "Shelf full",
-              description: `${targetShelf.name} does not have enough space.`,
-              variant: "destructive",
-            });
-            return;
-          }
-        }
-      }
-
-      setLocalShelves((prev) => {
-        let nextShelves = [...prev];
-        if (from !== "removed") {
-          nextShelves = nextShelves.map((s) =>
-            s.shelfNumber === from
-              ? { ...s, products: s.products.filter((p) => p.sku !== sku) }
-              : s
-          );
-        }
-        return nextShelves.map((s) => {
-          if (s.shelfNumber !== to) return s;
-          const productIds = s.products.map((p) => p.sku);
-          const targetIdx = targetSku ? productIds.indexOf(targetSku) : -1;
-          const newProducts = [...s.products];
-          if (targetIdx !== -1) {
-            newProducts.splice(targetIdx, 0, productToMove!);
-          } else {
-            newProducts.push(productToMove!);
-          }
-          return { ...s, products: newProducts };
-        });
-      });
-
-      if (from === "removed") {
-        setRemovedItems((items) => items.filter((p) => p.sku !== sku));
-      }
-
-      setCategoryPositions((prev) => {
-        const next = new Map(prev);
-        const targetShelf = localShelves.find((s) => s.shelfNumber === to);
-        if (targetShelf) {
-          const productIds = targetShelf.products.map((p) => p.sku);
-          const targetIdx = targetSku ? productIds.indexOf(targetSku) : productIds.length;
-          next.set(sku, { shelfNumber: to, position: targetIdx });
-        }
-        return next;
-      });
-
-      setHasChanges(true);
-    },
-    [localShelves, removedItems, shelfCapacities, toast]
-  );
-
-  const handleDragStart = useCallback(
-    (sku: string, fromShelf: number | "removed") => {
-      dragRef.current = { sku, fromShelf };
-    },
-    []
-  );
-
-  const handleDropOnShelf = useCallback(
-    (toShelfNumber: number, targetSku?: string) => {
-      if (!dragRef.current) return;
-      const { sku, fromShelf } = dragRef.current;
-      dragRef.current = null;
-      onMoveProduct(fromShelf, toShelfNumber, sku, targetSku);
-    },
-    [onMoveProduct]
-  );
-
-  const handleDropOnRemoved = useCallback(() => {
-    if (!dragRef.current) return;
-    const { sku, fromShelf } = dragRef.current;
-    dragRef.current = null;
-    if (fromShelf === "removed") return;
-    onRemoveProduct(fromShelf as number, sku);
-  }, [onRemoveProduct]);
-
-  const handleSave = useCallback(async () => {
-    if (!preview || !preview.planogramPayload || !hasChanges || !shelfId) return;
-    setIsSaving(true);
-    try {
-      const originalShelves = preview.planogramPayload.planogram.fixture.shelves;
-      const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
-
-      for (const shelf of localShelves) {
-        for (const p of shelf.products) {
-          const orig = originalShelves
-            .flatMap((s) => s.products)
-            .find((op) => op.sku === p.sku);
-          if (!orig) continue;
-          const edits: {
-            name?: string;
-            category?: string;
-            facings?: number;
-            depthCount?: number;
-          } = {};
-          if (p.name !== orig.name) edits.name = p.name;
-          if (p.category !== orig.category) edits.category = p.category;
-          if (p.facings !== orig.facings) edits.facings = p.facings;
-          if (p.depthCount !== orig.depthCount) edits.depthCount = p.depthCount;
-          if (Object.keys(edits).length > 0) productEdits[p.sku] = edits;
-        }
-      }
-
-      const arrangement: PlanogramArrangement = {
-        shelfOrder: localShelves.map((s) => ({
-          shelfId: `shelf-${s.shelfNumber}`,
-          productIds: s.products.map((p) => p.sku),
-        })),
-        removedProductIds: removedItems.map((p) => p.sku),
-        productEdits:
-          Object.keys(productEdits).length > 0 ? productEdits : undefined,
-      };
-
-      const updated = await updateShelfArrangement(shelfId, arrangement);
-      if (updated) {
-        await queryClient.invalidateQueries({
-          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
-        });
-        toast({
-          title: "Changes saved",
-          description: "Your planogram edits have been saved.",
-        });
-        setHasChanges(false);
-      } else {
-        toast({
-          title: "Save failed",
-          description: "Could not update shelf. It may not exist.",
-          variant: "destructive",
-        });
-      }
-    } catch {
+    if (!trimmedName || !trimmedCode) {
       toast({
-        title: "Save failed",
-        description: "An error occurred while saving.",
         variant: "destructive",
+        title: "Validation Error",
+        description: "Shelf name and code cannot be empty.",
       });
-    } finally {
-      setIsSaving(false);
+      return;
     }
-  }, [
-    preview,
-    hasChanges,
-    shelfId,
-    localShelves,
-    removedItems,
-    queryClient,
-    toast,
-  ]);
 
-  const planogram = effectivePayload?.planogram;
-  const metadata = effectivePayload?.metadata;
-  const fixture = planogram?.fixture;
-  const highDemandSkus =
-    effectivePayload?.metadata?.stockingRules?.highDemandProducts ?? [];
+    const w = (dimWidth ?? baseWidth).trim();
+    const h = (dimHeight ?? baseHeight).trim();
+    const d = (dimDepth ?? baseDepth).trim();
 
-  const baseShelves = useMemo(
-    () => (localShelves.length > 0 ? localShelves : (fixture?.shelves ?? [])),
-    [localShelves, fixture?.shelves]
-  );
+    const fixturePayload = {
+      type: (fixtureType ?? shelf.fixtureType)?.trim() || undefined,
+      physical_location:
+        (aisle ?? shelf.aisle)?.trim() || (zone ?? shelf.zone)?.trim() || (section ?? shelf.section)?.trim()
+          ? {
+              aisle: (aisle ?? shelf.aisle)?.trim() || undefined,
+              zone: (zone ?? shelf.zone)?.trim() || undefined,
+              section: (section ?? shelf.section)?.trim() || undefined,
+            }
+          : undefined,
+      dimensions:
+        w || h || d
+          ? {
+              width: w ? Number(w) : undefined,
+              height: h ? Number(h) : undefined,
+              depth: d ? Number(d) : undefined,
+            }
+          : undefined,
+    };
 
-  const stats = useMemo(
-    () => derivePlanogramStats(baseShelves, removedItems),
-    [baseShelves, removedItems]
-  );
+    if (fixturePayload.physical_location && Object.values(fixturePayload.physical_location).every((v) => v === undefined)) {
+      fixturePayload.physical_location = undefined;
+    }
+    if (fixturePayload.dimensions && Object.values(fixturePayload.dimensions).every((v) => v === undefined)) {
+      fixturePayload.dimensions = undefined;
+    }
 
-  const shelvesToShow = baseShelves;
+    const hasFixtureUpdates = Object.values(fixturePayload).some((v) => v !== undefined);
 
-  const onToggleCategory = useCallback(
-    (category: string) => {
-      if (toggleInProgressRef.current) {
-
-        return;
+    updateShelfMutation.mutate(
+      {
+        shelfId,
+        payload: {
+          name: trimmedName,
+          shelf_id: trimmedCode,
+          ...(hasFixtureUpdates ? { fixture: fixturePayload } : {}),
+        },
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Success",
+            description: "Shelf details updated successfully.",
+          });
+          setIsEditing(false);
+        },
+        onError: (updateError: any) => {
+          toast({
+            variant: "destructive",
+            title: "Error",
+            description: updateError?.message ?? "Failed to update shelf details.",
+          });
+        },
       }
-
-      toggleInProgressRef.current = true;
-
-      setSelectedCategories((prevSelected) => {
-        const isCurrentlyHidden = prevSelected.has(category);
-        const nextSelected = new Set(prevSelected);
-
-        if (isCurrentlyHidden) {
-          nextSelected.delete(category);
-
-          const toRestore = removedItems.filter((p) => p.category === category);
-
-          const restoredSkus = new Set<string>(
-            toRestore
-              .filter((p) => categoryPositions.has(p.sku))
-              .map((p) => p.sku)
-          );
-
-          // console.log(
-          //   `Restoring category "${category}": ${restoredSkus.size} products to restore`,
-          //   Array.from(restoredSkus)
-          // );
-
-          setLocalShelves((prevShelves) => {
-            return prevShelves.map((shelf) => {
-              const newProducts = [...shelf.products];
-
-              toRestore.forEach((product) => {
-                const originalPos = categoryPositions.get(product.sku);
-                if (
-                  !originalPos ||
-                  originalPos.shelfNumber !== shelf.shelfNumber
-                )
-                  return;
-
-                const capacity = shelfCapacities[shelf.shelfNumber] ?? 0;
-                const currentFacings = newProducts.reduce(
-                  (sum, p) => sum + p.facings,
-                  0
-                );
-                const hasSpace = currentFacings + product.facings <= capacity;
-
-                if (hasSpace) {
-                  const insertPos = Math.min(
-                    originalPos.position,
-                    newProducts.length
-                  );
-                  newProducts.splice(insertPos, 0, product);
-                } else if (originalPos.position < newProducts.length) {
-                  const occupant = newProducts[originalPos.position];
-                  newProducts.splice(originalPos.position, 1, product);
-
-                  setRemovedItems((items) => {
-                    if (items.some((i) => i.sku === occupant.sku))
-                      return items;
-                    return [...items, occupant];
-                  });
-                }
-              });
-
-              return { ...shelf, products: newProducts };
-            });
-          });
-
-          setTimeout(() => {
-            setRemovedItems((prevRemoved) => {
-              const filtered = prevRemoved.filter(
-                (p) => !restoredSkus.has(p.sku)
-              );
-
-              return filtered;
-            });
-          }, 0);
-
-          setHasChanges(true);
-        } else {
-          nextSelected.add(category);
-
-          const toRemove = localShelves.flatMap((shelf) =>
-            shelf.products.filter((p) => p.category === category)
-          );
-
-          setLocalShelves((prevShelves) => {
-            return prevShelves.map((shelf) => ({
-              ...shelf,
-              products: shelf.products.filter((p) => p.category !== category),
-            }));
-          });
-
-          setRemovedItems((prevRemoved) => {
-            const existingSkus = new Set(prevRemoved.map((p) => p.sku));
-            const newItems = toRemove.filter((p) => !existingSkus.has(p.sku));
-            return [...prevRemoved, ...newItems];
-          });
-
-          setHasChanges(true);
-        }
-
-        setTimeout(() => {
-          toggleInProgressRef.current = false;
-        }, 100);
-
-        return nextSelected;
-      });
-    },
-    [removedItems, categoryPositions, shelfCapacities, localShelves]
-  );
+    );
+  };
 
   return (
-    <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto max-w-screen-2xl space-y-4">
-          <header className="flex flex-wrap items-center gap-4">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to="/checker/shelves">
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Back</span>
-              </Link>
-            </Button>
-            <div className="min-w-0 flex-1">
-              {isLoading ? (
-                <Skeleton className="h-8 w-64" />
-              ) : error ? (
-                <h1 className="text-2xl font-bold text-destructive">
-                  Error loading planogram
-                </h1>
-              ) : preview ? (
-                <>
-                  <h1 className="text-2xl font-bold text-foreground truncate">
-                    {preview.shelf.shelfName}
-                  </h1>
-                  <p className="text-sm text-muted-foreground">
-                    {isBlankShelf
-                      ? "Sample planogram for display"
-                      : `v${planogram?.version ?? "1.0"} ${metadata?.location ?? "—"} · ${metadata?.status ?? "active"}`}
-                  </p>
-                </>
-              ) : (
-                <h1 className="text-2xl font-bold text-foreground">
-                  Planogram not found
-                </h1>
-              )}
-            </div>
-
-            {/* {preview && !isBlankShelf && (
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setIsInfoModalOpen(true)}
-                className="rounded-full bg-white/5 border-white/10 hover:bg-white/10 hover:text-white"
-                title="View Shelf Information"
-              >
-                <Info className="size-4" aria-hidden />
+    <MainLayout
+      pageHeader={
+        <PageHeader
+          title={effectiveShelfName}
+          description={`Shelf Id: ${effectiveShelfCode}`}
+        >
+          <div className="flex gap-2">
+            {!isEditing ? (
+              <Button variant="outline" size="sm" onClick={handleStartEditing}>
+                <Edit3 className="size-4 mr-2" />
+                Edit Details
               </Button>
-            )} */}
-
-            {hasChanges && !isBlankShelf && (
-              <Button
-                onClick={handleSave}
-                disabled={isSaving}
-                className="bg-chart-2 text-white hover:opacity-90"
-              >
-                <Check className="size-4" aria-hidden />
-                {isSaving ? "Saving…" : "Save"}
-              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCancelEditing}
+                  disabled={updateShelfMutation.isPending}
+                >
+                  <X className="size-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  disabled={updateShelfMutation.isPending}
+                  className="bg-chart-2 text-white hover:opacity-90"
+                >
+                  <Save className="size-4 mr-1" />
+                  {updateShelfMutation.isPending ? "Saving..." : "Save"}
+                </Button>
+              </>
             )}
-          </header>
-
-          {isLoading && (
-            <div className="space-y-4">
-              <Skeleton className="h-24 w-full" />
-              <Skeleton className="h-64 w-full rounded-lg" />
-            </div>
-          )}
-
-          {error && (
-            <div className="rounded-xl border border-destructive/50 bg-destructive/10 p-6 text-center">
-              <p className="text-destructive font-medium">
-                Failed to load planogram
-              </p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                This shelf may not have planogram data, or it could not be loaded.
-              </p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link to="/maker/audits/planogram">Back to list</Link>
-              </Button>
-            </div>
-          )}
-
-          {preview && !isLoading && (
-            <div className="space-y-4">
-              {isBlankShelf && (
-                <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
-                  Sample planogram for display. Assign a planogram to this shelf to save edits.
-                </div>
-              )}
-              <div
-                className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
-                role="region"
-                aria-label="Planogram summary metrics"
-              >
-                <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
-                <StatCard title="SKUs" value={stats.skus} className="stat-card" />
-                <StatCard
-                  title="Front Facings"
-                  value={stats.frontFacings}
-                  className="stat-card"
-                />
-                <StatCard
-                  title="Total Units (w/ depth)"
-                  value={stats.totalUnits}
-                  className="stat-card"
-                />
-                <StatCard
-                  title="Categories"
-                  value={stats.categories}
-                  className="stat-card"
-                />
-                <StatCard
-                  title="Removed"
-                  value={stats.removed}
-                  className="stat-card"
-                />
-              </div>
-
-              <div>
-                <p className="mb-2 text-xs font-medium text-foreground">
-                  Categories (Click to hide/show)
-                </p>
-                <CategoryFilterTags
-                  categories={stats.categoryList}
-                  selected={
-                    // Invert logic: selected = visible (not hidden)
-                    new Set(stats.categoryList.filter(c => !selectedCategories.has(c)))
-                  }
-                  onToggle={onToggleCategory}
-                />
-              </div>
-
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-start">
-                <div className="min-w-0 flex-1 space-y-4">
-                  {shelvesToShow.length === 0 ? (
-                    <div className="rounded-lg border border-dashed border-border bg-muted/20 px-6 py-8 text-center">
-                      <p className="text-sm font-medium text-muted-foreground">
-                        No shelves available
-                      </p>
-                    </div>
-                  ) : (
-                    [...shelvesToShow]
-                      .sort((a, b) => b.verticalPosition - a.verticalPosition)
-                      .map((shelf) => (
-                        <ShelfRow
-                          key={shelf.shelfNumber}
-                          shelf={shelf}
-                          fixture={fixture}
-                          highDemandSkus={highDemandSkus}
-                          editHandlers={{
-                            onEditName,
-                            onEditCategory,
-                            onEditFacingsDepth,
-                            onRemoveProduct,
-                            onMoveProduct,
-                            onReorderProducts,
-                          }}
-                          dragHandlers={{
-                            onDragStart: handleDragStart,
-                            onDropOnShelf: handleDropOnShelf,
-                            onDropOnRemoved: handleDropOnRemoved,
-                          }}
-                        />
-                      ))
-                  )}
-                </div>
-                <RemovedItemsSidebar
-                  removedItems={removedItems}
-                  shelves={baseShelves}
-                  shelfCapacities={shelfCapacities}
-                  // originalShelfAssignment={originalShelfAssignment}
-                  onRestore={onRestoreProduct}
-                  onRemoveFromShelf={(sku, shelfNumber) =>
-                    onRemoveProduct(shelfNumber, sku)
-                  }
-                  onMoveFromSidebar={(sku, toShelfNumber) =>
-                    onMoveProduct("removed", toShelfNumber, sku)
-                  }
-                />
-              </div>
-
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
-                <div className="min-w-0 overflow-x-auto">
-                  <div className="min-w-275">
-                    <ProductDetailsTable
-                      shelves={shelvesToShow}
-                      highDemandSkus={highDemandSkus}
-                      units={fixture?.units}
-                    />
+          </div>
+        </PageHeader>
+      }
+    >
+      <div className="p-6 space-y-8 w-full mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  <div className="p-1.5 rounded-md bg-accent/20 text-accent mr-3">
+                    <Scan className="size-4" />
                   </div>
+                  Physical Location
+                </CardTitle>
+                <Badge variant="outline" className="font-mono text-[10px]">LOC</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Aisle
+                  </p>
+                  <EditableField
+                    label=""
+                    value={effectiveAisle}
+                    isEditing={isEditing}
+                    onChange={setAisle}
+                    className="mt-1"
+                  />
                 </div>
-                <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-4">
-                  <StockingRulesSection
-                    stockingRules={effectivePayload?.metadata?.stockingRules}
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                    Bay
+                  </p>
+                  <p className="text-lg font-bold tabular-nums">{shelf.bayNumber}</p>
+                </div>
+                <div>
+                  <EditableField
+                    label="Zone"
+                    value={effectiveZone}
+                    isEditing={isEditing}
+                    onChange={setZone}
+                  />
+                </div>
+                <div>
+                  <EditableField
+                    label="Section"
+                    value={effectiveSection}
+                    isEditing={isEditing}
+                    onChange={setSection}
                   />
                 </div>
               </div>
-            </div>
-          )}
+            </CardContent>
+          </Card>
 
-          {!preview && !isLoading && !error && (
-            <div className="rounded-xl border border-border bg-card/80 p-6 text-center">
-              <p className="text-muted-foreground">Planogram not found.</p>
-              <Button asChild variant="outline" className="mt-4">
-                <Link to="/maker/audits/planogram">Back to list</Link>
-              </Button>
-            </div>
-          )}
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  <div className="p-1.5 rounded-md bg-chart-1/20 text-chart-1 mr-3">
+                    <Settings className="size-4" />
+                  </div>
+                  Fixture Details
+                </CardTitle>
+                <Badge variant="outline" className="font-mono text-[10px]">SPEC</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Type
+                </p>
+                {!isEditing ? (
+                  <p className="text-sm font-semibold capitalize">
+                    {effectiveFixtureType?.replace(/_/g, " ") || "Gondola"}
+                  </p>
+                ) : (
+                  <Select
+                    value={fixtureType ?? shelf.fixtureType ?? ""}
+                    onChange={(e) => setFixtureType(e.target.value)}
+                    aria-label="Fixture Type"
+                  >
+                    <option value="">Choose...</option>
+                    <option value="gondola">Gondola</option>
+                    <option value="wall_shelving">Wall Shelving</option>
+                    <option value="end_cap">End Cap</option>
+                    <option value="freezer">Freezer</option>
+                    <option value="cooler">Cooler</option>
+                  </Select>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Dimensions (WxHxD)
+                </p>
+                {!isEditing ? (
+                  <p className="text-sm font-medium font-mono tabular-nums">
+                    {shelf.dimensions || "—"}
+                  </p>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      placeholder="Width"
+                      value={dimWidth ?? baseWidth}
+                      onChange={(e) => setDimWidth(e.target.value)}
+                    />
+                    <span className="text-muted-foreground">×</span>
+                    <Input
+                      placeholder="Height"
+                      value={dimHeight ?? baseHeight}
+                      onChange={(e) => setDimHeight(e.target.value)}
+                    />
+                    <span className="text-muted-foreground">×</span>
+                    <Input
+                      placeholder="Depth"
+                      value={dimDepth ?? baseDepth}
+                      onChange={(e) => setDimDepth(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center">
+                  <div className="p-1.5 rounded-md bg-chart-2/20 text-chart-2 mr-3">
+                    <Play className="size-4" />
+                  </div>
+                  Current Status
+                </CardTitle>
+                <Badge variant="outline" className="font-mono text-[10px]">STATE</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Last Audit</p>
+                <p className="text-sm font-medium">{shelf.lastAuditDate ? shelf.lastAuditDate.toLocaleDateString() : "Never Audited"}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Compliance Score</p>
+                {shelf.complianceScore != null ? (
+                  <div className="flex items-center gap-2 mt-1">
+                    <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className={cn(
+                          "h-full rounded-full transition-all",
+                          shelf.complianceScore >= 90 ? "bg-chart-2" : shelf.complianceScore >= 75 ? "bg-accent" : "bg-destructive"
+                        )}
+                        style={{ width: `${shelf.complianceScore}%` }}
+                      />
+                    </div>
+                    <span className="text-lg font-bold tabular-nums">{shelf.complianceScore}%</span>
+                  </div>
+                ) : (
+                  <p className="text-sm font-medium text-muted-foreground italic">No score available</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
+
+        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold px-1">Planogram Management</h3>
+            <Card className="border-border/50">
+              <CardContent className="p-0">
+                <div className="flex flex-col">
+                  {shelf.planogramId ? (
+                    <div className="p-6 flex items-center justify-between border-b border-border/50">
+                      <div>
+                        <h4 className="font-semibold">{shelf.planogramId}</h4>
+                        <p className="text-sm text-muted-foreground mt-1">Planogram is currently associated with this shelf.</p>
+                      </div>
+                      <Button variant="outline" size="sm" asChild>
+                        <Link to={analysisPath as any} params={{ shelfId, storeId } as any}>
+                          View
+                        </Link>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="p-6 border-b border-border/50">
+                      <div className="flex items-start gap-4">
+                        <div className="p-3 rounded-xl bg-muted/50 text-muted-foreground">
+                          <Layout className="size-6" />
+                        </div>
+                        <div>
+                          <h4 className="font-semibold">No Planogram Associated</h4>
+                          <p className="text-sm text-muted-foreground mt-1 mr-8">
+                            This shelf does not have a reference planogram. Professional compliance 
+                            analysis requires a planogram.
+                          </p>
+                          <Button className="mt-4" size="sm" asChild>
+                            <Link to={basePogNewPath as any} params={{ storeId } as any} search={{ shelfId: shelf.id } as any}>
+                              Associate Planogram
+                            </Link>
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <button 
+                    disabled
+                    className="flex items-center justify-between p-4 px-6 text-sm text-muted-foreground hover:bg-muted/30 transition-colors group cursor-not-allowed"
+                  >
+                    <span className="flex items-center">
+                      <Scan className="size-4 mr-3" />
+                      Run Planogram Compliance Analysis
+                    </span>
+                    <Badge variant="secondary" className="text-[9px] uppercase">Planogram Required</Badge>
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold px-1">Quick Analysis</h3>
+            <div 
+              className="rounded-2xl border border-border/50 bg-gradient-to-br from-chart-2/10 via-background to-background p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => navigate({ to: baseAdhocNewPath as any, params: { storeId } as any, search: { shelfId: shelf.id } as any })}
+            >
+              <div className="flex items-start gap-4">
+                <div className="p-3 rounded-xl bg-chart-2/20 text-chart-2">
+                  <Play className="size-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-foreground">Run Adhoc Analysis</h4>
+                  <p className="text-sm text-muted-foreground mt-1 mr-4">
+                    Instantly analyze shelf images without a reference planogram. Perfect for 
+                    general SKU detection and counting.
+                  </p>
+                </div>
+              </div>
+              <div className="p-2 rounded-full bg-background border border-border shadow-sm group-hover:translate-x-1 transition-transform">
+                <ChevronRight className="size-5" />
+              </div>
+            </div>
+
+            <Card className="border-border/50 bg-muted/20">
+              <CardHeader className="py-4">
+                <CardTitle className="text-sm font-medium">History</CardTitle>
+                <CardDescription className="text-xs">Recent analysis activities for this shelf</CardDescription>
+              </CardHeader>
+              <CardContent className="pb-6">
+                <div className="text-center py-6">
+                  <p className="text-xs text-muted-foreground italic">No historical data found for this shelf.</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div> */}
       </div>
-      {preview?.planogramPayload && (
-        <ShelfInfoModal
-          isOpen={isInfoModalOpen}
-          onClose={() => setIsInfoModalOpen(false)}
-          payload={preview.planogramPayload}
-          stats={stats}
-        />
-      )}
     </MainLayout>
   );
 }

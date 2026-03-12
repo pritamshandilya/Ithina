@@ -1,30 +1,22 @@
 /**
- * React Query hook for creating a new shelf
+ * useCreateShelf Hook
+ *
+ * TanStack Query mutation for creating a new shelf via POST /shelves.
+ * Invalidates the shelf list on success so the UI stays in sync.
  */
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { createShelf } from "../api/maker";
-import { assignedShelvesKeys } from "./useAssignedShelves";
+import { createShelf } from "../api/shelves";
+import { shelfKeys } from "@/queries/shared";
 
-/**
- * Hook to create a new shelf
- * 
- * Features:
- * - Mutation for creating shelf
- * - Invalidation of assigned shelves list on success
- * - Loading and error states
- * 
- * @returns TanStack Mutation result
- */
 export function useCreateShelf() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: createShelf,
     onSuccess: () => {
-      // Invalidate the shelves list to show the new shelf
-      void queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+      void queryClient.invalidateQueries({ queryKey: shelfKeys.lists() });
     },
   });
 }

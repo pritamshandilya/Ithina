@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
 import { z } from "zod";
 
@@ -26,10 +26,8 @@ import {
   usePlanogramById,
   usePlanogramList,
 } from "@/queries/maker";
-import { useStore } from "@/providers/store";
 import { assignPlanogramToShelf } from "@/queries/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
-import { mockUser } from "@/lib/api/mock-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
@@ -43,16 +41,20 @@ export const Route = createFileRoute("/checker/shelf/new/")({
       .parse(search),
 });
 
-function AddPlanogramPage() {
+export function AddPlanogramPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams({ strict: false }) as any;
   const { associateShelfId, associateShelfName } = Route.useSearch();
+  const isAdmin = location.pathname.includes("/admin/");
+  const storeId = params.storeId as string | undefined;
+  const shelfListPath =
+    isAdmin && storeId ? `/admin/${storeId}/shelf` : "/checker/shelf";
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useAssignedShelves();
   const createShelfMutation = useCreateShelf();
-  const { selectedStore } = useStore();
-  const selectedStoreId = selectedStore?.id || mockUser.storeId;
   const isAssociateMode = !!associateShelfId;
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
@@ -64,6 +66,7 @@ function AddPlanogramPage() {
   const [fixtureType, setFixtureType] = useState("");
   const [dimWidth, setDimWidth] = useState("");
   const [dimHeight, setDimHeight] = useState("");
+  const [dimDepth, setDimDepth] = useState("");
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -115,27 +118,35 @@ function AddPlanogramPage() {
               productIds: s.products.map((p) => p.sku),
             })) ?? [],
         };
-        const shelf = await assignPlanogramToShelf(
+        await assignPlanogramToShelf(
           associateShelfId,
           selectedPlanogramId,
           arrangement
         );
         await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
-        navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: shelf?.id ?? associateShelfId } });
+        navigate({ to: shelfListPath as any });
       } else if (!isAssociateMode) {
-        const shelf = await createShelfMutation.mutateAsync({
-          aisleNumber: Number(aisleNumber),
-          bayNumber: Number(bayNumber),
-          shelfName: shelfName.trim(),
-          description: "Manually created shelf",
-          zone: zone.trim() || undefined,
-          section: section.trim() || undefined,
-          fixtureType: fixtureType.trim() || undefined,
-          dimensions: (dimWidth.trim() || dimHeight.trim()) ? `${dimWidth.trim()}x${dimHeight.trim()}` : undefined,
+        // Map UI fields to real API CreateShelfPayload
+        await createShelfMutation.mutateAsync({
+          shelf_id: `S${aisleNumber}-${bayNumber}`, // Unique business ID
+          name: shelfName.trim(),
+          fixture: {
+            type: fixtureType.trim() || "gondola",
+            dimensions: {
+              width: Number(dimWidth) || 0,
+              height: Number(dimHeight) || 0,
+              depth: Number(dimDepth) || 300, // Default to 300mm if not provided to satisfy gt=0
+            },
+            physical_location: {
+              aisle: String(aisleNumber),
+              zone: zone.trim() || "General",
+              section: section.trim() || "General",
+            },
+          },
         });
         toast({ title: "Shelf created", description: "Your shelf has been created successfully." });
-        navigate({ to: "/checker/shelf/$shelfId", params: { shelfId: shelf.id } });
+        navigate({ to: shelfListPath as any });
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
@@ -173,7 +184,7 @@ function AddPlanogramPage() {
 
           <header className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/checker/shelf">
+              <Link to={shelfListPath as any}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>
@@ -317,7 +328,7 @@ function AddPlanogramPage() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="dim-width">Dimensions (W×H)</Label>
+                          <Label htmlFor="dim-width">Dimensions (W×H×D)</Label>
                           <div className="flex items-center gap-2">
                             <Input
                               id="dim-width"
@@ -331,6 +342,13 @@ function AddPlanogramPage() {
                               placeholder="Height"
                               value={dimHeight}
                               onChange={(e) => setDimHeight(e.target.value)}
+                            />
+                            <span className="text-muted-foreground">×</span>
+                            <Input
+                              id="dim-depth"
+                              placeholder="Depth"
+                              value={dimDepth}
+                              onChange={(e) => setDimDepth(e.target.value)}
                             />
                           </div>
                         </div>

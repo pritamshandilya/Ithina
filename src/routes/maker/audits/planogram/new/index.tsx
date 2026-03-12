@@ -28,18 +28,24 @@ import { assignPlanogramToShelf } from "@/queries/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
+  validateSearch: (search: Record<string, unknown>) => {
+    return {
+      shelfId: (search.shelfId as string) || undefined,
+    };
+  },
   component: AddPOGAnalysisPage,
 });
 
-function AddPOGAnalysisPage() {
+export function AddPOGAnalysisPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { shelfId } = Route.useSearch();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves, isLoading: shelvesLoading } = useAssignedShelves();
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
-  const [selectedShelfId, setSelectedShelfId] = useState<string>("");
+  const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 

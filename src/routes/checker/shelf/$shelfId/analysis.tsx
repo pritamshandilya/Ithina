@@ -4,7 +4,6 @@
  * Visual preview of a saved planogram shelf.
  * This file was moved from index.tsx to allow for a dedicated Shelf Detail page.
  */
-import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useLocation, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,11 +18,11 @@ import {
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { updateShelfArrangement } from "@/queries/maker/api/planogram";
 import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
   planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
+  useUpdateShelfArrangement,
 } from "@/queries/maker";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -70,7 +69,6 @@ export function PlanogramAnalysisViewPage() {
   const { shelfId } = Route.useParams() as { shelfId: string };
   const location = useLocation();
   const params = useParams({ strict: false }) as any;
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
@@ -96,6 +94,7 @@ export function PlanogramAnalysisViewPage() {
   } | null>(null);
 
   const toggleInProgressRef = useRef(false);
+  const updateShelfArrangementMutation = useUpdateShelfArrangement();
 
   useEffect(() => {
     if (!preview) return;
@@ -450,7 +449,10 @@ export function PlanogramAnalysisViewPage() {
           Object.keys(productEdits).length > 0 ? productEdits : undefined,
       };
 
-      const updated = await updateShelfArrangement(shelfId, arrangement);
+      const updated = await updateShelfArrangementMutation.mutateAsync({
+        shelfId,
+        arrangement,
+      });
       if (updated) {
         await queryClient.invalidateQueries({
           queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),

@@ -8,7 +8,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { deleteShelf } from "../api/shelves";
-import { shelfKeys } from "@/queries/shared";
 
 export function useDeleteShelf() {
   const queryClient = useQueryClient();
@@ -16,8 +15,12 @@ export function useDeleteShelf() {
   return useMutation({
     mutationFn: (shelfId: string) => deleteShelf(shelfId),
     onSuccess: (_data, shelfId) => {
-      queryClient.removeQueries({ queryKey: shelfKeys.detail(shelfId) });
-      void queryClient.invalidateQueries({ queryKey: shelfKeys.lists() });
+      queryClient.removeQueries({
+        queryKey: ["maker", "shelves", "detail", shelfId],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["maker", "shelves", "list"],
+      });
     },
   });
 }

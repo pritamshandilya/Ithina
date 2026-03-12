@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { useAssignedShelves, useComplianceRuleSets, useDeleteShelf, usePlanogramList } from "@/queries/maker";
+import { useShelves, useComplianceRuleSets, useDeleteShelf, usePlanogramList } from "@/queries/maker";
 import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
@@ -294,7 +294,7 @@ export function PlanogramAnalysisPage() {
   const adhocNewPath = isAdmin ? "/admin/$storeId/audits/adhoc/new" : "/maker/audits/adhoc/new";
   const pogNewPath = isAdmin ? "/admin/$storeId/audits/planogram/new" : "/maker/audits/planogram/new";
 
-  const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: shelves, isLoading } = useShelves();
   const deleteShelfMutation = useDeleteShelf();
   const { data: planogramList } = usePlanogramList();
   const { selectedStore } = useStore();

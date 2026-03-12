@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { Rows3, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 import { ShelfCard } from "./shelf-card";
@@ -22,7 +22,7 @@ export function MakerAssignedPreview({
   onShelfClick,
   className,
 }: MakerAssignedPreviewProps) {
-  const { data: shelves, isLoading, error } = useAssignedShelves();
+  const { data: shelves, isLoading, error } = useShelves();
 
   if (isLoading) {
     return (

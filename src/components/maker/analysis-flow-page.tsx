@@ -24,11 +24,8 @@ import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import type { ImageComparisonData } from "@/lib/analysis/image-comparison-types";
-import {
-  useAnalysisPipeline,
-  MOCK_REPORT_SNIPPET,
-  SIMPLE_PROGRESS_STEPS,
-} from "@/lib/analysis";
+import { MOCK_REPORT_SNIPPET, SIMPLE_PROGRESS_STEPS } from "@/lib/analysis";
+import { useAnalysisPipeline } from "@/hooks/maker";
 import { cn } from "@/lib/utils";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];

@@ -7,7 +7,7 @@
 
 import { useMemo } from "react";
 import { useAdhocAnalyses } from "./useAdhocAnalyses";
-import { useAssignedShelves } from "./useAssignedShelves";
+import { useShelves } from "./useShelves";
 import type { HistoricalAnalysisRow } from "@/types/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
@@ -19,7 +19,7 @@ export function useHistoricalAnalyses(): {
   const { selectedStore } = useStore();
   const storeId = selectedStore?.id ?? mockUser.storeId;
   const { data: adhocAnalyses = [], isLoading: isAdhocLoading } = useAdhocAnalyses(storeId);
-  const { data: shelves = [], isLoading: isShelvesLoading } = useAssignedShelves();
+  const { data: shelves = [], isLoading: isShelvesLoading } = useShelves();
 
   const data = useMemo(() => {
     const adhocRows: HistoricalAnalysisRow[] = adhocAnalyses.map((a) => ({

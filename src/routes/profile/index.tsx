@@ -1,11 +1,9 @@
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
 import MainLayout from "@/components/layouts/main";
-
-import "./profile.css";
-
 import {
   AccountActionsCard,
   AccountMetadataCard,
@@ -17,17 +15,12 @@ import {
   AuthSessionService,
   getInitialsFromEmail,
 } from "@/lib/auth/session";
-import { requireAuth } from "@/routes/-guards/requireAuth";
 import type { UserInfo } from "@/providers/auth/context";
 import { useStore } from "@/providers/store";
+import { requireAuth } from "@/routes/-guards/requireAuth";
+import type { RootState } from "@/store";
 
-interface LocalProfileData {
-  firstName?: string;
-  lastName?: string;
-  profilePictureUrl?: string;
-}
-
-const PROFILE_KEY = "auth_profile";
+import "./profile.css";
 
 export const Route = createFileRoute("/profile/")({
   beforeLoad: ({ context, location }) => {
@@ -36,26 +29,21 @@ export const Route = createFileRoute("/profile/")({
   component: ProfilePage,
 });
 
+const selectProfile = (state: RootState) => state.profile ?? {};
+
 function ProfilePage() {
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const dispatch = useDispatch();
   const { setSelectedStore } = useStore();
   const { toast } = useToast();
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const localProfile = useSelector(selectProfile);
   const currentUser = useMemo(() => AuthSessionService.getCurrentUser(), []);
-  const localProfile = useMemo(() => {
-    const raw = localStorage.getItem(PROFILE_KEY);
-    if (!raw) return null;
-    try {
-      return JSON.parse(raw) as LocalProfileData;
-    } catch {
-      return null;
-    }
-  }, []);
 
   const userInfo: UserInfo | null = useMemo(() => {
     if (!currentUser) return null;
@@ -117,16 +105,13 @@ function ProfilePage() {
 
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      const previous = localProfile ?? {};
-      localStorage.setItem(
-        PROFILE_KEY,
-        JSON.stringify({
-          ...previous,
+      dispatch({
+        type: "profile/setProfile",
+        payload: {
+          ...localProfile,
           profilePictureUrl: URL.createObjectURL(file),
-        } satisfies LocalProfileData),
-      );
-
-      window.location.reload();
+        },
+      });
 
       toast({
         title: "Success",
@@ -172,17 +157,14 @@ function ProfilePage() {
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      const previous = localProfile ?? {};
-      localStorage.setItem(
-        PROFILE_KEY,
-        JSON.stringify({
-          ...previous,
+      dispatch({
+        type: "profile/setProfile",
+        payload: {
+          ...localProfile,
           firstName: updates.firstName ?? userInfo.firstName,
           lastName: updates.lastName ?? userInfo.lastName,
-        } satisfies LocalProfileData),
-      );
-
-      window.location.reload();
+        },
+      });
 
       toast({
         title: "Success",

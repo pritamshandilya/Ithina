@@ -18,13 +18,11 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import {
-  assignedShelvesKeys,
-  useAssignedShelves,
+  useShelves,
   usePlanogramById,
   usePlanogramList,
-  planogramShelfPreviewKeys,
+  useAssignPlanogramToShelf,
 } from "@/queries/maker";
-import { assignPlanogramToShelf } from "@/queries/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
@@ -42,7 +40,8 @@ export function AddPOGAnalysisPage() {
   const { toast } = useToast();
   const { shelfId } = Route.useSearch();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
-  const { data: shelves, isLoading: shelvesLoading } = useAssignedShelves();
+  const { data: shelves, isLoading: shelvesLoading } = useShelves();
+  const assignPlanogramMutation = useAssignPlanogramToShelf();
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
   const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
@@ -69,14 +68,12 @@ export function AddPOGAnalysisPage() {
             productIds: s.products.map((p) => p.sku),
           })) ?? [],
       };
-      const shelf = await assignPlanogramToShelf(
-        selectedShelfId,
-        selectedPlanogramId,
-        arrangement
-      );
-      await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
-      // Prefetch shelf preview so edit page has data immediately
-      await queryClient.prefetchQuery({ queryKey: planogramShelfPreviewKeys.byShelfId(shelf!.id) });
+
+      await assignPlanogramMutation.mutateAsync({
+        shelfId: selectedShelfId,
+        planogramId: selectedPlanogramId,
+        arrangement,
+      });
       toast({ title: "Analysis configured", description: "POG Analysis is now ready for the selected shelf." });
       navigate({ to: "/maker/audits/planogram" });
     } catch (err) {

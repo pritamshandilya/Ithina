@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useComplianceRuleSets, usePlanogramList } from "@/queries/maker";
+import { useShelves, useComplianceRuleSets, usePlanogramList } from "@/queries/maker";
 import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { mockUser } from "@/lib/api/mock-data";
@@ -280,7 +280,7 @@ const PLANOGRAM_COLUMNS = (
 
 function PlanogramAnalysisPage() {
   const navigate = useNavigate();
-  const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: shelves, isLoading } = useShelves();
   const { data: planogramList } = usePlanogramList();
   const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();

@@ -2,10 +2,6 @@
  * Barrel export for all maker hooks
  */
 
-export {
-  useAssignedShelves,
-  assignedShelvesKeys,
-} from "./useAssignedShelves";
 export { useQuickStats, quickStatsKeys } from "./useQuickStats";
 export {
   useMakerDashboardStats,
@@ -28,12 +24,16 @@ export { useAdhocAnalyses, adhocAnalysesKeys } from "./useAdhocAnalyses";
 export { useComplianceRuleSets, complianceRuleSetsKeys } from "./useComplianceRuleSets";
 export { useRulesByRuleSetId, rulesByRuleSetIdKeys } from "./useRulesByRuleSetId";
 export { usePlanogramList, planogramListKeys } from "./usePlanogramList";
-export { usePlanogramById, planogramByIdKeys } from "./usePlanogramById";
+export { usePlanogramById } from "./usePlanogramById";
 export {
   usePlanogramShelfPreview,
   planogramShelfPreviewKeys,
   type PlanogramShelfPreview,
 } from "./usePlanogramShelfPreview";
+export {
+  useAssignPlanogramToShelf,
+  useUpdateShelfArrangement,
+} from "./usePlanogramMutations";
 export { useHistoricalAnalyses } from "./useHistoricalAnalyses";
 export { useShelves, useShelf } from "./useShelves";
 export { useUpdateShelf } from "./useUpdateShelf";

@@ -8,8 +8,12 @@
  * Drag-and-drop: reorder within shelf, move between shelves, restore from removed.
  * Access at: /maker/audits/planogram/:shelfId
  */
-import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate, useRouter } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
@@ -24,11 +28,17 @@ import {
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { updateShelfArrangement } from "@/queries/maker/api/planogram";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch } from "@/store";
 import {
-  planogramShelfPreviewKeys,
-  usePlanogramShelfPreview,
-} from "@/queries/maker";
+  fetchPlanogramShelfPreview,
+} from "@/store/slices/planogramPreviewSlice";
+import {
+  selectPlanogramPreview,
+  selectPlanogramPreviewError,
+  selectPlanogramPreviewLoading,
+} from "@/store/selectors";
+import { updateShelfArrangementThunk } from "@/store/slices/shelvesSlice";
 import { useToast } from "@/hooks/use-toast";
 import type {
   PlanogramArrangement,
@@ -74,10 +84,13 @@ const SHELVES_FALLBACK = "/maker/shelves";
 
 function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
+  const preview = useSelector(selectPlanogramPreview);
+  const isLoading = useSelector(selectPlanogramPreviewLoading);
+  const error = useSelector(selectPlanogramPreviewError);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -86,7 +99,11 @@ function PlanogramPreviewPage() {
       navigate({ to: SHELVES_FALLBACK });
     }
   };
-  const { data: preview, isLoading, error } = usePlanogramShelfPreview(shelfId);
+  useEffect(() => {
+    if (shelfId) {
+      dispatch(fetchPlanogramShelfPreview(shelfId));
+    }
+  }, [dispatch, shelfId]);
   const [localShelves, setLocalShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -458,11 +475,11 @@ function PlanogramPreviewPage() {
           Object.keys(productEdits).length > 0 ? productEdits : undefined,
       };
 
-      const updated = await updateShelfArrangement(shelfId, arrangement);
+      const action = await dispatch(
+        updateShelfArrangementThunk({ shelfId, arrangement }),
+      );
+      const updated = action.payload;
       if (updated) {
-        await queryClient.invalidateQueries({
-          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
-        });
         toast({
           title: "Changes saved",
           description: "Your planogram edits have been saved.",
@@ -484,15 +501,7 @@ function PlanogramPreviewPage() {
     } finally {
       setIsSaving(false);
     }
-  }, [
-    preview,
-    hasChanges,
-    shelfId,
-    localShelves,
-    removedItems,
-    queryClient,
-    toast,
-  ]);
+  }, [preview, hasChanges, shelfId, localShelves, removedItems, toast, dispatch]);
 
   const planogram = preview?.planogramPayload?.planogram;
   const metadata = preview?.planogramPayload?.metadata;

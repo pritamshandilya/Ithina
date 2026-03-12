@@ -7,7 +7,7 @@ import {
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCard } from "@/components/shared";
-import { useQuickStats, useDraftAudits, useAssignedShelves } from "@/queries/maker";
+import { useQuickStats, useDraftAudits, useShelves } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 export interface MakerAccomplishedCardsProps {
@@ -21,7 +21,7 @@ export interface MakerAccomplishedCardsProps {
 export function MakerAccomplishedCards({ className }: MakerAccomplishedCardsProps) {
   const { data: stats, isLoading: statsLoading, error } = useQuickStats();
   const { data: drafts = [] } = useDraftAudits();
-  const { data: shelves = [] } = useAssignedShelves();
+  const { data: shelves = [] } = useShelves();
 
   if (statsLoading) {
     return (

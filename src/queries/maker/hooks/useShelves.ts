@@ -1,16 +1,6 @@
-/**
- * useShelves / useShelf Hooks
- *
- * TanStack Query hooks for fetching shelves from the real API.
- *
- *  - useShelves(fixtureId?)  → GET /shelves (optionally filtered by fixture)
- *  - useShelf(shelfId)       → GET /shelves/{id}
- */
-
 import { useQuery } from "@tanstack/react-query";
 
 import { getShelf, listShelves, mapShelfResponseToShelf } from "../api/shelves";
-import { shelfKeys } from "@/queries/shared";
 
 /**
  * Fetch all shelves for the current store.
@@ -19,7 +9,12 @@ import { shelfKeys } from "@/queries/shared";
  */
 export function useShelves(fixtureId?: string) {
   return useQuery({
-    queryKey: shelfKeys.list(fixtureId ? { fixture_id: fixtureId } : undefined),
+    queryKey: [
+      "maker",
+      "shelves",
+      "list",
+      fixtureId ? { fixtureId } : undefined,
+    ],
     queryFn: async () => {
       const responses = await listShelves(fixtureId);
       return responses.map(mapShelfResponseToShelf);
@@ -36,7 +31,7 @@ export function useShelves(fixtureId?: string) {
  */
 export function useShelf(shelfId: string | undefined) {
   return useQuery({
-    queryKey: shelfKeys.detail(shelfId ?? ""),
+    queryKey: ["maker", "shelves", "detail", shelfId ?? "none"],
     queryFn: async () => {
       const response = await getShelf(shelfId!);
       return mapShelfResponseToShelf(response);

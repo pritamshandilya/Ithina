@@ -42,3 +42,6 @@ bun.lock
 *.tanstack
 # documentation
 /docs
+
+#rules
+.cursor/rules/*

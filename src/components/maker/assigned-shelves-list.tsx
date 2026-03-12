@@ -4,7 +4,7 @@ import { LayoutGridIcon, TableIcon } from "lucide-react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { AuditStatus, Shelf } from "@/types/maker";
@@ -163,7 +163,7 @@ export function AssignedShelvesList({
   onShelfClick,
   className,
 }: AssignedShelvesListProps) {
-  const { data: shelves, isLoading, error } = useAssignedShelves();
+  const { data: shelves, isLoading, error } = useShelves();
   const [activeFilter, setActiveFilter] = useState<FilterOption>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });

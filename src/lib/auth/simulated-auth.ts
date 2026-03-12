@@ -1,4 +1,4 @@
-export type UserRole = "maker" | "checker";
+export type UserRole = "initiator" | "approver" | "storeOps";
 
 export interface SimulatedUser {
   email: string;
@@ -11,20 +11,28 @@ export interface SimulatedUser {
 
 const SIMULATED_USERS: SimulatedUser[] = [
   {
-    id: "maker-001",
-    email: "maker@displaydata.com",
+    id: "initiator-sarah",
+    email: "sarah@displaydata.com",
     password: "password123",
-    role: "maker",
-    firstName: "John",
-    lastName: "Maker",
+    role: "initiator",
+    firstName: "Sarah",
+    lastName: "Lee",
   },
   {
-    id: "checker-001",
-    email: "checker@displaydata.com",
+    id: "approver-marcus",
+    email: "marcus@displaydata.com",
     password: "password123",
-    role: "checker",
-    firstName: "Jane",
-    lastName: "Checker",
+    role: "approver",
+    firstName: "Marcus",
+    lastName: "Wright",
+  },
+  {
+    id: "storeops-david",
+    email: "david@displaydata.com",
+    password: "password123",
+    role: "storeOps",
+    firstName: "David",
+    lastName: "Nguyen",
   },
 ];
 

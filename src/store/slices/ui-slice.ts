@@ -2,12 +2,10 @@ import { createSlice } from "@reduxjs/toolkit";
 
 interface UiState {
   isDarkMode: boolean;
-  isSidebarCollapsed: boolean;
 }
 
 const initialState: UiState = {
   isDarkMode: true,
-  isSidebarCollapsed: false,
 };
 
 const uiSlice = createSlice({
@@ -17,12 +15,9 @@ const uiSlice = createSlice({
     toggleTheme(state) {
       state.isDarkMode = !state.isDarkMode;
     },
-    toggleSidebar(state) {
-      state.isSidebarCollapsed = !state.isSidebarCollapsed;
-    },
   },
 });
 
-export const { toggleTheme, toggleSidebar } = uiSlice.actions;
+export const { toggleTheme } = uiSlice.actions;
 
 export default uiSlice.reducer;

@@ -3,7 +3,7 @@ import { AddPlanogramPage } from "@/routes/checker/shelf/new/index";
 import { z } from "zod";
 
 export const Route = createFileRoute("/admin/$storeId/shelf/new")({
-  component: AddPlanogramPage,
+  component: AdminShelfNewRouteComponent,
   validateSearch: (search: unknown) =>
     z
       .object({
@@ -12,3 +12,9 @@ export const Route = createFileRoute("/admin/$storeId/shelf/new")({
       })
       .parse(search),
 });
+
+function AdminShelfNewRouteComponent() {
+  const search = Route.useSearch();
+
+  return <AddPlanogramPage searchOverride={search} />;
+}

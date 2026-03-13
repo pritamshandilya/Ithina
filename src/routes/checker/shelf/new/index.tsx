@@ -39,11 +39,21 @@ export const Route = createFileRoute("/checker/shelf/new/")({
       .parse(search),
 });
 
-export function AddPlanogramPage() {
+type AddPlanogramPageSearch = {
+  associateShelfId?: string;
+  associateShelfName?: string;
+};
+
+type AddPlanogramPageProps = {
+  searchOverride?: AddPlanogramPageSearch;
+};
+
+export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams({ strict: false }) as any;
-  const { associateShelfId, associateShelfName } = Route.useSearch();
+  const { associateShelfId, associateShelfName } =
+    searchOverride ?? Route.useSearch();
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
   const shelfListPath =

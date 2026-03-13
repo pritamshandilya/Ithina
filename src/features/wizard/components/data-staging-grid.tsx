@@ -1,5 +1,5 @@
 import { ArrowRight, CloudUpload, FileSpreadsheet, X, Zap } from "lucide-react";
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 import type { StagedSku } from "@/types/wizard";

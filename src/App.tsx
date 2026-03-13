@@ -20,8 +20,11 @@ const queryClient = new QueryClient({
   },
 });
 
+const basepath = import.meta.env.BASE_URL.replace(/\/$/, "") || "/";
+
 const router = createRouter({
   routeTree,
+  basepath,
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultPreloadStaleTime: 0,

@@ -10,6 +10,9 @@ import type { DataTableColumn } from "@/components/ui/data-table";
 
 export const Route = createFileRoute("/checker/reports/shelf-level/")({
     component: ShelfLevelReport,
+    meta: {
+        layoutMode: "stickyTable",
+    },
 });
 
 export function ShelfLevelReport() {
@@ -32,17 +35,10 @@ export function ShelfLevelReport() {
     ];
 
     const handleRowClick = (row: ShelfSummary) => {
-        // eslint-disable-next-line no-console
-        console.log("Row clicked:", row);
         // Only navigate if it's a child row (analysis row)
         if (row.id.includes("-")) {
             const reportId = row.id.split("-")[1] || "1";
-            // eslint-disable-next-line no-console
-            console.log("Navigating to report:", reportId);
             navigate({ to: `/checker/reports/view/${reportId}` });
-        } else {
-            // eslint-disable-next-line no-console
-            console.log("Parent row clicked, not navigating");
         }
     };
 

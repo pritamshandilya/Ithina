@@ -9,12 +9,7 @@ import { getShelf, listShelves, mapShelfResponseToShelf } from "../api/shelves";
  */
 export function useShelves(fixtureId?: string) {
   return useQuery({
-    queryKey: [
-      "maker",
-      "shelves",
-      "list",
-      fixtureId ? { fixtureId } : undefined,
-    ],
+    queryKey: ["maker", "shelves", "list", fixtureId ?? "all"],
     queryFn: async () => {
       const responses = await listShelves(fixtureId);
       return responses.map(mapShelfResponseToShelf);

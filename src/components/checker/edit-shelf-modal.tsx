@@ -17,7 +17,7 @@ interface EditShelfModalProps {
 
 export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) {
   const [shelfName, setShelfName] = useState(shelf.shelfName);
-  const [shelfCode, setShelfCode] = useState(shelf.shelfCode);
+  const [shelfCode, setShelfCode] = useState<string>(shelf.shelfCode ?? "");
   const [aisle, setAisle] = useState(shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""));
   const [zone, setZone] = useState(shelf.zone ?? "");
   const [section, setSection] = useState(shelf.section ?? "");
@@ -34,7 +34,7 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
   useEffect(() => {
     if (isOpen) {
       setShelfName(shelf.shelfName);
-      setShelfCode(shelf.shelfCode);
+      setShelfCode(shelf.shelfCode ?? "");
       setAisle(shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""));
       setZone(shelf.zone ?? "");
       setSection(shelf.section ?? "");

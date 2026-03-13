@@ -4,7 +4,7 @@ import { z } from "zod";
 
 export const Route = createFileRoute("/admin/$storeId/shelf/new")({
   component: AddPlanogramPage,
-  validateSearch: (search) =>
+  validateSearch: (search: unknown) =>
     z
       .object({
         associateShelfId: z.string().optional(),

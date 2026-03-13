@@ -39,8 +39,8 @@ export function StoreUserAssignmentModal({
         if (!store) return;
         try {
             await assignMutation.mutateAsync({ storeId: store.id, userId });
-        } catch (error) {
-            console.error("Failed to assign user:", error);
+        } catch {
+            // Assignment errors are surfaced via query layer or UI; no console logs.
         }
     };
 
@@ -48,8 +48,8 @@ export function StoreUserAssignmentModal({
         if (!store) return;
         try {
             await removeMutation.mutateAsync({ storeId: store.id, userId });
-        } catch (error) {
-            console.error("Failed to remove user:", error);
+        } catch {
+            // Removal errors are surfaced via query layer or UI; no console logs.
         }
     };
 

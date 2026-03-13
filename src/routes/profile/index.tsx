@@ -17,13 +17,14 @@ import {
 } from "@/lib/auth/session";
 import type { UserInfo } from "@/providers/auth/context";
 import { useStore } from "@/providers/store";
+import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
 import type { RootState } from "@/store";
 
 import "./profile.css";
 
 export const Route = createFileRoute("/profile/")({
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: ({ context, location }: BeforeLoadArgs) => {
     requireAuth(context, location);
   },
   component: ProfilePage,

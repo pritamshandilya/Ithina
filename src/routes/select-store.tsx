@@ -7,12 +7,13 @@ import { Building2, Store as StoreIcon, Loader2, ArrowRight } from "lucide-react
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import type { BeforeLoadArgs } from "@/routes/__root";
 
 export const Route = createFileRoute("/select-store")({
-  beforeLoad: ({ location }) => {
+  beforeLoad: ({ location }: BeforeLoadArgs) => {
     const user = AuthSessionService.getCurrentUser();
     if (!user) {
-      throw redirect({ to: "/login", search: { redirect: location.href } });
+      throw redirect({ to: "/login", search: { redirect: location?.href ?? "" } });
     }
   },
   component: SelectStorePage,

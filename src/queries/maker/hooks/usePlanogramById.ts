@@ -20,7 +20,7 @@ export const planogramKeys = {
 
 export function usePlanogramById(id: string | null) {
   return useQuery({
-    queryKey: id ? planogramKeys.detail(id) : planogramKeys.detail("none"),
+    queryKey: planogramKeys.detail(id ?? "none"),
     queryFn: () => (id ? fetchPlanogramById(id) : Promise.resolve(null)),
     enabled: !!id,
     staleTime: 2 * 60 * 1000,

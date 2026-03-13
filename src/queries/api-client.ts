@@ -132,18 +132,26 @@ async function request<T>(
   return parseResponse<T>(res);
 }
 
+export interface RequestOptions {
+  headers?: HeadersInit;
+}
+
 export const apiClient = {
   get: <T>(
     path: string,
     params?: Record<string, string | number | boolean | undefined | null>,
-  ) => request<T>("GET", path, { params }),
+    options?: RequestOptions,
+  ) => request<T>("GET", path, { params, ...options }),
 
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, { body }),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("POST", path, { body, ...options }),
 
-  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("PUT", path, { body, ...options }),
 
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>("PATCH", path, { body }),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("PATCH", path, { body, ...options }),
 
-  delete: <T = void>(path: string) => request<T>("DELETE", path),
+  delete: <T = void>(path: string, options?: RequestOptions) =>
+    request<T>("DELETE", path, options),
 };

@@ -11,6 +11,11 @@ export interface AppRouterContext {
   auth: RouterAuthState;
 }
 
+export interface BeforeLoadArgs {
+  context: AppRouterContext;
+  location?: { href?: string };
+}
+
 export const Route = createRootRouteWithContext<AppRouterContext>()({
   component: () => {
     return (

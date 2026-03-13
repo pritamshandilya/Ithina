@@ -80,8 +80,7 @@ export function PublishingStatusPanel({
   const { data: audits, isLoading, error } = usePublishedAudits(storeId);
 
   // Handle retry (placeholder for Phase 2)
-  const handleRetry = (auditId: string) => {
-    console.log("Retry publish for audit:", auditId);
+  const handleRetry = (_auditId: string) => {
     alert("Retry functionality will be implemented in Phase 2");
   };
 

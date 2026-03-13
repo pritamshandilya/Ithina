@@ -457,7 +457,6 @@ function PlanogramPreviewPage() {
     shelfId,
     localShelves,
     removedItems,
-    queryClient,
     toast,
   ]);
 

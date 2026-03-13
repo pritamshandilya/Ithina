@@ -24,6 +24,7 @@ import {
   usePlanogramShelfPreview,
   useUpdateShelfArrangement,
 } from "@/queries/maker";
+import { queryClient } from "@/queries/shared";
 import { useToast } from "@/hooks/use-toast";
 import type {
   PlanogramArrangement,

@@ -217,7 +217,7 @@ export function MyAuditsSection({
         },
       },
     ],
-    [shelves, onResume, onViewReport, deleteDraftMutation]
+    [shelves, onResume, onViewReport, deleteDraftMutation, handleAction]
   );
 
   if (isLoading) {

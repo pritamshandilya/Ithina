@@ -65,6 +65,7 @@ function MakerManualAuditsPage() {
       } else {
         navigate({
           to: "/maker/audits/adhoc/new",
+          search: { shelfId },
         });
       }
     } else if (action === "view-report" || action === "view-details") {

@@ -30,7 +30,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
-  validateSearch: (search) =>
+  validateSearch: (search: unknown) =>
     z
       .object({
         associateShelfId: z.string().optional(),

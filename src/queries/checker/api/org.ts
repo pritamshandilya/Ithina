@@ -56,14 +56,18 @@ export async function assignUserToStore(
   storeId: string,
   userId: string,
 ): Promise<void> {
-  return apiClient.post<void>(`/stores/${storeId}/users/${userId}`);
+  return apiClient.post<void>(`/store/users/${userId}`, undefined, {
+    headers: { "X-Store-Id": storeId },
+  });
 }
 
 export async function removeUserFromStore(
   storeId: string,
   userId: string,
 ): Promise<void> {
-  return apiClient.delete<void>(`/stores/${storeId}/users/${userId}`);
+  return apiClient.delete<void>(`/store/users/${userId}`, {
+    headers: { "X-Store-Id": storeId },
+  });
 }
 
 export async function fetchOrgUsers(
@@ -84,8 +88,9 @@ export async function fetchStoreUsers(
   if (userType) params.user_type = userType;
 
   const users = await apiClient.get<OrgUserApiModel[]>(
-    `/stores/${storeId}/users`,
+    "/store/users",
     params,
+    { headers: { "X-Store-Id": storeId } },
   );
 
   return users.map(mapOrgUser);

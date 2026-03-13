@@ -12,7 +12,7 @@ import { usePlanogramShelfPreview } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
   component: NewPlanogramAnalysisPage,
-  validateSearch: (search) =>
+  validateSearch: (search: unknown) =>
     z
       .object({
         from: z.string().optional(),

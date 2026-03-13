@@ -102,11 +102,10 @@ export async function fetchNotifications(
  * @returns Promise resolving when operation completes
  */
 export async function markNotificationAsRead(
-  notificationId: string,
+  _notificationId: string,
 ): Promise<void> {
   await delay(200);
   // In real app, would make API call to update notification status
-  console.log("Marked notification as read:", notificationId);
 }
 
 /**
@@ -116,11 +115,10 @@ export async function markNotificationAsRead(
  * @returns Promise resolving when operation completes
  */
 export async function markAllNotificationsAsRead(
-  userId: string,
+  _userId: string,
 ): Promise<void> {
   await delay(300);
   // In real app, would make API call to mark all as read
-  console.log("Marked all notifications as read for user:", userId);
 }
 
 /**
@@ -166,10 +164,9 @@ export async function fetchPublishedAudits(
  * @param auditId - The audit ID to approve
  * @returns Promise resolving when operation completes
  */
-export async function approveAudit(auditId: string): Promise<void> {
+export async function approveAudit(_auditId: string): Promise<void> {
   await delay(600);
   // In real app, would make API call to approve and publish
-  console.log("Approved audit:", auditId);
 }
 
 /**
@@ -180,12 +177,11 @@ export async function approveAudit(auditId: string): Promise<void> {
  * @returns Promise resolving when operation completes
  */
 export async function returnAudit(
-  auditId: string,
-  reason: string,
+  _auditId: string,
+  _reason: string,
 ): Promise<void> {
   await delay(500);
   // In real app, would make API call to return audit
-  console.log("Returned audit:", auditId, "Reason:", reason);
 }
 
 /**
@@ -196,17 +192,11 @@ export async function returnAudit(
  * @returns Promise resolving when operation completes
  */
 export async function overrideAndApprove(
-  auditId: string,
-  overrideReason: string,
+  _auditId: string,
+  _overrideReason: string,
 ): Promise<void> {
   await delay(600);
   // In real app, would make API call to override and approve
-  console.log(
-    "Overridden and approved audit:",
-    auditId,
-    "Reason:",
-    overrideReason,
-  );
 }
 
 /**
@@ -215,10 +205,9 @@ export async function overrideAndApprove(
  * @param auditId - The audit ID to delete
  * @returns Promise resolving when operation completes
  */
-export async function deleteAudit(auditId: string): Promise<void> {
+export async function deleteAudit(_auditId: string): Promise<void> {
   await delay(400);
   // In real app, would make API call to delete/cancel audit
-  console.log("Deleted audit:", auditId);
 }
 
 /**

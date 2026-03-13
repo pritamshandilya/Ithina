@@ -1,3 +1,3 @@
 export * from "./shared";
-export * from "./maker";
-export * from "./checker";
+export * as maker from "./maker";
+export * as checker from "./checker";

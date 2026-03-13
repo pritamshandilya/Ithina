@@ -86,8 +86,6 @@ export function AdhocReport() {
     ];
 
     const handleRowClick = (row: AdhocAnalysis) => {
-        // eslint-disable-next-line no-console
-        console.log("Adhoc row clicked:", row);
         navigate({ to: `/checker/reports/view/${row.id}` });
     };
 

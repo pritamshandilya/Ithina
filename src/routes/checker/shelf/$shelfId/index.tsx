@@ -93,7 +93,7 @@ export function ShelfDetailPage() {
   }
 
   const effectiveShelfName = shelfName ?? shelf.shelfName;
-  const effectiveShelfCode = shelfCode ?? shelf.shelfCode;
+  const effectiveShelfCode = shelfCode ?? shelf.shelfCode ?? "";
   const effectiveAisle = aisle ?? shelf.aisle ?? (shelf.aisleNumber ? `A${shelf.aisleNumber}` : "");
   const effectiveZone = zone ?? shelf.zone ?? "";
   const effectiveSection = section ?? shelf.section ?? "";
@@ -133,7 +133,7 @@ export function ShelfDetailPage() {
 
   const handleSave = () => {
     const trimmedName = (shelfName ?? shelf.shelfName).trim();
-    const trimmedCode = (shelfCode ?? shelf.shelfCode).trim();
+    const trimmedCode = (shelfCode ?? shelf.shelfCode ?? "").trim();
 
     if (!trimmedName || !trimmedCode) {
       toast({

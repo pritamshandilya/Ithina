@@ -26,6 +26,7 @@ export type AuditMode =
  */
 export interface Shelf {
   id: string;
+  fixtureId?: string;
   shelf_id?: string;
   aisleNumber: number;
   aisle?: string;
@@ -52,6 +53,10 @@ export interface Shelf {
   fixtureType?: string;
   /** Dimensions of the fixture */
   dimensions?: string;
+  /** Shelf creation timestamp from backend */
+  createdAt?: Date;
+  /** Shelf update timestamp from backend */
+  updatedAt?: Date;
 }
 
 /**

@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { BeforeLoadArgs } from "@/routes/__root";
+import type { Store } from "@/types/checker";
 
 export const Route = createFileRoute("/select-store")({
   beforeLoad: ({ location }: BeforeLoadArgs) => {
@@ -24,20 +25,19 @@ function SelectStorePage() {
   const { data: stores, isLoading } = useStores();
   const navigate = useNavigate();
   const user = AuthSessionService.getCurrentUser();
-  const [isRedirecting, setIsRedirecting] = useState(false);
   const [hasNotified, setHasNotified] = useState(false);
+  const isAutoRedirecting = Boolean(stores && stores.length === 1);
 
   useEffect(() => {
     if (stores && stores.length === 1) {
       const store = stores[0];
       setSelectedStore(store);
-      setIsRedirecting(true);
       const target = AuthSessionService.getDashboardRoute(user?.role || "maker");
       navigate({ to: target, replace: true });
     }
   }, [stores, setSelectedStore, navigate, user?.role]);
 
-  const handleSelect = (store: any) => {
+  const handleSelect = (store: Store) => {
     setSelectedStore(store);
     const target = AuthSessionService.getDashboardRoute(user?.role || "maker");
     navigate({ to: target, replace: true });
@@ -47,7 +47,7 @@ function SelectStorePage() {
     setHasNotified(true);
   };
 
-  if (isLoading || isRedirecting || (stores && stores.length === 1)) {
+  if (isLoading || isAutoRedirecting) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-[#070b14]">
         <div className="flex flex-col items-center gap-4">

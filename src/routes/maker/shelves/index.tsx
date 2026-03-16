@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { format } from "date-fns";
 import { renderToString } from "react-dom/server";
 import { Plus, Search, LayoutGrid, List } from "lucide-react";
 
@@ -40,53 +39,49 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     },
   },
   {
+    title: "ID",
+    field: "shelfCode",
+    sorter: "string",
+    width: 120,
+    headerSort: true,
+    formatter: (cell: unknown) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
+      return `<span class="font-mono text-sm font-medium text-foreground">${shelf.shelfCode ?? shelf.shelf_id ?? "—"}</span>`;
+    },
+  },
+  {
     title: "Location",
-    field: "aisleNumber",
-    sorter: "number",
+    field: "zone",
+    minWidth: 180,
+    sorter: "string",
     headerSort: true,
     formatter: (cell: unknown) => {
       const shelf = (cell as { getData: () => Shelf }).getData();
       return `
-        <div class="flex items-center justify-center h-full">
-          <span class="font-mono text-sm bg-accent/20 px-2 py-1 rounded text-accent">
-            ${String(shelf.aisleNumber).padStart(2, "0")} / ${String(shelf.bayNumber).padStart(2, "0")}
-          </span>
+        <div class="flex flex-col gap-1 py-1">
+          <span class="font-medium text-foreground">${shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}</span>
+          <span class="text-xs text-muted-foreground">${shelf.zone ?? "—"} · ${shelf.section ?? "—"}</span>
         </div>
       `;
     },
-    headerHozAlign: "center",
   },
-  // {
-  //   title: "Elevation",
-  //   field: "elevation",
-  //   sorter: "string",
-  //   headerSort: true,
-  //   formatter: (cell: unknown) => {
-  //     const value = (cell as { getValue: () => unknown }).getValue() || "—";
-  //     return `<span class="text-sm font-medium text-muted-foreground">${value}</span>`;
-  //   },
-  // },
   {
-    title: "Last Modified",
-    field: "lastAuditDate",
-    sorter: "date",
+    title: "Fixture",
+    field: "fixtureType",
+    minWidth: 180,
+    sorter: "string",
     headerSort: true,
     formatter: (cell: unknown) => {
-      const date = (cell as { getValue: () => unknown }).getValue();
-      if (!date) return `<span class="text-muted-foreground text-xs italic">Never</span>`;
-      return `<span class="text-sm text-foreground">${format(new Date(date as string | number), "MMM d, yyyy")}</span>`;
+      const shelf = (cell as { getData: () => Shelf }).getData();
+      const type = shelf.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `
+        <div class="flex flex-col gap-1 py-1">
+          <span class="text-sm font-medium text-foreground">${type}</span>
+          <span class="text-xs text-muted-foreground">${shelf.dimensions ?? "—"}</span>
+        </div>
+      `;
     },
   },
-  // {
-  //   title: "Notes",
-  //   field: "notes",
-  //   sorter: "string",
-  //   formatter: (cell: unknown) => {
-  //     const value = (cell as { getValue: () => unknown }).getValue();
-  //     if (!value) return "";
-  //     return `<span class="text-sm text-muted-foreground italic truncate block max-w-[200px]" title="${String(value)}">${String(value)}</span>`;
-  //   },
-  // },
   {
     title: "Actions",
     field: "actions",
@@ -116,12 +111,23 @@ function ShelfManagementPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const GRID_PAGE_SIZE = 9;
 
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+    setCurrentPage(1);
+  };
+
   const filteredShelves =
     shelves?.filter((shelf) => {
       if (!searchQuery) return true;
       const query = searchQuery.toLowerCase();
       return (
         shelf.shelfName.toLowerCase().includes(query) ||
+        shelf.shelfCode?.toLowerCase().includes(query) ||
+        shelf.aisle?.toLowerCase().includes(query) ||
+        shelf.zone?.toLowerCase().includes(query) ||
+        shelf.section?.toLowerCase().includes(query) ||
+        shelf.fixtureType?.toLowerCase().includes(query) ||
         shelf.notes?.toLowerCase().includes(query) ||
         String(shelf.aisleNumber).includes(query) ||
         String(shelf.bayNumber).includes(query)
@@ -139,17 +145,12 @@ function ShelfManagementPage() {
         )
       : 0;
 
-  // Reset pagination when search changes
-  useEffect(() => {
-    setTablePagination((p) => ({ ...p, page: 1 }));
-    setCurrentPage(1);
-  }, [searchQuery]);
-
   // Pagination Logic for Grid
-  const totalPages = Math.ceil(filteredShelves.length / GRID_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(filteredShelves.length / GRID_PAGE_SIZE));
+  const visibleCurrentPage = Math.min(currentPage, totalPages);
   const paginatedGridShelves = filteredShelves.slice(
-    (currentPage - 1) * GRID_PAGE_SIZE,
-    currentPage * GRID_PAGE_SIZE
+    (visibleCurrentPage - 1) * GRID_PAGE_SIZE,
+    visibleCurrentPage * GRID_PAGE_SIZE
   );
 
   return (
@@ -174,7 +175,7 @@ function ShelfManagementPage() {
                   placeholder="Quick search shelves..."
                   aria-label="Search shelves"
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                 />
               </div>
 
@@ -362,6 +363,7 @@ function ShelfManagementPage() {
                 emptyMessage="No shelves found matching your search."
                 pageSize={10}
                 pageSizeSelector={[5, 10, 20, 50]}
+                layout="fitDataTable"
                 onPaginationChange={setTablePagination}
               />
             ) : (
@@ -387,14 +389,14 @@ function ShelfManagementPage() {
                     Previous
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page <span className="font-semibold text-foreground">{currentPage}</span> of{" "}
+                    Page <span className="font-semibold text-foreground">{visibleCurrentPage}</span> of{" "}
                     <span className="font-semibold text-foreground">{totalPages}</span>
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, Math.min(p, totalPages) + 1))}
+                    disabled={visibleCurrentPage === totalPages}
                   >
                     Next
                   </Button>

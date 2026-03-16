@@ -6,7 +6,7 @@
  * Matches the pattern used in MyAuditsSection, AssignedShelvesList, and Compliance Rules.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -38,6 +38,10 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
+  const resetPagination = () => {
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  };
+
   const filteredAudits = useMemo(() => {
     let result = allAudits || [];
 
@@ -61,10 +65,6 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
       return dateB - dateA;
     });
   }, [allAudits, activeFilter, searchQuery, shelves]);
-
-  useEffect(() => {
-    setTablePagination((p) => ({ ...p, page: 1 }));
-  }, [activeFilter, searchQuery]);
 
   const tableVisibleCount = Math.max(
     0,
@@ -215,7 +215,10 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
             <button
               key={filter}
               type="button"
-              onClick={() => setActiveFilter(filter)}
+              onClick={() => {
+                setActiveFilter(filter);
+                resetPagination();
+              }}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm font-medium transition-all shrink-0",
                 "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -239,7 +242,10 @@ export function AuditReviewQueue({ className, onAction }: AuditReviewQueueProps)
           <Input
             placeholder="Search by shelf or audit ID..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              resetPagination();
+            }}
             className="pl-9 h-10 w-full bg-background"
             aria-label="Search audits"
           />

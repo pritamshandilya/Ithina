@@ -14,12 +14,26 @@ export const Route = createFileRoute("/checker/shelf/")({
   },
 });
 
+function getOptionalStoreId(params: unknown): string | undefined {
+  if (!params || typeof params !== "object") return undefined;
+  const { storeId } = params as { storeId?: unknown };
+  return typeof storeId === "string" ? storeId : undefined;
+}
+
+function asRouterPath(path: string): never {
+  return path as never;
+}
+
+function asRouterParams(params: Record<string, string | undefined>): never {
+  return params as never;
+}
+
 export function PlanogramAnalysisPage() {
   const location = useLocation();
-  const params = useParams({ strict: false }) as any;
+  const params = useParams({ strict: false });
 
   const isAdmin = location.pathname.includes("/admin/");
-  const storeId = params.storeId as string | undefined;
+  const storeId = getOptionalStoreId(params);
 
   const shelfDetailPath = isAdmin
     ? "/admin/$storeId/shelf/$shelfId"
@@ -45,7 +59,7 @@ export function PlanogramAnalysisPage() {
             asChild
             className="bg-chart-2 text-white hover:opacity-90 shrink-0"
           >
-            <Link to={shelfNewPath as any} params={{ storeId } as any}>
+            <Link to={asRouterPath(shelfNewPath)} params={asRouterParams({ storeId })}>
               <Plus className="size-4" aria-hidden />
               Add Shelf
             </Link>

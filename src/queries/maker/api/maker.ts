@@ -16,8 +16,7 @@ import {
   getReturnedAudits,
 } from "@/lib/api/mock-data";
 import { apiClient, ApiError } from "@/queries/shared";
-import { getShelf } from "./shelves";
-import type { ShelfResponse } from "@/models/response/shelves";
+import { getShelf, mapShelfResponseToShelf } from "./shelves";
 import type { Store } from "@/types/checker";
 import type {
   AdhocAnalysis,
@@ -40,7 +39,8 @@ function simulateNetworkDelay(ms = 500): Promise<void> {
  * @param _userId - The maker's user ID (currently handled by Bearer token)
  * @returns Promise<Store[]> - Array of store objects
  */
-export async function fetchStores(_userId: string): Promise<Store[]> {
+export async function fetchStores(userId: string): Promise<Store[]> {
+  void userId;
   return apiClient.get<Store[]>("/stores");
 }
 
@@ -225,28 +225,6 @@ export async function getShelfById(shelfId: string): Promise<Shelf | null> {
 }
 
 /**
- * Maps a real API ShelfResponse to the internal Shelf type used by the UI.
- * (Duplicate of mapping in useAssignedShelves for use in this API module)
- */
-function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
-  const aisleMatch = res.fixture.physical_location.aisle.match(/\d+/);
-  const aisleNumber = aisleMatch ? Number(aisleMatch[0]) : 0;
-
-  return {
-    id: res.id,
-    aisleNumber,
-    bayNumber: 1, 
-    shelfName: res.name,
-    status: "never-audited",
-    zone: res.fixture.physical_location.zone,
-    section: res.fixture.physical_location.section,
-    fixtureType: res.fixture.type,
-    dimensions: `${res.fixture.dimensions.width}x${res.fixture.dimensions.height}`,
-    planogramId: undefined, 
-  };
-}
-
-/**
  * Submit a new audit (placeholder for future implementation)
  *
  * @param auditData - The audit data to submit
@@ -387,7 +365,8 @@ export async function saveDraftProgress(
  * await deleteDraft('audit-123');
  * ```
  */
-export async function deleteDraft(_auditId: string): Promise<void> {
+export async function deleteDraft(auditId: string): Promise<void> {
+  void auditId;
   await simulateNetworkDelay(300);
 
   // In production, this would be:

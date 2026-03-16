@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, type FormEvent } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,27 @@ interface UserFormModalProps {
     mode?: "create" | "invite" | "edit";
 }
 
+const EMPTY_USER_FORM: UpsertUserPayload = {
+    email: "",
+    first_name: "",
+    last_name: "",
+    role: "maker",
+    is_active: true,
+};
+
+function getInitialUserFormData(initialData?: AuthSessionUser): UpsertUserPayload {
+    if (!initialData) return EMPTY_USER_FORM;
+
+    return {
+        email: initialData.email,
+        first_name: initialData.firstName,
+        last_name: initialData.lastName,
+        role: initialData.role,
+        is_active: initialData.isActive,
+        store_ids: initialData.storeIds,
+    };
+}
+
 export function UserFormModal({
     isOpen,
     onClose,
@@ -25,36 +46,38 @@ export function UserFormModal({
     isLoading = false,
     mode = "invite",
 }: UserFormModalProps) {
-    const [formData, setFormData] = useState<UpsertUserPayload>({
-        email: "",
-        first_name: "",
-        last_name: "",
-        role: "maker",
-        is_active: true,
+    const draftSeed = `${mode}:${initialData?.email ?? "new"}`;
+    const [draftState, setDraftState] = useState<{
+        seed: string;
+        values: Partial<UpsertUserPayload>;
+    }>({
+        seed: draftSeed,
+        values: {},
     });
+    const formData = {
+        ...getInitialUserFormData(initialData),
+        ...(draftState.seed === draftSeed ? draftState.values : {}),
+    };
 
-    useEffect(() => {
-        if (initialData) {
-            setFormData({
-                email: initialData.email,
-                first_name: initialData.firstName,
-                last_name: initialData.lastName,
-                role: initialData.role,
-                is_active: initialData.isActive,
-                store_ids: initialData.storeIds,
-            });
-        } else {
-            setFormData({
-                email: "",
-                first_name: "",
-                last_name: "",
-                role: "maker",
-                is_active: true,
-            });
-        }
-    }, [initialData, isOpen]);
+    const updateField = <K extends keyof UpsertUserPayload>(
+        field: K,
+        value: UpsertUserPayload[K],
+    ) => {
+        setDraftState((prev) => ({
+            seed: draftSeed,
+            values: {
+                ...(prev.seed === draftSeed ? prev.values : {}),
+                [field]: value,
+            },
+        }));
+    };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleClose = () => {
+        setDraftState({ seed: draftSeed, values: {} });
+        onClose();
+    };
+
+    const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         onSubmit(formData);
     };
@@ -63,7 +86,7 @@ export function UserFormModal({
     const submitLabel = mode === "edit" ? "Save Changes" : mode === "invite" ? "Send Invitation" : "Create User";
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg">
+        <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
             <div className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden text-foreground glassmorphism">
                 <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20">
                     <div className="flex items-center gap-2">
@@ -75,7 +98,7 @@ export function UserFormModal({
                         </h3>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="p-1 hover:bg-muted rounded-md transition-colors text-muted-foreground"
                     >
                         <X className="w-4 h-4" />
@@ -92,7 +115,7 @@ export function UserFormModal({
                                 id="firstName"
                                 placeholder="John"
                                 value={formData.first_name}
-                                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
+                                onChange={(e) => updateField("first_name", e.target.value)}
                                 className="bg-background border-border focus:border-accent transition-all"
                             />
                         </div>
@@ -104,7 +127,7 @@ export function UserFormModal({
                                 id="lastName"
                                 placeholder="Doe"
                                 value={formData.last_name}
-                                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
+                                onChange={(e) => updateField("last_name", e.target.value)}
                                 className="bg-background border-border focus:border-accent transition-all"
                             />
                         </div>
@@ -121,7 +144,7 @@ export function UserFormModal({
                                 type="email"
                                 placeholder="john.doe@example.com"
                                 value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                onChange={(e) => updateField("email", e.target.value)}
                                 className="pl-10 bg-background border-border focus:border-accent transition-all"
                                 required
                                 disabled={mode === "edit"}
@@ -136,7 +159,7 @@ export function UserFormModal({
                         <Select
                             id="role"
                             value={formData.role}
-                            onChange={(e) => setFormData({ ...formData, role: e.target.value as UserRole })}
+                            onChange={(e) => updateField("role", e.target.value as UserRole)}
                         >
                             <option value="admin">Admin</option>
                             <option value="checker">Checker (Store Manager)</option>
@@ -150,7 +173,7 @@ export function UserFormModal({
                                 id="is_active"
                                 type="checkbox"
                                 checked={formData.is_active}
-                                onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                onChange={(e) => updateField("is_active", e.target.checked)}
                                 className="rounded border-border text-accent focus:ring-accent"
                             />
                             <Label htmlFor="is_active" className="text-sm font-medium">
@@ -162,7 +185,7 @@ export function UserFormModal({
                     <div className="flex items-center justify-end gap-3 pt-4">
                         <button
                             type="button"
-                            onClick={onClose}
+                            onClick={handleClose}
                             className="px-6 py-2 rounded-lg border border-border hover:bg-muted transition-colors text-sm font-medium"
                         >
                             Cancel

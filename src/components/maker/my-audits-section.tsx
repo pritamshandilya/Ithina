@@ -5,7 +5,7 @@
  * Uses shared DataTable with dotted column lines, status badges, and action buttons.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { FileEdit, AlertCircle, Search } from "lucide-react";
 
@@ -56,6 +56,10 @@ export function MyAuditsSection({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [auditToDelete, setAuditToDelete] = useState<string | null>(null);
 
+  const resetPagination = () => {
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  };
+
   const isLoading = isDraftsLoading || isReturnedLoading;
 
   const allAudits = useMemo(() => {
@@ -83,11 +87,7 @@ export function MyAuditsSection({
     return maxItems != null ? sorted.slice(0, maxItems) : sorted;
   }, [allAudits, activeFilter, searchQuery, shelves, maxItems]);
 
-  useEffect(() => {
-    setTablePagination((p) => ({ ...p, page: 1 }));
-  }, [activeFilter, searchQuery]);
-
-  const handleAction = (audit: Audit, action: "resume" | "fix" | "delete") => {
+  const handleAction = useCallback((audit: Audit, action: "resume" | "fix" | "delete") => {
     if (action === "delete") {
       setAuditToDelete(audit.id);
       setIsDeleteDialogOpen(true);
@@ -95,7 +95,7 @@ export function MyAuditsSection({
     }
     if (action === "resume") onResume?.(audit.id, audit.shelfId);
     else onViewReport?.(audit.id, audit.shelfId);
-  };
+  }, [onResume, onViewReport]);
 
   const handleConfirmDelete = () => {
     if (auditToDelete) {
@@ -217,7 +217,7 @@ export function MyAuditsSection({
         },
       },
     ],
-    [shelves, onResume, onViewReport, deleteDraftMutation, handleAction]
+    [handleAction, shelves]
   );
 
   if (isLoading) {
@@ -267,7 +267,10 @@ export function MyAuditsSection({
             <button
               key={filter}
               type="button"
-              onClick={() => setActiveFilter(filter)}
+              onClick={() => {
+                setActiveFilter(filter);
+                resetPagination();
+              }}
               className={cn(
                 "inline-flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-all shrink-0",
                 "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -298,7 +301,10 @@ export function MyAuditsSection({
           <Input
             placeholder="Search by shelf or audit ID..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              resetPagination();
+            }}
             className="pl-9 h-10"
             aria-label="Search audits"
           />

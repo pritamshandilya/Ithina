@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { LayoutGridIcon, TableIcon } from "lucide-react";
 
@@ -14,18 +14,26 @@ import { ShelfCard } from "./shelf-card";
 /** Assigned shelves table column definitions */
 const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
   {
-    title: "Aisle",
-    field: "aisleNumber",
-    sorter: "number",
-    width: 80,
+    title: "ID",
+    field: "shelfCode",
+    sorter: "string",
+    width: 120,
     headerSort: true,
+    formatter: (cell) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
+      return `<span class="font-mono text-sm font-medium text-foreground">${shelf.shelfCode ?? shelf.shelf_id ?? "—"}</span>`;
+    },
   },
   {
-    title: "Bay",
-    field: "bayNumber",
-    sorter: "number",
-    width: 80,
+    title: "Aisle",
+    field: "aisleNumber",
+    sorter: "string",
+    width: 90,
     headerSort: true,
+    formatter: (cell) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
+      return shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—");
+    },
   },
   {
     title: "Shelf Name",
@@ -33,6 +41,39 @@ const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
     sorter: "string",
     minWidth: 160,
     headerSort: true,
+  },
+  {
+    title: "Zone / Section",
+    field: "zone",
+    sorter: "string",
+    minWidth: 180,
+    headerSort: true,
+    formatter: (cell) => {
+      const data = (cell as { getData: () => Shelf }).getData();
+      return `
+        <div class="flex flex-col gap-1 py-1">
+          <span class="text-sm font-medium text-foreground">${data.zone ?? "—"}</span>
+          <span class="text-xs text-muted-foreground">${data.section ?? "—"}</span>
+        </div>
+      `;
+    },
+  },
+  {
+    title: "Fixture",
+    field: "fixtureType",
+    sorter: "string",
+    minWidth: 180,
+    headerSort: true,
+    formatter: (cell) => {
+      const shelf = (cell as { getData: () => Shelf }).getData();
+      const type = shelf.fixtureType?.replace(/_/g, " ") ?? "—";
+      return `
+        <div class="flex flex-col gap-1 py-1">
+          <span class="text-sm font-medium text-foreground">${type}</span>
+          <span class="text-xs text-muted-foreground">${shelf.dimensions ?? "—"}</span>
+        </div>
+      `;
+    },
   },
   {
     title: "Last Audit",
@@ -177,10 +218,11 @@ export function AssignedShelvesList({
   }, [shelves, activeFilter]);
 
   const cardTotalPages = Math.max(1, Math.ceil(filteredShelves.length / CARD_PAGE_SIZE));
+  const visibleCardPage = Math.min(cardPage, cardTotalPages);
   const paginatedCardShelves = useMemo(() => {
-    const start = (cardPage - 1) * CARD_PAGE_SIZE;
+    const start = (visibleCardPage - 1) * CARD_PAGE_SIZE;
     return filteredShelves.slice(start, start + CARD_PAGE_SIZE);
-  }, [cardPage, filteredShelves]);
+  }, [filteredShelves, visibleCardPage]);
 
   const tableVisibleCount = useMemo(() => {
     const start = (tablePagination.page - 1) * tablePagination.pageSize;
@@ -191,16 +233,11 @@ export function AssignedShelvesList({
   const visibleShelvesCount =
     viewMode === "table" ? tableVisibleCount : paginatedCardShelves.length;
 
-  useEffect(() => {
+  const handleFilterChange = (nextFilter: FilterOption) => {
+    setActiveFilter(nextFilter);
     setCardPage(1);
-    setTablePagination((prev) => ({ ...prev, page: 1 }));
-  }, [activeFilter]);
-
-  useEffect(() => {
-    if (cardPage > cardTotalPages) {
-      setCardPage(cardTotalPages);
-    }
-  }, [cardPage, cardTotalPages]);
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  };
 
   // Loading state
   if (isLoading) {
@@ -276,7 +313,7 @@ export function AssignedShelvesList({
           return (
             <button
               key={option.value}
-              onClick={() => setActiveFilter(option.value)}
+              onClick={() => handleFilterChange(option.value)}
               className={cn(
                 "px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap shrink-0",
                 "border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
@@ -375,12 +412,12 @@ export function AssignedShelvesList({
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={() => setCardPage((page) => Math.max(1, page - 1))}
-              disabled={cardPage === 1}
+              onClick={() => setCardPage((page) => Math.max(1, Math.min(page, cardTotalPages) - 1))}
+              disabled={visibleCardPage === 1}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-sm transition-all",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                cardPage === 1
+                visibleCardPage === 1
                   ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
                   : "border-border text-foreground hover:bg-accent/40"
               )}
@@ -388,17 +425,17 @@ export function AssignedShelvesList({
               Previous
             </button>
             <span className="text-sm text-muted-foreground">
-              Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
+              Page <span className="font-semibold text-foreground">{visibleCardPage}</span> of{" "}
               <span className="font-semibold text-foreground">{cardTotalPages}</span>
             </span>
             <button
               type="button"
-              onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
-              disabled={cardPage === cardTotalPages}
+              onClick={() => setCardPage((page) => Math.min(cardTotalPages, Math.min(page, cardTotalPages) + 1))}
+              disabled={visibleCardPage === cardTotalPages}
               className={cn(
                 "rounded-md border px-3 py-1.5 text-sm transition-all",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                cardPage === cardTotalPages
+                visibleCardPage === cardTotalPages
                   ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
                   : "border-border text-foreground hover:bg-accent/40"
               )}

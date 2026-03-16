@@ -13,7 +13,7 @@
  * - Empty states
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { LayoutGridIcon, Search, TableIcon } from "lucide-react";
 
@@ -47,7 +47,7 @@ export interface AuditReviewQueueProps {
   /**
    * Click handler when an audit card is clicked
    */
-  onAuditClick?: (auditId: string, event?: any) => void;
+  onAuditClick?: (auditId: string, event?: unknown) => void;
 
   /**
    * Action handlers
@@ -236,9 +236,19 @@ export function AuditReviewQueue({
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
   const [cardPage, setCardPage] = useState(1);
 
+  const resetPagination = useCallback(() => {
+    setCardPage(1);
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  }, []);
+
   const handleReviewClick = useCallback(
-    (auditId: string, event?: any) => {
-      if (event && event.target && (event.target as HTMLElement).closest("button")) {
+    (auditId: string, event?: unknown) => {
+      const target =
+        event && typeof event === "object" && "target" in event
+          ? (event.target as EventTarget | null)
+          : null;
+
+      if (target instanceof HTMLElement && target.closest("button")) {
         // If the click originated from an action button, don't trigger review navigation
         return;
       }
@@ -341,11 +351,12 @@ export function AuditReviewQueue({
   }, [audits, activeFilter, sortBy, searchQuery]);
 
   const cardTotalPages = Math.max(1, Math.ceil(filteredAndSortedAudits.length / CARD_PAGE_SIZE));
+  const visibleCardPage = Math.min(cardPage, cardTotalPages);
 
   const paginatedCardAudits = useMemo(() => {
-    const start = (cardPage - 1) * CARD_PAGE_SIZE;
+    const start = (visibleCardPage - 1) * CARD_PAGE_SIZE;
     return filteredAndSortedAudits.slice(start, start + CARD_PAGE_SIZE);
-  }, [cardPage, filteredAndSortedAudits]);
+  }, [filteredAndSortedAudits, visibleCardPage]);
 
   const tableVisibleCount = useMemo(() => {
     const start = (tablePagination.page - 1) * tablePagination.pageSize;
@@ -355,16 +366,20 @@ export function AuditReviewQueue({
 
   const visibleCount = viewMode === "table" ? tableVisibleCount : paginatedCardAudits.length;
 
-  useEffect(() => {
-    setCardPage(1);
-    setTablePagination((prev) => ({ ...prev, page: 1 }));
-  }, [activeFilter, searchQuery, sortBy]);
+  const handleFilterChange = (nextFilter: AuditQueueFilter) => {
+    setActiveFilter(nextFilter);
+    resetPagination();
+  };
 
-  useEffect(() => {
-    if (cardPage > cardTotalPages) {
-      setCardPage(cardTotalPages);
-    }
-  }, [cardPage, cardTotalPages]);
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    resetPagination();
+  };
+
+  const handleSortChange = (value: AuditQueueSort) => {
+    setSortBy(value);
+    resetPagination();
+  };
 
   // Loading state
   if (isLoading) {
@@ -418,7 +433,7 @@ export function AuditReviewQueue({
             return (
               <button
                 key={option.value}
-                onClick={() => setActiveFilter(option.value)}
+                onClick={() => handleFilterChange(option.value)}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
                   "border-2 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2",
@@ -457,7 +472,7 @@ export function AuditReviewQueue({
             type="search"
             placeholder="Search by shelf or submitter name..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-10"
             aria-label="Search audits"
           />
@@ -470,7 +485,7 @@ export function AuditReviewQueue({
           <span className="text-muted-foreground">Sort by:</span>
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as AuditQueueSort)}
+            onChange={(e) => handleSortChange(e.target.value as AuditQueueSort)}
             className="rounded-md border border-border bg-card px-3 py-1.5 text-card-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             aria-label="Sort audits"
           >
@@ -530,7 +545,8 @@ export function AuditReviewQueue({
               </p>
               {searchQuery.trim() && (
                 <button
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => handleSearchChange("")}
+                  type="button"
                   className="mt-3 text-sm text-accent underline hover:text-accent/80"
                 >
                   Clear search
@@ -574,12 +590,12 @@ export function AuditReviewQueue({
             <div className="mt-3 flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={() => setCardPage((page) => Math.max(1, page - 1))}
-                disabled={cardPage === 1}
+                onClick={() => setCardPage((page) => Math.max(1, Math.min(page, cardTotalPages) - 1))}
+                disabled={visibleCardPage === 1}
                 className={cn(
                   "rounded-md border px-3 py-1.5 text-sm transition-all",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  cardPage === 1
+                  visibleCardPage === 1
                     ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
                     : "border-border text-foreground hover:bg-accent/40"
                 )}
@@ -587,17 +603,17 @@ export function AuditReviewQueue({
                 Previous
               </button>
               <span className="text-sm text-muted-foreground">
-                Page <span className="font-semibold text-foreground">{cardPage}</span> of{" "}
+                Page <span className="font-semibold text-foreground">{visibleCardPage}</span> of{" "}
                 <span className="font-semibold text-foreground">{cardTotalPages}</span>
               </span>
               <button
                 type="button"
-                onClick={() => setCardPage((page) => Math.min(cardTotalPages, page + 1))}
-                disabled={cardPage === cardTotalPages}
+                onClick={() => setCardPage((page) => Math.min(cardTotalPages, Math.min(page, cardTotalPages) + 1))}
+                disabled={visibleCardPage === cardTotalPages}
                 className={cn(
                   "rounded-md border px-3 py-1.5 text-sm transition-all",
                   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  cardPage === cardTotalPages
+                  visibleCardPage === cardTotalPages
                     ? "cursor-not-allowed border-border/60 text-muted-foreground/60"
                     : "border-border text-foreground hover:bg-accent/40"
                 )}

@@ -5,7 +5,7 @@
  * Allows tracking of pending, approved, and returned audits.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Search, AlertTriangle, CheckCircle, Clock } from "lucide-react";
 import { format } from "date-fns";
 
@@ -51,6 +51,10 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+
+  const resetPagination = () => {
+    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+  };
 
   const submittedAudits = useMemo(() => {
     return (allAudits || []).filter((a) => a.status !== "draft" && a.status !== "never-audited");
@@ -100,10 +104,6 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
       return dateB - dateA;
     });
   }, [normalizedAudits, activeFilter, searchQuery, shelves]);
-
-  useEffect(() => {
-    setTablePagination((p) => ({ ...p, page: 1 }));
-  }, [activeFilter, searchQuery]);
 
   const tableVisibleCount = Math.max(
     0,
@@ -307,7 +307,10 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
             <button
               key={filter}
               type="button"
-              onClick={() => setActiveFilter(filter)}
+              onClick={() => {
+                setActiveFilter(filter);
+                resetPagination();
+              }}
               className={cn(
                 "inline-flex shrink-0 items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-medium transition-all",
                 "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
@@ -330,7 +333,10 @@ export function ApprovalStatusList({ className, onAction }: ApprovalStatusListPr
           <Input
             placeholder="Search audits..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              resetPagination();
+            }}
             className="h-9 w-full bg-background pl-9"
             aria-label="Search audits"
           />

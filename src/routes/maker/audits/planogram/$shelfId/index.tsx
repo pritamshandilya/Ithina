@@ -6,7 +6,6 @@
  * Drag-and-drop: reorder within shelf, move between shelves, restore from removed.
  * Access at: /maker/audits/planogram/:shelfId
  */
-import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useLocation, useNavigate, useRouter } from "@tanstack/react-router";
 import { ArrowLeft, Check } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -21,11 +20,10 @@ import {
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { updateShelfArrangement } from "@/queries/maker/api/planogram";
 import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
-  planogramShelfPreviewKeys,
   usePlanogramShelfPreview,
+  useUpdateShelfArrangement,
 } from "@/queries/maker";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -72,7 +70,6 @@ const PLANOGRAM_FALLBACK = "/maker/audits/planogram";
 
 function PlanogramPreviewPage() {
   const { shelfId } = Route.useParams();
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const router = useRouter();
   const navigate = useNavigate();
@@ -99,6 +96,8 @@ function PlanogramPreviewPage() {
     sku: string;
     fromShelf: number | "removed";
   } | null>(null);
+
+  const updateShelfArrangementMutation = useUpdateShelfArrangement();
 
   useEffect(() => {
     if (!preview) return;
@@ -426,11 +425,11 @@ function PlanogramPreviewPage() {
           Object.keys(productEdits).length > 0 ? productEdits : undefined,
       };
 
-      const updated = await updateShelfArrangement(shelfId, arrangement);
+      const updated = await updateShelfArrangementMutation.mutateAsync({
+        shelfId,
+        arrangement,
+      });
       if (updated) {
-        await queryClient.invalidateQueries({
-          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
-        });
         toast({
           title: "Changes saved",
           description: "Your planogram edits have been saved.",
@@ -458,7 +457,6 @@ function PlanogramPreviewPage() {
     shelfId,
     localShelves,
     removedItems,
-    queryClient,
     toast,
   ]);
 

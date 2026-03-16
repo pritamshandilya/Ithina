@@ -8,7 +8,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { createShelf } from "../api/shelves";
-import { shelfKeys } from "@/queries/shared";
 
 export function useCreateShelf() {
   const queryClient = useQueryClient();
@@ -16,7 +15,9 @@ export function useCreateShelf() {
   return useMutation({
     mutationFn: createShelf,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: shelfKeys.lists() });
+      void queryClient.invalidateQueries({
+        queryKey: ["maker", "shelves", "list"],
+      });
     },
   });
 }

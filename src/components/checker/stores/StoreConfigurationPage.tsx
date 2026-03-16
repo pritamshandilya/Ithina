@@ -55,8 +55,7 @@ export function StoreConfigurationPage() {
                 title: "Settings Saved",
                 description: "The store configuration has been updated successfully.",
             });
-        } catch (error) {
-            console.error("Failed to update store:", error);
+        } catch {
             toast({
                 title: "Update Failed",
                 description: "An error occurred while saving the store settings.",

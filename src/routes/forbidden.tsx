@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
+import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
 
 export const Route = createFileRoute("/forbidden")({
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: ({ context, location }: BeforeLoadArgs) => {
     requireAuth(context, location);
   },
   component: ForbiddenPage,

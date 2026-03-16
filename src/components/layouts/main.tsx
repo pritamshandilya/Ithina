@@ -1,5 +1,5 @@
 import { createContext, type PropsWithChildren, useContext } from "react";
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Outlet, useRouter } from "@tanstack/react-router";
 
 import Sidenav from "./main/sidenav";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -12,32 +12,7 @@ interface MainLayoutProps extends PropsWithChildren {
   pageHeaderClassName?: string;
 }
 
-/** Full report views where header/metrics/tabs stay fixed and only tab content scrolls */
-function isFullReportView(pathname: string): boolean {
-  if (pathname.includes("maker/reports/view")) return true;
-  if (pathname.includes("checker/audit-report/")) return true;
-  if (
-    pathname.includes("checker/reports/view") &&
-    !pathname.match(/checker\/reports\/view\/[^/]+/)
-  )
-    return true;
-  return false;
-}
-
-/** Pages where header/search stay fixed and only the table scrolls */
-function isStickyTablePage(pathname: string): boolean {
-  if (pathname === "/maker/audits/planogram" || pathname === "/maker/audits/planogram/")
-    return true;
-  if (pathname === "/maker/shelf" || pathname === "/maker/shelf/") return true;
-  if (pathname === "/checker/shelf" || pathname === "/checker/shelf/") return true;
-  if (pathname === "/checker/audit-review" || pathname === "/checker/audit-review/") return true;
-  if (pathname === "/checker/knowledge-center" || pathname === "/checker/knowledge-center/")
-    return true;
-  if (pathname === "/maker/audits/adhoc" || pathname === "/maker/audits/adhoc/") return true;
-  if (pathname === "/maker/manual-audits" || pathname === "/maker/manual-audits/") return true;
-  if (pathname.startsWith("/maker/historical-analysis")) return true;
-  return false;
-}
+type LayoutMode = "default" | "fullReport" | "stickyTable";
 
 export default function MainLayout({
   children,
@@ -45,10 +20,16 @@ export default function MainLayout({
   pageHeaderClassName,
 }: MainLayoutProps) {
   const isNestedMainLayout = useContext(MainLayoutContext);
-  const location = useLocation();
-  const fullReportView = isFullReportView(location.pathname);
-  const stickyTablePage = isStickyTablePage(location.pathname);
-  const constrainedHeight = fullReportView || stickyTablePage;
+  const router = useRouter();
+
+  // Derive layout mode from the current route's meta instead of hard-coded path checks.
+  const matches = router.state.matches;
+  const currentMatch = matches[matches.length - 1];
+  const layoutMode: LayoutMode =
+    (currentMatch?.meta as { layoutMode?: LayoutMode } | undefined)
+      ?.layoutMode ?? "default";
+  const constrainedHeight =
+    layoutMode === "fullReport" || layoutMode === "stickyTable";
 
   if (isNestedMainLayout) {
     return (

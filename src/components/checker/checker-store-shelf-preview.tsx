@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Rows3, Store, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
 import { useComplianceOverview } from "@/queries/checker";
 import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
@@ -36,7 +36,7 @@ export function CheckerStoreShelfPreview({
   const navigate = useNavigate();
   const { selectedStore } = useStore();
   const storeId = selectedStore?.id ?? mockCheckerUser.storeId;
-  const { data: shelves, isLoading: shelvesLoading } = useAssignedShelves();
+  const { data: shelves, isLoading: shelvesLoading } = useShelves();
   const { data: _compliance, isLoading: complianceLoading } =
     useComplianceOverview(storeId);
 

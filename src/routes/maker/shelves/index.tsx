@@ -9,7 +9,7 @@ import { ShelfCard, ShelfActions } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { useAssignedShelves } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { Shelf } from "@/types/maker";
@@ -108,7 +108,7 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
 ];
 
 function ShelfManagementPage() {
-  const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: shelves, isLoading } = useShelves();
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
@@ -216,11 +216,19 @@ function ShelfManagementPage() {
 
               {/* <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
                 <SheetTrigger asChild> */}
-                  <Button onClick={() => navigate({ to: "/maker/audits/planogram/new" })} className="bg-chart-2 text-white hover:opacity-90">
-                    <Plus className="size-4 mr-2" />
-                    New Shelf
-                  </Button>
-                {/* </SheetTrigger> */}
+              <Button
+                onClick={() =>
+                  navigate({
+                    to: "/maker/audits/planogram/new",
+                    search: { shelfId: undefined },
+                  })
+                }
+                className="bg-chart-2 text-white hover:opacity-90"
+              >
+                <Plus className="size-4 mr-2" />
+                New Shelf
+              </Button>
+              {/* </SheetTrigger> */}
                 {/* <SheetContent className="w-full sm:max-w-md p-0">
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-4 pb-2 space-y-1">

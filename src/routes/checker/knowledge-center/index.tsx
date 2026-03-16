@@ -19,6 +19,7 @@ import { hasPermission } from "@/auth/authorization";
 import MainLayout from "@/components/layouts/main";
 import { useStore } from "@/providers/store";
 import { mockCheckerUser } from "@/lib/api/mock-data";
+import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/shared/page-header";
@@ -27,7 +28,7 @@ import { ComplianceRulesTab } from "@/components/checker/knowledge-center/compli
 import { ReferenceDocumentsTab } from "@/components/checker/knowledge-center/reference-documents-tab";
 
 export const Route = createFileRoute("/checker/knowledge-center/")({
-  beforeLoad: ({ context, location }) => {
+  beforeLoad: ({ context, location }: BeforeLoadArgs) => {
     const user = requireAuth(context, location);
     if (!hasPermission(user, "knowledge-center:view")) {
       throw redirect({ to: "/forbidden" });

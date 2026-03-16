@@ -3,7 +3,7 @@ import { AlertCircleIcon, FileTextIcon, ImageIcon, ChevronRightIcon, ClockIcon }
 
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useReturnedAudits } from "@/queries/maker";
+import { useShelves, useReturnedAudits } from "@/queries/maker";
 import { cn } from "@/lib/utils";
 
 /**
@@ -58,7 +58,7 @@ export function ReturnedAuditsSection({
   className,
 }: ReturnedAuditsSectionProps) {
   const { data: returnedAudits = [], isLoading, error } = useReturnedAudits();
-  const { data: shelves } = useAssignedShelves();
+  const { data: shelves } = useShelves();
 
   // Loading state
   if (isLoading) {

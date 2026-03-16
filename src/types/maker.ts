@@ -26,13 +26,13 @@ export type AuditMode =
  */
 export interface Shelf {
   id: string;
-  shelf_id: string;
+  shelf_id?: string;
   aisleNumber: number;
   aisle?: string;
   bayNumber: number;
   shelfName: string;
   /** String identifier from backend (e.g. S1, SH-01) */
-  shelfCode: string;
+  shelfCode?: string;
   description?: string;
   status: AuditStatus;
   lastAuditDate?: Date;

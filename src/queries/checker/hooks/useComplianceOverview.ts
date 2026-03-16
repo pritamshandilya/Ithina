@@ -1,8 +1,8 @@
 /**
  * useComplianceOverview Hook
- * 
+ *
  * TanStack Query hook for fetching compliance overview metrics.
- * 
+ *
  * Features:
  * - Automatic caching (30 second stale time)
  * - Auto-refresh every 30 seconds
@@ -17,9 +17,10 @@ import { fetchComplianceOverview } from "../api/checker";
  * Query key factory for compliance overview
  */
 export const complianceOverviewKeys = {
-  all: ["checker", "compliance-overview"] as const,
-  byStore: (storeId: string) => [...complianceOverviewKeys.all, storeId] as const,
-};
+  all: ["compliance-overview"] as const,
+  detail: (storeId: string) =>
+    [...complianceOverviewKeys.all, "detail", storeId] as const,
+} as const;
 
 /**
  * Hook to fetch compliance overview metrics for a specific store
@@ -34,7 +35,7 @@ export const complianceOverviewKeys = {
  */
 export function useComplianceOverview(storeId: string) {
   return useQuery({
-    queryKey: complianceOverviewKeys.byStore(storeId),
+    queryKey: complianceOverviewKeys.detail(storeId),
     queryFn: () => fetchComplianceOverview(storeId),
     staleTime: 30 * 1000, // 30 seconds - governance metrics update frequently
     gcTime: 5 * 60 * 1000, // 5 minutes garbage collection

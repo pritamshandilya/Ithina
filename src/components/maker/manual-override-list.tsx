@@ -12,7 +12,7 @@ import { format } from "date-fns";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, useMakerAudits } from "@/queries/maker";
+import { useShelves, useMakerAudits } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { Audit } from "@/types/maker";
@@ -46,7 +46,7 @@ function getModeLabel(mode: string): string {
 
 export function ApprovalStatusList({ className, onAction }: ApprovalStatusListProps) {
   const { data: allAudits, isLoading } = useMakerAudits();
-  const { data: shelves } = useAssignedShelves();
+  const { data: shelves } = useShelves();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");

@@ -17,8 +17,27 @@
 
 import { ApiError } from "@/exceptions/ApiError";
 import { getHttpConfig } from "@/lib/api/config";
+import store from "@/store";
+import { selectSelectedStore } from "@/store/selectors";
 
 export { ApiError };
+
+function getAuthToken(): string | null {
+  try {
+    return store.getState().auth?.token ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function getSelectedStoreId(): string | null {
+  try {
+    const selected = selectSelectedStore(store.getState());
+    return selected?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
 async function parseResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
@@ -34,6 +53,8 @@ async function parseResponse<T>(res: Response): Promise<T> {
         : data && typeof data === "object" && "detail" in data
           ? String((data as { detail: unknown }).detail)
           : res.statusText || "An unexpected error occurred";
+
+    // Surface 401/403 as ApiError so callers can handle session expiry
     throw new ApiError(res.status, res.statusText, message, data);
   }
   // 204 No Content
@@ -48,23 +69,16 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
     ...(extra as Record<string, string>),
   };
 
-  // Attach auth token when available (JWT stored in memory by auth provider)
-  const token = sessionStorage.getItem(getHttpConfig().tokenStorageKey);
+  // Attach auth token when available
+  const token = getAuthToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Attach selected store ID when available (stored in localStorage by StoreProvider)
-  const storedStore = localStorage.getItem("selected_store");
-  if (storedStore) {
-    try {
-      const store = JSON.parse(storedStore);
-      if (store?.id) {
-        headers["X-Store-Id"] = store.id;
-      }
-    } catch {
-      // Ignore parse errors
-    }
+  // Attach selected store ID when available
+  const storeId = getSelectedStoreId();
+  if (storeId) {
+    headers["X-Store-Id"] = storeId;
   }
 
   return headers;
@@ -77,6 +91,7 @@ async function request<T>(
     body?: unknown;
     params?: Record<string, string | number | boolean | undefined | null>;
     headers?: HeadersInit;
+    timeoutMs?: number;
   },
 ): Promise<T> {
   let url = `${getHttpConfig().baseUrl}${path}`;
@@ -92,6 +107,14 @@ async function request<T>(
     if (queryString) url += `?${queryString}`;
   }
 
+  const controller = new AbortController();
+  const timeout =
+    typeof options?.timeoutMs === "number" && options.timeoutMs > 0
+      ? options.timeoutMs
+      : 30_000;
+
+  const timer = setTimeout(() => controller.abort(), timeout);
+
   const res = await fetch(url, {
     method,
     headers: buildHeaders(options?.headers),
@@ -101,23 +124,34 @@ async function request<T>(
         : options?.body !== undefined
           ? JSON.stringify(options.body)
           : undefined,
+    signal: controller.signal,
+  }).finally(() => {
+    clearTimeout(timer);
   });
 
   return parseResponse<T>(res);
+}
+
+export interface RequestOptions {
+  headers?: HeadersInit;
 }
 
 export const apiClient = {
   get: <T>(
     path: string,
     params?: Record<string, string | number | boolean | undefined | null>,
-  ) => request<T>("GET", path, { params }),
+    options?: RequestOptions,
+  ) => request<T>("GET", path, { params, ...options }),
 
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, { body }),
+  post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("POST", path, { body, ...options }),
 
-  put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
+  put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("PUT", path, { body, ...options }),
 
-  patch: <T>(path: string, body?: unknown) =>
-    request<T>("PATCH", path, { body }),
+  patch: <T>(path: string, body?: unknown, options?: RequestOptions) =>
+    request<T>("PATCH", path, { body, ...options }),
 
-  delete: <T = void>(path: string) => request<T>("DELETE", path),
+  delete: <T = void>(path: string, options?: RequestOptions) =>
+    request<T>("DELETE", path, options),
 };

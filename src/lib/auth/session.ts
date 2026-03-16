@@ -2,7 +2,7 @@ import type { Permission } from "@/auth/permissions";
 import { isPermission } from "@/auth/permissions";
 import type { RouterAuthSnapshot } from "@/auth/state";
 import { ApiError, apiClient } from "@/queries/shared";
-import { getHttpConfig } from "@/lib/api/config";
+import store from "@/store";
 
 export type UserRole = "admin" | "maker" | "checker";
 
@@ -44,17 +44,6 @@ interface MeApiResponse {
   store_ids?: string[];
 }
 
-const TOKEN_EXPIRY_KEY = "auth_token_expiry";
-const USER_KEY = "auth_user";
-
-function getTokenStorageKey(): string {
-  return getHttpConfig().tokenStorageKey;
-}
-
-function isUserRole(role: unknown): role is UserRole {
-  return role === "admin" || role === "maker" || role === "checker";
-}
-
 function parsePermissions(value: unknown): Permission[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const permissions = value.filter(isPermission);
@@ -67,74 +56,6 @@ function parseStoreIds(value: unknown): string[] | undefined {
     (storeId): storeId is string => typeof storeId === "string" && !!storeId,
   );
   return storeIds.length ? storeIds : undefined;
-}
-
-function loadUser(): AuthSessionUser | null {
-  const rawUser = localStorage.getItem(USER_KEY);
-  if (!rawUser) return null;
-
-  try {
-    const parsed = JSON.parse(rawUser) as Partial<AuthSessionUser> & {
-      organization?: Partial<OrganizationInfo>;
-      store_ids?: unknown;
-      permissions?: unknown;
-    };
-
-    if (!parsed || typeof parsed !== "object") return null;
-
-    const id = typeof parsed.id === "string" ? parsed.id : "";
-    const email = typeof parsed.email === "string" ? parsed.email : "";
-    const role = isUserRole(parsed.role) ? parsed.role : null;
-    const organizationId =
-      typeof parsed.organization?.id === "string"
-        ? parsed.organization.id
-        : "default-org";
-    const organizationName =
-      typeof parsed.organization?.name === "string"
-        ? parsed.organization.name
-        : "My Organization";
-    const isActive =
-      typeof parsed.isActive === "boolean" ? parsed.isActive : false;
-    const lastLoginAt =
-      typeof parsed.lastLoginAt === "string" ? parsed.lastLoginAt : undefined;
-    const permissions = parsePermissions(parsed.permissions);
-    const storeIds =
-      parseStoreIds(parsed.storeIds) ?? parseStoreIds(parsed.store_ids);
-
-    if (!id || !email || !role) {
-      return null;
-    }
-
-    const fallbackNames = getInitialsFromEmail(email);
-
-    return {
-      id,
-      email,
-      role,
-      organization: {
-        id: organizationId,
-        name: organizationName,
-      },
-      isActive,
-      lastLoginAt,
-      firstName: normalizeName(parsed.firstName) ?? fallbackNames.firstName,
-      lastName: normalizeName(parsed.lastName) ?? fallbackNames.lastName,
-      permissions,
-      storeIds,
-    };
-  } catch {
-    return null;
-  }
-}
-
-function saveUser(user: AuthSessionUser): void {
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-}
-
-function saveToken(accessToken: string, expiresInSeconds: number): void {
-  sessionStorage.setItem(getTokenStorageKey(), accessToken);
-  const expiryEpochMs = Date.now() + expiresInSeconds * 1000;
-  localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiryEpochMs));
 }
 
 export function getInitialsFromEmail(email: string): {
@@ -169,55 +90,52 @@ function normalizeName(name?: string | null): string | undefined {
   return trimmed ? trimmed : undefined;
 }
 
-function hasSameSnapshot(
-  left: RouterAuthSnapshot,
-  right: RouterAuthSnapshot,
-): boolean {
-  return (
-    left.isAuthenticated === right.isAuthenticated &&
-    left.user?.id === right.user?.id &&
-    left.user?.role === right.user?.role &&
-    left.user?.permissions?.join("|") === right.user?.permissions?.join("|")
-  );
+function getAuthFromStore() {
+  return store.getState().auth;
 }
 
+const EMPTY_SNAPSHOT: RouterAuthSnapshot = {
+  isAuthenticated: false,
+  user: null,
+};
+
 export class AuthSessionService {
-  private static listeners = new Set<() => void>();
-  private static snapshot: RouterAuthSnapshot | null = null;
+  private static cachedSnapshot: RouterAuthSnapshot = EMPTY_SNAPSHOT;
+  private static cachedAuthKey: string = "";
 
   private static computeSnapshot(): RouterAuthSnapshot {
-    if (!this.isAuthenticated()) {
-      return {
-        isAuthenticated: false,
-        user: null,
-      };
-    }
-
-    const user = loadUser();
+    const { token, tokenExpiry, user } = getAuthFromStore();
+    const validToken =
+      !!token &&
+      !!tokenExpiry &&
+      !Number.isNaN(Number(tokenExpiry)) &&
+      Date.now() < Number(tokenExpiry);
+    const authenticated = validToken && !!user;
     return {
-      isAuthenticated: !!user,
-      user,
+      isAuthenticated: authenticated,
+      user: authenticated ? (user as AuthSessionUser) : null,
     };
   }
 
-  private static emitAuthChanged(): void {
-    this.snapshot = this.computeSnapshot();
-    this.listeners.forEach((listener) => listener());
+  /** Stable key for current auth state so we can return cached snapshot when unchanged */
+  private static getAuthKey(): string {
+    const { token, tokenExpiry, user } = getAuthFromStore();
+    const u = user as AuthSessionUser | null;
+    return `${token ?? ""}|${tokenExpiry ?? ""}|${u?.id ?? ""}`;
   }
 
   static subscribe(listener: () => void): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
+    return store.subscribe(listener);
   }
 
   static getSnapshot(): RouterAuthSnapshot {
-    const next = this.computeSnapshot();
-    if (!this.snapshot || !hasSameSnapshot(this.snapshot, next)) {
-      this.snapshot = next;
+    const key = this.getAuthKey();
+    if (key === this.cachedAuthKey) {
+      return this.cachedSnapshot;
     }
-    return this.snapshot;
+    this.cachedAuthKey = key;
+    this.cachedSnapshot = this.computeSnapshot();
+    return this.cachedSnapshot;
   }
 
   static async login(
@@ -229,7 +147,11 @@ export class AuthSessionService {
       password,
     });
 
-    saveToken(login.access_token, login.expires_in);
+    const tokenExpiry = Date.now() + login.expires_in * 1000;
+    store.dispatch({
+      type: "auth/setSession",
+      payload: { token: login.access_token, tokenExpiry, user: null },
+    });
 
     const me = await this.fetchUserInfo();
     return me;
@@ -245,7 +167,11 @@ export class AuthSessionService {
 
     const login = await apiClient.post<LoginApiResponse>("/auth/token", body);
 
-    saveToken(login.access_token, login.expires_in);
+    const tokenExpiry = Date.now() + login.expires_in * 1000;
+    store.dispatch({
+      type: "auth/setSession",
+      payload: { token: login.access_token, tokenExpiry, user: null },
+    });
 
     const me = await this.fetchUserInfo();
     return me;
@@ -253,26 +179,20 @@ export class AuthSessionService {
 
   static getCurrentUser(): AuthSessionUser | null {
     if (!this.isAuthenticated()) return null;
-    return loadUser();
+    return getAuthFromStore().user as AuthSessionUser | null;
   }
 
   static isAuthenticated(): boolean {
-    const token = sessionStorage.getItem(getTokenStorageKey());
-    const expiryRaw = localStorage.getItem(TOKEN_EXPIRY_KEY);
-
-    if (!token || !expiryRaw) return false;
-
-    const expiry = Number.parseInt(expiryRaw, 10);
+    const { token, tokenExpiry } = getAuthFromStore();
+    if (!token || tokenExpiry == null) return false;
+    const expiry = Number(tokenExpiry);
     if (Number.isNaN(expiry)) return false;
     return Date.now() < expiry;
   }
 
   static logout(): void {
-    sessionStorage.removeItem(getTokenStorageKey());
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem("selected_store");
-    this.emitAuthChanged();
+    store.dispatch({ type: "auth/clearSession" });
+    store.dispatch({ type: "store/setCurrentStore", payload: null });
   }
 
   static getDashboardRoute(
@@ -301,8 +221,7 @@ export class AuthSessionService {
         permissions: parsePermissions(me.permissions),
         storeIds: parseStoreIds(me.store_ids),
       };
-      saveUser(mapped);
-      this.emitAuthChanged();
+      store.dispatch({ type: "auth/setSession", payload: { user: mapped } });
       return mapped;
     } catch (error) {
       if (error instanceof ApiError && error.status === 401) {

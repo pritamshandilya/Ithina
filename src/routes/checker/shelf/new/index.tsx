@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
 import { z } from "zod";
@@ -20,19 +19,18 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  assignedShelvesKeys,
-  useAssignedShelves,
+  useShelves,
   useCreateShelf,
   usePlanogramById,
   usePlanogramList,
+  useAssignPlanogramToShelf,
 } from "@/queries/maker";
-import { assignPlanogramToShelf } from "@/queries/maker/api/planogram";
 import type { PlanogramArrangement } from "@/types/planogram";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
-  validateSearch: (search) =>
+  validateSearch: (search: unknown) =>
     z
       .object({
         associateShelfId: z.string().optional(),
@@ -41,20 +39,30 @@ export const Route = createFileRoute("/checker/shelf/new/")({
       .parse(search),
 });
 
-export function AddPlanogramPage() {
+type AddPlanogramPageSearch = {
+  associateShelfId?: string;
+  associateShelfName?: string;
+};
+
+type AddPlanogramPageProps = {
+  searchOverride?: AddPlanogramPageSearch;
+};
+
+export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams({ strict: false }) as any;
-  const { associateShelfId, associateShelfName } = Route.useSearch();
+  const { associateShelfId, associateShelfName } =
+    searchOverride ?? Route.useSearch();
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
   const shelfListPath =
     isAdmin && storeId ? `/admin/${storeId}/shelf` : "/checker/shelf";
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
-  const { data: shelves } = useAssignedShelves();
+  const { data: shelves } = useShelves();
   const createShelfMutation = useCreateShelf();
+  const assignPlanogramMutation = useAssignPlanogramToShelf();
   const isAssociateMode = !!associateShelfId;
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
@@ -118,12 +126,11 @@ export function AddPlanogramPage() {
               productIds: s.products.map((p) => p.sku),
             })) ?? [],
         };
-        await assignPlanogramToShelf(
-          associateShelfId,
-          selectedPlanogramId,
-          arrangement
-        );
-        await queryClient.invalidateQueries({ queryKey: assignedShelvesKeys.all });
+        await assignPlanogramMutation.mutateAsync({
+          shelfId: associateShelfId,
+          planogramId: selectedPlanogramId,
+          arrangement,
+        });
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
         navigate({ to: shelfListPath as any });
       } else if (!isAssociateMode) {
@@ -168,8 +175,8 @@ export function AddPlanogramPage() {
     dimHeight,
     planogramPayload,
     createShelfMutation,
+    assignPlanogramMutation,
     navigate,
-    queryClient,
     toast,
   ]);
 

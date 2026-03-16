@@ -10,3 +10,5 @@ export {
   type RuleStatusBadgeProps,
 } from "./rule-status-badge";
 export { PageHeader } from "./page-header";
+export { ReportPage } from "./report-page";
+export * from "./compliance-report";

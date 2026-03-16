@@ -21,6 +21,9 @@ import { getRelativePath } from "@/lib/utils";
 
 export const Route = createFileRoute("/maker/reports/view/")({
   component: FullReportPage,
+  meta: {
+    layoutMode: "fullReport",
+  },
 });
 
 function FullReportPage() {
@@ -49,8 +52,7 @@ function FullReportPage() {
         title: "PDF exported",
         description: "The report has been exported. A preview opened in a new tab and the file was downloaded.",
       });
-    } catch (err) {
-      console.error("PDF export failed:", err);
+    } catch {
       toast({
         title: "Export failed",
         description: "Could not generate the PDF. Please try again.",

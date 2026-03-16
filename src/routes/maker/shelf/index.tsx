@@ -7,7 +7,7 @@ import MainLayout from "@/components/layouts/main";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves, usePlanogramList } from "@/queries/maker";
+import { useShelves, usePlanogramList } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { PageHeader } from "@/components/shared/page-header";
 import type { PlanogramArrangement } from "@/types/planogram";
@@ -226,7 +226,7 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
 ];
 
 export function MakerShelfPage() {
-  const { data: shelves, isLoading } = useAssignedShelves();
+  const { data: shelves, isLoading } = useShelves();
   const { data: planogramList } = usePlanogramList();
   
   const [searchQuery, setSearchQuery] = useState("");

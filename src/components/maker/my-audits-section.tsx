@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
-  useAssignedShelves,
+  useShelves,
   useDraftAudits,
   useReturnedAudits,
   useDeleteDraft,
@@ -47,7 +47,7 @@ export function MyAuditsSection({
 }: MyAuditsSectionProps) {
   const { data: draftAudits = [], isLoading: isDraftsLoading } = useDraftAudits();
   const { data: returnedAudits = [], isLoading: isReturnedLoading } = useReturnedAudits();
-  const { data: shelves } = useAssignedShelves();
+  const { data: shelves } = useShelves();
   const deleteDraftMutation = useDeleteDraft();
 
   const [activeFilter, setActiveFilter] = useState<"all" | "draft" | "returned">("all");
@@ -217,7 +217,7 @@ export function MyAuditsSection({
         },
       },
     ],
-    [shelves, onResume, onViewReport, deleteDraftMutation]
+    [shelves, onResume, onViewReport, deleteDraftMutation, handleAction]
   );
 
   if (isLoading) {

@@ -10,6 +10,9 @@ import type { DataTableColumn } from "@/components/ui/data-table";
 
 export const Route = createFileRoute("/checker/reports/store-level/")({
     component: StoreLevelReport,
+    meta: {
+        layoutMode: "stickyTable",
+    },
 });
 
 export function StoreLevelReport() {
@@ -33,9 +36,7 @@ export function StoreLevelReport() {
         { title: "STATUS", field: "status" },
     ];
 
-    const handleRowClick = (row: ShelfSummary) => {
-        // eslint-disable-next-line no-console
-        console.log("Store level row clicked:", row);
+    const handleRowClick = (_row: ShelfSummary) => {
         navigate({ to: "/checker/reports/view/$reportId", params: { reportId: "1" } });
     };
 

@@ -40,3 +40,12 @@ export {
   type StockingRulesSectionProps,
 } from "./stocking-rules-section";
 export { ShelfInfoModal } from "./shelf-info-modal";
+export {
+  createPlanogramColumns,
+  PLANOGRAM_INITIAL_SORT,
+  PLANOGRAM_PAGE_SIZE_OPTIONS,
+  PlanogramStatusCell,
+  PlanogramActionsMenu,
+  type PlanogramActionsMenuProps,
+  type PlanogramStatusCellProps,
+} from "./planogram-table-columns";

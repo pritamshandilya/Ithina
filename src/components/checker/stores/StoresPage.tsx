@@ -44,8 +44,8 @@ export function StoresPage() {
         try {
             await createStoreMutation.mutateAsync(newStore);
             setIsAddModalOpen(false);
-        } catch (error) {
-            console.error("Failed to create store:", error);
+        } catch {
+            // Store creation errors are handled by query layer or UI feedback.
         }
     };
 
@@ -58,8 +58,8 @@ export function StoresPage() {
             });
             setIsEditModalOpen(false);
             setSelectedStore(null);
-        } catch (error) {
-            console.error("Failed to update store:", error);
+        } catch {
+            // Store update errors are handled by query layer or UI feedback.
         }
     };
 
@@ -69,8 +69,8 @@ export function StoresPage() {
             await deleteStoreMutation.mutateAsync(selectedStore.id);
             setIsDeleteModalOpen(false);
             setSelectedStore(null);
-        } catch (error) {
-            console.error("Failed to delete store:", error);
+        } catch {
+            // Store deletion errors are handled by query layer or UI feedback.
         }
     };
 

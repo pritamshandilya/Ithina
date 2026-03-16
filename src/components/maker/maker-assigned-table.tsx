@@ -3,7 +3,7 @@ import { formatDistanceToNow } from "date-fns";
 import { Rows3, ChevronRight } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignedShelves } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
 import type { AuditStatus } from "@/types/maker";
@@ -32,7 +32,7 @@ export function MakerAssignedTable({
   className,
 }: MakerAssignedTableProps) {
   const navigate = useNavigate();
-  const { data: shelves, isLoading, error } = useAssignedShelves();
+  const { data: shelves, isLoading, error } = useShelves();
 
   if (isLoading) {
     return (

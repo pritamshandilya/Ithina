@@ -61,8 +61,7 @@ function AdminUsersPage() {
       await inviteUserMutation.mutateAsync(payload);
       setIsFormModalOpen(false);
       toast({ title: "Invitation Sent", description: `A login invitation has been sent to ${payload.email}.` });
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       toast({ title: "Error", description: "Failed to send invitation.", variant: "destructive" });
     }
   };
@@ -74,8 +73,7 @@ function AdminUsersPage() {
       setIsFormModalOpen(false);
       setSelectedUser(null);
       toast({ title: "User Updated", description: "The user has been updated successfully." });
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       toast({ title: "Error", description: "Failed to update user.", variant: "destructive" });
     }
   };
@@ -87,8 +85,7 @@ function AdminUsersPage() {
       setIsDeleteModalOpen(false);
       setSelectedUser(null);
       toast({ title: "User Deactivated", description: "The user account has been disabled." });
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
       toast({ title: "Error", description: "Failed to deactivate user.", variant: "destructive" });
     }
   };

@@ -53,7 +53,6 @@ export function DraftAuditsSection({
     if (onResume) {
       onResume(auditId, shelfId);
     } else {
-      console.log("Resume draft:", { auditId, shelfId });
       alert("Resume draft functionality will navigate to audit editor in Phase 2");
     }
   };

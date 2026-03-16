@@ -44,7 +44,7 @@ export function useApproveAudit(storeId: string) {
         queryKey: pendingAuditsKeys.byStore(storeId),
       });
       queryClient.invalidateQueries({
-        queryKey: complianceOverviewKeys.byStore(storeId),
+        queryKey: complianceOverviewKeys.detail(storeId),
       });
       queryClient.invalidateQueries({
         queryKey: publishedAuditsKeys.byStore(storeId),
@@ -77,7 +77,7 @@ export function useReturnAudit(storeId: string) {
         queryKey: pendingAuditsKeys.byStore(storeId),
       });
       queryClient.invalidateQueries({
-        queryKey: complianceOverviewKeys.byStore(storeId),
+        queryKey: complianceOverviewKeys.detail(storeId),
       });
     },
   });
@@ -112,7 +112,7 @@ export function useOverrideAndApprove(storeId: string) {
         queryKey: pendingAuditsKeys.byStore(storeId),
       });
       queryClient.invalidateQueries({
-        queryKey: complianceOverviewKeys.byStore(storeId),
+        queryKey: complianceOverviewKeys.detail(storeId),
       });
       queryClient.invalidateQueries({
         queryKey: publishedAuditsKeys.byStore(storeId),

@@ -133,22 +133,24 @@ export async function createShelf(shelfData: {
  * console.log(stats.auditsSubmittedToday); // 5
  * ```
  */
-export async function fetchQuickStats(): Promise<QuickStats> {
+export async function fetchQuickStats(storeId?: string): Promise<QuickStats> {
   await simulateNetworkDelay(200);
 
   // In production, this would be:
   // const response = await api.get('/maker/stats');
   // return response.data;
 
-  return generateMockQuickStats();
+  return generateMockQuickStats(storeId);
 }
 
 /**
  * Fetch maker dashboard stats (weekly audits, status breakdown) for charts
  */
-export async function fetchMakerDashboardStats(): Promise<MakerDashboardStats> {
+export async function fetchMakerDashboardStats(
+  storeId?: string,
+): Promise<MakerDashboardStats> {
   await simulateNetworkDelay(200);
-  return generateMakerDashboardStats();
+  return generateMakerDashboardStats(storeId);
 }
 
 /**
@@ -162,14 +164,14 @@ export async function fetchMakerDashboardStats(): Promise<MakerDashboardStats> {
  * returned.forEach(audit => console.log(audit.rejectionReason));
  * ```
  */
-export async function fetchReturnedAudits(): Promise<Audit[]> {
+export async function fetchReturnedAudits(storeId?: string): Promise<Audit[]> {
   await simulateNetworkDelay(250);
 
   // In production, this would be:
   // const response = await api.get('/maker/audits/returned');
   // return response.data;
 
-  return getReturnedAudits();
+  return getReturnedAudits(storeId);
 }
 
 /**
@@ -182,14 +184,14 @@ export async function fetchReturnedAudits(): Promise<Audit[]> {
  * const audits = await fetchAudits();
  * ```
  */
-export async function fetchAudits(): Promise<Audit[]> {
+export async function fetchAudits(storeId?: string): Promise<Audit[]> {
   await simulateNetworkDelay(300);
 
   // In production, this would be:
   // const response = await api.get('/maker/audits');
   // return response.data;
 
-  return generateMockAudits();
+  return generateMockAudits(storeId);
 }
 
 /**
@@ -308,14 +310,14 @@ export async function resubmitAudit(auditId: string): Promise<Audit> {
  * const drafts = await fetchDraftAudits();
  * ```
  */
-export async function fetchDraftAudits(): Promise<Audit[]> {
+export async function fetchDraftAudits(storeId?: string): Promise<Audit[]> {
   await simulateNetworkDelay(400);
 
   // In production, this would be:
   // const response = await api.get('/maker/audits/drafts');
   // return response.data;
 
-  return getDraftAudits();
+  return getDraftAudits(storeId);
 }
 
 /**

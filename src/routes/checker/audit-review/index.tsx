@@ -20,8 +20,7 @@ import {
   // useStores,
 } from "@/queries/checker";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-// import type { Notification } from "@/types/checker";
-// import { useStore } from "@/providers/store";
+import { useStore } from "@/providers/store";
 
 export const Route = createFileRoute("/checker/audit-review/")({
   component: CheckerAuditReviewPage,
@@ -29,8 +28,9 @@ export const Route = createFileRoute("/checker/audit-review/")({
 
 export function CheckerAuditReviewPage() {
   const navigate = useNavigate();
+  const { selectedStore } = useStore();
   // const { data: stores } = useStores();
-  const [selectedStoreId, _setSelectedStoreId] = useState<string>(mockCheckerUser.storeId);
+  const selectedStoreId = selectedStore?.id ?? mockCheckerUser.storeId;
 
   const { data: audits, isLoading: auditsLoading, error: auditsError } =
     usePendingAudits(selectedStoreId);

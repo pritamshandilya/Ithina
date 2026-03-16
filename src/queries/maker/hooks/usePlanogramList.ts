@@ -5,6 +5,8 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+
+import { useSelectedStoreId } from "@/providers/store";
 import { fetchPlanogramList } from "../api/planogram";
 
 export const planogramListKeys = {
@@ -13,9 +15,12 @@ export const planogramListKeys = {
 };
 
 export function usePlanogramList(storeId?: string) {
+  const selectedStoreId = useSelectedStoreId();
+  const scopedStoreId = storeId ?? selectedStoreId;
+
   return useQuery({
-    queryKey: planogramListKeys.byStore(storeId),
-    queryFn: () => fetchPlanogramList(storeId),
+    queryKey: planogramListKeys.byStore(scopedStoreId),
+    queryFn: () => fetchPlanogramList(scopedStoreId),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

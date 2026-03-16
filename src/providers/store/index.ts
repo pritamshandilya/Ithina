@@ -14,3 +14,7 @@ export function useStore() {
 
   return context;
 }
+
+export function useSelectedStoreId(): string | undefined {
+  return useStore().selectedStore?.id;
+}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { useSelectedStoreId } from "@/providers/store";
 import { getShelf, listShelves, mapShelfResponseToShelf } from "../api/shelves";
 
 /**
@@ -8,8 +9,10 @@ import { getShelf, listShelves, mapShelfResponseToShelf } from "../api/shelves";
  * @param fixtureId - Optional fixture UUID to filter results
  */
 export function useShelves(fixtureId?: string) {
+  const storeId = useSelectedStoreId();
+
   return useQuery({
-    queryKey: ["maker", "shelves", "list", fixtureId ?? "all"],
+    queryKey: ["maker", "shelves", "list", storeId ?? "all", fixtureId ?? "all"],
     queryFn: async () => {
       const responses = await listShelves(fixtureId);
       return responses.map(mapShelfResponseToShelf);
@@ -25,8 +28,10 @@ export function useShelves(fixtureId?: string) {
  * @param shelfId - The shelf UUID (query is disabled when falsy)
  */
 export function useShelf(shelfId: string | undefined) {
+  const storeId = useSelectedStoreId();
+
   return useQuery({
-    queryKey: ["maker", "shelves", "detail", shelfId ?? "none"],
+    queryKey: ["maker", "shelves", "detail", storeId ?? "all", shelfId ?? "none"],
     queryFn: async () => {
       const response = await getShelf(shelfId!);
       return mapShelfResponseToShelf(response);

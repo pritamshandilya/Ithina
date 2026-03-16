@@ -10,7 +10,10 @@
  */
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { useSelectedStoreId } from "@/providers/store";
 import { fetchDraftAudits, saveDraftProgress, deleteDraft } from "../api/maker";
+import { quickStatsKeys } from "./useQuickStats";
 import type { Audit } from "@/types/maker";
 
 /**
@@ -18,6 +21,8 @@ import type { Audit } from "@/types/maker";
  */
 export const draftAuditsKeys = {
   all: ["maker", "draft-audits"] as const,
+  byStore: (storeId: string | undefined) =>
+    [...draftAuditsKeys.all, storeId ?? "all"] as const,
 };
 
 /**
@@ -31,9 +36,11 @@ export const draftAuditsKeys = {
  * ```
  */
 export function useDraftAudits() {
+  const storeId = useSelectedStoreId();
+
   return useQuery({
-    queryKey: draftAuditsKeys.all,
-    queryFn: fetchDraftAudits,
+    queryKey: draftAuditsKeys.byStore(storeId),
+    queryFn: () => fetchDraftAudits(storeId),
     staleTime: 1 * 60 * 1000, // 1 minute
     gcTime: 10 * 60 * 1000, // 10 minutes
     refetchOnWindowFocus: true,
@@ -53,33 +60,41 @@ export function useDraftAudits() {
  */
 export function useSaveDraftProgress() {
   const queryClient = useQueryClient();
+  const storeId = useSelectedStoreId();
 
   return useMutation({
     mutationFn: ({ auditId, progress }: { auditId: string; progress: number }) =>
       saveDraftProgress(auditId, progress),
     // Optimistic update
     onMutate: async ({ auditId, progress }) => {
-      await queryClient.cancelQueries({ queryKey: draftAuditsKeys.all });
+      await queryClient.cancelQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
 
-      const previousDrafts = queryClient.getQueryData(draftAuditsKeys.all);
+      const previousDrafts = queryClient.getQueryData(
+        draftAuditsKeys.byStore(storeId),
+      );
 
-      queryClient.setQueryData<Audit[]>(draftAuditsKeys.all, (old) =>
+      queryClient.setQueryData<Audit[]>(
+        draftAuditsKeys.byStore(storeId),
+        (old) =>
         old?.map((audit) =>
           audit.id === auditId
             ? { ...audit, draftProgress: progress, draftSavedAt: new Date() }
             : audit
-        )
+        ),
       );
 
       return { previousDrafts };
     },
     onError: (_err, _variables, context) => {
       if (context?.previousDrafts) {
-        queryClient.setQueryData(draftAuditsKeys.all, context.previousDrafts);
+        queryClient.setQueryData(
+          draftAuditsKeys.byStore(storeId),
+          context.previousDrafts,
+        );
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.all });
+      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
       queryClient.invalidateQueries({ queryKey: ["maker", "assigned-shelves"] });
     },
   });
@@ -98,13 +113,14 @@ export function useSaveDraftProgress() {
  */
 export function useDeleteDraft() {
   const queryClient = useQueryClient();
+  const storeId = useSelectedStoreId();
 
   return useMutation({
     mutationFn: deleteDraft,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.all });
+      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
       queryClient.invalidateQueries({ queryKey: ["maker", "assigned-shelves"] });
-      queryClient.invalidateQueries({ queryKey: ["maker", "quick-stats"] });
+      queryClient.invalidateQueries({ queryKey: quickStatsKeys.all });
     },
   });
 }

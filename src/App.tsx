@@ -5,6 +5,7 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 
 import type { RouterAuthState } from "./auth/state";
 import { AuthSessionService } from "./lib/auth/session";
+import { useStore } from "./providers/store";
 import { queryClient } from "./queries/client";
 import { routeTree } from "./routeTree.gen";
 
@@ -47,13 +48,30 @@ function useRouterAuthState(): RouterAuthState {
 
 export default function App() {
   const auth = useRouterAuthState();
+  const { selectedStore } = useStore();
   const authUserId = auth.user?.id ?? null;
   const authUserRole = auth.user?.role ?? null;
   const permissionFingerprint = auth.user?.permissions?.join("|") ?? "";
+  const selectedStoreId = selectedStore?.id ?? null;
 
   useEffect(() => {
     router.invalidate();
   }, [auth.isAuthenticated, authUserId, authUserRole, permissionFingerprint]);
+
+  useEffect(() => {
+    router.invalidate();
+    queryClient.invalidateQueries({
+      predicate: ({ queryKey }) => {
+        const scope = queryKey[0];
+        return (
+          scope === "maker" ||
+          scope === "checker" ||
+          scope === "compliance-rule-sets" ||
+          scope === "planograms"
+        );
+      },
+    });
+  }, [selectedStoreId]);
 
   return (
     <>

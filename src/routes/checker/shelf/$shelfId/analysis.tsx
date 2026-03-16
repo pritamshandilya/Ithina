@@ -456,7 +456,7 @@ export function PlanogramAnalysisViewPage() {
       });
       if (updated) {
         await queryClient.invalidateQueries({
-          queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
+          queryKey: planogramShelfPreviewKeys.all,
         });
         toast({
           title: "Changes saved",

@@ -4,6 +4,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { useSelectedStoreId } from "@/providers/store";
 import { fetchQuickStats } from "../api/maker";
 
 /**
@@ -11,6 +12,8 @@ import { fetchQuickStats } from "../api/maker";
  */
 export const quickStatsKeys = {
   all: ["maker", "quick-stats"] as const,
+  byStore: (storeId: string | undefined) =>
+    [...quickStatsKeys.all, storeId ?? "all"] as const,
 };
 
 /**
@@ -42,9 +45,11 @@ export const quickStatsKeys = {
  * ```
  */
 export function useQuickStats() {
+  const storeId = useSelectedStoreId();
+
   return useQuery({
-    queryKey: quickStatsKeys.all,
-    queryFn: fetchQuickStats,
+    queryKey: quickStatsKeys.byStore(storeId),
+    queryFn: () => fetchQuickStats(storeId),
     staleTime: 2 * 60 * 1000, // 2 minutes (shorter for stats)
     gcTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 2 * 60 * 1000, // Auto-refetch every 2 minutes

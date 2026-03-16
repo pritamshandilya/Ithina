@@ -31,8 +31,8 @@ export function useAssignPlanogramToShelf() {
       });
 
       if (shelf) {
-        await queryClient.prefetchQuery({
-          queryKey: planogramShelfPreviewKeys.byShelfId(shelf.id),
+        await queryClient.invalidateQueries({
+          queryKey: planogramShelfPreviewKeys.all,
         });
       }
     },
@@ -45,13 +45,12 @@ export function useUpdateShelfArrangement() {
   return useMutation({
     mutationFn: ({ shelfId, arrangement }: UpdateShelfArrangementInput) =>
       updateShelfArrangement(shelfId, arrangement),
-    onSuccess: async (updated, { shelfId }) => {
+    onSuccess: async (updated) => {
       if (!updated) return;
 
       await queryClient.invalidateQueries({
-        queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
+        queryKey: planogramShelfPreviewKeys.all,
       });
     },
   });
 }
-

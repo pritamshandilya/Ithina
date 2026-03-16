@@ -6,13 +6,15 @@
  */
 
 import { useQuery } from "@tanstack/react-query";
+
+import { useSelectedStoreId } from "@/providers/store";
 import { getShelfById } from "../api/maker";
 import { fetchPlanogramById } from "../api/planogram";
 
 export const planogramShelfPreviewKeys = {
   all: ["maker", "planogram-shelf-preview"] as const,
-  byShelfId: (shelfId: string | null) =>
-    [...planogramShelfPreviewKeys.all, shelfId ?? "none"] as const,
+  byShelfId: (storeId: string | undefined, shelfId: string | null) =>
+    [...planogramShelfPreviewKeys.all, storeId ?? "all", shelfId ?? "none"] as const,
 };
 
 export interface PlanogramShelfPreview {
@@ -21,8 +23,10 @@ export interface PlanogramShelfPreview {
 }
 
 export function usePlanogramShelfPreview(shelfId: string | null) {
+  const storeId = useSelectedStoreId();
+
   return useQuery({
-    queryKey: planogramShelfPreviewKeys.byShelfId(shelfId),
+    queryKey: planogramShelfPreviewKeys.byShelfId(storeId, shelfId),
     queryFn: async (): Promise<PlanogramShelfPreview | null> => {
       if (!shelfId) return null;
       const shelf = await getShelfById(shelfId);

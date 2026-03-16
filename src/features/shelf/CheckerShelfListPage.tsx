@@ -58,6 +58,7 @@ function toPlanogramRow(
     planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
   const aisle =
     info?.aisle ??
+    shelf.aisle ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
@@ -67,10 +68,10 @@ function toPlanogramRow(
     productsCount: skuCount,
     issuesCount: issues,
     aisle,
-    zone: info?.zone,
-    section: info?.section,
-    fixtureType: info?.fixtureType,
-    dimensions: info?.dimensions,
+    zone: info?.zone ?? shelf.zone,
+    section: info?.section ?? shelf.section,
+    fixtureType: info?.fixtureType ?? shelf.fixtureType,
+    dimensions: info?.dimensions ?? shelf.dimensions,
   };
 }
 
@@ -81,6 +82,24 @@ export interface CheckerShelfListPageProps {
   pogNewPath: string;
 }
 
+function getOptionalStoreId(params: unknown): string | undefined {
+  if (!params || typeof params !== "object") return undefined;
+  const { storeId } = params as { storeId?: unknown };
+  return typeof storeId === "string" ? storeId : undefined;
+}
+
+function asRouterPath(path: string): never {
+  return path as never;
+}
+
+function asRouterParams(params: Record<string, string | undefined>): never {
+  return params as never;
+}
+
+function asRouterSearch(search: Record<string, string | undefined>): never {
+  return search as never;
+}
+
 export function CheckerShelfListPage({
   shelfDetailPath,
   shelfNewPath,
@@ -89,10 +108,10 @@ export function CheckerShelfListPage({
 }: CheckerShelfListPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams({ strict: false }) as any;
+  const params = useParams({ strict: false });
   const { toast } = useToast();
 
-  const storeId = params.storeId as string | undefined;
+  const storeId = getOptionalStoreId(params);
 
   const { data: shelves, isLoading } = useShelves();
   const deleteShelfMutation = useDeleteShelf();
@@ -164,6 +183,7 @@ export function CheckerShelfListPage({
         String(r.aisleNumber).includes(q) ||
         r.aisle?.toLowerCase().includes(q) ||
         String(r.bayNumber).includes(q) ||
+        r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
         r.fixtureType?.toLowerCase().includes(q),
@@ -230,8 +250,8 @@ export function CheckerShelfListPage({
   const handleRowClick = useCallback(
     (row: PlanogramShelfRow) => {
       navigate({
-        to: shelfDetailPath as any,
-        params: { shelfId: row.id, storeId } as any,
+        to: asRouterPath(shelfDetailPath),
+        params: asRouterParams({ shelfId: row.id, storeId }),
       });
     },
     [navigate, shelfDetailPath, storeId],
@@ -252,9 +272,9 @@ export function CheckerShelfListPage({
   const handleNewRun = useCallback(
     (shelfId: string) => {
       navigate({
-        to: adhocNewPath as any,
-        params: { storeId } as any,
-        search: { shelfId, from: location.pathname } as any,
+        to: asRouterPath(adhocNewPath),
+        params: asRouterParams({ storeId }),
+        search: asRouterSearch({ shelfId, from: location.pathname }),
       });
       setActionsMenu(null);
     },
@@ -264,9 +284,9 @@ export function CheckerShelfListPage({
   const handleAssociatePlanogram = useCallback(
     (shelfId: string) => {
       navigate({
-        to: pogNewPath as any,
-        params: { storeId } as any,
-        search: { shelfId } as any,
+        to: asRouterPath(pogNewPath),
+        params: asRouterParams({ storeId }),
+        search: asRouterSearch({ shelfId }),
       });
     },
     [navigate, pogNewPath, storeId],
@@ -380,7 +400,7 @@ export function CheckerShelfListPage({
                   asChild
                   className="mt-6 bg-chart-2 text-white hover:opacity-90"
                 >
-                  <Link to={shelfNewPath as any} params={{ storeId } as any}>
+                  <Link to={asRouterPath(shelfNewPath)} params={asRouterParams({ storeId })}>
                     <Plus className="size-4" aria-hidden />
                     Add Shelf
                   </Link>
@@ -429,4 +449,3 @@ export function CheckerShelfListPage({
     </>
   );
 }
-

@@ -47,6 +47,7 @@ function toPlanogramRow(
     planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
   const aisle =
     info?.aisle ??
+    shelf.aisle ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
@@ -56,10 +57,10 @@ function toPlanogramRow(
     productsCount: skuCount,
     issuesCount: issues,
     aisle,
-    zone: info?.zone,
-    section: info?.section,
-    fixtureType: info?.fixtureType,
-    dimensions: info?.dimensions,
+    zone: info?.zone ?? shelf.zone,
+    section: info?.section ?? shelf.section,
+    fixtureType: info?.fixtureType ?? shelf.fixtureType,
+    dimensions: info?.dimensions ?? shelf.dimensions,
   };
 }
 
@@ -134,6 +135,7 @@ export function PlanogramMakerPage() {
         String(r.aisleNumber).includes(q) ||
         r.aisle?.toLowerCase().includes(q) ||
         String(r.bayNumber).includes(q) ||
+        r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
         r.fixtureType?.toLowerCase().includes(q),
@@ -372,4 +374,3 @@ export function PlanogramMakerPage() {
     </>
   );
 }
-

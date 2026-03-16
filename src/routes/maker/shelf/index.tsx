@@ -3,15 +3,36 @@ import { format } from "date-fns";
 import { LayoutGrid, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
+
+
 import MainLayout from "@/components/layouts/main";
+import { PageHeader } from "@/components/shared/page-header";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useShelves, usePlanogramList } from "@/queries/maker";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
-import { PageHeader } from "@/components/shared/page-header";
-import type { PlanogramArrangement } from "@/types/planogram";
+import { usePlanogramList, useShelves } from "@/queries/maker";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import type { PlanogramArrangement } from "@/types/planogram";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 export const Route = createFileRoute("/maker/shelf/")({
   component: MakerShelfPage,
@@ -29,7 +50,7 @@ function toPlanogramRow(
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
   const planogramInfo = shelf.planogramId ? planogramMap?.get(shelf.planogramId) : undefined;
   const info = planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
-  const aisle = info?.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
+  const aisle = info?.aisle ?? shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -38,10 +59,10 @@ function toPlanogramRow(
     productsCount: skuCount,
     issuesCount: issues,
     aisle,
-    zone: info?.zone,
-    section: info?.section,
-    fixtureType: info?.fixtureType,
-    dimensions: info?.dimensions,
+    zone: info?.zone ?? shelf.zone,
+    section: info?.section ?? shelf.section,
+    fixtureType: info?.fixtureType ?? shelf.fixtureType,
+    dimensions: info?.dimensions ?? shelf.dimensions,
   };
 }
 
@@ -49,31 +70,6 @@ const PLANOGRAM_INITIAL_SORT = { field: "shelfName" as const, dir: "asc" as cons
 const PLANOGRAM_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
 
 const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
-  {
-    title: "Aisle",
-    field: "aisleNumber",
-    width: 70,
-    sorter: "number",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const val = row.aisle ?? (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ?? "—";
-      return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
-    },
-  },
-  {
-    title: "Zone",
-    field: "zone",
-    width: 100,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
-    },
-  },
   {
     title: "Shelf Name",
     field: "shelfName",
@@ -83,13 +79,9 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      const skus = row.productsCount ?? 0;
-      const runs = row.lastRun ? "1 run" : "0 runs";
-      const suffix = `(${skus} SKUs · ${runs})`;
       return `
         <div class="min-w-0 py-1">
           <span class="font-medium text-foreground truncate">${row.shelfName}</span>
-          <span class="text-muted-foreground"> ${suffix}</span>
         </div>
       `;
     },
@@ -103,7 +95,35 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.id}</span>`;
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.shelfCode ?? row.shelf_id ?? "—"}</span>`;
+    },
+  },
+  {
+    title: "Aisle",
+    field: "aisleNumber",
+    width: 70,
+    sorter: "number",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      const val =
+        row.aisle ??
+        (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ??
+        "—";
+      return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
+    },
+  },
+  {
+    title: "Zone",
+    field: "zone",
+    width: 100,
+    sorter: "string",
+    headerSort: true,
+    headerFilter: false,
+    formatter: (cell: unknown) => {
+      const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
     },
   },
   {
@@ -178,7 +198,8 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-      if (!row.lastRun) return `<span class="text-xs text-muted-foreground italic">No runs</span>`;
+      if (!row.lastRun)
+        return `<span class="text-xs text-muted-foreground italic">No runs</span>`;
       return `<span class="text-sm text-foreground">${format(new Date(row.lastRun), "MMM d, yyyy")}</span>`;
     },
   },
@@ -205,7 +226,8 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
       const n = row.issuesCount ?? 0;
-      const cls = n > 0 ? "text-destructive font-semibold" : "text-muted-foreground";
+      const cls =
+        n > 0 ? "text-destructive font-semibold" : "text-muted-foreground";
       return `<span class="tabular-nums text-sm ${cls}">${n}</span>`;
     },
   },
@@ -261,6 +283,7 @@ export function MakerShelfPage() {
         String(r.aisleNumber).includes(q) ||
         r.aisle?.toLowerCase().includes(q) ||
         String(r.bayNumber).includes(q) ||
+        r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
         r.fixtureType?.toLowerCase().includes(q)

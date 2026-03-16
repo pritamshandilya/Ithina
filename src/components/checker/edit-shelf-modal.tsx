@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,39 +15,71 @@ interface EditShelfModalProps {
   onClose: () => void;
 }
 
-export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) {
-  const [shelfName, setShelfName] = useState(shelf.shelfName);
-  const [shelfCode, setShelfCode] = useState<string>(shelf.shelfCode ?? "");
-  const [aisle, setAisle] = useState(shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""));
-  const [zone, setZone] = useState(shelf.zone ?? "");
-  const [section, setSection] = useState(shelf.section ?? "");
-  const [fixtureType, setFixtureType] = useState(shelf.fixtureType ?? "");
+interface EditShelfFormValues {
+  shelfName: string;
+  shelfCode: string;
+  aisle: string;
+  zone: string;
+  section: string;
+  fixtureType: string;
+  width: string;
+  height: string;
+  depth: string;
+}
 
-  const [initialWidth, initialHeight, initialDepth] = (shelf.dimensions || "").split("x");
-  const [width, setWidth] = useState(initialWidth || "");
-  const [height, setHeight] = useState(initialHeight || "");
-  const [depth, setDepth] = useState(initialDepth || "");
+function getInitialEditShelfFormValues(shelf: Shelf): EditShelfFormValues {
+  const [width = "", height = "", depth = ""] = (shelf.dimensions || "").split("x");
+
+  return {
+    shelfName: shelf.shelfName,
+    shelfCode: shelf.shelfCode ?? "",
+    aisle: shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""),
+    zone: shelf.zone ?? "",
+    section: shelf.section ?? "",
+    fixtureType: shelf.fixtureType ?? "",
+    width,
+    height,
+    depth,
+  };
+}
+
+export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) {
+  const draftSeed = `${shelf.id}:${shelf.updatedAt?.toISOString() ?? ""}`;
+  const [draftState, setDraftState] = useState<{
+    seed: string;
+    values: Partial<EditShelfFormValues>;
+  }>({
+    seed: draftSeed,
+    values: {},
+  });
 
   const { mutate: updateShelf, isPending } = useUpdateShelf();
   const { toast } = useToast();
+  const formValues = {
+    ...getInitialEditShelfFormValues(shelf),
+    ...(draftState.seed === draftSeed ? draftState.values : {}),
+  };
 
-  useEffect(() => {
-    if (isOpen) {
-      setShelfName(shelf.shelfName);
-      setShelfCode(shelf.shelfCode ?? "");
-      setAisle(shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""));
-      setZone(shelf.zone ?? "");
-      setSection(shelf.section ?? "");
-      setFixtureType(shelf.fixtureType ?? "");
-      const [iw, ih, id] = (shelf.dimensions || "").split("x");
-      setWidth(iw || "");
-      setHeight(ih || "");
-      setDepth(id || "");
-    }
-  }, [isOpen, shelf]);
+  const updateField = <K extends keyof EditShelfFormValues>(
+    field: K,
+    value: EditShelfFormValues[K],
+  ) => {
+    setDraftState((prev) => ({
+      seed: draftSeed,
+      values: {
+        ...(prev.seed === draftSeed ? prev.values : {}),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleClose = () => {
+    setDraftState({ seed: draftSeed, values: {} });
+    onClose();
+  };
 
   const handleSave = () => {
-    if (!shelfName.trim() || !shelfCode.trim()) {
+    if (!formValues.shelfName.trim() || !formValues.shelfCode.trim()) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -57,21 +89,21 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
     }
 
     const fixturePayload = {
-      type: fixtureType.trim() ? fixtureType.trim() : undefined,
+      type: formValues.fixtureType.trim() ? formValues.fixtureType.trim() : undefined,
       physical_location:
-        aisle.trim() || zone.trim() || section.trim()
+        formValues.aisle.trim() || formValues.zone.trim() || formValues.section.trim()
           ? {
-              aisle: aisle.trim() ? aisle.trim() : undefined,
-              zone: zone.trim() ? zone.trim() : undefined,
-              section: section.trim() ? section.trim() : undefined,
+              aisle: formValues.aisle.trim() ? formValues.aisle.trim() : undefined,
+              zone: formValues.zone.trim() ? formValues.zone.trim() : undefined,
+              section: formValues.section.trim() ? formValues.section.trim() : undefined,
             }
           : undefined,
       dimensions:
-        width.trim() || height.trim() || depth.trim()
+        formValues.width.trim() || formValues.height.trim() || formValues.depth.trim()
           ? {
-              width: width.trim() ? Number(width) : undefined,
-              height: height.trim() ? Number(height) : undefined,
-              depth: depth.trim() ? Number(depth) : undefined,
+              width: formValues.width.trim() ? Number(formValues.width) : undefined,
+              height: formValues.height.trim() ? Number(formValues.height) : undefined,
+              depth: formValues.depth.trim() ? Number(formValues.depth) : undefined,
             }
           : undefined,
     };
@@ -89,8 +121,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
       {
         shelfId: shelf.id,
         payload: {
-          name: shelfName.trim(),
-          shelf_id: shelfCode.trim(),
+          name: formValues.shelfName.trim(),
+          shelf_id: formValues.shelfCode.trim(),
           ...(hasFixtureUpdates ? { fixture: fixturePayload } : {}),
         },
       },
@@ -100,13 +132,16 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
             title: "Success",
             description: "Shelf details updated successfully.",
           });
-          onClose();
+          handleClose();
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           toast({
             variant: "destructive",
             title: "Error",
-            description: error.message || "Failed to update shelf details.",
+            description:
+              error instanceof Error
+                ? error.message
+                : "Failed to update shelf details.",
           });
         },
       }
@@ -114,7 +149,7 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal isOpen={isOpen} onClose={handleClose}>
       <Card className="border-border/50 bg-card/50 backdrop-blur-xl shadow-2xl overflow-hidden">
         <CardHeader className="bg-gradient-to-br from-accent/10 via-card to-card border-b border-border/50">
           <CardTitle>Edit Shelf Details</CardTitle>
@@ -125,8 +160,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
             <Label htmlFor="edit-shelf-name">Shelf Name</Label>
             <Input
               id="edit-shelf-name"
-              value={shelfName}
-              onChange={(e) => setShelfName(e.target.value)}
+              value={formValues.shelfName}
+              onChange={(e) => updateField("shelfName", e.target.value)}
               placeholder="e.g. Food & Beverage Shelf"
               className="bg-background/50"
             />
@@ -135,8 +170,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
             <Label htmlFor="edit-shelf-code">Shelf Identifier / Code</Label>
             <Input
               id="edit-shelf-code"
-              value={shelfCode}
-              onChange={(e) => setShelfCode(e.target.value)}
+              value={formValues.shelfCode}
+              onChange={(e) => updateField("shelfCode", e.target.value)}
               placeholder="e.g. SH-01"
               className="bg-background/50"
             />
@@ -150,8 +185,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Label htmlFor="edit-zone">Zone</Label>
               <Input
                 id="edit-zone"
-                value={zone}
-                onChange={(e) => setZone(e.target.value)}
+                value={formValues.zone}
+                onChange={(e) => updateField("zone", e.target.value)}
                 placeholder="e.g. Grocery"
                 className="bg-background/50"
               />
@@ -160,8 +195,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Label htmlFor="edit-section">Section</Label>
               <Input
                 id="edit-section"
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
+                value={formValues.section}
+                onChange={(e) => updateField("section", e.target.value)}
                 placeholder="e.g. Snacks"
                 className="bg-background/50"
               />
@@ -170,8 +205,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Label htmlFor="edit-aisle">Aisle</Label>
               <Input
                 id="edit-aisle"
-                value={aisle}
-                onChange={(e) => setAisle(e.target.value)}
+                value={formValues.aisle}
+                onChange={(e) => updateField("aisle", e.target.value)}
                 placeholder="e.g. A3"
                 className="bg-background/50"
               />
@@ -182,8 +217,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
             <Label htmlFor="edit-fixture-type">Fixture Type</Label>
             <Input
               id="edit-fixture-type"
-              value={fixtureType}
-              onChange={(e) => setFixtureType(e.target.value)}
+              value={formValues.fixtureType}
+              onChange={(e) => updateField("fixtureType", e.target.value)}
               placeholder="e.g. Gondola, Wall Shelving"
               className="bg-background/50"
             />
@@ -195,8 +230,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Input
                 id="edit-width"
                 type="number"
-                value={width}
-                onChange={(e) => setWidth(e.target.value)}
+                value={formValues.width}
+                onChange={(e) => updateField("width", e.target.value)}
                 placeholder="e.g. 120"
                 className="bg-background/50"
               />
@@ -206,8 +241,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Input
                 id="edit-height"
                 type="number"
-                value={height}
-                onChange={(e) => setHeight(e.target.value)}
+                value={formValues.height}
+                onChange={(e) => updateField("height", e.target.value)}
                 placeholder="e.g. 200"
                 className="bg-background/50"
               />
@@ -217,8 +252,8 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
               <Input
                 id="edit-depth"
                 type="number"
-                value={depth}
-                onChange={(e) => setDepth(e.target.value)}
+                value={formValues.depth}
+                onChange={(e) => updateField("depth", e.target.value)}
                 placeholder="e.g. 50"
                 className="bg-background/50"
               />
@@ -226,7 +261,7 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
           </div>
         </CardContent>
         <CardFooter className="flex justify-end gap-3 p-6 pt-0 border-t border-border/50 bg-muted/20">
-          <Button variant="ghost" onClick={onClose} disabled={isPending}>
+          <Button variant="ghost" onClick={handleClose} disabled={isPending}>
             Cancel
           </Button>
           <Button 

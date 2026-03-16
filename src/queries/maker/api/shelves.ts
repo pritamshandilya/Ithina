@@ -62,22 +62,25 @@ export function deleteShelf(shelfId: string): Promise<void> {
  * This ensures compatibility across the application.
  */
 export function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
-  const aisleMatch = res.fixture.physical_location.aisle.match(/\d+/);
+  const aisleMatch = res.fixture_aisle.match(/\d+/);
   const aisleNumber = aisleMatch ? Number(aisleMatch[0]) : 0;
 
   return {
     id: res.id,
+    fixtureId: res.fixture_id,
     shelf_id: res.shelf_id,
     aisleNumber,
-    aisle: res.fixture.physical_location.aisle,
+    aisle: res.fixture_aisle,
     bayNumber: 1, // Defaulting to 1
     shelfName: res.name,
     shelfCode: res.shelf_id,
     status: "never-audited",
-    zone: res.fixture.physical_location.zone,
-    section: res.fixture.physical_location.section,
-    fixtureType: res.fixture.type,
-    dimensions: `${res.fixture.dimensions.width}x${res.fixture.dimensions.height}x${res.fixture.dimensions.depth}`,
+    zone: res.fixture_zone,
+    section: res.fixture_section,
+    fixtureType: res.fixture_type,
+    dimensions: `${res.fixture_width}x${res.fixture_height}x${res.fixture_depth}`,
+    createdAt: new Date(res.created_at),
+    updatedAt: new Date(res.updated_at),
     planogramId: undefined, // Planogram association logic to be added
   };
 }

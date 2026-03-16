@@ -55,10 +55,15 @@ export const mockUser: MockUserContext = {
   storeName: "Store #1234 - Downtown",
 };
 
+function getStoreVariantSeed(storeId?: string): number {
+  if (!storeId || storeId === mockUser.storeId) return 0;
+  return Array.from(storeId).reduce((sum, char) => sum + char.charCodeAt(0), 0);
+}
+
 /**
  * Generate mock shelf data
  */
-export function generateMockShelves(): Shelf[] {
+export function generateMockShelves(storeId?: string): Shelf[] {
   const shelves: Shelf[] = [];
 
   // Aisle 1
@@ -326,15 +331,41 @@ export function generateMockShelves(): Shelf[] {
     }
   );
 
-  return shelves;
+  const variantSeed = getStoreVariantSeed(storeId);
+  if (variantSeed === 0) {
+    return shelves;
+  }
+
+  const statusCycle: Shelf["status"][] = [
+    "approved",
+    "pending",
+    "returned",
+    "draft",
+    "never-audited",
+  ];
+
+  return shelves.map((shelf, index) => {
+    const status = statusCycle[(index + variantSeed) % statusCycle.length];
+    const audited = status !== "never-audited";
+    const scored = status !== "never-audited" && status !== "draft";
+
+    return {
+      ...shelf,
+      status,
+      lastAuditDate: audited ? randomPastDate(((index + variantSeed) % 6) + 1) : undefined,
+      complianceScore: scored
+        ? Math.max(58, Math.min(99, 64 + ((index * 9 + variantSeed) % 31)))
+        : undefined,
+    };
+  });
 }
 
 /**
  * Generate mock audit data
  */
-export function generateMockAudits(): Audit[] {
-  const shelves = generateMockShelves();
-  const adhocAnalyses = generateMockAdhocAnalyses(mockUser.storeId);
+export function generateMockAudits(storeId?: string): Audit[] {
+  const shelves = generateMockShelves(storeId);
+  const adhocAnalyses = generateMockAdhocAnalyses(storeId ?? mockUser.storeId);
   const audits: Audit[] = [];
   let adhocIndex = 0;
 
@@ -404,8 +435,8 @@ function getRandomRejectionReason(): string {
 /**
  * Generate mock quick stats
  */
-export function generateMockQuickStats(): QuickStats {
-  const shelves = generateMockShelves();
+export function generateMockQuickStats(storeId?: string): QuickStats {
+  const shelves = generateMockShelves(storeId);
 
   // Count audits submitted today (within last 24 hours)
   const now = new Date();
@@ -434,8 +465,8 @@ const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 /**
  * Generate mock maker dashboard stats (for charts)
  */
-export function generateMakerDashboardStats(): MakerDashboardStats {
-  const shelves = generateMockShelves();
+export function generateMakerDashboardStats(storeId?: string): MakerDashboardStats {
+  const shelves = generateMockShelves(storeId);
   const now = new Date();
 
   // Build last 7 days with mock submitted/approved counts
@@ -463,16 +494,16 @@ export function generateMakerDashboardStats(): MakerDashboardStats {
 /**
  * Get returned audits with full details
  */
-export function getReturnedAudits(): Audit[] {
-  const audits = generateMockAudits();
+export function getReturnedAudits(storeId?: string): Audit[] {
+  const audits = generateMockAudits(storeId);
   return audits.filter((audit) => audit.status === "returned");
 }
 
 /**
  * Get draft audits (in progress, not submitted)
  */
-export function getDraftAudits(): Audit[] {
-  const audits = generateMockAudits();
+export function getDraftAudits(storeId?: string): Audit[] {
+  const audits = generateMockAudits(storeId);
   return audits.filter((audit) => audit.status === "draft");
 }
 

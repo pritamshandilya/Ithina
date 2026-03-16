@@ -5,32 +5,19 @@
  * Matches the backend ShelfResponse DTO.
  */
 
-export interface ShelfFixtureDimensionsResponse {
-  width: number;
-  height: number;
-  depth: number;
-}
-
-export interface ShelfFixtureLocationResponse {
-  section: string;
-  aisle: string;
-  zone: string;
-}
-
-export interface ShelfFixtureResponse {
-  id: string;
-  type: string;
-  dimensions: ShelfFixtureDimensionsResponse;
-  physical_location: ShelfFixtureLocationResponse;
-}
-
 /** Shape returned by GET /shelves, GET /shelves/{id}, POST /shelves, PUT /shelves/{id} */
 export interface ShelfResponse {
   id: string;
   fixture_id: string;
   shelf_id: string;
   name: string;
-  fixture: ShelfFixtureResponse;
+  fixture_type: string;
+  fixture_width: number;
+  fixture_height: number;
+  fixture_depth: number;
+  fixture_section: string;
+  fixture_aisle: string;
+  fixture_zone: string;
   created_at: string;
   updated_at: string;
 }

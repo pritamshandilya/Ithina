@@ -33,6 +33,8 @@ export function createPlanogramColumns({
   ruleSets,
   useShelfIdField = "id",
 }: CreatePlanogramColumnsOptions): DataTableColumn<PlanogramShelfRow>[] {
+  void useShelfIdField;
+
   return [
     {
       title: "Aisle",
@@ -83,18 +85,15 @@ export function createPlanogramColumns({
       },
     },
     {
-      title: "Shelf ID",
-      field: "id",
+      title: "ID",
+      field: "shelfCode",
       width: 120,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const value =
-          useShelfIdField === "shelf_id" && (row as any).shelf_id != null
-            ? (row as any).shelf_id
-            : row.id;
+        const value = row.shelfCode ?? row.shelf_id ?? "—";
         return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
       },
     },
@@ -386,4 +385,3 @@ export function PlanogramActionsMenu({
 
   return createPortal(content, document.body);
 }
-

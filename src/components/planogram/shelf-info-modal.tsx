@@ -7,7 +7,8 @@ import {
     Maximize,
     Calendar,
     User,
-    Info
+    Info,
+    type LucideIcon,
 } from "lucide-react";
 import { type AuditStatus } from "@/types/maker";
 import { Modal } from "@/components/ui/modal";
@@ -29,6 +30,28 @@ interface ShelfInfoModalProps {
     };
 }
 
+interface DetailItemProps {
+    icon?: LucideIcon;
+    label: string;
+    value: string | number;
+}
+
+function DetailItem({ icon: Icon, label, value }: DetailItemProps) {
+    return (
+        <div className="flex items-center gap-3 py-1">
+            {Icon ? (
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+            ) : null}
+            <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+                <p className="text-sm font-medium text-foreground">{value}</p>
+            </div>
+        </div>
+    );
+}
+
 export const ShelfInfoModal: React.FC<ShelfInfoModalProps> = ({
     isOpen,
     onClose,
@@ -37,18 +60,6 @@ export const ShelfInfoModal: React.FC<ShelfInfoModalProps> = ({
 }) => {
     const { planogram, metadata } = payload;
     const fixture = planogram.fixture;
-
-    const DetailItem = ({ icon: Icon, label, value }: { icon: any, label: string, value: string | number }) => (
-        <div className="flex items-center gap-3 py-1">
-            {Icon && <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 border border-white/10">
-                <Icon className="h-4 w-4 text-muted-foreground" />
-            </div>}
-            <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
-                <p className="text-sm font-medium text-foreground">{value}</p>
-            </div>
-        </div>
-    );
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} showCloseButton className="max-w-xl">

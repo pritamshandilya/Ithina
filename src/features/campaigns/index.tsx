@@ -4,17 +4,17 @@ import { useNavigate } from "@tanstack/react-router";
 
 import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import { useAppDispatch } from "@/store/hooks";
 import { activateCampaign } from "@/store/slices/campaign-slice";
-import type { CampaignFilterOption, CampaignListStatus } from "@/types/campaigns";
+import type { CampaignFilterOption, CampaignListItem, CampaignListStatus } from "@/types/campaigns";
 import {
   useCalendarWeekdays,
   useCampaignFilters,
   useCampaignList,
   useCampaignStatDefinitions,
   useCampaignStatusStyles,
-  useCampaignTableColumns,
   useMonthNames,
 } from "@/hooks/use-campaigns";
 
@@ -26,11 +26,10 @@ export default function Campaigns() {
   const { data: filters = [], isLoading: filtersLoading } = useCampaignFilters();
   const { data: statDefs = [], isLoading: statsLoading } = useCampaignStatDefinitions();
   const { data: statusStyles, isLoading: stylesLoading } = useCampaignStatusStyles();
-  const { data: tableColumns = [], isLoading: columnsLoading } = useCampaignTableColumns();
   const { data: weekdays = [], isLoading: weekdaysLoading } = useCalendarWeekdays();
   const { data: monthNames = [], isLoading: monthsLoading } = useMonthNames();
 
-  const isLoading = listLoading || filtersLoading || statsLoading || stylesLoading || columnsLoading || weekdaysLoading || monthsLoading;
+  const isLoading = listLoading || filtersLoading || statsLoading || stylesLoading || weekdaysLoading || monthsLoading;
   const isError = listError;
 
   const [activeFilter, setActiveFilter] = useState<CampaignFilterOption>("All");
@@ -104,15 +103,112 @@ export default function Campaigns() {
     return days;
   }, [calYear, calMonth, campaignEvents]);
 
-  const openInStudio = (c: { name: string }) => {
+  const openInStudio = useCallback((c: CampaignListItem) => {
     dispatch(activateCampaign(c.name));
     navigate({ to: "/studio" });
-  };
+  }, [dispatch, navigate]);
+
+  const tableColumns = useMemo<DataTableColumn<CampaignListItem>[]>(() => {
+    if (!statusStyles) return [];
+    return [
+      {
+        title: "Campaign",
+        field: "name",
+        minWidth: 200,
+        hozAlign: "left",
+        headerHozAlign: "left",
+        formatter: (cell: unknown) => {
+          const row = (cell as { getData: () => CampaignListItem }).getData();
+          return `<div><span class="block font-medium text-white">${row.name}</span><span class="block font-mono text-[10px] text-slate-500">${row.id}</span></div>`;
+        },
+      },
+      {
+        title: "Status",
+        field: "status",
+        width: 120,
+        formatter: (cell: unknown) => {
+          const row = (cell as { getData: () => CampaignListItem }).getData();
+          const cls = statusStyles[row.status]?.table ?? "";
+          const dot = row.status === "Active" ? `<span class="size-1.5 animate-pulse rounded-full bg-current inline-block mr-1.5"></span>` : "";
+          return `<span class="inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[10px] ${cls}">${dot}${row.status}</span>`;
+        },
+      },
+      {
+        title: "SKUs",
+        field: "skus",
+        width: 80,
+        sorter: "number",
+        formatter: (cell: unknown) => {
+          const val = (cell as { getValue: () => number }).getValue();
+          return `<span class="font-mono text-sm text-slate-300">${val}</span>`;
+        },
+      },
+      {
+        title: "Hardware",
+        field: "hardware",
+        minWidth: 150,
+        headerSort: false,
+        formatter: (cell: unknown) => {
+          const hw = (cell as { getValue: () => string[] }).getValue();
+          return hw.map((h) => `<span class="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-slate-400 mr-1">${h}</span>`).join("");
+        },
+      },
+      {
+        title: "Date",
+        field: "date",
+        width: 130,
+        formatter: (cell: unknown) => {
+          const val = (cell as { getValue: () => string }).getValue();
+          return `<span class="font-mono text-xs text-slate-400">${val}</span>`;
+        },
+      },
+      {
+        title: "Initiator",
+        field: "initiator",
+        width: 140,
+        formatter: (cell: unknown) => {
+          const val = (cell as { getValue: () => string }).getValue();
+          return `<span class="text-xs text-slate-400">${val}</span>`;
+        },
+      },
+      {
+        title: "Actions",
+        field: "id",
+        width: 180,
+        headerSort: false,
+        headerFilter: false,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: () =>
+          `<div class="flex items-center justify-end gap-2">` +
+          `<button data-action="edit" class="rounded-lg border border-purple-500/20 bg-purple-500/10 px-2.5 py-1.5 text-[10px] font-medium text-purple-400 transition-all hover:bg-purple-500 hover:text-white">Edit in Studio</button>` +
+          `<button data-action="duplicate" class="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-medium text-slate-400 transition-all hover:text-white">Duplicate</button>` +
+          `</div>`,
+        cellClick: (_e: MouseEvent, cell: { getData: () => CampaignListItem }) => {
+          const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
+          const btn = target.closest?.("[data-action]");
+          if (!btn) return;
+          _e.stopPropagation();
+          const action = btn.getAttribute("data-action");
+          if (action === "edit") openInStudio(cell.getData());
+        },
+      },
+    ];
+  }, [statusStyles, openInStudio]);
 
   const pageHeader = (
     <PageHeader
       breadcrumbs={[{ label: "Promotions Assistant" }, { label: "Campaigns", isActive: true }]}
       title="Campaign History & Schedule"
+      actions={
+        <button
+          onClick={() => navigate({ to: "/wizard" })}
+          className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
+        >
+          <Plus className="size-4" />
+          New Campaign
+        </button>
+      }
     />
   );
 
@@ -137,20 +233,6 @@ export default function Campaigns() {
         <LoadingSpinner label="Loading campaigns..." className="flex-1" />
       ) : (
         <div className="flex flex-1 flex-col gap-5 overflow-hidden p-6 animate-[fadeIn_0.4s_ease-out] lg:p-8">
-          <div className="flex shrink-0 items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Campaigns</h2>
-              <p className="mt-1 text-sm text-slate-400">All campaigns — past, scheduled and in-progress.</p>
-            </div>
-            <button
-              onClick={() => navigate({ to: "/wizard" })}
-              className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
-            >
-              <Plus className="size-4" />
-              New Campaign
-            </button>
-          </div>
-
           <div className="grid shrink-0 grid-cols-2 gap-4 md:grid-cols-4">
             {stats.map((s) => (
               <div key={s.label} className="rounded-xl border border-ithina-border bg-ithina-panel p-4 shadow-sm">
@@ -201,74 +283,16 @@ export default function Campaigns() {
           </div>
 
           {viewMode === "table" && statusStyles && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
-              <div className="flex-1 overflow-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="sticky top-0 z-10 border-b border-ithina-border bg-ithina-sidebar">
-                    <tr className="font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                      {tableColumns.map((col) => (
-                        <th
-                          key={col.key}
-                          className={cn(
-                            "px-4 py-3",
-                            col.key === "campaign" && "pl-8 pr-6",
-                            col.key === "actions" && "px-6 text-right",
-                          )}
-                        >
-                          {col.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ithina-border/50 text-sm">
-                    {filtered.map((c) => (
-                      <tr key={c.id} className="group transition-colors hover:bg-white/[0.02]">
-                        <td className="py-4 pl-8 pr-6">
-                          <span className="mb-0.5 block font-medium text-white">{c.name}</span>
-                          <span className="block font-mono text-[10px] text-slate-500">{c.id}</span>
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className={cn("inline-flex items-center gap-1.5 rounded border px-2 py-1 font-mono text-[10px]", statusStyles[c.status]?.table)}>
-                            {c.status === "Active" && <span className="size-1.5 animate-pulse rounded-full bg-current" />}
-                            {c.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 font-mono text-sm text-slate-300">{c.skus}</td>
-                        <td className="px-4 py-4">
-                          <div className="flex flex-wrap gap-1">
-                            {c.hardware.map((hw) => (
-                              <span key={hw} className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 font-mono text-[9px] text-slate-400">{hw}</span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 font-mono text-xs text-slate-400">{c.date}</td>
-                        <td className="px-4 py-4 text-xs text-slate-400">{c.initiator}</td>
-                        <td className="px-6 py-4 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                            <button onClick={() => openInStudio(c)} className="rounded-lg border border-ithina-purple/20 bg-ithina-purple/10 px-2.5 py-1.5 text-[10px] font-medium text-ithina-purple transition-all hover:bg-ithina-purple hover:text-white">
-                              Edit in Studio
-                            </button>
-                            <button className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-medium text-slate-400 transition-all hover:text-white">
-                              Duplicate
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/30 px-6 py-3 text-xs text-slate-500">
-                <span>{filtered.length} campaigns</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono">Page 1 of 1</span>
-                  <div className="flex gap-1">
-                    <button className="rounded border border-ithina-border bg-ithina-panel px-2.5 py-1 transition-colors hover:border-ithina-purple"><ChevronLeft className="size-3" /></button>
-                    <button className="rounded border border-ithina-border bg-ithina-panel px-2.5 py-1 transition-colors hover:border-ithina-purple"><ChevronRight className="size-3" /></button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <DataTable<CampaignListItem>
+              columns={tableColumns}
+              data={filtered}
+              rowIdField="id"
+              emptyMessage="No campaigns match the current filters"
+              pageSize={10}
+              pageSizeSelector={[5, 10, 20, 50]}
+              initialSort={{ field: "date", dir: "desc" }}
+              showRowNumber
+            />
           )}
 
           {viewMode === "calendar" && (

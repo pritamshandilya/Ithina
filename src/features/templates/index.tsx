@@ -49,6 +49,15 @@ export default function TemplateManager() {
     <PageHeader
       breadcrumbs={[{ label: "Promotions Assistant" }, { label: "Template Manager", isActive: true }]}
       title="Manage Layouts & Styles"
+      actions={
+        <button
+          onClick={() => setShowNewModal(true)}
+          className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
+        >
+          <Plus className="size-4" />
+          New Template
+        </button>
+      }
     />
   );
 
@@ -73,20 +82,6 @@ export default function TemplateManager() {
         <LoadingSpinner label="Loading templates..." className="flex-1" />
       ) : (
         <div className="relative flex flex-1 flex-col gap-5 overflow-hidden p-6 animate-[fadeIn_0.4s_ease-out] lg:p-8">
-          <div className="flex shrink-0 items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">Template Manager</h2>
-              <p className="mt-1 text-sm text-slate-400">Manage layout templates, styles and brand defaults per hardware.</p>
-            </div>
-            <button
-              onClick={() => setShowNewModal(true)}
-              className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
-            >
-              <Plus className="size-4" />
-              New Template
-            </button>
-          </div>
-
           <div className="flex shrink-0 items-center gap-2">
             {hwFilters.map((hw) => (
               <button

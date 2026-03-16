@@ -1,6 +1,7 @@
-import { ArrowRight, CloudUpload, FileSpreadsheet, X, Zap } from "lucide-react";
-import { memo, useCallback, useRef } from "react";
+import { ArrowRight, CloudUpload, FileSpreadsheet, Zap } from "lucide-react";
+import { memo, useCallback, useMemo, useRef } from "react";
 
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import type { StagedSku } from "@/types/wizard";
 
@@ -88,6 +89,175 @@ function DataStagingGrid({
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const csvColumnsWithIndex = useMemo(() => {
+    const indexed = csvRows.map((r, i) => ({ ...r, __idx: i, __id: String(i) }));
+    return indexed;
+  }, [csvRows]);
+
+  type IndexedCsvRow = (typeof csvColumnsWithIndex)[number];
+
+  const csvTableColumns = useMemo<DataTableColumn<IndexedCsvRow>[]>(() => [
+    {
+      title: "SKU",
+      field: "sku",
+      width: 110,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-xs text-slate-400">${val}</span>`;
+      },
+    },
+    {
+      title: "Product Name",
+      field: "name",
+      minWidth: 180,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="text-sm font-medium text-slate-200">${val}</span>`;
+      },
+    },
+    {
+      title: "Current Price",
+      field: "current",
+      width: 110,
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-sm text-slate-500 line-through">$${val}</span>`;
+      },
+    },
+    {
+      title: "Proposed Price",
+      field: "proposed",
+      width: 120,
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-sm font-bold text-white">$${val}</span>`;
+      },
+    },
+    {
+      title: "Margin Check",
+      field: "safe",
+      width: 120,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => boolean }).getValue();
+        if (val) return `<span class="rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">PASS</span>`;
+        return `<span class="rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">LOW MARGIN</span>`;
+      },
+    },
+    {
+      title: "",
+      field: "__idx",
+      width: 50,
+      headerSort: false,
+      headerFilter: false,
+      hozAlign: "center",
+      formatter: () => `<button data-action="remove" class="rounded p-1 text-slate-500 transition-all hover:bg-rose-400/10 hover:text-rose-400"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`,
+      cellClick: (_e: MouseEvent, cell: { getData: () => IndexedCsvRow }) => {
+        const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
+        if (target.closest?.("[data-action='remove']")) {
+          _e.stopPropagation();
+          onRemoveCsvRow(cell.getData().__idx);
+        }
+      },
+    },
+  ], [onRemoveCsvRow]);
+
+  const csvRowFormatter = useMemo(() => (row: { getData: () => IndexedCsvRow; getElement: () => HTMLElement }) => {
+    const d = row.getData();
+    if (!d.safe) {
+      const el = row.getElement();
+      el.style.borderLeft = "2px solid rgb(251 113 133)";
+      el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    }
+  }, []);
+
+  const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => [
+    {
+      title: "SKU",
+      field: "sku",
+      width: 110,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-xs text-slate-400">${val}</span>`;
+      },
+    },
+    {
+      title: "Product",
+      field: "name",
+      minWidth: 180,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="text-sm font-medium text-slate-200">${val}</span>`;
+      },
+    },
+    {
+      title: "Current",
+      field: "current",
+      width: 100,
+      sorter: "number",
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => number }).getValue();
+        return `<span class="font-mono text-sm text-slate-500 line-through">$${val.toFixed(2)}</span>`;
+      },
+    },
+    {
+      title: "Proposed",
+      field: "proposed",
+      width: 110,
+      sorter: "number",
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => number }).getValue();
+        return `<span class="font-mono text-base font-bold text-white">$${val.toFixed(2)}</span>`;
+      },
+    },
+    {
+      title: "Compliance",
+      field: "safe",
+      width: 130,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-2.5 py-1 font-mono text-[10px] text-emerald-400">PASS</span>`;
+        return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 font-mono text-[10px] text-rose-400">ALERT (${row.margin})</span>`;
+      },
+    },
+    {
+      title: "",
+      field: "sku",
+      width: 50,
+      headerSort: false,
+      headerFilter: false,
+      hozAlign: "center",
+      formatter: () => `<button data-action="remove" class="rounded p-1 text-slate-500 transition-all hover:bg-rose-400/10 hover:text-rose-400"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`,
+      cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
+        const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
+        if (target.closest?.("[data-action='remove']")) {
+          _e.stopPropagation();
+          onRemoveGridRow(cell.getData().sku);
+        }
+      },
+    },
+  ], [onRemoveGridRow]);
+
+  const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
+    const d = row.getData();
+    if (!d.safe) {
+      const el = row.getElement();
+      el.style.borderLeft = "2px solid rgb(251 113 133)";
+      el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    }
+  }, []);
 
   return (
     <div className="relative flex h-full min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
@@ -179,44 +349,17 @@ function DataStagingGrid({
                   <button onClick={onCsvConfirm} className="rounded-lg bg-ithina-purple px-4 py-1.5 text-xs font-bold text-white transition-colors hover:bg-ithina-purple-hover">Confirm &amp; Stage</button>
                 </div>
               </div>
-              <div className="flex-1 overflow-auto">
-                <table className="w-full text-left whitespace-nowrap">
-                  <thead className="sticky top-0 z-10 border-b border-ithina-border bg-ithina-sidebar">
-                    <tr className="font-mono text-[10px] uppercase tracking-widest text-ithina-muted">
-                      <th className="px-6 py-3">#</th>
-                      <th className="px-5 py-3">SKU</th>
-                      <th className="px-5 py-3">Product Name</th>
-                      <th className="px-5 py-3 text-right">Current Price</th>
-                      <th className="px-5 py-3 text-right">Proposed Price</th>
-                      <th className="px-5 py-3 text-center">Margin Check</th>
-                      <th className="w-10 px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-ithina-border/50 text-sm">
-                    {csvRows.map((row, i) => (
-                      <tr key={i} className={cn("group transition-colors hover:bg-white/[0.02]", !row.safe && "border-l-2 border-l-rose-400 bg-rose-900/10")}>
-                        <td className="px-6 py-3 font-mono text-[10px] text-slate-600">{i + 1}</td>
-                        <td className="px-5 py-3 font-mono text-xs text-slate-400">{row.sku}</td>
-                        <td className="px-5 py-3 text-sm font-medium text-slate-200">{row.name}</td>
-                        <td className="px-5 py-3 text-right font-mono text-sm text-slate-500 line-through">${row.current}</td>
-                        <td className="px-5 py-3 text-right font-mono text-sm font-bold text-white">${row.proposed}</td>
-                        <td className="px-5 py-3 text-center">
-                          {row.safe ? (
-                            <span className="rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">PASS</span>
-                          ) : (
-                            <span className="rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">LOW MARGIN</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <button onClick={() => onRemoveCsvRow(i)} className="rounded p-1 text-slate-500 opacity-0 transition-all hover:bg-rose-400/10 hover:text-rose-400 group-hover:opacity-100" aria-label="Remove row">
-                            <X className="size-3.5" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable<IndexedCsvRow>
+                columns={csvTableColumns}
+                data={csvColumnsWithIndex}
+                rowIdField="__id"
+                emptyMessage="No CSV rows"
+                pagination={false}
+                headerFilters={false}
+                showRowNumber
+                layout="fitColumns"
+                rowFormatter={csvRowFormatter}
+              />
             </div>
           )}
         </div>
@@ -233,40 +376,17 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <table className="w-full text-left whitespace-nowrap">
-              <thead className="sticky top-0 z-10 border-b border-ithina-border bg-ithina-panel">
-                <tr className="font-mono text-[10px] font-medium uppercase tracking-widest text-ithina-muted">
-                  <th className="px-6 py-4">SKU</th>
-                  <th className="px-5 py-4">Product</th>
-                  <th className="px-5 py-4 text-right">Current</th>
-                  <th className="px-5 py-4 text-right text-ithina-purple">Proposed</th>
-                  <th className="px-5 py-4 text-center">Compliance</th>
-                  <th className="w-10 px-4 py-4 text-center" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-ithina-border/50 text-sm">
-                {data.map((item) => (
-                  <tr key={item.sku} className={cn("group transition-colors hover:bg-white/[0.02]", !item.safe && "border-l-2 border-l-rose-400 bg-rose-900/10")}>
-                    <td className="px-6 py-4 font-mono text-xs text-slate-400">{item.sku}</td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-200">{item.name}</td>
-                    <td className="px-5 py-4 text-right font-mono text-sm text-slate-500 line-through">${item.current.toFixed(2)}</td>
-                    <td className="px-5 py-4 text-right font-mono text-base font-bold text-white">${item.proposed.toFixed(2)}</td>
-                    <td className="px-5 py-4 text-center">
-                      {item.safe ? (
-                        <span className="rounded border border-emerald-400/20 bg-emerald-900/40 px-2.5 py-1 font-mono text-[10px] text-emerald-400">PASS</span>
-                      ) : (
-                        <span className="rounded border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 font-mono text-[10px] text-rose-400">ALERT ({item.margin})</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <button onClick={() => onRemoveGridRow(item.sku)} className="rounded p-1 text-slate-500 opacity-0 transition-all hover:bg-rose-400/10 hover:text-rose-400 group-hover:opacity-100" aria-label="Remove SKU">
-                        <X className="size-3.5" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <DataTable<StagedSku>
+              columns={aiColumns}
+              data={data}
+              rowIdField="sku"
+              emptyMessage="No SKUs staged"
+              pagination={false}
+              headerFilters={false}
+              showRowNumber
+              layout="fitColumns"
+              rowFormatter={aiRowFormatter}
+            />
           )}
         </div>
       )}

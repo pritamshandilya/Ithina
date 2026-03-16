@@ -1,18 +1,8 @@
-import { Bell, Moon, Settings, Shield, Sun } from "lucide-react";
+import { Bell, Settings, Shield } from "lucide-react";
 
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { toggleTheme } from "@/store/slices/ui-slice";
 
 export default function Header() {
-  const isDarkMode = useAppSelector((state) => state.ui.isDarkMode);
-  const dispatch = useAppDispatch();
-
-  const handleToggleTheme = () => {
-    dispatch(toggleTheme());
-    document.documentElement.classList.toggle("dark");
-  };
-
   return (
     <header className="flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-6 shadow-sm">
       <div className="flex h-full items-center py-3">
@@ -46,17 +36,6 @@ export default function Header() {
           <Settings className="size-[18px]" />
         </button>
 
-        <button
-          onClick={handleToggleTheme}
-          title={isDarkMode ? "Light mode" : "Dark mode"}
-          className="ml-1 rounded-md border border-ithina-border p-1.5 text-slate-400 transition-colors hover:text-white"
-        >
-          {isDarkMode ? (
-            <Sun className="size-[18px]" />
-          ) : (
-            <Moon className="size-[18px]" />
-          )}
-        </button>
       </div>
     </header>
   );

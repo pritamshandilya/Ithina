@@ -107,13 +107,6 @@ export default function Admin() {
       ) : (
         <div className="relative flex flex-1 flex-col overflow-hidden p-6 animate-[fadeIn_0.4s_ease-out] lg:p-8">
           <div className="relative mx-auto flex h-full w-full max-w-[1200px] flex-col">
-            <header className="mb-6 shrink-0">
-              <h2 className="text-2xl font-bold tracking-tight text-white">System Guardrails & Brand Profile</h2>
-              <p className="mt-1 text-sm text-slate-400">
-                Configure the strict JSON constraints enforced by the Agent Pipeline.
-              </p>
-            </header>
-
             <div className="mb-6 flex shrink-0 items-center gap-8 border-b border-ithina-border" role="tablist" aria-label="Admin settings tabs">
               {tabs.map((tab) => {
                 const Icon = ICON_MAP[tab.iconName];

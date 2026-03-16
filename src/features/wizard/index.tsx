@@ -1,4 +1,4 @@
-import { AlertTriangle, Check } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -198,12 +198,6 @@ export default function Wizard() {
           { label: "Campaign Wizard", isActive: true },
         ]}
         title="Intent & Data Staging"
-        actions={
-          <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 font-mono text-[11px] text-emerald-400">
-            <Check className="h-3 w-3" strokeWidth={2} />
-            ROOS Connected
-          </div>
-        }
       />
 
       <div className="relative flex flex-1 overflow-hidden p-6 lg:p-8">

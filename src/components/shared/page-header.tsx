@@ -7,20 +7,18 @@ interface PageHeaderProps {
   actions?: ReactNode;
 }
 
+const RoosConnected = () => (
+  <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 font-mono text-[11px] text-emerald-400">
+    <Check className="h-3 w-3" strokeWidth={2} />
+    ROOS Connected
+  </div>
+);
+
 export default function PageHeader({
   breadcrumbs,
   title,
   actions,
 }: PageHeaderProps) {
-  const resolvedActions =
-    actions ??
-    (
-      <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 font-mono text-[11px] text-emerald-400">
-        <Check className="h-3 w-3" strokeWidth={2} />
-        ROOS Connected
-      </div>
-    );
-
   return (
     <header className="flex shrink-0 items-end justify-between border-b border-ithina-border/50 px-8 py-6">
       <div>
@@ -39,7 +37,10 @@ export default function PageHeader({
         </h1>
       </div>
 
-      <div className="flex items-center gap-3">{resolvedActions}</div>
+      <div className="flex items-center gap-3">
+        {actions}
+        <RoosConnected />
+      </div>
     </header>
   );
 }

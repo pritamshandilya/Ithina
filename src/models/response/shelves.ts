@@ -15,6 +15,7 @@ export interface ShelfResponse {
   fixture_width: number;
   fixture_height: number;
   fixture_depth: number;
+  fixture_dimension_unit: string;
   fixture_section: string;
   fixture_aisle: string;
   fixture_zone: string;

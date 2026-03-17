@@ -6,6 +6,7 @@ import {
 } from "@/lib/constants/planogram";
 import { cn } from "@/lib/utils";
 import type { PlanogramFixture, PlanogramShelfDef } from "@/types/planogram";
+import { useStore } from "@/providers/store";
 import { ShelfProduct } from "./shelf-product";
 import type { PlanogramEditHandlers } from "./types";
 import {
@@ -43,7 +44,9 @@ export function ShelfRow({
   dragHandlers,
   className,
 }: ShelfRowProps) {
-  const units = fixture?.units ?? UNITS;
+  const { selectedStore } = useStore();
+  const storeUnits = (selectedStore as any)?.default_dimensions as string | undefined;
+  const units = fixture?.units ?? storeUnits ?? UNITS;
   const hasShelfWidth = shelf.width != null;
   const hasShelfDepth = shelf.depth != null;
   const widthValue = shelf.width ?? fixture?.width;

@@ -19,14 +19,16 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  useShelves,
+  useAssignPlanogramToShelf,
   useCreateShelf,
   usePlanogramById,
   usePlanogramList,
-  useAssignPlanogramToShelf,
+  useShelves,
 } from "@/queries/maker";
 import type { PlanogramArrangement } from "@/types/planogram";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/providers/store";
+import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
@@ -65,6 +67,8 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const assignPlanogramMutation = useAssignPlanogramToShelf();
   const isAssociateMode = !!associateShelfId;
 
+  const { selectedStore } = useStore();
+
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
   const [shelfName, setShelfName] = useState("");
   const [aisleNumber, setAisleNumber] = useState<number | "">("");
@@ -78,6 +82,18 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  const defaultDimensionUnit = useMemo(() => {
+    const raw = (selectedStore as any)?.default_dimensions as string | undefined;
+    if (!raw) return "mm";
+    const value = raw.toLowerCase();
+    const match = STORE_DIMENSION_UNITS.find(
+      (unit) =>
+        value === unit.toLowerCase() ||
+        value.endsWith(` ${unit.toLowerCase()}`),
+    );
+    return match ?? "mm";
+  }, [selectedStore]);
 
   useEffect(() => {
     if (isAssociateMode && associateShelfName) {
@@ -134,7 +150,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
         navigate({ to: shelfListPath as any });
       } else if (!isAssociateMode) {
-        // Map UI fields to real API CreateShelfPayload
+          // Map UI fields to real API CreateShelfPayload
         await createShelfMutation.mutateAsync({
           shelf_id: `S${aisleNumber}-${bayNumber}`, // Unique business ID
           name: shelfName.trim(),
@@ -145,6 +161,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
               height: Number(dimHeight) || 0,
               depth: Number(dimDepth) || 300, // Default to 300mm if not provided to satisfy gt=0
             },
+              dimension_unit: defaultDimensionUnit,
             physical_location: {
               aisle: String(aisleNumber),
               zone: zone.trim() || "General",
@@ -334,14 +351,25 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                             <option value="cooler">Cooler</option>
                           </Select>
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="dim-width">Dimensions (W×H×D)</Label>
-                          <div className="flex items-center gap-2">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <Label htmlFor="dim-width">
+                              Dimensions (W × H × D)
+                            </Label>
+                            <span className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+                              Unit:{" "}
+                              <span className="ml-1 font-medium">
+                                {defaultDimensionUnit}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
                             <Input
                               id="dim-width"
                               placeholder="Width"
                               value={dimWidth}
                               onChange={(e) => setDimWidth(e.target.value)}
+                              className="h-9"
                             />
                             <span className="text-muted-foreground">×</span>
                             <Input
@@ -349,6 +377,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                               placeholder="Height"
                               value={dimHeight}
                               onChange={(e) => setDimHeight(e.target.value)}
+                              className="h-9"
                             />
                             <span className="text-muted-foreground">×</span>
                             <Input
@@ -356,6 +385,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                               placeholder="Depth"
                               value={dimDepth}
                               onChange={(e) => setDimDepth(e.target.value)}
+                              className="h-9"
                             />
                           </div>
                         </div>

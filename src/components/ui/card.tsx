@@ -4,13 +4,13 @@ import { cn } from "@/lib/utils";
 
 const Card = React.forwardRef<
   HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
+  React.HTMLAttributes<HTMLDivElement> & { noBorder?: boolean }
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
     data-slot="card"
     className={cn(
-      "rounded-lg border border-border bg-card text-card-foreground shadow-sm",
+      `rounded-lg ${props.noBorder ? "" : "border border-border"} bg-card text-card-foreground shadow-sm`,
       className
     )}
     {...props}

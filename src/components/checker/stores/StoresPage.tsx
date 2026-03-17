@@ -11,7 +11,7 @@ import MainLayout from "@/components/layouts/main";
 
 import { StoreFormModal } from "./StoreFormModal";
 import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
-import { useOrgStores, useCreateStore, useUpdateStore, useDeleteStore } from "@/queries/checker";
+import { useOrgStores, useUpdateStore, useDeleteStore } from "@/queries/checker";
 import { useStore as useGlobalStore } from "@/providers/store";
 import { useNavigate } from "@tanstack/react-router";
 import { AuthSessionService } from "@/lib/auth/session";
@@ -19,7 +19,6 @@ import type { StoreSetting } from "@/types/checker";
 
 export function StoresPage() {
     const { data: stores = [], isLoading } = useOrgStores();
-    const createStoreMutation = useCreateStore();
     const updateStoreMutation = useUpdateStore();
     const deleteStoreMutation = useDeleteStore();
     const { setSelectedStore: setGlobalSelectedStore } = useGlobalStore();
@@ -27,7 +26,6 @@ export function StoresPage() {
     const currentUser = AuthSessionService.getCurrentUser();
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -39,15 +37,6 @@ export function StoresPage() {
             (store.address || "").toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [stores, searchQuery]);
-
-    const handleAddStore = async (newStore: any) => {
-        try {
-            await createStoreMutation.mutateAsync(newStore);
-            setIsAddModalOpen(false);
-        } catch {
-            // Store creation errors are handled by query layer or UI feedback.
-        }
-    };
 
     const handleEditStore = async (updatedStore: any) => {
         if (!selectedStore) return;
@@ -188,6 +177,7 @@ export function StoresPage() {
                 `;
             },
             cellClick: (e: any, cell: any) => {
+            e.stopPropagation();
                 const store = cell.getData() as StoreSetting;
                 const target = e.target.closest("button");
                 if (target?.classList.contains("edit-btn")) {
@@ -212,7 +202,14 @@ export function StoresPage() {
                     description="Monitor and manage all retail locations in your organization."
                     // icon={StoreIcon}
                 >
-                    <Button variant="accent" onClick={() => setIsAddModalOpen(true)}>
+                    <Button
+                        variant="accent"
+                        onClick={() =>
+                            navigate({
+                                to: "/admin/stores/new",
+                            })
+                        }
+                    >
                         <Plus className="mr-2 size-4" />
                         Create Store
                     </Button>
@@ -246,13 +243,6 @@ export function StoresPage() {
                     </div>
                 </div>
             </div>
-
-            <StoreFormModal
-                isOpen={isAddModalOpen}
-                isLoading={createStoreMutation.isPending}
-                onClose={() => setIsAddModalOpen(false)}
-                onSubmit={handleAddStore}
-            />
 
             <StoreFormModal
                 isOpen={isEditModalOpen}

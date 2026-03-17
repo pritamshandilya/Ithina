@@ -88,42 +88,12 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
       return;
     }
 
-    const fixturePayload = {
-      type: formValues.fixtureType.trim() ? formValues.fixtureType.trim() : undefined,
-      physical_location:
-        formValues.aisle.trim() || formValues.zone.trim() || formValues.section.trim()
-          ? {
-              aisle: formValues.aisle.trim() ? formValues.aisle.trim() : undefined,
-              zone: formValues.zone.trim() ? formValues.zone.trim() : undefined,
-              section: formValues.section.trim() ? formValues.section.trim() : undefined,
-            }
-          : undefined,
-      dimensions:
-        formValues.width.trim() || formValues.height.trim() || formValues.depth.trim()
-          ? {
-              width: formValues.width.trim() ? Number(formValues.width) : undefined,
-              height: formValues.height.trim() ? Number(formValues.height) : undefined,
-              depth: formValues.depth.trim() ? Number(formValues.depth) : undefined,
-            }
-          : undefined,
-    };
-
-    if (fixturePayload.physical_location && Object.values(fixturePayload.physical_location).every((v) => v === undefined)) {
-      fixturePayload.physical_location = undefined;
-    }
-    if (fixturePayload.dimensions && Object.values(fixturePayload.dimensions).every((v) => v === undefined)) {
-      fixturePayload.dimensions = undefined;
-    }
-    
-    const hasFixtureUpdates = Object.values(fixturePayload).some(v => v !== undefined);
-
     updateShelf(
       {
         shelfId: shelf.id,
         payload: {
           name: formValues.shelfName.trim(),
           shelf_id: formValues.shelfCode.trim(),
-          ...(hasFixtureUpdates ? { fixture: fixturePayload } : {}),
         },
       },
       {

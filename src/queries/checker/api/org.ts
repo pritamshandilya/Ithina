@@ -40,16 +40,46 @@ function mapOrgUser(user: OrgUserApiModel): AuthSessionUser {
   };
 }
 
+interface OrgStoreApiModel {
+  id: string;
+  organization_id: string;
+  created_by_user_id: string;
+  name: string;
+  address: string;
+  currency: string;
+  default_dimension_unit?: string;
+  maker_ids?: string[];
+  checker_ids?: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+function mapOrgStore(store: OrgStoreApiModel): Store {
+  return {
+    id: store.id,
+    name: store.name,
+    address: store.address,
+    currency: store.currency,
+    default_dimensions: store.default_dimension_unit,
+    maker_ids: store.maker_ids,
+    user_ids: store.checker_ids,
+    created: store.created_at,
+    status: "Active",
+  };
+}
+
 export async function fetchOrganization(): Promise<OrganizationInfo> {
   return apiClient.get<OrganizationInfo>("/organization");
 }
 
 export async function fetchOrgStores(): Promise<Store[]> {
-  return apiClient.get<Store[]>("/stores");
+  const stores = await apiClient.get<OrgStoreApiModel[]>("/stores");
+  return stores.map(mapOrgStore);
 }
 
 export async function fetchStoreById(storeId: string): Promise<Store> {
-  return apiClient.get<Store>(`/stores/${storeId}`);
+  const store = await apiClient.get<OrgStoreApiModel>(`/stores/${storeId}`);
+  return mapOrgStore(store);
 }
 
 export async function assignUserToStore(
@@ -102,11 +132,20 @@ export async function createStore(data: {
   currency: string;
   default_dimensions: string;
 }): Promise<Store> {
-  return apiClient.post<Store>("/stores", data);
+  const payload = {
+    name: data.name,
+    address: data.address,
+    currency: data.currency,
+    default_dimension_unit: data.default_dimensions,
+  };
+  const store = await apiClient.post<OrgStoreApiModel>("/stores", payload);
+  return mapOrgStore(store);
 }
 
 export async function deleteStore(storeId: string): Promise<void> {
-  return apiClient.delete<void>(`/stores/${storeId}`);
+  return apiClient.delete<void>("/store", {
+    headers: { "X-Store-Id": storeId },
+  });
 }
 
 export async function updateStore(
@@ -118,7 +157,17 @@ export async function updateStore(
     default_dimensions: string;
   },
 ): Promise<Store> {
-  return apiClient.patch<Store>(`/stores/${storeId}`, data);
+  const payload: any = {
+    name: data.name,
+    address: data.address,
+    currency: data.currency,
+    default_dimension_unit: data.default_dimensions,
+  };
+
+  const store = await apiClient.put<OrgStoreApiModel>("/store", payload, {
+    headers: { "X-Store-Id": storeId },
+  });
+  return mapOrgStore(store);
 }
 
 export interface UpsertUserPayload {

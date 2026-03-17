@@ -199,6 +199,12 @@ export default function Sidenav() {
           icon: FileSignature,
         });
       }
+      // Maker store settings (view-only)
+      items.push({
+        label: "Store Settings",
+        to: "/maker/store-settings",
+        icon: Settings,
+      });
       return items;
     }
 
@@ -219,7 +225,7 @@ export default function Sidenav() {
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
-        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any, 
+        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any,
         icon: Library,
       });
     }
@@ -232,6 +238,22 @@ export default function Sidenav() {
         { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as any },
       ],
     });
+    // Store settings:
+    // - In admin store view: editable store settings for the selected store
+    // - In checker context: view-only store settings
+    if (isAdminStoreView) {
+      items.push({
+        label: "Store Settings",
+        to: `${storePrefix}/store-settings` as any,
+        icon: Settings,
+      });
+    } else {
+      items.push({
+        label: "Store Settings",
+        to: "/checker/store-settings",
+        icon: Settings,
+      });
+    }
     return items;
   }, [enabledCoreNav, role, isOrgContext, selectedStore, location.pathname]);
 

@@ -77,6 +77,10 @@ export interface DataTableProps<T = object> {
   dataTreeElementColumn?: string;
   /** Show serial number column "No." as first column (default: true) */
   showRowNumber?: boolean;
+  /** Enable bulk row selection with checkboxes (default: false) */
+  isBulkEnabled?: boolean;
+  /** Optional callback when bulk selection changes */
+  onSelectionChange?: (rows: T[]) => void;
 }
 
 /**
@@ -107,6 +111,8 @@ export function DataTable<T extends object>({
   dataTreeStartExpanded = false,
   dataTreeElementColumn,
   showRowNumber = true,
+  isBulkEnabled = false,
+  onSelectionChange,
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -144,9 +150,28 @@ export function DataTable<T extends object>({
       vertAlign: "middle" as const,
     };
 
-    const finalColumns = showRowNumber
-      ? [serialColumn, ...tabulatorColumns]
-      : tabulatorColumns;
+    const selectionColumn =
+      isBulkEnabled
+        ? {
+            title: "",
+            field: "__select__",
+            width: 40,
+            headerSort: false,
+            headerFilter: false,
+            hozAlign: "center" as const,
+            headerHozAlign: "center" as const,
+            vertAlign: "middle" as const,
+            formatter: "rowSelection" as const,
+            titleFormatter: "rowSelection" as const,
+            titleFormatterParams: { rowRange: "active" },
+          }
+        : null;
+
+    const finalColumns = [
+      ...(selectionColumn ? [selectionColumn] : []),
+      ...(showRowNumber ? [serialColumn] : []),
+      ...tabulatorColumns,
+    ];
 
     const options: Record<string, unknown> = {
       data: [...data],
@@ -188,6 +213,11 @@ export function DataTable<T extends object>({
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
 
+    if (isBulkEnabled) {
+      options.selectable = true;
+      options.selectableRangeMode = "click";
+    }
+
     const effectiveRowFormatter = rowFormatter
       ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
         rowFormatter(row);
@@ -203,11 +233,24 @@ export function DataTable<T extends object>({
     tableRef.current = new TabulatorFull(containerRef.current, options as never);
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+      (tableRef.current as never as {
+        on: (
+          event: string,
+          callback: (e: unknown, row: { getData: () => T }) => void,
+        ) => void;
+      }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
         const ev = e as { target?: EventTarget };
         const target = ev?.target as HTMLElement | null;
         if (target?.closest?.("button, select, [data-action], a[href]")) return;
         onRowClick(row.getData(), e);
+      });
+    }
+
+    if (isBulkEnabled && onSelectionChange && tableRef.current) {
+      (tableRef.current as never as {
+        on: (event: string, callback: (data: T[]) => void) => void;
+      }).on("rowSelectionChanged", (data: T[]) => {
+        onSelectionChange(data);
       });
     }
 
@@ -235,6 +278,8 @@ export function DataTable<T extends object>({
     dataTreeStartExpanded,
     dataTreeElementColumn,
     showRowNumber,
+    isBulkEnabled,
+    onSelectionChange,
   ]);
 
   // Keep row updates cheap when only data changes.

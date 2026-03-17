@@ -20,6 +20,7 @@ export interface ShelfFixtureLocationPayload {
 export interface ShelfFixturePayload {
   type: string;
   dimensions: ShelfFixtureDimensionsPayload;
+  dimension_unit: string;
   physical_location: ShelfFixtureLocationPayload;
 }
 
@@ -59,5 +60,4 @@ export interface ShelfFixtureUpdateRequest {
 export interface UpdateShelfPayload {
   shelf_id?: string;
   name?: string;
-  fixture?: ShelfFixtureUpdateRequest;
 }

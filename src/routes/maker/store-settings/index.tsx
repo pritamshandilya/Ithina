@@ -2,11 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { StoreConfigurationPage } from "@/components/checker/stores/StoreConfigurationPage";
 
-export const Route = createFileRoute("/checker/store-settings/")({
-  component: CheckerStoreSettingsRoute,
+export const Route = createFileRoute("/maker/store-settings/")({
+  component: MakerStoreSettingsRoute,
 });
 
-function CheckerStoreSettingsRoute() {
+function MakerStoreSettingsRoute() {
   return <StoreConfigurationPage />;
 }
 

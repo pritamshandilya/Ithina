@@ -32,6 +32,7 @@ import { Route as MakerReportsRouteRouteImport } from './routes/maker/reports/ro
 import { Route as MakerHistoricalAnalysisRouteRouteImport } from './routes/maker/historical-analysis/route'
 import { Route as MakerAuditsRouteRouteImport } from './routes/maker/audits/route'
 import { Route as CheckerShelfRouteRouteImport } from './routes/checker/shelf/route'
+import { Route as MakerStoreSettingsIndexRouteImport } from './routes/maker/store-settings/index'
 import { Route as MakerShelvesIndexRouteImport } from './routes/maker/shelves/index'
 import { Route as MakerShelfIndexRouteImport } from './routes/maker/shelf/index'
 import { Route as MakerManualAuditsIndexRouteImport } from './routes/maker/manual-audits/index'
@@ -52,6 +53,8 @@ import { Route as AdminStoresIndexRouteImport } from './routes/admin/stores/inde
 import { Route as AdminStoreSettingsIndexRouteImport } from './routes/admin/store-settings/index'
 import { Route as AdminOrganizationSettingsIndexRouteImport } from './routes/admin/organization-settings/index'
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin/dashboard/index'
+import { Route as AdminStoresNewRouteImport } from './routes/admin/stores/new'
+import { Route as AdminStoreIdStoreSettingsRouteImport } from './routes/admin/$storeId/store-settings'
 import { Route as AdminStoreIdKnowledgeCenterRouteImport } from './routes/admin/$storeId/knowledge-center'
 import { Route as AdminStoreIdDashboardRouteImport } from './routes/admin/$storeId/dashboard'
 import { Route as AdminStoreIdAuditReviewRouteImport } from './routes/admin/$storeId/audit-review'
@@ -202,6 +205,11 @@ const CheckerShelfRouteRoute = CheckerShelfRouteRouteImport.update({
   path: '/shelf',
   getParentRoute: () => CheckerRouteRoute,
 } as any)
+const MakerStoreSettingsIndexRoute = MakerStoreSettingsIndexRouteImport.update({
+  id: '/store-settings/',
+  path: '/store-settings/',
+  getParentRoute: () => MakerRouteRoute,
+} as any)
 const MakerShelvesIndexRoute = MakerShelvesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -307,6 +315,17 @@ const AdminDashboardIndexRoute = AdminDashboardIndexRouteImport.update({
   path: '/dashboard/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
+const AdminStoresNewRoute = AdminStoresNewRouteImport.update({
+  id: '/stores/new',
+  path: '/stores/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminStoreIdStoreSettingsRoute =
+  AdminStoreIdStoreSettingsRouteImport.update({
+    id: '/store-settings',
+    path: '/store-settings',
+    getParentRoute: () => AdminStoreIdRoute,
+  } as any)
 const AdminStoreIdKnowledgeCenterRoute =
   AdminStoreIdKnowledgeCenterRouteImport.update({
     id: '/knowledge-center',
@@ -531,6 +550,8 @@ export interface FileRoutesByFullPath {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
+  '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard': typeof AdminDashboardIndexRoute
   '/admin/organization-settings': typeof AdminOrganizationSettingsIndexRoute
   '/admin/store-settings': typeof AdminStoreSettingsIndexRoute
@@ -551,6 +572,7 @@ export interface FileRoutesByFullPath {
   '/maker/manual-audits': typeof MakerManualAuditsIndexRoute
   '/maker/shelf': typeof MakerShelfIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
+  '/maker/store-settings': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
@@ -600,6 +622,8 @@ export interface FileRoutesByTo {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
+  '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard': typeof AdminDashboardIndexRoute
   '/admin/organization-settings': typeof AdminOrganizationSettingsIndexRoute
   '/admin/store-settings': typeof AdminStoreSettingsIndexRoute
@@ -620,6 +644,7 @@ export interface FileRoutesByTo {
   '/maker/manual-audits': typeof MakerManualAuditsIndexRoute
   '/maker/shelf': typeof MakerShelfIndexRoute
   '/maker/shelves': typeof MakerShelvesIndexRoute
+  '/maker/store-settings': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
@@ -680,6 +705,8 @@ export interface FileRoutesById {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
+  '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard/': typeof AdminDashboardIndexRoute
   '/admin/organization-settings/': typeof AdminOrganizationSettingsIndexRoute
   '/admin/store-settings/': typeof AdminStoreSettingsIndexRoute
@@ -700,6 +727,7 @@ export interface FileRoutesById {
   '/maker/manual-audits/': typeof MakerManualAuditsIndexRoute
   '/maker/shelf/': typeof MakerShelfIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
+  '/maker/store-settings/': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
@@ -760,6 +788,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/store-settings'
+    | '/admin/stores/new'
     | '/admin/dashboard'
     | '/admin/organization-settings'
     | '/admin/store-settings'
@@ -780,6 +810,7 @@ export interface FileRouteTypes {
     | '/maker/manual-audits'
     | '/maker/shelf'
     | '/maker/shelves/'
+    | '/maker/store-settings'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
     | '/admin/$storeId/reports/store-level'
@@ -829,6 +860,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/store-settings'
+    | '/admin/stores/new'
     | '/admin/dashboard'
     | '/admin/organization-settings'
     | '/admin/store-settings'
@@ -849,6 +882,7 @@ export interface FileRouteTypes {
     | '/maker/manual-audits'
     | '/maker/shelf'
     | '/maker/shelves'
+    | '/maker/store-settings'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
     | '/admin/$storeId/reports/store-level'
@@ -908,6 +942,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/store-settings'
+    | '/admin/stores/new'
     | '/admin/dashboard/'
     | '/admin/organization-settings/'
     | '/admin/store-settings/'
@@ -928,6 +964,7 @@ export interface FileRouteTypes {
     | '/maker/manual-audits/'
     | '/maker/shelf/'
     | '/maker/shelves/'
+    | '/maker/store-settings/'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
     | '/admin/$storeId/reports/store-level'
@@ -1134,6 +1171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerShelfRouteRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
+    '/maker/store-settings/': {
+      id: '/maker/store-settings/'
+      path: '/store-settings'
+      fullPath: '/maker/store-settings'
+      preLoaderRoute: typeof MakerStoreSettingsIndexRouteImport
+      parentRoute: typeof MakerRouteRoute
+    }
     '/maker/shelves/': {
       id: '/maker/shelves/'
       path: '/'
@@ -1273,6 +1317,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/dashboard'
       preLoaderRoute: typeof AdminDashboardIndexRouteImport
       parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/stores/new': {
+      id: '/admin/stores/new'
+      path: '/stores/new'
+      fullPath: '/admin/stores/new'
+      preLoaderRoute: typeof AdminStoresNewRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/$storeId/store-settings': {
+      id: '/admin/$storeId/store-settings'
+      path: '/store-settings'
+      fullPath: '/admin/$storeId/store-settings'
+      preLoaderRoute: typeof AdminStoreIdStoreSettingsRouteImport
+      parentRoute: typeof AdminStoreIdRoute
     }
     '/admin/$storeId/knowledge-center': {
       id: '/admin/$storeId/knowledge-center'
@@ -1534,6 +1592,7 @@ interface AdminStoreIdRouteChildren {
   AdminStoreIdAuditReviewRoute: typeof AdminStoreIdAuditReviewRoute
   AdminStoreIdDashboardRoute: typeof AdminStoreIdDashboardRoute
   AdminStoreIdKnowledgeCenterRoute: typeof AdminStoreIdKnowledgeCenterRoute
+  AdminStoreIdStoreSettingsRoute: typeof AdminStoreIdStoreSettingsRoute
   AdminStoreIdReportsAdhocRoute: typeof AdminStoreIdReportsAdhocRoute
   AdminStoreIdReportsShelfLevelRoute: typeof AdminStoreIdReportsShelfLevelRoute
   AdminStoreIdReportsStoreLevelRoute: typeof AdminStoreIdReportsStoreLevelRoute
@@ -1549,6 +1608,7 @@ const AdminStoreIdRouteChildren: AdminStoreIdRouteChildren = {
   AdminStoreIdAuditReviewRoute: AdminStoreIdAuditReviewRoute,
   AdminStoreIdDashboardRoute: AdminStoreIdDashboardRoute,
   AdminStoreIdKnowledgeCenterRoute: AdminStoreIdKnowledgeCenterRoute,
+  AdminStoreIdStoreSettingsRoute: AdminStoreIdStoreSettingsRoute,
   AdminStoreIdReportsAdhocRoute: AdminStoreIdReportsAdhocRoute,
   AdminStoreIdReportsShelfLevelRoute: AdminStoreIdReportsShelfLevelRoute,
   AdminStoreIdReportsStoreLevelRoute: AdminStoreIdReportsStoreLevelRoute,
@@ -1567,6 +1627,7 @@ const AdminStoreIdRouteWithChildren = AdminStoreIdRoute._addFileChildren(
 interface AdminRouteRouteChildren {
   AdminStoreIdRoute: typeof AdminStoreIdRouteWithChildren
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminStoresNewRoute: typeof AdminStoresNewRoute
   AdminDashboardIndexRoute: typeof AdminDashboardIndexRoute
   AdminOrganizationSettingsIndexRoute: typeof AdminOrganizationSettingsIndexRoute
   AdminStoreSettingsIndexRoute: typeof AdminStoreSettingsIndexRoute
@@ -1577,6 +1638,7 @@ interface AdminRouteRouteChildren {
 const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminStoreIdRoute: AdminStoreIdRouteWithChildren,
   AdminIndexRoute: AdminIndexRoute,
+  AdminStoresNewRoute: AdminStoresNewRoute,
   AdminDashboardIndexRoute: AdminDashboardIndexRoute,
   AdminOrganizationSettingsIndexRoute: AdminOrganizationSettingsIndexRoute,
   AdminStoreSettingsIndexRoute: AdminStoreSettingsIndexRoute,
@@ -1751,6 +1813,7 @@ interface MakerRouteRouteChildren {
   MakerDashboardIndexRoute: typeof MakerDashboardIndexRoute
   MakerManualAuditsIndexRoute: typeof MakerManualAuditsIndexRoute
   MakerShelfIndexRoute: typeof MakerShelfIndexRoute
+  MakerStoreSettingsIndexRoute: typeof MakerStoreSettingsIndexRoute
 }
 
 const MakerRouteRouteChildren: MakerRouteRouteChildren = {
@@ -1763,6 +1826,7 @@ const MakerRouteRouteChildren: MakerRouteRouteChildren = {
   MakerDashboardIndexRoute: MakerDashboardIndexRoute,
   MakerManualAuditsIndexRoute: MakerManualAuditsIndexRoute,
   MakerShelfIndexRoute: MakerShelfIndexRoute,
+  MakerStoreSettingsIndexRoute: MakerStoreSettingsIndexRoute,
 }
 
 const MakerRouteRouteWithChildren = MakerRouteRoute._addFileChildren(

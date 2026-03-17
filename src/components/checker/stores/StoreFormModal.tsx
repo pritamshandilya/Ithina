@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Store, X, Check } from "lucide-react";
 import type { StoreSetting } from "@/types/checker";
+import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
 
 interface StoreFormModalProps {
     isOpen: boolean;
@@ -17,10 +18,10 @@ interface StoreFormModalProps {
 type StoreFormValues = Omit<StoreSetting, "id" | "created" | "status" | "maker_ids">;
 
 const EMPTY_STORE_FORM: StoreFormValues = {
-    name: "",
-    address: "",
-    currency: "USD",
-    default_dimensions: "Metric",
+  name: "",
+  address: "",
+  currency: "USD",
+  default_dimensions: "cm",
 };
 
 function getInitialStoreFormData(initialData?: StoreSetting): StoreFormValues {
@@ -41,41 +42,42 @@ export function StoreFormModal({
     initialData,
     isLoading = false,
 }: StoreFormModalProps) {
-    const draftSeed = initialData?.id ?? "new";
-    const [draftState, setDraftState] = useState<{
-        seed: string;
-        values: Partial<StoreFormValues>;
-    }>({
-        seed: draftSeed,
-        values: {},
-    });
-    const formData = {
-        ...getInitialStoreFormData(initialData),
-        ...(draftState.seed === draftSeed ? draftState.values : {}),
-    };
+  const draftSeed = initialData?.id ?? "new";
+  const [draftState, setDraftState] = useState<{
+    seed: string;
+    values: Partial<StoreFormValues>;
+  }>({
+    seed: draftSeed,
+    values: {},
+  });
 
-    const updateField = <K extends keyof StoreFormValues>(
-        field: K,
-        value: StoreFormValues[K],
-    ) => {
-        setDraftState((prev) => ({
-            seed: draftSeed,
-            values: {
-                ...(prev.seed === draftSeed ? prev.values : {}),
-                [field]: value,
-            },
-        }));
-    };
+  const formData: StoreFormValues = {
+    ...getInitialStoreFormData(initialData),
+    ...(draftState.seed === draftSeed ? draftState.values : {}),
+  };
 
-    const handleClose = () => {
-        setDraftState({ seed: draftSeed, values: {} });
-        onClose();
-    };
+  const updateField = <K extends keyof StoreFormValues>(
+    field: K,
+    value: StoreFormValues[K],
+  ) => {
+    setDraftState((prev) => ({
+      seed: draftSeed,
+      values: {
+        ...(prev.seed === draftSeed ? prev.values : {}),
+        [field]: value,
+      },
+    }));
+  };
 
-    const handleSubmit = (e: FormEvent) => {
-        e.preventDefault();
-        onSubmit(formData);
-    };
+  const handleClose = () => {
+    setDraftState({ seed: draftSeed, values: {} });
+    onClose();
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    onSubmit(formData);
+  };
 
     return (
         <Modal isOpen={isOpen} onClose={handleClose} className="max-w-lg">
@@ -143,16 +145,21 @@ export function StoreFormModal({
 
                         <div className="space-y-2">
                             <Label htmlFor="default_dimensions" className="text-sm font-medium text-muted-foreground">
-                                Default Dimensions <span className="text-destructive">*</span>
+                                Default Dimension Unit <span className="text-destructive">*</span>
                             </Label>
-                            <Input
+                            <select
                                 id="default_dimensions"
-                                placeholder="e.g. Metric, Imperial"
                                 value={formData.default_dimensions}
                                 onChange={(e) => updateField("default_dimensions", e.target.value)}
-                                className="bg-background border-border focus:border-accent transition-all"
+                                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 required
-                            />
+                            >
+                                {STORE_DIMENSION_UNITS.map((unit) => (
+                                    <option key={unit} value={unit}>
+                                        {unit}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

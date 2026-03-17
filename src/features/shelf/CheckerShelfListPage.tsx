@@ -56,10 +56,15 @@ function toPlanogramRow(
     : undefined;
   const info =
     planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
+
   const aisle =
     info?.aisle ??
     shelf.aisle ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
+  const zone = info?.zone ?? shelf.zone;
+  const section = info?.section ?? shelf.section;
+  const fixtureType = info?.fixtureType ?? shelf.fixtureType;
+  const dimensions = info?.dimensions ?? shelf.dimensions;
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -68,10 +73,10 @@ function toPlanogramRow(
     productsCount: skuCount,
     issuesCount: issues,
     aisle,
-    zone: info?.zone ?? shelf.zone,
-    section: info?.section ?? shelf.section,
-    fixtureType: info?.fixtureType ?? shelf.fixtureType,
-    dimensions: info?.dimensions ?? shelf.dimensions,
+    zone,
+    section,
+    fixtureType,
+    dimensions,
   };
 }
 
@@ -144,6 +149,8 @@ export function CheckerShelfListPage({
   >(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+  const [selectedRows, setSelectedRows] = useState<PlanogramShelfRow[]>([]);
+  console.log("selectedRows", selectedRows);
 
   const planogramMap = useMemo(() => {
     const map = new Map<
@@ -353,6 +360,48 @@ export function CheckerShelfListPage({
                 aria-label="Search shelves"
               />
             </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={selectedRows.length === 0}
+                className={
+                  selectedRows.length === 0
+                    ? "border-destructive text-destructive/60 cursor-not-allowed opacity-60"
+                    : "border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                }
+                onClick={() => {
+                  const count = selectedRows.length;
+                  if (!count) return;
+                  toast({
+                    title: "Bulk delete (frontend only)",
+                    description: `You selected ${count} shelf${count === 1 ? "" : "s"}. Backend delete is not wired yet.`,
+                  });
+                }}
+              >
+                Delete selected
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const input = document.createElement("input");
+                  input.type = "file";
+                  input.accept = ".xlsx,.xls,.csv";
+                  input.onchange = () => {
+                    const file = input.files?.[0];
+                    if (!file) return;
+                    toast({
+                      title: "Bulk add (frontend only)",
+                      description: `Loaded file "${file.name}". Parsing and upload will be wired to the backend later.`,
+                    });
+                  };
+                  input.click();
+                }}
+              >
+                Bulk add shelves
+              </Button>
+            </div>
           </div>
 
           {filteredRows.length > 0 && (
@@ -420,6 +469,8 @@ export function CheckerShelfListPage({
                   layout="fitData"
                   onPaginationChange={setTablePagination}
                   onRowClick={handleRowClick}
+                  isBulkEnabled
+                  onSelectionChange={setSelectedRows}
                 />
               </div>
             )}

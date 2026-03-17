@@ -78,7 +78,7 @@ export function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
     zone: res.fixture_zone,
     section: res.fixture_section,
     fixtureType: res.fixture_type,
-    dimensions: `${res.fixture_width}x${res.fixture_height}x${res.fixture_depth}`,
+    dimensions: `${res.fixture_width}x${res.fixture_height}x${res.fixture_depth} ${res.fixture_dimension_unit}`,
     createdAt: new Date(res.created_at),
     updatedAt: new Date(res.updated_at),
     planogramId: undefined, // Planogram association logic to be added

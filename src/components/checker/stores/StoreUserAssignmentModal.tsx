@@ -1,11 +1,18 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
-import { X, UserPlus, Trash2, Search, User } from "lucide-react";
-import { useOrgUsers, useStoreUsers, useAssignStoreUser, useRemoveStoreUser } from "@/queries/checker";
+import { X, UserPlus, Trash2, Search } from "lucide-react";
+import {
+  useAssignStoreUser,
+  useOrgUsers,
+  useRemoveStoreUser,
+  useStoreUsers,
+} from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Store } from "@/types/checker";
 import { Input } from "@/components/ui/input";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import type { AuthSessionUser } from "@/lib/auth/session";
 
 interface StoreUserAssignmentModalProps {
     isOpen: boolean;
@@ -28,8 +35,8 @@ export function StoreUserAssignmentModal({
     const assignedUserIds = useMemo(() => new Set(storeUsers.map(u => u.id)), [storeUsers]);
 
     const availableUsers = useMemo(() => {
-        return orgUsers.filter(user => 
-            !assignedUserIds.has(user.id) && 
+        return orgUsers.filter((user) =>
+            !assignedUserIds.has(user.id) &&
             (user.role === "maker" || user.role === "checker") &&
             (`${user.firstName} ${user.lastName} ${user.email}`.toLowerCase().includes(searchQuery.toLowerCase()))
         );
@@ -54,6 +61,59 @@ export function StoreUserAssignmentModal({
     };
 
     if (!store) return null;
+
+    const availableColumns: DataTableColumn<AuthSessionUser>[] = [
+        {
+            title: "User",
+            field: "firstName",
+            minWidth: 220,
+            headerHozAlign: "left",
+            hozAlign: "left",
+            formatter: (cell: any) => {
+                const user = cell.getData() as AuthSessionUser;
+                const initials = `${user.firstName?.[0] ?? "U"}${user.lastName?.[0] ?? "U"}`;
+                return `
+                    <div class="flex items-center gap-3">
+                        <div class="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-xs font-bold">
+                            ${initials}
+                        </div>
+                        <div class="min-w-0 text-left">
+                            <p class="text-sm font-medium text-foreground truncate">${user.firstName} ${user.lastName}</p>
+                            <p class="text-xs text-muted-foreground truncate">${user.email}</p>
+                        </div>
+                    </div>
+                `;
+            },
+        },
+        {
+            title: "Role",
+            field: "role",
+            width: 120,
+            formatter: (cell: any) => {
+                const role = cell.getValue() as AuthSessionUser["role"];
+                const label = role.charAt(0).toUpperCase() + role.slice(1);
+                return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border bg-muted/40 text-muted-foreground">${label}</span>`;
+            },
+        },
+        {
+            title: "Action",
+            field: "actions",
+            width: 90,
+            headerSort: false,
+            hozAlign: "right",
+            formatter: () => {
+                return `
+                    <button class="assign-btn inline-flex items-center rounded-md px-2 py-1 text-xs font-medium text-accent hover:bg-accent/10">
+                        Assign
+                    </button>
+                `;
+            },
+            cellClick: (_e: any, cell: any) => {
+                const user = cell.getData() as AuthSessionUser;
+                void handleAssign(user.id);
+            },
+        },
+    ];
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} className="max-w-2xl">
@@ -98,15 +158,17 @@ export function StoreUserAssignmentModal({
                                                 <p className="text-[10px] text-muted-foreground uppercase tracking-tight">{user.role}</p>
                                             </div>
                                         </div>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            onClick={() => handleRemove(user.id)}
-                                            disabled={removeMutation.isPending}
-                                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                        >
-                                            <Trash2 className="size-4" />
-                                        </Button>
+                                        {user.role !== "admin" && (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleRemove(user.id)}
+                                                disabled={removeMutation.isPending}
+                                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="size-4" />
+                                            </Button>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -128,34 +190,19 @@ export function StoreUserAssignmentModal({
                         </div>
 
                         {isOrgUsersLoading ? (
-                            <Skeleton className="h-20 w-full" />
+                            <Skeleton className="h-24 w-full" />
                         ) : availableUsers.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic py-4 text-center">No more staff members available to assign.</p>
+                            <p className="text-sm text-muted-foreground italic py-4 text-center">
+                                No more staff members available to assign.
+                            </p>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                {availableUsers.map(user => (
-                                    <div key={user.id} className="flex items-center justify-between p-2 rounded-lg border border-border/30 hover:border-accent/30 transition-colors">
-                                        <div className="flex items-center gap-2">
-                                            <div className="size-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground text-[10px]">
-                                                <User className="size-4" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-xs font-medium truncate">{user.firstName} {user.lastName}</p>
-                                                <p className="text-[9px] text-muted-foreground truncate">{user.email}</p>
-                                            </div>
-                                        </div>
-                                        <Button 
-                                            variant="ghost" 
-                                            size="sm" 
-                                            onClick={() => handleAssign(user.id)}
-                                            disabled={assignMutation.isPending}
-                                            className="h-7 text-accent hover:bg-accent/10"
-                                        >
-                                            Assign
-                                        </Button>
-                                    </div>
-                                ))}
-                            </div>
+                            <DataTable<AuthSessionUser>
+                                columns={availableColumns}
+                                data={availableUsers}
+                                pageSize={5}
+                                pageSizeSelector={[5, 10, 20]}
+                                emptyMessage="No more staff members available to assign."
+                            />
                         )}
                     </section>
                 </div>

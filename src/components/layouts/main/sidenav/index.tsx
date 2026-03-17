@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { hasAnyPermission, hasPermission } from "@/auth/authorization";
 import { CORE_NAV } from "@/app/nav";
 import logo from "@/assets/logo.avif";
+import { hasAnyPermission, hasPermission } from "@/auth/authorization";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -199,6 +199,12 @@ export default function Sidenav() {
           icon: FileSignature,
         });
       }
+      // Maker store settings (view-only)
+      items.push({
+        label: "Store Settings",
+        to: "/maker/store-settings",
+        icon: Settings,
+      });
       return items;
     }
 
@@ -219,7 +225,7 @@ export default function Sidenav() {
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
-        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any, 
+        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any,
         icon: Library,
       });
     }
@@ -232,6 +238,22 @@ export default function Sidenav() {
         { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as any },
       ],
     });
+    // Store settings:
+    // - In admin store view: editable store settings for the selected store
+    // - In checker context: view-only store settings
+    if (isAdminStoreView) {
+      items.push({
+        label: "Store Settings",
+        to: `${storePrefix}/store-settings` as any,
+        icon: Settings,
+      });
+    } else {
+      items.push({
+        label: "Store Settings",
+        to: "/checker/store-settings",
+        icon: Settings,
+      });
+    }
     return items;
   }, [enabledCoreNav, role, isOrgContext, selectedStore, location.pathname]);
 
@@ -482,6 +504,11 @@ export default function Sidenav() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <div className="pb-1 text-center group-data-[collapsible=icon]:hidden">
+          <span className="text-[12px] text-muted-foreground/50 select-none">
+            v{__APP_VERSION__}
+          </span>
+        </div>
         <SidenavFooter />
       </SidebarFooter>
     </Sidebar>

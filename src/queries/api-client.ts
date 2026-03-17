@@ -19,6 +19,7 @@ import { ApiError } from "@/exceptions/ApiError";
 import { getHttpConfig } from "@/lib/api/config";
 import store from "@/store";
 import { selectSelectedStore } from "@/store/selectors";
+import { AuthSessionService } from "@/lib/auth/session";
 
 export { ApiError };
 
@@ -55,7 +56,17 @@ async function parseResponse<T>(res: Response): Promise<T> {
           : res.statusText || "An unexpected error occurred";
 
     // Surface 401/403 as ApiError so callers can handle session expiry
-    throw new ApiError(res.status, res.statusText, message, data);
+    const error = new ApiError(res.status, res.statusText, message, data);
+    if (error.status === 401) {
+      // Clear session and force redirect to login on invalid/expired token
+      AuthSessionService.logout();
+      window.dispatchEvent(
+        new CustomEvent("app:session-expired", {
+          detail: { message: "Session expired. Please log in again." },
+        }),
+      );
+    }
+    throw error;
   }
   // 204 No Content
   if (res.status === 204) return undefined as T;
@@ -63,21 +74,23 @@ async function parseResponse<T>(res: Response): Promise<T> {
 }
 
 function buildHeaders(extra?: HeadersInit): HeadersInit {
+  const baseExtras = extra ?? {};
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "application/json",
-    ...(extra as Record<string, string>),
+    ...(baseExtras as Record<string, string>),
   };
 
-  // Attach auth token when available
   const token = getAuthToken();
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
 
-  // Attach selected store ID when available
+  const hasExplicitStoreHeader = Object.keys(baseExtras).some(
+    (key) => key.toLowerCase() === "x-store-id",
+  );
   const storeId = getSelectedStoreId();
-  if (storeId) {
+  if (storeId && !hasExplicitStoreHeader) {
     headers["X-Store-Id"] = storeId;
   }
 

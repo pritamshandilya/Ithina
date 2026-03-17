@@ -99,7 +99,7 @@ export function DataTable<T extends object>({
       : tabulatorColumns;
 
     const options: Record<string, unknown> = {
-      data: [...data],
+      data: data.map((row) => ({ ...row })),
       columns: finalColumns,
       layout,
       responsiveLayout: false,
@@ -175,7 +175,7 @@ export function DataTable<T extends object>({
 
   useEffect(() => {
     if (tableRef.current) {
-      tableRef.current.setData(data);
+      tableRef.current.setData(data.map((row) => ({ ...row })));
     }
   }, [data]);
 

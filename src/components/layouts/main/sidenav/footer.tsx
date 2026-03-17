@@ -19,7 +19,7 @@ export default function SidenavFooter() {
 
   if (!user) {
     return (
-      <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
+      <div className="shrink-0 border-t border-ithina-border/40 bg-black/20 p-4">
         <div className="flex items-center gap-3">
           <div className="size-10 shrink-0 rounded-full border border-ithina-border bg-ithina-panel" />
           <div className="overflow-hidden">
@@ -41,12 +41,12 @@ export default function SidenavFooter() {
   };
 
   return (
-    <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
+    <div className="shrink-0 border-t border-ithina-border/40 bg-gradient-to-t from-black/30 to-transparent p-4">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <button className="flex w-full items-center gap-3 rounded-lg p-1 text-left transition-colors hover:bg-white/[0.04]">
-            <Avatar className="size-10 shrink-0 rounded-full border border-ithina-border">
-              <AvatarFallback className="rounded-full bg-ithina-panel text-sm">
+          <button className="flex w-full items-center gap-3 rounded-lg p-1.5 text-left transition-all duration-200 hover:bg-white/[0.04]">
+            <Avatar className="size-9 shrink-0 rounded-full border border-ithina-purple/20 shadow-[0_0_8px_rgba(168,85,247,0.1)]">
+              <AvatarFallback className="rounded-full bg-ithina-purple/10 text-xs font-semibold text-ithina-purple">
                 {initials}
               </AvatarFallback>
             </Avatar>
@@ -60,7 +60,7 @@ export default function SidenavFooter() {
               </p>
             </div>
 
-            <ChevronsUpDown className="ml-auto size-4 shrink-0 text-slate-500" />
+            <ChevronsUpDown className="ml-auto size-4 shrink-0 text-slate-600" />
           </button>
         </DropdownMenuTrigger>
 
@@ -73,7 +73,7 @@ export default function SidenavFooter() {
           <DropdownMenuLabel className="p-0 font-normal">
             <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
               <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg">
+                <AvatarFallback className="rounded-lg bg-ithina-purple/10 text-xs font-semibold text-ithina-purple">
                   {initials}
                 </AvatarFallback>
               </Avatar>
@@ -98,4 +98,3 @@ export default function SidenavFooter() {
     </div>
   );
 }
-

@@ -1,11 +1,12 @@
-import { AlertTriangle, ClipboardList, Loader2, Wand2, Zap } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ClipboardList, Loader2, Wand2, Zap } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
 import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setPendingApproval, setPublishedAt } from "@/store/slices/campaign-slice";
+import { deactivateCampaign, setPendingApproval, setPublishedAt } from "@/store/slices/campaign-slice";
+import { resetStudio } from "@/store/slices/studio-slice";
 import {
   useInboxItems,
   usePayloadManifest,
@@ -23,6 +24,7 @@ export default function Approval() {
   const dispatch = useAppDispatch();
   const campaign = useAppSelector((s) => s.campaign);
   const [activeInbox, setActiveInbox] = useState(0);
+  const [isDemoReview, setIsDemoReview] = useState(false);
 
   const { data: inbox = [], isLoading: inboxLoading, isError: inboxError } = useInboxItems();
   const { data: checks = [], isLoading: checksLoading } = useValidationChecks();
@@ -36,12 +38,24 @@ export default function Approval() {
   const handlePublish = useCallback(async () => {
     await publishMutation.mutateAsync();
     dispatch(setPublishedAt(Date.now()));
+    dispatch(deactivateCampaign());
+    dispatch(resetStudio());
     navigate({ to: "/fleet" });
   }, [publishMutation, navigate, dispatch]);
 
   const handleLoadDemo = useCallback(() => {
+    setIsDemoReview(true);
     dispatch(setPendingApproval(true));
   }, [dispatch]);
+
+  const handleBack = useCallback(() => {
+    if (isDemoReview) {
+      setIsDemoReview(false);
+      dispatch(setPendingApproval(false));
+    } else {
+      navigate({ to: "/studio" });
+    }
+  }, [isDemoReview, dispatch, navigate]);
 
   const approvalHeader = (
     <PageHeader
@@ -104,18 +118,27 @@ export default function Approval() {
             ) : (
               <>
                 <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-8 py-5">
-                  <div>
-                    <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white">
-                      {campaign.name || activeItem?.title || "Campaign"} Review
-                      {activeItem?.urgent && (
-                        <span className="rounded border border-rose-400/20 bg-rose-400/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-rose-400">
-                          Expires 48H
-                        </span>
-                      )}
-                    </h2>
-                    <p className="mt-1 text-xs text-ithina-muted">
-                      Review Agent validations and visual diff before broadcasting to hardware.
-                    </p>
+                  <div className="flex items-start gap-4">
+                    <button
+                      onClick={handleBack}
+                      title={isDemoReview ? "Back to Approval Queue" : "Back to Campaign Studio"}
+                      className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg border border-ithina-border text-slate-500 transition-all hover:bg-ithina-border hover:text-white"
+                    >
+                      <ChevronLeft className="size-4" />
+                    </button>
+                    <div>
+                      <h2 className="flex items-center gap-3 text-xl font-bold tracking-tight text-white">
+                        {campaign.name || activeItem?.title || "Campaign"} Review
+                        {activeItem?.urgent && (
+                          <span className="rounded border border-rose-400/20 bg-rose-400/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-rose-400">
+                            Expires 48H
+                          </span>
+                        )}
+                      </h2>
+                      <p className="mt-1 text-xs text-ithina-muted">
+                        Review Agent validations and visual diff before broadcasting to hardware.
+                      </p>
+                    </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <button

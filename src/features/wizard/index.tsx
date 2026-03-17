@@ -4,14 +4,26 @@ import { useNavigate } from "@tanstack/react-router";
 
 import PageHeader from "@/components/shared/page-header";
 import { cn } from "@/lib/utils";
-import { useAppDispatch } from "@/store/hooks";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { activateCampaign, setStagedSkus } from "@/store/slices/campaign-slice";
-import type {
-  ChatMessage,
-  HardwareDeviceId,
-  StagedSku,
-  WizardConstraints,
-} from "@/types/wizard";
+import { resetStudio } from "@/store/slices/studio-slice";
+import {
+  appendGridRow,
+  pushMessage as pushWizardMessage,
+  removeAllCsvViolations,
+  removeCsvRow,
+  removeGridRow,
+  resetWizard,
+  setCampaignNamed,
+  setConstraints as setWizardConstraints,
+  setCsvConfirmed,
+  setCsvFileName,
+  setCsvRows,
+  setHasSplit,
+  setInputMode as setWizardInputMode,
+  setShowGrid,
+} from "@/store/slices/wizard-slice";
+import type { HardwareDeviceId, WizardConstraints } from "@/types/wizard";
 import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 
@@ -34,55 +46,59 @@ export default function Wizard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  const [hasSplit, setHasSplit] = useState(false);
-  const [showGrid, setShowGrid] = useState(false);
+  const {
+    hasSplit,
+    showGrid,
+    messages,
+    gridData,
+    constraints,
+    inputMode,
+    csvRows,
+    csvFileName,
+    csvConfirmed,
+    campaignNamed,
+  } = useAppSelector((s) => s.wizard);
+
   const [showHardwareModal, setShowHardwareModal] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [gridData, setGridData] = useState<StagedSku[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [constraints, setConstraints] = useState<WizardConstraints>({
-    store: "4281",
-    marginFloor: "15%",
-    duration: "weekend",
-  });
-
-  const [inputMode, setInputMode] = useState<InputMode>("ai");
-  const [csvRows, setCsvRows] = useState<CsvRow[]>([]);
-  const [csvFileName, setCsvFileName] = useState("");
-  const [csvConfirmed, setCsvConfirmed] = useState(false);
-  const [campaignNamed, setCampaignNamed] = useState(false);
 
   const addTimer = useScheduledCallback();
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
 
-  const pushMessage = useCallback((msg: ChatMessage) => {
-    setMessages((prev) => [...prev, msg]);
-  }, []);
+  const pushMessage = useCallback(
+    (msg: Parameters<typeof pushWizardMessage>[0]) => {
+      dispatch(pushWizardMessage(msg));
+    },
+    [dispatch],
+  );
 
-  const generateCampaignName = useCallback((prompt: string) => {
-    if (campaignNamed) return;
-    const p = (prompt || "").trim();
-    const now = new Date();
-    const suffix = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    const stop = new Set(["with", "this", "that", "from", "want", "have", "need", "will", "make", "sale", "for", "the", "and", "all", "our", "you", "can", "get"]);
-    const meaningful = p.split(/\s+/).filter((w) => w.length >= 4 && !stop.has(w.toLowerCase())).slice(0, 3);
-    const base = meaningful.length
-      ? meaningful.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")
-      : "Promo Campaign";
-    const name = `${base} — ${suffix}`;
-    dispatch(activateCampaign(name));
-    setCampaignNamed(true);
-  }, [campaignNamed, dispatch]);
+  const generateCampaignName = useCallback(
+    (prompt: string) => {
+      if (campaignNamed) return;
+      const p = (prompt || "").trim();
+      const now = new Date();
+      const suffix = now.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+      const stop = new Set(["with", "this", "that", "from", "want", "have", "need", "will", "make", "sale", "for", "the", "and", "all", "our", "you", "can", "get"]);
+      const meaningful = p.split(/\s+/).filter((w) => w.length >= 4 && !stop.has(w.toLowerCase())).slice(0, 3);
+      const base = meaningful.length
+        ? meaningful.map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ")
+        : "Promo Campaign";
+      const name = `${base} — ${suffix}`;
+      dispatch(activateCampaign(name));
+      dispatch(setCampaignNamed(true));
+    },
+    [campaignNamed, dispatch],
+  );
 
   const handleSubmit = useCallback(async () => {
     const text = inputText.trim();
     if (!text || intentMutation.isPending) return;
 
-    if (!hasSplit) setHasSplit(true);
-    if (!showGrid) setShowGrid(true);
+    if (!hasSplit) dispatch(setHasSplit(true));
+    if (!showGrid) dispatch(setShowGrid(true));
     setError(null);
 
     pushMessage({ role: "user", text });
@@ -98,18 +114,21 @@ export default function Wizard() {
 
       if (gridData.length === 0) {
         skus.forEach((item, idx) => {
-          addTimer(() => setGridData((prev) => [...prev, item]), idx * 150);
+          addTimer(() => dispatch(appendGridRow(item)), idx * 150);
         });
       }
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, gridData.length, pushMessage, generateCampaignName]);
+  }, [inputText, intentMutation, hasSplit, showGrid, constraints, gridData.length, pushMessage, generateCampaignName, dispatch, addTimer]);
 
-  const handleConstraintChange = useCallback((c: WizardConstraints) => {
-    setConstraints(c);
-  }, []);
+  const handleConstraintChange = useCallback(
+    (c: WizardConstraints) => {
+      dispatch(setWizardConstraints(c));
+    },
+    [dispatch],
+  );
 
   const handleProceedToDesign = useCallback(() => {
     setShowHardwareModal(true);
@@ -131,43 +150,50 @@ export default function Wizard() {
 
         addTimer(() => {
           setIsTyping(false);
+          dispatch(resetWizard());
+          dispatch(resetStudio());
           navigate({ to: "/studio" });
         }, 3000);
       } catch {
         setError("Failed to confirm hardware. Please try again.");
       }
     },
-    [hwConfirmMutation, navigate, pushMessage, inputMode, csvConfirmed, csvRows, dispatch],
+    [hwConfirmMutation, navigate, pushMessage, inputMode, csvConfirmed, csvRows, dispatch, addTimer],
   );
 
-  const handleInputModeChange = useCallback((mode: InputMode) => {
-    setInputMode(mode);
-    if (mode === "csv") {
-      setHasSplit(true);
-      setShowGrid(true);
-    }
-  }, []);
+  const handleInputModeChange = useCallback(
+    (mode: InputMode) => {
+      dispatch(setWizardInputMode(mode));
+    },
+    [dispatch],
+  );
 
-  const handleRemoveGridRow = useCallback((sku: string) => {
-    setGridData((prev) => prev.filter((r) => r.sku !== sku));
-  }, []);
+  const handleRemoveGridRow = useCallback(
+    (sku: string) => {
+      dispatch(removeGridRow(sku));
+    },
+    [dispatch],
+  );
 
-  const handleCsvParsed = useCallback((rows: CsvRow[], fileName: string) => {
-    setCsvRows(rows);
-    setCsvFileName(fileName);
-    setCsvConfirmed(false);
-    setHasSplit(true);
-    setShowGrid(true);
-  }, []);
+  const handleCsvParsed = useCallback(
+    (rows: CsvRow[], fileName: string) => {
+      dispatch(setCsvRows(rows));
+      dispatch(setCsvFileName(fileName));
+      dispatch(setCsvConfirmed(false));
+      dispatch(setHasSplit(true));
+      dispatch(setShowGrid(true));
+    },
+    [dispatch],
+  );
 
   const handleCsvClear = useCallback(() => {
-    setCsvRows([]);
-    setCsvFileName("");
-    setCsvConfirmed(false);
-  }, []);
+    dispatch(setCsvRows([]));
+    dispatch(setCsvFileName(""));
+    dispatch(setCsvConfirmed(false));
+  }, [dispatch]);
 
   const handleCsvConfirm = useCallback(() => {
-    setCsvConfirmed(true);
+    dispatch(setCsvConfirmed(true));
     dispatch(setStagedSkus(csvRows));
     const warningCount = csvRows.filter((r) => !r.safe).length;
     pushMessage({
@@ -176,13 +202,16 @@ export default function Wizard() {
     });
   }, [csvRows, dispatch, pushMessage]);
 
-  const handleRemoveCsvRow = useCallback((idx: number) => {
-    setCsvRows((prev) => prev.filter((_, i) => i !== idx));
-  }, []);
+  const handleRemoveCsvRow = useCallback(
+    (idx: number) => {
+      dispatch(removeCsvRow(idx));
+    },
+    [dispatch],
+  );
 
   const handleRemoveAllViolations = useCallback(() => {
-    setCsvRows((prev) => prev.filter((r) => r.safe));
-  }, []);
+    dispatch(removeAllCsvViolations());
+  }, [dispatch]);
 
   const handleSwitchToCsv = useCallback(() => {
     handleInputModeChange("csv");

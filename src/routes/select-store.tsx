@@ -49,10 +49,10 @@ function SelectStorePage() {
 
   if (isLoading || isAutoRedirecting) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-[#070b14]">
+      <div className="flex min-h-screen w-full items-center justify-center bg-[#070b14] font-sans">
         <div className="flex flex-col items-center gap-4">
           <Loader2 className="size-10 animate-spin text-accent" />
-          <p className="text-sm font-medium text-slate-400 font-bold uppercase tracking-widest">Initialising your workspace...</p>
+          <p className="text-sm font-medium text-slate-400">Initializing your workspace...</p>
         </div>
       </div>
     );
@@ -60,7 +60,7 @@ function SelectStorePage() {
 
   if (stores && stores.length === 0) {
     return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-[#0f1419] to-[#1a2332] p-6 relative overflow-hidden">
+      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f1419] to-[#1a2332] p-6 font-sans">
         {/* Background Effects */}
         <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }}></div>
         <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#9810fa]/10 rounded-full blur-[120px] pointer-events-none"></div>
@@ -73,9 +73,9 @@ function SelectStorePage() {
           className="relative z-10 w-full max-w-md space-y-10 text-center"
         >
           <div className="space-y-4">
-            <div className="inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-[0.2em] mb-2">
-                <Building2 className="size-3" />
-                {user?.organization?.name || "Corporate"} Network
+            <div className="mb-2 inline-flex items-center justify-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-medium tracking-[0.14em] text-accent uppercase">
+              <Building2 className="size-3" />
+              {user?.organization?.name || "Corporate"} Network
             </div>
             <div className="flex justify-center">
               <div className="flex size-16 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 shadow-[0_0_30px_rgba(245,158,11,0.1)]">
@@ -83,51 +83,51 @@ function SelectStorePage() {
               </div>
             </div>
             <div className="space-y-2">
-              <h2 className="text-3xl font-black text-white uppercase italic tracking-tight leading-none">Awaiting Assignment</h2>
-              <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.2em]">Deployment status: Pending</p>
+              <h2 className="text-3xl font-semibold leading-none text-white">Awaiting Assignment</h2>
+              <p className="text-sm text-slate-400">Deployment status: Pending</p>
             </div>
-            <p className="text-slate-400 font-medium leading-relaxed">
-              Hi {user?.firstName}, your account is active and verified. However, you haven't been assigned to a retail store yet. 
+            <p className="leading-relaxed text-slate-400">
+              Hi {user?.firstName}, your account is active and verified. However, you haven&apos;t been assigned to a retail store yet.
               One of your organization admins will grant you access to a specific branch shortly.
             </p>
           </div>
 
           <div className="p-6 rounded-2xl bg-white/5 border border-white/5 space-y-4 backdrop-blur-sm">
-              {!hasNotified ? (
-                  <>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-relaxed">
-                          Need access urgently? Use the secure channel below to notify your administrator.
-                      </p>
-                      <Button 
-                          onClick={handleNotifyAdmin}
-                          className="w-full bg-accent hover:bg-accent/80 text-white font-black uppercase tracking-[0.2em] italic h-12 shadow-[0_0_20px_rgba(var(--accent),0.2)]"
-                      >
-                          <Building2 className="mr-2 size-4" />
-                          Request Store Assignment
-                      </Button>
-                  </>
-              ) : (
-                  <motion.div 
-                      initial={{ scale: 0.9, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="flex flex-col items-center gap-3 py-2 text-emerald-400"
-                  >
-                      <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20">
-                          <ArrowRight className="size-5" />
-                      </div>
-                      <p className="text-xs font-black uppercase tracking-[0.2em]">Notification Sent to Admin</p>
-                  </motion.div>
-              )}
+            {!hasNotified ? (
+              <>
+                <p className="text-xs leading-relaxed text-slate-400">
+                  Need access urgently? Use the secure channel below to notify your administrator.
+                </p>
+                <Button
+                  onClick={handleNotifyAdmin}
+                  className="h-12 w-full bg-accent font-medium text-white shadow-[0_0_20px_rgba(var(--accent),0.2)] hover:bg-accent/80"
+                >
+                  <Building2 className="mr-2 size-4" />
+                  Request Store Assignment
+                </Button>
+              </>
+            ) : (
+              <motion.div
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                className="flex flex-col items-center gap-3 py-2 text-emerald-400"
+              >
+                <div className="flex size-10 items-center justify-center rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                  <ArrowRight className="size-5" />
+                </div>
+                <p className="text-sm font-medium">Notification sent to admin</p>
+              </motion.div>
+            )}
           </div>
 
-          <div className="pt-8 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col items-center justify-between gap-4 border-t border-white/5 pt-8 sm:flex-row">
             <div className="flex items-center gap-2">
               <div className="size-2 rounded-full bg-emerald-500/50 animate-pulse" />
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Encrypted Session</span>
+              <span className="text-xs font-medium text-slate-500">Encrypted session</span>
             </div>
-            <button 
+            <button
               onClick={() => AuthSessionService.logout()}
-              className="text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.2em] transition-colors border-b border-transparent hover:border-white/20 pb-0.5"
+              className="border-b border-transparent pb-0.5 text-xs font-medium text-slate-500 transition-colors hover:border-white/20 hover:text-white"
             >
               Log Out & Exit
             </button>
@@ -138,7 +138,7 @@ function SelectStorePage() {
   }
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-gradient-to-br from-[#0f1419] to-[#1a2332] p-6 relative overflow-hidden">
+    <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f1419] to-[#1a2332] p-6 font-sans">
       {/* Background Effects */}
       <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: "linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)", backgroundSize: "40px 40px" }}></div>
       <div className="absolute top-0 right-1/4 w-[500px] h-[500px] bg-[#9810fa]/10 rounded-full blur-[120px] pointer-events-none"></div>
@@ -151,14 +151,16 @@ function SelectStorePage() {
         className="relative z-10 w-full max-w-lg space-y-8"
       >
         <div className="space-y-4 text-center">
-          <div className="inline-flex items-center justify-center gap-2 px-3 py-1 rounded-full bg-accent/10 border border-accent/20 text-accent text-[10px] font-black uppercase tracking-[0.2em] mb-2">
+          <div className="mb-2 inline-flex items-center justify-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-medium tracking-[0.14em] text-accent uppercase">
             <Building2 className="size-3" />
             {user?.organization?.name || "Corporate"} Network
           </div>
-          
-          <h2 className="text-4xl font-black text-white uppercase italic tracking-tight">Select Store</h2>
-          <p className="text-sm font-bold text-slate-400 uppercase tracking-widest leading-relaxed">
-            Welcome back, {user?.firstName}.<br/>Please select a branch to continue.
+
+          <h2 className="text-4xl font-semibold text-white">Select Store</h2>
+          <p className="text-sm leading-relaxed text-slate-400">
+            Welcome back, {user?.firstName}.
+            <br />
+            Please select a branch to continue.
           </p>
         </div>
 
@@ -181,18 +183,18 @@ function SelectStorePage() {
                     <StoreIcon className="size-5 text-slate-400 group-hover:text-accent" />
                   </div>
                   <div className="min-w-0 text-left">
-                    <h3 className="text-base font-black text-white leading-tight truncate">
+                    <h3 className="truncate text-base font-semibold leading-tight text-white">
                       {store.name}
                     </h3>
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em] truncate mt-0.5">
+                    <p className="mt-0.5 truncate text-xs text-slate-400">
                       {store.address || "Main Branch"}
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-center gap-3">
                   {store.pendingAuditCount && store.pendingAuditCount > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-accent/20 border border-accent/20 text-[10px] font-black text-accent tracking-tighter">
+                    <span className="rounded-full border border-accent/20 bg-accent/20 px-2 py-0.5 text-[10px] font-semibold text-accent">
                       {store.pendingAuditCount} AUDITS
                     </span>
                   )}
@@ -210,9 +212,9 @@ function SelectStorePage() {
         </div>
 
         <div className="pt-8 border-t border-white/5 flex items-center justify-end">
-          <button 
+          <button
             onClick={() => AuthSessionService.logout()}
-            className="text-[10px] font-black text-slate-500 hover:text-white uppercase tracking-[0.2em] transition-colors"
+            className="text-xs font-medium text-slate-500 transition-colors hover:text-white"
           >
             Log Out
           </button>

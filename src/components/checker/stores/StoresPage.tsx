@@ -1,21 +1,21 @@
-import { useState, useMemo } from "react";
-import { Plus, Search, Store, MapPin, Globe, Maximize, Edit2, Users, Trash2 } from "lucide-react";
-import { renderToStaticMarkup } from "react-dom/server";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/shared/page-header";
 import MainLayout from "@/components/layouts/main";
+import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Edit2, Globe, MapPin, Maximize, Plus, Search, Store, Trash2, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
+import { AuthSessionService } from "@/lib/auth/session";
+import { useStore as useGlobalStore } from "@/providers/store";
+import { useDeleteStore, useOrgStores, useUpdateStore } from "@/queries/checker";
+import type { StoreSetting } from "@/types/checker";
+import { useNavigate } from "@tanstack/react-router";
 import { StoreFormModal } from "./StoreFormModal";
 import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
-import { useOrgStores, useUpdateStore, useDeleteStore } from "@/queries/checker";
-import { useStore as useGlobalStore } from "@/providers/store";
-import { useNavigate } from "@tanstack/react-router";
-import { AuthSessionService } from "@/lib/auth/session";
-import type { StoreSetting } from "@/types/checker";
 
 export function StoresPage() {
     const { data: stores = [], isLoading } = useOrgStores();
@@ -144,7 +144,7 @@ export function StoresPage() {
                 const store = cell.getData() as StoreSetting;
                 const makerCount = store.maker_ids?.length || 0;
                 const userCount = (store as any).user_ids?.length || 0;
-                const count = userCount || makerCount;
+                const count = makerCount + userCount;
                 return `
                     <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 border border-accent/20 text-accent">
                         ${count} Users
@@ -163,14 +163,14 @@ export function StoresPage() {
                 const staffIcon = renderToStaticMarkup(<Users size={16} />);
                 const deleteIcon = renderToStaticMarkup(<Trash2 size={16} />);
                 return `
-                    <div class="flex items-center justify-end gap-2">
-                        <button class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
+                    <div class="flex items-center justify-end gap-1">
+                        <button title="Edit store" class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
                             ${editIcon}
                         </button>
-                        <button class="staff-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
+                        <button title="Manage staff" class="staff-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
                             ${staffIcon}
                         </button>
-                        <button class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
+                        <button title="Delete store" class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
                             ${deleteIcon}
                         </button>
                     </div>

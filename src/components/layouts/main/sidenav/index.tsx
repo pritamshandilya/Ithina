@@ -18,9 +18,9 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { hasAnyPermission, hasPermission } from "@/auth/authorization";
 import { CORE_NAV } from "@/app/nav";
 import logo from "@/assets/logo.avif";
+import { hasAnyPermission, hasPermission } from "@/auth/authorization";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -504,6 +504,11 @@ export default function Sidenav() {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>
+        <div className="pb-1 text-center group-data-[collapsible=icon]:hidden">
+          <span className="text-[12px] text-muted-foreground/50 select-none">
+            v{__APP_VERSION__}
+          </span>
+        </div>
         <SidenavFooter />
       </SidebarFooter>
     </Sidebar>

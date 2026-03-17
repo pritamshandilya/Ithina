@@ -1,4 +1,4 @@
-export const STORE_DIMENSION_UNITS = ["cm", "mm", "m", "inch", "ft"] as const;
+export const STORE_DIMENSION_UNITS = ["mm", "cm", "inch"] as const;
 
 export type StoreDimensionUnit = (typeof STORE_DIMENSION_UNITS)[number];
 

@@ -8,6 +8,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import { useAppDispatch } from "@/store/hooks";
 import { activateCampaign } from "@/store/slices/campaign-slice";
+import { resetStudio } from "@/store/slices/studio-slice";
 import type { CampaignFilterOption, CampaignListItem, CampaignListStatus } from "@/types/campaigns";
 import {
   useCalendarWeekdays,
@@ -108,6 +109,16 @@ export default function Campaigns() {
     navigate({ to: "/studio" });
   }, [dispatch, navigate]);
 
+  const duplicateCampaign = useCallback(
+    (c: CampaignListItem) => {
+      const duplicateName = `${c.name} (Copy)`;
+      dispatch(activateCampaign(duplicateName));
+      dispatch(resetStudio());
+      navigate({ to: "/studio" });
+    },
+    [dispatch, navigate],
+  );
+
   const tableColumns = useMemo<DataTableColumn<CampaignListItem>[]>(() => {
     if (!statusStyles) return [];
     return [
@@ -191,10 +202,11 @@ export default function Campaigns() {
           _e.stopPropagation();
           const action = btn.getAttribute("data-action");
           if (action === "edit") openInStudio(cell.getData());
+          if (action === "duplicate") duplicateCampaign(cell.getData());
         },
       },
     ];
-  }, [statusStyles, openInStudio]);
+  }, [statusStyles, openInStudio, duplicateCampaign]);
 
   const pageHeader = (
     <PageHeader

@@ -7,6 +7,7 @@ export interface InboxItem {
   meta: string;
   metaVariant: "success" | "muted";
   urgent: boolean;
+  status?: "pending" | "rejected";
 }
 
 export interface ValidationCheck {

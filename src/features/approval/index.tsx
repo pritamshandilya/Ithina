@@ -1,6 +1,7 @@
 import { AlertTriangle, ChevronLeft, ClipboardList, Loader2, Wand2, Zap } from "lucide-react";
 import { useCallback, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
@@ -12,7 +13,9 @@ import {
   usePayloadManifest,
   usePublishToFleet,
   useValidationChecks,
+  approvalKeys,
 } from "@/hooks/use-approval";
+import type { InboxItem } from "@/types/approval";
 
 import PayloadManifest from "./components/payload-manifest";
 import TaskInbox from "./components/task-inbox";
@@ -22,6 +25,7 @@ import VisualDiffViewer from "./components/visual-diff-viewer";
 export default function Approval() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const campaign = useAppSelector((s) => s.campaign);
   const [activeInbox, setActiveInbox] = useState(0);
   const [isDemoReview, setIsDemoReview] = useState(false);
@@ -47,6 +51,25 @@ export default function Approval() {
     setIsDemoReview(true);
     dispatch(setPendingApproval(true));
   }, [dispatch]);
+
+  const handleReject = useCallback(() => {
+    if (!activeItem) return;
+
+    queryClient.setQueryData<InboxItem[] | undefined>(approvalKeys.inbox, (prev) => {
+      if (!prev) return prev;
+      return prev.map((item) =>
+        item.id === activeItem.id
+          ? {
+              ...item,
+              status: "rejected",
+              urgent: false,
+            }
+          : item,
+      );
+    });
+
+    dispatch(setPendingApproval(false));
+  }, [activeItem, queryClient, dispatch]);
 
   const handleBack = useCallback(() => {
     if (isDemoReview) {
@@ -142,6 +165,7 @@ export default function Approval() {
                   </div>
                   <div className="flex items-center gap-3">
                     <button
+                      onClick={handleReject}
                       className="rounded-lg border border-transparent px-5 py-2.5 text-sm font-medium text-slate-300 transition-all hover:border-white/10 hover:bg-white/5 hover:text-white"
                       aria-label="Reject campaign"
                     >

@@ -15,7 +15,7 @@ export const MOCK_CAMPAIGN_LIST: CampaignListItem[] = [
   { id: "CMP-9937-E", name: "Dairy & Bakery Weekend", status: "Scheduled", skus: 31, hardware: ["Chroma 29"], date: "Mar 14 2026", initiator: "Marcus T." },
   { id: "CMP-9936-F", name: "BOGO Snacks Promotion", status: "Completed", skus: 22, hardware: ["Chroma 42"], date: "Mar 3 2026", initiator: "Sarah J." },
   { id: "CMP-9935-G", name: "Valentine's Day Special", status: "Completed", skus: 15, hardware: ["Chroma 42", "LCD Banner"], date: "Feb 14 2026", initiator: "Auto-Scheduled" },
-  { id: "CMP-9934-H", name: "Cold & Flu Season Display", status: "Completed", skus: 9, hardware: ["Chroma 29"], date: "Feb 10 2026", initiator: "Marcus T." },
+  { id: "CMP-9934-H", name: "Cold & Flu Season Display", status: "Rejected", skus: 9, hardware: ["Chroma 29"], date: "Feb 10 2026", initiator: "Marcus T." },
 ];
 
 export const MOCK_CAMPAIGN_FILTERS: CampaignFilterOption[] = [
@@ -24,6 +24,7 @@ export const MOCK_CAMPAIGN_FILTERS: CampaignFilterOption[] = [
   "Scheduled",
   "Completed",
   "Draft",
+  "Rejected",
 ];
 
 export const MOCK_CAMPAIGN_STAT_DEFINITIONS: CampaignStatDefinition[] = [
@@ -49,6 +50,10 @@ export const MOCK_CAMPAIGN_STATUS_STYLES: Record<CampaignListStatus, CampaignSta
   Draft: {
     table: "text-slate-400 border-slate-600 bg-white/5",
     calendar: "bg-slate-600/40 text-slate-400",
+  },
+  Rejected: {
+    table: "text-rose-400 border-rose-400/40 bg-rose-400/10",
+    calendar: "bg-rose-400/15 text-rose-400",
   },
 };
 

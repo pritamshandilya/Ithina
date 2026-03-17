@@ -14,6 +14,7 @@ import {
   useWizardMargins,
   useWizardStores,
 } from "@/hooks/use-wizard";
+import { useAppSelector } from "@/store/hooks";
 
 type DropdownKey = "store" | "margin" | "duration" | null;
 
@@ -45,6 +46,8 @@ function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
   const { data: margins = [] } = useWizardMargins();
   const { data: durations = [] } = useWizardDurations();
 
+  const constraintsStoreId = useAppSelector((s) => s.wizard.constraints.store);
+
   const [selectedStore, setSelectedStore] = useState<WizardStore | null>(null);
   const [selectedMargin, setSelectedMargin] = useState<WizardMargin | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<WizardDuration | null>(null);
@@ -55,8 +58,13 @@ function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
   const durationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (stores.length > 0 && !selectedStore) setSelectedStore(stores[0]);
-  }, [stores, selectedStore]);
+    if (stores.length === 0) return;
+    const fromConstraints = stores.find((s) => s.id === constraintsStoreId);
+    const target = fromConstraints ?? stores[0];
+    if (!selectedStore || selectedStore.id !== target.id) {
+      setSelectedStore(target);
+    }
+  }, [stores, selectedStore, constraintsStoreId]);
 
   useEffect(() => {
     if (margins.length > 0 && !selectedMargin) setSelectedMargin(margins[0]);
@@ -91,6 +99,7 @@ function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
       {/* Store */}
       <div className="relative" ref={storeRef}>
         <button
+          id="wizard-store-button"
           type="button"
           onClick={() => toggle("store")}
           aria-haspopup="listbox"

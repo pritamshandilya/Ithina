@@ -10,7 +10,7 @@ interface TaskInboxProps {
   onSelect: (index: number) => void;
 }
 
-type FilterTab = "all" | "urgent" | "muted";
+type FilterTab = "all" | "pending" | "rejected" | "urgent";
 
 const PAGE_SIZE = 8;
 
@@ -28,8 +28,9 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
         item.initiator.toLowerCase().includes(q);
       const matchTab =
         tab === "all" ||
-        (tab === "urgent" && item.urgent) ||
-        (tab === "muted" && !item.urgent);
+        (tab === "pending" && item.status !== "rejected") ||
+        (tab === "rejected" && item.status === "rejected") ||
+        (tab === "urgent" && item.urgent && item.status !== "rejected");
       return matchSearch && matchTab;
     });
   }, [items, search, tab]);
@@ -38,7 +39,9 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
   const safePage = Math.min(page, totalPages);
   const pageItems = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const urgentCount = items.filter((i) => i.urgent).length;
+  const pendingCount = items.filter((i) => i.status !== "rejected").length;
+  const rejectedCount = items.filter((i) => i.status === "rejected").length;
+  const urgentCount = items.filter((i) => i.urgent && i.status !== "rejected").length;
 
   const handleTabChange = (t: FilterTab) => {
     setTab(t);
@@ -89,8 +92,9 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
         {(
           [
             { id: "all", label: "All", count: items.length },
+            { id: "pending", label: "Pending", count: pendingCount },
+            { id: "rejected", label: "Rejected", count: rejectedCount },
             { id: "urgent", label: "Urgent", count: urgentCount },
-            { id: "muted", label: "Normal", count: items.length - urgentCount },
           ] as { id: FilterTab; label: string; count: number }[]
         ).map((t) => (
           <button
@@ -138,6 +142,7 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
             {pageItems.map((item) => {
               const origIdx = originalIndex(item);
               const isActive = activeIndex === origIdx;
+              const isRejected = item.status === "rejected";
               return (
                 <div
                   key={item.id}
@@ -153,9 +158,9 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
                   }}
                   className={cn(
                     "group relative cursor-pointer rounded-xl px-3.5 py-3 transition-all duration-150",
-                    isActive
-                      ? "border border-ithina-purple/25 bg-ithina-purple/10 shadow-[0_0_12px_rgba(168,85,247,0.05)]"
-                      : "border border-transparent hover:border-ithina-border hover:bg-white/[0.03]",
+                    isActive && !isRejected && "border border-ithina-purple/25 bg-ithina-purple/10 shadow-[0_0_12px_rgba(168,85,247,0.05)]",
+                    !isActive && !isRejected && "border border-transparent hover:border-ithina-border hover:bg-white/[0.03]",
+                    isRejected && "border border-rose-400/20 bg-rose-400/5 opacity-80",
                   )}
                 >
                   {/* Urgent dot */}
@@ -165,7 +170,12 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
 
                   {/* Title row */}
                   <div className="mb-0.5 flex items-baseline gap-1.5 pr-4">
-                    <span className={cn("truncate text-xs font-semibold", isActive ? "text-white" : "text-slate-300 group-hover:text-white")}>
+                    <span
+                      className={cn(
+                        "truncate text-xs font-semibold",
+                        isRejected ? "text-rose-300" : isActive ? "text-white" : "text-slate-300 group-hover:text-white",
+                      )}
+                    >
                       {item.title}
                     </span>
                     {item.subtitle && (
@@ -175,16 +185,25 @@ function TaskInbox({ items, activeIndex, onSelect }: TaskInboxProps) {
 
                   {/* Meta row */}
                   <div className="flex items-center justify-between">
-                    <span className={cn("font-mono text-[10px]", isActive ? "text-slate-400" : "text-slate-500")}>
+                    <span
+                      className={cn(
+                        "font-mono text-[10px]",
+                        isRejected ? "text-rose-300/80" : isActive ? "text-slate-400" : "text-slate-500",
+                      )}
+                    >
                       {item.initiator} · <span className="text-slate-500">{item.skus} SKUs</span>
                     </span>
                     <span
                       className={cn(
                         "shrink-0 font-mono text-[10px]",
-                        item.metaVariant === "success" ? "text-emerald-400" : "text-slate-600",
+                        isRejected
+                          ? "text-rose-400"
+                          : item.metaVariant === "success"
+                            ? "text-emerald-400"
+                            : "text-slate-600",
                       )}
                     >
-                      {item.meta}
+                      {isRejected ? "Rejected" : item.meta}
                     </span>
                   </div>
                 </div>

@@ -1,8 +1,18 @@
-import { Bell, Settings, Shield } from "lucide-react";
+import { Bell, MapPin, Settings, Shield } from "lucide-react";
 
 import ithinaLogo from "@/assets/ithina_logo.png";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { setConstraints } from "@/store/slices/wizard-slice";
+import { useWizardStores } from "@/hooks/use-wizard";
 
 export default function Header() {
+  const dispatch = useAppDispatch();
+  const { data: stores = [] } = useWizardStores();
+  const constraints = useAppSelector((s) => s.wizard.constraints);
+
+  const currentStore = stores.find((s) => s.id === constraints.store) ?? stores[0];
+
   return (
     <header className="relative flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border/60 bg-ithina-sidebar px-6">
       <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-ithina-purple/30 to-transparent" />
@@ -23,9 +33,42 @@ export default function Header() {
           Store Manager
         </button>
 
-        <button className="rounded-lg border border-ithina-border/60 bg-white/[0.03] px-3.5 py-2 shadow-sm transition-all duration-200 hover:border-ithina-purple/30 hover:bg-ithina-purple/[0.06] hover:text-white">
-          Intensive
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="flex items-center gap-2 rounded-lg border border-ithina-border/60 bg-white/[0.03] px-3.5 py-2 shadow-sm transition-all duration-200 hover:border-ithina-purple/30 hover:bg-ithina-purple/[0.06] hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={stores.length === 0}
+            >
+              <MapPin className="size-3.5 text-ithina-purple" />
+              <span className="font-mono text-[11px]">
+                {currentStore ? `Store ${currentStore.id}` : "Select Store"}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-64">
+            {stores.map((store) => (
+              <DropdownMenuItem
+                key={store.id}
+                onClick={() =>
+                  dispatch(
+                    setConstraints({
+                      ...constraints,
+                      store: store.id,
+                    }),
+                  )
+                }
+                className="flex flex-col items-start gap-0.5"
+              >
+                <span className="text-xs font-semibold text-white">
+                  {store.name}
+                </span>
+                <span className="font-mono text-[10px] text-slate-400">
+                  #{store.id} · {store.displays} displays
+                </span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="mx-1 h-6 w-px bg-ithina-border/40" />
 

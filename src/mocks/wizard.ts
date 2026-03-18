@@ -23,6 +23,22 @@ export const MOCK_STORES: WizardStore[] = [
     displays: 168,
     activePromos: 11,
   },
+  {
+    id: "south-loop",
+    name: "Chicago South Loop",
+    short: "South Loop",
+    address: "233 S Wacker Dr, Chicago, IL",
+    displays: 9,
+    activePromos: 1,
+  },
+  {
+    id: "evanston-main",
+    name: "Evanston Main",
+    short: "Evanston",
+    address: "1501 Sherman Ave, Evanston, IL",
+    displays: 11,
+    activePromos: 2,
+  },
 ];
 
 export const MOCK_MARGINS: WizardMargin[] = [

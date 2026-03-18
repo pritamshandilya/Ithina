@@ -8,6 +8,7 @@ import {
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
 import { apiDelay } from "@/lib/api-delay";
+import { promoApiClient } from "@/lib/promo-api-client";
 import type {
   CampaignFilterOption,
   CampaignListItem,
@@ -17,9 +18,9 @@ import type {
   CampaignTableColumn,
 } from "@/types/campaigns";
 
-// TODO (backend): replace with axios.get("/api/campaigns")
 export async function getCampaignList(): Promise<CampaignListItem[]> {
-  await apiDelay(400);
+  // TEMP (frontend-only): use mocked data until backend is wired
+  await apiDelay(200);
   return MOCK_CAMPAIGN_LIST;
 }
 

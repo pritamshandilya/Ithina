@@ -3,6 +3,7 @@ import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, StagedSku, WizardConstraints } from "@/types/wizard";
 
 type InputMode = "ai" | "csv";
+export type WizardMode = "nl" | "manual";
 
 interface CsvRow {
   sku: string;
@@ -13,6 +14,8 @@ interface CsvRow {
 }
 
 interface WizardState {
+  wMode: WizardMode | "";
+  wStep: number;
   hasSplit: boolean;
   showGrid: boolean;
   messages: ChatMessage[];
@@ -26,6 +29,8 @@ interface WizardState {
 }
 
 const initialState: WizardState = {
+  wMode: "",
+  wStep: 0,
   hasSplit: false,
   showGrid: false,
   messages: [],
@@ -46,6 +51,12 @@ const wizardSlice = createSlice({
   name: "wizard",
   initialState,
   reducers: {
+    setWMode(state, action: PayloadAction<WizardMode | "">) {
+      state.wMode = action.payload;
+    },
+    setWStep(state, action: PayloadAction<number>) {
+      state.wStep = action.payload;
+    },
     setHasSplit(state, action: PayloadAction<boolean>) {
       state.hasSplit = action.payload;
     },
@@ -99,6 +110,8 @@ const wizardSlice = createSlice({
 });
 
 export const {
+  setWMode,
+  setWStep,
   setHasSplit,
   setShowGrid,
   pushMessage,

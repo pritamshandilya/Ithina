@@ -286,19 +286,15 @@ function DataStagingGrid({
         </div>
         <div className="ml-auto flex items-center gap-3">
           {inputMode === "ai" && data.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">{data.length} SKUs staged — Review proposals below</span>
+            <span className="hidden text-xs text-slate-400 lg:block">
+              {data.length} SKUs staged — Review proposals below
+            </span>
           )}
           {inputMode === "csv" && csvRows.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">{csvRows.length} rows loaded</span>
+            <span className="hidden text-xs text-slate-400 lg:block">
+              {csvRows.length} rows loaded
+            </span>
           )}
-          <button
-            onClick={onProceed}
-            disabled={isGenerating || (inputMode === "ai" && data.length === 0) || (inputMode === "csv" && !csvConfirmed)}
-            className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Proceed to Creative Design
-            <ArrowRight className="size-3.5" />
-          </button>
         </div>
       </header>
 

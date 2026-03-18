@@ -6,6 +6,14 @@ interface EslPreviewProps {
   hw: HardwareDeviceId;
   headerText: string;
   headerClass: string;
+  headerBg: string;
+  productText: string;
+  priceText: string;
+  productFontSize: number;
+  productColor: string;
+  priceFontSize: number;
+  priceColor: string;
+  layout: string;
   product29Text: string;
   price29Text: string;
   lcdBgUrl: string;
@@ -25,20 +33,105 @@ function ScanLine({ fast }: { fast?: boolean }) {
   );
 }
 
-function Chroma42Preview({ headerText, headerClass, isScanning }: Pick<EslPreviewProps, "headerText" | "headerClass" | "isScanning">) {
+function Chroma42Preview({
+  headerText,
+  headerClass,
+  headerBg,
+  productText,
+  priceText,
+  productFontSize,
+  productColor,
+  priceFontSize,
+  priceColor,
+  layout,
+  isScanning,
+}: Pick<
+  EslPreviewProps,
+  "headerText" | "headerClass" | "headerBg" | "productText" | "priceText" | "productFontSize" | "productColor" | "priceFontSize" | "priceColor" | "layout" | "isScanning"
+>) {
   return (
     <div className="relative z-10 flex flex-col items-center rounded-xl border border-white/10 bg-[#E2E8F0] p-8 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-500">
       <div className="relative flex h-[300px] w-[400px] flex-col overflow-hidden border border-slate-400 bg-[#F9F9F9]" style={{ imageRendering: "pixelated" }}>
-        <div className={`flex w-full items-center justify-center border-b-4 border-black bg-[#FF0000] font-bold tracking-widest text-white transition-all duration-500 ${headerClass}`}>
+        <div
+          className={`flex w-full items-center justify-center border-b-4 border-black font-bold tracking-widest text-white transition-all duration-500 ${headerClass}`}
+          style={{ backgroundColor: headerBg }}
+        >
           {headerText}
         </div>
-        <div className="flex h-full items-end justify-between p-4 text-black">
-          <div className="flex flex-col pb-2">
-            <span className="text-2xl font-bold leading-tight">Premium<br />Salmon Tray</span>
-            <span className="mt-3 text-sm font-bold line-through">WAS $12.99</span>
+        {layout === "price-center" && (
+          <div className="flex h-full flex-col items-center justify-center gap-1 text-black">
+            <span
+              className="font-bold leading-tight text-center whitespace-pre-line"
+              style={{ fontSize: productFontSize, color: productColor }}
+            >
+              {productText}
+            </span>
+            <span
+              className="font-bold leading-none tracking-tighter"
+              style={{ fontSize: priceFontSize, color: priceColor }}
+            >
+              {priceText}
+            </span>
+            <span className="mt-1 text-sm font-bold text-slate-500 line-through">WAS $12.99</span>
           </div>
-          <span className="text-[70px] font-bold leading-none tracking-tighter">$10.39</span>
-        </div>
+        )}
+        {layout === "stacked" && (
+          <div className="flex h-full flex-col justify-between p-4 text-black">
+            <div>
+              <span
+                className="font-bold leading-tight whitespace-pre-line"
+                style={{ fontSize: productFontSize, color: productColor }}
+              >
+                {productText}
+              </span>
+            </div>
+            <div className="flex items-end justify-between">
+              <span className="text-sm font-bold text-slate-500 line-through">WAS $12.99</span>
+              <span
+                className="font-bold leading-none tracking-tighter"
+                style={{ fontSize: priceFontSize, color: priceColor }}
+              >
+                {priceText}
+              </span>
+            </div>
+          </div>
+        )}
+        {layout === "price-dominant" && (
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-4 text-black">
+            <span
+              className="font-bold leading-tight text-center whitespace-pre-line"
+              style={{ fontSize: productFontSize * 0.8, color: productColor }}
+            >
+              {productText}
+            </span>
+            <span
+              className="font-extrabold leading-none tracking-tighter"
+              style={{ fontSize: priceFontSize * 1.2, color: priceColor }}
+            >
+              {priceText}
+            </span>
+            <span className="mt-1 text-xs font-bold text-slate-500 line-through">WAS $12.99</span>
+          </div>
+        )}
+        {layout === "price-right" && (
+          <div className="flex h-full items-end justify-between p-4 text-black">
+            <div className="flex flex-col pb-2">
+              <span
+                className="font-bold leading-tight whitespace-pre-line"
+                style={{ fontSize: productFontSize, color: productColor }}
+              >
+                {productText}
+              </span>
+              <span className="mt-3 text-sm font-bold line-through">WAS $12.99</span>
+            </div>
+            <span
+              className="font-bold leading-none tracking-tighter"
+              style={{ fontSize: priceFontSize, color: priceColor }}
+            >
+              {priceText}
+            </span>
+          </div>
+        )}
         {isScanning && <ScanLine />}
       </div>
       <div className="mt-5 flex w-[400px] items-center justify-between opacity-40">
@@ -49,11 +142,14 @@ function Chroma42Preview({ headerText, headerClass, isScanning }: Pick<EslPrevie
   );
 }
 
-function Chroma29Preview({ headerText, productText, priceText, isScanning }: { headerText: string; productText: string; priceText: string; isScanning: boolean }) {
+function Chroma29Preview({ headerText, headerBg, productText, priceText, isScanning }: { headerText: string; headerBg: string; productText: string; priceText: string; isScanning: boolean }) {
   return (
     <div className="relative z-10 flex flex-col items-center rounded-xl border border-white/10 bg-[#E2E8F0] p-6 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.8)] transition-all duration-500">
       <div className="relative flex h-[128px] w-[296px] flex-col overflow-hidden border border-slate-400 bg-[#F9F9F9] transition-all duration-500" style={{ imageRendering: "pixelated" }}>
-        <div className="flex h-5 w-full items-center justify-center border-b border-black bg-[#FF0000] text-[9px] font-bold tracking-widest text-white transition-all duration-500">
+        <div
+          className="flex h-5 w-full items-center justify-center border-b border-black text-[9px] font-bold tracking-widest text-white transition-all duration-500"
+          style={{ backgroundColor: headerBg }}
+        >
           {headerText}
         </div>
         <div className="flex h-full items-center justify-between p-2 text-black">
@@ -95,11 +191,34 @@ function LcdPreview({ lcdBgUrl, isScanning }: { lcdBgUrl: string; isScanning: bo
   );
 }
 
-function EslPreview({ hw, headerText, headerClass, product29Text, price29Text, lcdBgUrl, isScanning }: EslPreviewProps) {
+function EslPreview(props: EslPreviewProps) {
+  const { hw, headerText, headerClass, headerBg, productText, priceText, productFontSize, productColor, priceFontSize, priceColor, layout, product29Text, price29Text, lcdBgUrl, isScanning } = props;
   return (
     <>
-      {hw === "chroma42" && <Chroma42Preview headerText={headerText} headerClass={headerClass} isScanning={isScanning} />}
-      {hw === "chroma29" && <Chroma29Preview headerText={headerText} productText={product29Text} priceText={price29Text} isScanning={isScanning} />}
+      {hw === "chroma42" && (
+        <Chroma42Preview
+          headerText={headerText}
+          headerClass={headerClass}
+          headerBg={headerBg}
+          productText={productText}
+          priceText={priceText}
+          productFontSize={productFontSize}
+          productColor={productColor}
+          priceFontSize={priceFontSize}
+          priceColor={priceColor}
+          layout={layout}
+          isScanning={isScanning}
+        />
+      )}
+      {hw === "chroma29" && (
+        <Chroma29Preview
+          headerText={headerText}
+          headerBg={headerBg}
+          productText={product29Text}
+          priceText={price29Text}
+          isScanning={isScanning}
+        />
+      )}
       {hw === "lcd" && <LcdPreview lcdBgUrl={lcdBgUrl} isScanning={isScanning} />}
     </>
   );

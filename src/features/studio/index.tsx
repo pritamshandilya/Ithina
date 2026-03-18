@@ -56,6 +56,14 @@ export default function Studio() {
     messages,
     einkHeaderClass,
     einkHeaderText,
+    einkHeaderBg,
+    einkProductText,
+    einkPriceText,
+    einkProductFontSize,
+    einkProductColor,
+    einkPriceFontSize,
+    einkPriceColor,
+    einkLayout,
     eink29ProductText,
     eink29PriceText,
     lcdBgUrl,
@@ -178,6 +186,7 @@ export default function Studio() {
 
   const handleSendToApproval = useCallback(() => {
     dispatch(setPendingApproval(true));
+    dispatch(resetStudio());
     navigate({ to: "/approval" });
   }, [navigate, dispatch]);
 
@@ -313,6 +322,14 @@ export default function Studio() {
                       hw={activeHw}
                       headerText={einkHeaderText}
                       headerClass={einkHeaderClass}
+                      headerBg={einkHeaderBg}
+                      productText={einkProductText}
+                      priceText={einkPriceText}
+                      productFontSize={einkProductFontSize}
+                      productColor={einkProductColor}
+                      priceFontSize={einkPriceFontSize}
+                      priceColor={einkPriceColor}
+                      layout={einkLayout}
                       product29Text={eink29ProductText}
                       price29Text={eink29PriceText}
                       lcdBgUrl={lcdBgUrl}

@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
-import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
 import { useRemoveStoreUser, useStoreUsers, useUpdateStore } from "@/queries/checker";
 import {
@@ -50,7 +50,7 @@ export function StoreConfigurationPage({
     name: "",
     address: "",
     currency: "USD",
-    default_dimensions: "mm",
+    default_dimensions: "mm" as StoreDimensionUnit,
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -62,7 +62,7 @@ export function StoreConfigurationPage({
         address: (selectedStore as any).address || "",
         currency: (selectedStore as any).currency || "USD",
         default_dimensions:
-          (selectedStore as any).default_dimensions || "Metric",
+          ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
     }
   }, [selectedStore]);
@@ -285,17 +285,15 @@ export function StoreConfigurationPage({
                     onChange={(e) =>
                       setFormData({
                         ...formData,
-                        default_dimensions: e.target.value,
+                        default_dimensions: e.target.value as StoreDimensionUnit,
                       })
                     }
                     className="h-11 rounded-md border border-border bg-background/50 px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
                     disabled={!canEdit}
                   >
-                    {STORE_DIMENSION_UNITS.map((opt) => (
-                      <option key={opt} value={opt}>
-                        {opt}
-                      </option>
-                    ))}
+                    <option value="mm">mm</option>
+                    <option value="cm">cm</option>
+                    <option value="inch">inch</option>
                   </select>
                 </div>
               </CardContent>

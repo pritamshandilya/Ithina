@@ -17,7 +17,8 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateStore, useOrgUsers, useAssignStoreUser } from "@/queries/checker";
-import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
+import { useDimensionUnits } from "@/queries/checker";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import type { StoreSetting } from "@/types/checker";
 
 export const Route = createFileRoute("/admin/stores/new")({
@@ -43,7 +44,7 @@ function StoreOnboardingPage() {
   });
 
   const [configForm, setConfigForm] = useState({
-    default_dimensions: "cm",
+    default_dimensions: "cm" as StoreDimensionUnit,
   });
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
@@ -56,6 +57,8 @@ function StoreOnboardingPage() {
     basicForm.currency.trim().length > 0;
 
   const canContinueConfig = configForm.default_dimensions.trim().length > 0;
+
+  const { data: dimensionUnits = [] } = useDimensionUnits();
 
   const assignableUsers = useMemo(
     () => orgUsers.filter((u) => u.role === "maker" || u.role === "checker"),
@@ -250,12 +253,12 @@ function StoreOnboardingPage() {
                   <div className="space-y-2">
                     <Label>Default dimension unit</Label>
                     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {STORE_DIMENSION_UNITS.map((opt) => (
+                      {dimensionUnits.map((opt) => (
                         <button
                           key={opt}
                           type="button"
                           onClick={() =>
-                            setConfigForm({ default_dimensions: opt })
+                            setConfigForm({ default_dimensions: opt as StoreDimensionUnit })
                           }
                           className={`flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                             configForm.default_dimensions === opt

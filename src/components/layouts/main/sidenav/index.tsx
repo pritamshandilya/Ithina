@@ -222,6 +222,11 @@ export default function Sidenav() {
       });
     }
     items.push({ label: "Shelves", to: `${storePrefix}/shelf` as any, icon: Rows3 });
+    items.push({
+      label: "Shelf Templates",
+      to: `${storePrefix}/shelf-templates` as any,
+      icon: LayoutGrid,
+    });
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",

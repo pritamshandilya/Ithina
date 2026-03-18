@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Store, X, Check } from "lucide-react";
 import type { StoreSetting } from "@/types/checker";
-import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 
 interface StoreFormModalProps {
     isOpen: boolean;
@@ -31,7 +31,8 @@ function getInitialStoreFormData(initialData?: StoreSetting): StoreFormValues {
         name: initialData.name,
         address: initialData.address,
         currency: initialData.currency || "USD",
-        default_dimensions: initialData.default_dimensions || "Metric",
+        default_dimensions:
+          (initialData.default_dimensions as StoreDimensionUnit | undefined) || "cm",
     };
 }
 
@@ -154,11 +155,9 @@ export function StoreFormModal({
                                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                                 required
                             >
-                                {STORE_DIMENSION_UNITS.map((unit) => (
-                                    <option key={unit} value={unit}>
-                                        {unit}
-                                    </option>
-                                ))}
+                                <option value="mm">mm</option>
+                                <option value="cm">cm</option>
+                                <option value="inch">inch</option>
                             </select>
                         </div>
                     </div>

@@ -34,6 +34,7 @@ import type {
   ReportKeyFinding,
   ReportIssueCategory,
 } from "@/lib/analysis";
+import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
 
 export interface ReportSnippetsViewProps {
   /** Shelf image preview URL */
@@ -52,6 +53,10 @@ export interface ReportSnippetsViewProps {
   viewFullReportTo?: string;
   /** State to pass when navigating to View Full Report */
   viewFullReportState?: Record<string, unknown>;
+  /** Selected rule set summary (preferred when available) */
+  selectedRuleSet?: ComplianceRuleSetSummary | null;
+  /** Fallback name when rule set is not found in API (e.g. custom selection) */
+  selectedRuleSetName?: string | null;
 }
 
 function KeyFindingIcon({ type }: { type: ReportKeyFinding["type"] }) {
@@ -87,6 +92,8 @@ export function ReportSnippetsView({
   isHistorical = false,
   viewFullReportTo = "/maker/reports/view",
   viewFullReportState,
+  selectedRuleSet,
+  selectedRuleSetName,
 }: ReportSnippetsViewProps) {
   const { toast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -115,6 +122,8 @@ export function ReportSnippetsView({
         onClose={() => setSendForApprovalOpen(false)}
         onSubmit={handleSendForApproval}
         isLoading={isSubmittingApproval}
+        selectedRuleSet={selectedRuleSet ?? null}
+        selectedRuleSetName={selectedRuleSetName ?? "Default Rules"}
       />
       {/* Report header - hide title when isHistorical (parent page provides it) */}
       <div className="flex flex-wrap items-center justify-between gap-4">

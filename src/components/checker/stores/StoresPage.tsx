@@ -34,7 +34,9 @@ export function StoresPage() {
     const filteredStores = useMemo(() => {
         return (stores as StoreSetting[]).filter((store) =>
             store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (store.address || "").toLowerCase().includes(searchQuery.toLowerCase())
+            (store.address || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (store.region || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (store.status || "").toLowerCase().includes(searchQuery.toLowerCase())
         );
     }, [stores, searchQuery]);
 
@@ -110,6 +112,28 @@ export function StoresPage() {
                         <span class="text-sm truncate">${value}</span>
                     </div>
                 `;
+            },
+        },
+        {
+            title: "Region",
+            field: "region",
+            width: 130,
+            formatter: (cell: any) => {
+                const value = cell.getValue() || "—";
+                return `<span class="text-sm text-muted-foreground">${value}</span>`;
+            },
+        },
+        {
+            title: "Status",
+            field: "status",
+            width: 120,
+            formatter: (cell: any) => {
+                const value = (cell.getValue() as "Active" | "Inactive" | undefined) || "Active";
+                const statusClass =
+                  value === "Inactive"
+                    ? "border-destructive/30 text-destructive"
+                    : "border-emerald-500/30 text-emerald-500";
+                return `<span class="inline-flex rounded px-1.5 py-0.5 border text-xs ${statusClass}">${value}</span>`;
             },
         },
         {

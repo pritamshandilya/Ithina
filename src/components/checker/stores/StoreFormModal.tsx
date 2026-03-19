@@ -10,18 +10,20 @@ import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 interface StoreFormModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSubmit: (store: Omit<StoreSetting, "id" | "created" | "status" | "maker_ids">) => void;
+    onSubmit: (store: Omit<StoreSetting, "id" | "created" | "maker_ids">) => void;
     initialData?: StoreSetting;
     isLoading?: boolean;
 }
 
-type StoreFormValues = Omit<StoreSetting, "id" | "created" | "status" | "maker_ids">;
+type StoreFormValues = Omit<StoreSetting, "id" | "created" | "maker_ids">;
 
 const EMPTY_STORE_FORM: StoreFormValues = {
   name: "",
   address: "",
+  region: "",
+  status: "Active",
   currency: "USD",
-  default_dimensions: "cm",
+  default_dimensions: "inch",
 };
 
 function getInitialStoreFormData(initialData?: StoreSetting): StoreFormValues {
@@ -30,9 +32,11 @@ function getInitialStoreFormData(initialData?: StoreSetting): StoreFormValues {
     return {
         name: initialData.name,
         address: initialData.address,
+        region: initialData.region || "",
+        status: initialData.status || "Active",
         currency: initialData.currency || "USD",
         default_dimensions:
-          (initialData.default_dimensions as StoreDimensionUnit | undefined) || "cm",
+          (initialData.default_dimensions as StoreDimensionUnit | undefined) || "inch",
     };
 }
 
@@ -127,6 +131,36 @@ export function StoreFormModal({
                             className="bg-background border-border focus:border-accent transition-all"
                             required
                         />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="region" className="text-sm font-medium text-muted-foreground">
+                                Region
+                            </Label>
+                            <Input
+                                id="region"
+                                placeholder="e.g. North, West, APAC"
+                                value={formData.region}
+                                onChange={(e) => updateField("region", e.target.value)}
+                                className="bg-background border-border focus:border-accent transition-all"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="status" className="text-sm font-medium text-muted-foreground">
+                                Status <span className="text-destructive">*</span>
+                            </Label>
+                            <select
+                                id="status"
+                                value={formData.status}
+                                onChange={(e) => updateField("status", e.target.value as "Active" | "Inactive")}
+                                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                                required
+                            >
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">

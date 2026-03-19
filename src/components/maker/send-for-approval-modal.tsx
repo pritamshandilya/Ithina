@@ -47,6 +47,15 @@ export function SendForApprovalModal({
   const { data: rules, isLoading: isRulesLoading } = useRulesByRuleSetId(
     isOpen ? ruleSetId : null,
   );
+  const resolvedRules = rules ?? [];
+  const resolvedRulesCount = selectedRuleSet?.rulesCount ?? resolvedRules.length;
+  const resolvedEnabledCount =
+    selectedRuleSet?.enabledCount ??
+    resolvedRules.filter((rule) => rule.enabled !== false).length;
+  const resolvedRuleSetName = selectedRuleSet?.name ?? selectedRuleSetName ?? null;
+  const resolvedRuleSetDescription = selectedRuleSet?.description;
+  const isDefaultSet =
+    selectedRuleSet?.isDefault ?? ruleSetId === "default-rules";
 
   const handleSubmit = () => {
     if (isLoading) return;
@@ -133,7 +142,12 @@ export function SendForApprovalModal({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} showCloseButton>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      showCloseButton
+      className="max-w-2xl"
+    >
       <div
         className="rounded-xl border border-border bg-card p-4 shadow-lg"
         onClick={(e) => e.stopPropagation()}
@@ -155,15 +169,15 @@ export function SendForApprovalModal({
             Selected analysis rules
           </p>
 
-          {selectedRuleSet ? (
+          {resolvedRuleSetName ? (
             <div className="mt-2 space-y-3">
               <div className="space-y-1">
                 <p className="text-sm font-medium text-foreground">
-                  {selectedRuleSet.name}
+                  {resolvedRuleSetName}
                 </p>
-                {selectedRuleSet.description && (
+                {resolvedRuleSetDescription && (
                   <p className="text-sm text-muted-foreground">
-                    {selectedRuleSet.description}
+                    {resolvedRuleSetDescription}
                   </p>
                 )}
               </div>
@@ -172,16 +186,16 @@ export function SendForApprovalModal({
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Rules in set</span>
                   <span className="font-medium tabular-nums text-foreground">
-                    {selectedRuleSet.rulesCount}
+                    {resolvedRulesCount}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Enabled rules</span>
                   <span className="font-medium tabular-nums text-foreground">
-                    {selectedRuleSet.enabledCount}
+                    {resolvedEnabledCount}
                   </span>
                 </div>
-                {selectedRuleSet.isDefault && (
+                {isDefaultSet && (
                   <div className="rounded-md border border-chart-2/30 bg-chart-2/10 px-2 py-1.5 text-xs font-medium text-chart-2">
                     Default rule set
                   </div>
@@ -199,24 +213,17 @@ export function SendForApprovalModal({
                       <Skeleton className="h-24 w-full rounded-lg" />
                       <Skeleton className="h-24 w-full rounded-lg" />
                     </div>
-                  ) : rules && rules.length > 0 ? (
-                    rules.map((rule) => <RuleCard key={rule.ruleId} rule={rule} />)
+                  ) : resolvedRules.length > 0 ? (
+                    resolvedRules.map((rule) => <RuleCard key={rule.ruleId} rule={rule} />)
                   ) : (
                     <p className="text-sm text-muted-foreground py-2">
-                      No rules in this set.
+                      {ruleSetId
+                        ? "No rules in this set."
+                        : "Rule set details are not available."}
                     </p>
                   )}
                 </div>
               </div>
-            </div>
-          ) : selectedRuleSetName ? (
-            <div className="mt-2 space-y-1">
-              <p className="text-sm font-medium text-foreground">
-                {selectedRuleSetName}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Rule set details are not available.
-              </p>
             </div>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">

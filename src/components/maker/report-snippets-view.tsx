@@ -12,7 +12,7 @@
  */
 
 import { useState } from "react";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
   FileText,
@@ -95,6 +95,7 @@ export function ReportSnippetsView({
   selectedRuleSet,
   selectedRuleSetName,
 }: ReportSnippetsViewProps) {
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [zoomLevel, setZoomLevel] = useState(1);
   const [sendForApprovalOpen, setSendForApprovalOpen] = useState(false);
@@ -105,10 +106,12 @@ export function ReportSnippetsView({
     // TODO: Call API to submit for approval
     setTimeout(() => {
       setIsSubmittingApproval(false);
+      setSendForApprovalOpen(false);
       toast({
         title: "Sent for approval",
         description: "This analysis has been sent to the Store Manager for review.",
       });
+      navigate({ to: "/maker/audits/planogram" });
     }, 800);
   };
 

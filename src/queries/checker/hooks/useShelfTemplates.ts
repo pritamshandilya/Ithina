@@ -6,7 +6,8 @@ import {
   fetchShelfTemplates,
   updateShelfTemplate,
 } from "@/queries/checker/api/shelf-templates";
-import { useSelectedStoreId } from "@/providers/store";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { useSelectedStoreId, useStore } from "@/providers/store";
 import type {
   ShelfTemplateCreateInput,
   ShelfTemplateUpdateInput,
@@ -20,9 +21,12 @@ export const shelfTemplateKeys = {
 
 export function useShelfTemplates() {
   const storeId = useSelectedStoreId();
+  const { selectedStore } = useStore();
+  const defaultUnit =
+    ((selectedStore as any)?.default_dimensions as StoreDimensionUnit | undefined) ?? "mm";
   return useQuery({
-    queryKey: shelfTemplateKeys.list(storeId),
-    queryFn: () => fetchShelfTemplates(storeId!),
+    queryKey: [...shelfTemplateKeys.list(storeId), defaultUnit],
+    queryFn: () => fetchShelfTemplates(storeId!, defaultUnit),
     enabled: !!storeId,
     staleTime: 60_000,
   });

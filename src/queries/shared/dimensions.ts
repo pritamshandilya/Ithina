@@ -1,6 +1,7 @@
-import { apiClient } from "@/queries/shared";
+const DIMENSION_UNITS: string[] = ["mm", "cm", "inch"];
 
 export async function fetchDimensionUnits(): Promise<string[]> {
-  return apiClient.get<string[]>("/dimensions/units");
+  // Frontend-only constant for now; backend endpoint is not yet wired.
+  return DIMENSION_UNITS;
 }
 

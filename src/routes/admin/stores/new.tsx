@@ -1,31 +1,41 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Check, Globe, Store as StoreIcon, Users as UsersIcon } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Globe,
+  Store as StoreIcon,
+  Users as UsersIcon,
+} from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
+import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
+import { StoreOnboardingBasicStep } from "@/components/admin/stores/store-onboarding-basic-step";
+import {
+  StoreOnboardingConfigStep,
+} from "@/components/admin/stores/store-onboarding-config-step";
+import type {
+  ConfigSection,
+  FixtureConfig,
+  ShelfTemplateConfig,
+} from "@/components/admin/stores/store-onboarding-config-step";
+import { StoreOnboardingTeamStep } from "@/components/admin/stores/store-onboarding-team-step";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateStore, useOrgUsers, useAssignStoreUser } from "@/queries/checker";
 import { useDimensionUnits } from "@/queries/checker";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import type { StoreSetting } from "@/types/checker";
+import type { ShelfTemplateCreateInput } from "@/types/shelf-template";
+import { replaceShelfTemplates } from "@/queries/checker/api/shelf-templates";
 
 export const Route = createFileRoute("/admin/stores/new")({
   component: StoreOnboardingPage,
 });
 
 type Step = 0 | 1 | 2;
+
 
 function StoreOnboardingPage() {
   const navigate = useNavigate();
@@ -40,12 +50,82 @@ function StoreOnboardingPage() {
   const [basicForm, setBasicForm] = useState({
     name: "",
     address: "",
+    region: "",
+    status: "Active" as "Active" | "Inactive",
     currency: "USD",
   });
 
   const [configForm, setConfigForm] = useState({
-    default_dimensions: "cm" as StoreDimensionUnit,
+    default_dimensions: "inch" as StoreDimensionUnit,
   });
+
+  const [activeConfigSection, setActiveConfigSection] =
+    useState<ConfigSection>("fixtures");
+  const [configVisited, setConfigVisited] = useState<Record<ConfigSection, boolean>>({
+    fixtures: true,
+    shelfTemplates: false,
+    rules: false,
+    dimensions: false,
+  });
+
+  const [fixtureTypes, setFixtureTypes] = useState<FixtureConfig[]>([
+    { name: "Gondola (standard)", detail: "Primary aisle runs" },
+    { name: "Endcap", detail: "Promotional displays at aisle ends" },
+    { name: "Cooler/Chiller", detail: "Refrigerated product bays" },
+    { name: "Checkout Lane", detail: "Impulse fixtures at checkout" },
+    { name: "Wall Unit", detail: "Perimeter wall shelving" },
+  ]);
+
+  const [shelfTemplatesConfig, setShelfTemplatesConfig] = useState<ShelfTemplateConfig[]>([
+    {
+      name: '4-shelf standard (48"W)',
+      description: "4 shelves · gondola bay",
+      fixtureType: "gondola",
+      zone: "Grocery",
+      section: "General",
+      width: "48",
+      height: "72",
+      depth: "18",
+    },
+    {
+      name: '5-shelf tall (48"W)',
+      description: "5 shelves · tall gondola",
+      fixtureType: "gondola",
+      zone: "Grocery",
+      section: "General",
+      width: "48",
+      height: "84",
+      depth: "18",
+    },
+    {
+      name: "3-shelf cooler",
+      description: "3 shelves · refrigerated bay",
+      fixtureType: "cooler",
+      zone: "Dairy",
+      section: "Cold",
+      width: "48",
+      height: "78",
+      depth: "30",
+    },
+  ]);
+
+  const [newFixture, setNewFixture] = useState<FixtureConfig>({
+    name: "",
+    detail: "",
+  });
+
+  const [newTemplate, setNewTemplate] = useState<ShelfTemplateConfig>({
+    name: "",
+    description: "",
+    fixtureType: "gondola",
+    zone: "",
+    section: "",
+    width: "",
+    height: "",
+    depth: "",
+  });
+  const [editingTemplateIndex, setEditingTemplateIndex] = useState<number | null>(null);
+  const [showAddTemplateForm, setShowAddTemplateForm] = useState(false);
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
     () => new Set(),
@@ -56,7 +136,13 @@ function StoreOnboardingPage() {
     basicForm.address.trim().length > 0 &&
     basicForm.currency.trim().length > 0;
 
-  const canContinueConfig = configForm.default_dimensions.trim().length > 0;
+  const hasVisitedAllConfigSections = useMemo(
+    () => Object.values(configVisited).every(Boolean),
+    [configVisited],
+  );
+
+  const canContinueConfig =
+    configForm.default_dimensions.trim().length > 0 && hasVisitedAllConfigSections;
 
   const { data: dimensionUnits = [] } = useDimensionUnits();
 
@@ -77,15 +163,77 @@ function StoreOnboardingPage() {
     });
   };
 
+  const saveShelfTemplateFromModal = (values: ShelfTemplateModalValues) => {
+    const name = values.name.trim();
+    if (!name) return;
+    if (editingTemplateIndex !== null) {
+      setShelfTemplatesConfig((prev) =>
+        prev.map((item, idx) =>
+          idx === editingTemplateIndex
+            ? {
+                name,
+                description: values.description.trim() || "Custom shelf template",
+                fixtureType: values.fixtureType,
+                zone: values.zone,
+                section: values.section,
+                width: values.width || "48",
+                height: values.height || "72",
+                depth: values.depth || "18",
+              }
+            : item,
+        ),
+      );
+    } else {
+      setShelfTemplatesConfig((prev) => [
+        ...prev,
+        {
+          name,
+          description: values.description.trim() || "Custom shelf template",
+          fixtureType: values.fixtureType,
+          zone: values.zone,
+          section: values.section,
+          width: values.width || "48",
+          height: values.height || "72",
+          depth: values.depth || "18",
+        },
+      ]);
+    }
+    setNewTemplate({
+      name: "",
+      description: "",
+      fixtureType: "gondola",
+      zone: "",
+      section: "",
+      width: "",
+      height: "",
+      depth: "",
+    });
+    setEditingTemplateIndex(null);
+    setShowAddTemplateForm(false);
+  };
+
   const handleCreateStore = async () => {
     if (!canContinueBasic || !canContinueConfig) return;
     try {
       const store = await createStoreMutation.mutateAsync({
         name: basicForm.name.trim(),
         address: basicForm.address.trim(),
+        region: basicForm.region.trim(),
+        status: basicForm.status,
         currency: basicForm.currency.trim().toUpperCase(),
         default_dimensions: configForm.default_dimensions,
       });
+      const templatePayload: ShelfTemplateCreateInput[] = shelfTemplatesConfig.map((tpl) => ({
+        name: tpl.name.trim(),
+        description: tpl.description.trim() || undefined,
+        fixtureType: tpl.fixtureType,
+        zone: tpl.zone.trim() || undefined,
+        section: tpl.section.trim() || undefined,
+        width: Number(tpl.width) || 48,
+        height: Number(tpl.height) || 72,
+        depth: Number(tpl.depth) || 18,
+      }));
+      await replaceShelfTemplates((store as StoreSetting).id, templatePayload);
       setCreatedStore(store as StoreSetting);
       toast({
         title: "Store created",
@@ -184,194 +332,63 @@ function StoreOnboardingPage() {
             />
           </ol>
 
-          {/* Step content */}
           {step === 0 && (
-            <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
-              <CardHeader>
-                <CardTitle>Basic store details</CardTitle>
-                <CardDescription>
-                  Name and locate your store. You can refine settings later.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="store-name">Store name</Label>
-                  <Input
-                    id="store-name"
-                    placeholder="e.g. Downtown Flagship"
-                    value={basicForm.name}
-                    onChange={(e) =>
-                      setBasicForm((f) => ({ ...f, name: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="store-address">Address</Label>
-                  <Input
-                    id="store-address"
-                    placeholder="Street, City, Region"
-                    value={basicForm.address}
-                    onChange={(e) =>
-                      setBasicForm((f) => ({ ...f, address: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="store-currency">Currency</Label>
-                  <Input
-                    id="store-currency"
-                    placeholder="e.g. USD, EUR"
-                    value={basicForm.currency}
-                    onChange={(e) =>
-                      setBasicForm((f) => ({ ...f, currency: e.target.value }))
-                    }
-                  />
-                </div>
-                <div className="flex justify-end pt-2">
-                  <Button
-                    className="min-w-[140px]"
-                    disabled={!canContinueBasic}
-                    onClick={() => setStep(1)}
-                  >
-                    Next
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <StoreOnboardingBasicStep
+              name={basicForm.name}
+              address={basicForm.address}
+              region={basicForm.region}
+              status={basicForm.status}
+              currency={basicForm.currency}
+              canContinue={canContinueBasic}
+              onNameChange={(value) => setBasicForm((f) => ({ ...f, name: value }))}
+              onAddressChange={(value) => setBasicForm((f) => ({ ...f, address: value }))}
+              onRegionChange={(value) => setBasicForm((f) => ({ ...f, region: value }))}
+              onStatusChange={(value) => setBasicForm((f) => ({ ...f, status: value }))}
+              onCurrencyChange={(value) => setBasicForm((f) => ({ ...f, currency: value }))}
+              onNext={() => setStep(1)}
+            />
           )}
 
           {step === 1 && (
-            <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
-              <CardHeader>
-                <CardTitle>Store configuration</CardTitle>
-                <CardDescription>
-                  Choose measurement defaults for shelves and planograms.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Default dimension unit</Label>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                      {dimensionUnits.map((opt) => (
-                        <button
-                          key={opt}
-                          type="button"
-                          onClick={() =>
-                            setConfigForm({ default_dimensions: opt as StoreDimensionUnit })
-                          }
-                          className={`flex items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                            configForm.default_dimensions === opt
-                              ? "border-accent bg-accent/10 text-accent"
-                              : "border-border bg-background/40 text-muted-foreground hover:border-accent/60"
-                          }`}
-                        >
-                          {opt}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-between pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(0)}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    className="min-w-[160px]"
-                    disabled={!canContinueConfig || createStoreMutation.isPending}
-                    onClick={handleCreateStore}
-                  >
-                    {createStoreMutation.isPending ? "Creating..." : "Create store"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <StoreOnboardingConfigStep
+              activeConfigSection={activeConfigSection}
+              setActiveConfigSection={setActiveConfigSection}
+              configVisited={configVisited}
+              setConfigVisited={setConfigVisited}
+              fixtureTypes={fixtureTypes}
+              setFixtureTypes={setFixtureTypes}
+              newFixture={newFixture}
+              setNewFixture={setNewFixture}
+              shelfTemplatesConfig={shelfTemplatesConfig}
+              setShelfTemplatesConfig={setShelfTemplatesConfig}
+              newTemplate={newTemplate}
+              setNewTemplate={setNewTemplate}
+              editingTemplateIndex={editingTemplateIndex}
+              setEditingTemplateIndex={setEditingTemplateIndex}
+              showAddTemplateForm={showAddTemplateForm}
+              setShowAddTemplateForm={setShowAddTemplateForm}
+              saveShelfTemplateFromModal={saveShelfTemplateFromModal}
+              dimensionUnits={dimensionUnits}
+              configForm={configForm}
+              setConfigForm={setConfigForm}
+              canContinueConfig={canContinueConfig}
+              isCreating={createStoreMutation.isPending}
+              onBack={() => setStep(0)}
+              onCreateStore={handleCreateStore}
+            />
           )}
 
           {step === 2 && (
-            <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
-              <CardHeader>
-                <CardTitle>Assign users to store</CardTitle>
-                <CardDescription>
-                  Makers and checkers you select will have access to this store.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {!createdStore ? (
-                  <Skeleton className="h-40 w-full" />
-                ) : (
-                  <>
-                    {orgUsersLoading ? (
-                      <Skeleton className="h-32 w-full" />
-                    ) : assignableUsers.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">
-                        No makers or checkers available to assign yet.
-                      </p>
-                    ) : (
-                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                        {assignableUsers.map((user) => {
-                          const selected = selectedUserIds.has(user.id);
-                          return (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() => toggleUserSelection(user.id)}
-                              className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                                selected
-                                  ? "border-accent bg-accent/10 text-accent"
-                                  : "border-border bg-background/40 text-foreground hover:border-accent/60"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
-                                  {user.firstName[0]}
-                                  {user.lastName[0]}
-                                </div>
-                                <div className="min-w-0">
-                                  <p className="truncate font-medium">
-                                    {user.firstName} {user.lastName}
-                                  </p>
-                                  <p className="truncate text-[11px] text-muted-foreground">
-                                    {user.email}
-                                  </p>
-                                </div>
-                              </div>
-                              {selected && (
-                                <Check className="size-4 shrink-0 text-accent" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div className="flex justify-between pt-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setStep(1)}
-                  >
-                    Back
-                  </Button>
-                  <Button
-                    type="button"
-                    className="min-w-[160px]"
-                    disabled={assignStoreUserMutation.isPending}
-                    onClick={handleFinish}
-                  >
-                    {assignStoreUserMutation.isPending ? "Finishing..." : "Finish onboarding"}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            <StoreOnboardingTeamStep
+              hasStore={!!createdStore}
+              usersLoading={orgUsersLoading}
+              assignableUsers={assignableUsers}
+              selectedUserIds={selectedUserIds}
+              isFinishing={assignStoreUserMutation.isPending}
+              onToggleUser={toggleUserSelection}
+              onBack={() => setStep(1)}
+              onFinish={handleFinish}
+            />
           )}
         </div>
       </div>

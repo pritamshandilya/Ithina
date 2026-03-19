@@ -1,32 +1,65 @@
 import MainLayout from "@/components/layouts/main";
+import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
-import { useRemoveStoreUser, useStoreUsers, useUpdateStore } from "@/queries/checker";
 import {
-  Globe,
-  MapPin,
-  Maximize,
-  Save,
+  useCreateShelfTemplate,
+  useDeleteShelfTemplate,
+  useRemoveStoreUser,
+  useShelfTemplates,
+  useStoreUsers,
+  useUpdateShelfTemplate,
+  useUpdateStore,
+} from "@/queries/checker";
+import {
   Settings,
   Store as StoreIcon,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
+import { StoreDefaultsTabContent } from "./store-defaults-tab-content";
+import { StoreProfileTab } from "./store-profile-tab";
+import type { ShelfTemplateCreateInput, ShelfTemplateFixtureType } from "@/types/shelf-template";
 
-type Tab = "profile" | "team";
+type Tab = "profile" | "defaults" | "team";
+type DefaultsTab = "fixtures" | "templates" | "rules" | "units";
+type StoreTemplateForm = {
+  name: string;
+  description: string;
+  fixtureType: ShelfTemplateFixtureType;
+  zone: string;
+  section: string;
+  width: string;
+  height: string;
+  depth: string;
+};
+
+const DEFAULT_FIXTURE_TYPES = [
+  "Gondola (standard)",
+  "Endcap",
+  "Cooler/Chiller",
+  "Checkout Lane",
+  "Wall Unit",
+];
+
+const DEFAULT_COMPLIANCE_RULES = [
+  "Min facing: 1",
+  'Max gap: 2"',
+  "FIFO required for perishables",
+  "Label alignment: required",
+];
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "Store Profile", icon: StoreIcon },
+  { id: "defaults", label: "Store Defaults", icon: Settings },
   { id: "team", label: "Staff", icon: Users },
 ];
 
@@ -49,23 +82,86 @@ export function StoreConfigurationPage({
   const [formData, setFormData] = useState({
     name: "",
     address: "",
+    region: "",
+    status: "Active" as "Active" | "Inactive",
     currency: "USD",
     default_dimensions: "mm" as StoreDimensionUnit,
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [fixtureTypes, setFixtureTypes] = useState<string[]>(DEFAULT_FIXTURE_TYPES);
+  const [complianceRules, setComplianceRules] = useState<string[]>(
+    DEFAULT_COMPLIANCE_RULES,
+  );
+  const [newFixture, setNewFixture] = useState("");
+  const [newTemplate, setNewTemplate] = useState<StoreTemplateForm>({
+    name: "",
+    description: "",
+    fixtureType: "gondola",
+    zone: "",
+    section: "",
+    width: "",
+    height: "",
+    depth: "",
+  });
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [newRule, setNewRule] = useState("");
+  const [activeDefaultsTab, setActiveDefaultsTab] = useState<DefaultsTab>("fixtures");
+  const { data: shelfTemplates = [], isLoading: shelfTemplatesLoading } = useShelfTemplates();
+  const createTemplateMutation = useCreateShelfTemplate();
+  const updateTemplateMutation = useUpdateShelfTemplate();
+  const deleteTemplateMutation = useDeleteShelfTemplate();
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
 
   useEffect(() => {
     if (selectedStore) {
       setFormData({
         name: selectedStore.name || "",
         address: (selectedStore as any).address || "",
+        region: (selectedStore as any).region || "",
+        status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
         currency: (selectedStore as any).currency || "USD",
         default_dimensions:
           ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
     }
   }, [selectedStore]);
+
+  useEffect(() => {
+    const storeId = selectedStore?.id;
+    if (!storeId) return;
+    const key = `dd-pog:store-defaults:${storeId}`;
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) {
+        setFixtureTypes(DEFAULT_FIXTURE_TYPES);
+        setComplianceRules(DEFAULT_COMPLIANCE_RULES);
+        return;
+      }
+      const parsed = JSON.parse(raw) as {
+        fixtureTypes?: string[];
+        complianceRules?: string[];
+      };
+      setFixtureTypes(parsed.fixtureTypes?.length ? parsed.fixtureTypes : DEFAULT_FIXTURE_TYPES);
+      setComplianceRules(parsed.complianceRules?.length ? parsed.complianceRules : DEFAULT_COMPLIANCE_RULES);
+    } catch {
+      setFixtureTypes(DEFAULT_FIXTURE_TYPES);
+      setComplianceRules(DEFAULT_COMPLIANCE_RULES);
+    }
+  }, [selectedStore?.id]);
+
+  useEffect(() => {
+    const storeId = selectedStore?.id;
+    if (!storeId) return;
+    const key = `dd-pog:store-defaults:${storeId}`;
+    localStorage.setItem(
+      key,
+      JSON.stringify({
+        fixtureTypes,
+        complianceRules,
+      }),
+    );
+  }, [selectedStore?.id, fixtureTypes, complianceRules]);
 
   if (!selectedStore) {
     return (
@@ -96,6 +192,71 @@ export function StoreConfigurationPage({
         variant: "destructive",
       });
     }
+  };
+
+  const handleSaveDefaults = async () => {
+    if (!canEdit) return;
+    try {
+      const updatedStore = await updateStoreMutation.mutateAsync({
+        storeId: selectedStore.id,
+        data: formData,
+      });
+      setSelectedStore(updatedStore);
+      toast({
+        title: "Defaults Saved",
+        description: "Store defaults have been updated successfully.",
+      });
+    } catch {
+      toast({
+        title: "Update Failed",
+        description: "An error occurred while saving store defaults.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveShelfTemplate = async (values: ShelfTemplateModalValues) => {
+    const payload: ShelfTemplateCreateInput = {
+      name: values.name.trim(),
+      description: values.description.trim() || undefined,
+      fixtureType: values.fixtureType,
+      zone: values.zone.trim() || undefined,
+      section: values.section.trim() || undefined,
+      width: Number(values.width) || 48,
+      height: Number(values.height) || 72,
+      depth: Number(values.depth) || 18,
+    };
+
+    if (!payload.name) {
+      toast({
+        title: "Missing name",
+        description: "Template name is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (editingTemplateId) {
+      await updateTemplateMutation.mutateAsync({
+        id: editingTemplateId,
+        ...payload,
+      });
+    } else {
+      await createTemplateMutation.mutateAsync(payload);
+    }
+
+    setEditingTemplateId(null);
+    setNewTemplate({
+      name: "",
+      description: "",
+      fixtureType: "gondola",
+      zone: "",
+      section: "",
+      width: "",
+      height: "",
+      depth: "",
+    });
+    setTemplateModalOpen(false);
   };
 
   const userColumns: DataTableColumn<AuthSessionUser>[] = useMemo(
@@ -193,129 +354,64 @@ export function StoreConfigurationPage({
           ))}
         </div>
 
-        {/* Store Profile tab */}
         {activeTab === "profile" && (
-          <form onSubmit={handleSave} className="space-y-6">
-            <Card noBorder className="bg-card shadow-xl glassmorphism">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <StoreIcon className="size-5 text-accent" />
-                  <CardTitle>Basic Information</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="name"
-                    className="text-muted-foreground flex items-center gap-2"
-                  >
-                    <StoreIcon className="size-3.5" /> Store Name
-                  </Label>
-                  <Input
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder="Enter store name"
-                    className="bg-background/50 border-border focus:border-accent font-medium h-11"
-                    required
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="address"
-                    className="text-muted-foreground flex items-center gap-2"
-                  >
-                    <MapPin className="size-3.5" /> Physical Address
-                  </Label>
-                  <Input
-                    id="address"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    placeholder="Full store address"
-                    className="bg-background/50 border-border focus:border-accent font-medium h-11"
-                    required
-                    disabled={!canEdit}
-                  />
-                </div>
-              </CardContent>
-            </Card>
+          <StoreProfileTab
+            canEdit={canEdit}
+            formData={formData}
+            setFormData={setFormData}
+            isSaving={updateStoreMutation.isPending}
+            onSave={handleSave}
+          />
+        )}
 
-            <Card noBorder className="bg-card shadow-xl glassmorphism">
-              <CardHeader>
-                <div className="flex items-center gap-2">
-                  <Globe className="size-5 text-accent" />
-                  <CardTitle>Regional</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="grid sm:grid-cols-2 gap-6">
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="currency"
-                    className="text-muted-foreground flex items-center gap-2"
-                  >
-                    <Globe className="size-3.5" /> Currency
-                  </Label>
-                  <Input
-                    id="currency"
-                    value={formData.currency}
-                    onChange={(e) =>
-                      setFormData({ ...formData, currency: e.target.value })
-                    }
-                    placeholder="e.g. USD, EUR"
-                    className="bg-background/50 border-border focus:border-accent font-medium h-11"
-                    required
-                    disabled={!canEdit}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="dimensions"
-                    className="text-muted-foreground flex items-center gap-2"
-                  >
-                    <Maximize className="size-3.5" /> Default Dimension Unit
-                  </Label>
-                  <select
-                    id="dimensions"
-                    value={formData.default_dimensions}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        default_dimensions: e.target.value as StoreDimensionUnit,
-                      })
-                    }
-                    className="h-11 rounded-md border border-border bg-background/50 px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
-                    disabled={!canEdit}
-                  >
-                    <option value="mm">mm</option>
-                    <option value="cm">cm</option>
-                    <option value="inch">inch</option>
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {canEdit && (
-              <div className="flex items-center justify-end gap-4">
-                <Button
-                  type="submit"
-                  disabled={updateStoreMutation.isPending}
-                  className="bg-accent hover:bg-accent/90 text-accent-foreground min-w-[150px] gap-2 h-11 rounded-xl shadow-lg shadow-accent/20"
-                >
-                  {updateStoreMutation.isPending ? (
-                    <div className="size-4 border-2 border-accent-foreground/30 border-t-accent-foreground animate-spin rounded-full" />
-                  ) : (
-                    <Save className="size-4" />
-                  )}
-                  Save Configuration
-                </Button>
-              </div>
-            )}
-          </form>
+        {activeTab === "defaults" && (
+          <StoreDefaultsTabContent
+            canEdit={canEdit}
+            activeDefaultsTab={activeDefaultsTab}
+            setActiveDefaultsTab={setActiveDefaultsTab}
+            fixtureTypes={fixtureTypes}
+            setFixtureTypes={setFixtureTypes}
+            newFixture={newFixture}
+            setNewFixture={setNewFixture}
+            complianceRules={complianceRules}
+            setComplianceRules={setComplianceRules}
+            newRule={newRule}
+            setNewRule={setNewRule}
+            shelfTemplates={shelfTemplates}
+            shelfTemplatesLoading={shelfTemplatesLoading}
+            deleteTemplate={(id) => deleteTemplateMutation.mutateAsync(id)}
+            openNewTemplate={() => {
+              setEditingTemplateId(null);
+              setTemplateModalOpen(true);
+            }}
+            openEditTemplate={(tpl) => {
+              setEditingTemplateId(tpl.id);
+              setNewTemplate({
+                name: tpl.name,
+                description: tpl.description ?? "",
+                fixtureType: tpl.fixtureType,
+                zone: tpl.zone ?? "",
+                section: tpl.section ?? "",
+                width: String(tpl.width),
+                height: String(tpl.height),
+                depth: String(tpl.depth),
+              });
+              setTemplateModalOpen(true);
+            }}
+            templateModalOpen={templateModalOpen}
+            closeTemplateModal={() => {
+              setTemplateModalOpen(false);
+              setEditingTemplateId(null);
+            }}
+            saveTemplate={handleSaveShelfTemplate}
+            isTemplateSaving={createTemplateMutation.isPending || updateTemplateMutation.isPending}
+            editingTemplateId={editingTemplateId}
+            templateInitialValues={newTemplate}
+            formData={formData}
+            setFormData={setFormData}
+            isSavingDefaults={updateStoreMutation.isPending}
+            onSaveDefaults={handleSaveDefaults}
+          />
         )}
 
         {/* Team tab */}

@@ -1,4 +1,4 @@
-import { ArrowRight, CloudUpload, FileSpreadsheet, Zap } from "lucide-react";
+import { CloudUpload, FileSpreadsheet, Zap } from "lucide-react";
 import { memo, useCallback, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -18,13 +18,11 @@ interface CsvRow {
 interface DataStagingGridProps {
   data: StagedSku[];
   isGenerating: boolean;
-  onProceed: () => void;
   inputMode: InputMode;
   onInputModeChange: (mode: InputMode) => void;
   onRemoveGridRow: (sku: string) => void;
   csvRows: CsvRow[];
   csvFileName: string;
-  csvConfirmed: boolean;
   onCsvParsed: (rows: CsvRow[], fileName: string) => void;
   onCsvClear: () => void;
   onCsvConfirm: () => void;
@@ -36,13 +34,11 @@ interface DataStagingGridProps {
 function DataStagingGrid({
   data,
   isGenerating,
-  onProceed,
   inputMode,
   onInputModeChange,
   onRemoveGridRow,
   csvRows,
   csvFileName,
-  csvConfirmed,
   onCsvParsed,
   onCsvClear,
   onCsvConfirm,

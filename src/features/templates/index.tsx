@@ -66,7 +66,7 @@ export default function TemplateManager() {
       fields: {
         headerText: t.headerText,
         headerBg: t.headerBg,
-        headerHex: ESL_PALETTE.find((p) => t.headerBg.includes("red"))?.hex ?? "#FF0000",
+        headerHex: "#FF0000",
         headerFontSize: 24,
         productName: t.productLine ?? "Product Name",
         nameFontSize: 14,

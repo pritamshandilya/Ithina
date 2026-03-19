@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, Clock, Shield } from "lucide-react";
+import { ChevronDown, Clock, Shield } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";

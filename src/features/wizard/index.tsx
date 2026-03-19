@@ -27,8 +27,6 @@ import {
 import type { HardwareDeviceId, WizardConstraints } from "@/types/wizard";
 import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
-import { cn } from "@/lib/utils";
-
 import ChatPanel from "./components/chat-panel";
 import ConstraintBar from "./components/constraint-bar";
 import DataStagingGrid from "./components/data-staging-grid";
@@ -389,13 +387,11 @@ export default function Wizard() {
                         <DataStagingGrid
                           data={gridData}
                           isGenerating={hwConfirmMutation.isPending}
-                          onProceed={() => dispatch(setWStep(2))}
                           inputMode={inputMode}
                           onInputModeChange={handleInputModeChange}
                           onRemoveGridRow={handleRemoveGridRow}
                           csvRows={csvRows}
                           csvFileName={csvFileName}
-                          csvConfirmed={csvConfirmed}
                           onCsvParsed={handleCsvParsed}
                           onCsvClear={handleCsvClear}
                           onCsvConfirm={handleCsvConfirm}

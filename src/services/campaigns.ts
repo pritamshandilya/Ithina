@@ -8,7 +8,6 @@ import {
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
 import { apiDelay } from "@/lib/api-delay";
-import { promoApiClient } from "@/lib/promo-api-client";
 import type {
   CampaignFilterOption,
   CampaignListItem,

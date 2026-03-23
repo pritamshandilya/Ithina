@@ -25,13 +25,12 @@ import {
   useDeleteShelf,
   usePlanogramList,
 } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
 
-/** Map shelf to planogram row with derived/mock planogram-specific fields */
 function toPlanogramRow(
   shelf: Shelf,
   planogramMap?: Map<
@@ -115,13 +114,16 @@ export function CheckerShelfListPage({
   const location = useLocation();
   const params = useParams({ strict: false });
   const { toast } = useToast();
+  const { selectedStore } = useStore();
 
-  const storeId = getOptionalStoreId(params);
+  const isAdminPath = location.pathname.includes("/admin/");
+  const storeId =
+    getOptionalStoreId(params) ??
+    (isAdminPath ? selectedStore?.id : undefined);
 
   const { data: shelves, isLoading } = useShelves();
   const deleteShelfMutation = useDeleteShelf();
   const { data: planogramList } = usePlanogramList();
-  const { selectedStore } = useStore();
   const { data: ruleSets } = useComplianceRuleSets();
   const _selectedStoreId = selectedStore?.id || mockUser.storeId;
   void _selectedStoreId;
@@ -150,7 +152,6 @@ export function CheckerShelfListPage({
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const [selectedRows, setSelectedRows] = useState<PlanogramShelfRow[]>([]);
-  console.log("selectedRows", selectedRows);
 
   const planogramMap = useMemo(() => {
     const map = new Map<

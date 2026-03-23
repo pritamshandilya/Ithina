@@ -542,9 +542,9 @@ export interface FileRoutesByFullPath {
   '/admin/$storeId': typeof AdminStoreIdRouteWithChildren
   '/admin/': typeof AdminIndexRoute
   '/checker/': typeof CheckerIndexRoute
-  '/login': typeof LoginIndexRoute
+  '/login/': typeof LoginIndexRoute
   '/maker/': typeof MakerIndexRoute
-  '/profile': typeof ProfileIndexRoute
+  '/profile/': typeof ProfileIndexRoute
   '/maker/audits/adhoc': typeof MakerAuditsAdhocRouteRouteWithChildren
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
@@ -552,56 +552,56 @@ export interface FileRoutesByFullPath {
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
   '/admin/stores/new': typeof AdminStoresNewRoute
-  '/admin/dashboard': typeof AdminDashboardIndexRoute
-  '/admin/organization-settings': typeof AdminOrganizationSettingsIndexRoute
-  '/admin/store-settings': typeof AdminStoreSettingsIndexRoute
-  '/admin/stores': typeof AdminStoresIndexRoute
-  '/admin/users': typeof AdminUsersIndexRoute
-  '/checker/audit-review': typeof CheckerAuditReviewIndexRoute
-  '/checker/dashboard': typeof CheckerDashboardIndexRoute
-  '/checker/knowledge-center': typeof CheckerKnowledgeCenterIndexRoute
-  '/checker/org-dashboard': typeof CheckerOrgDashboardIndexRoute
-  '/checker/org-staff': typeof CheckerOrgStaffIndexRoute
+  '/admin/dashboard/': typeof AdminDashboardIndexRoute
+  '/admin/organization-settings/': typeof AdminOrganizationSettingsIndexRoute
+  '/admin/store-settings/': typeof AdminStoreSettingsIndexRoute
+  '/admin/stores/': typeof AdminStoresIndexRoute
+  '/admin/users/': typeof AdminUsersIndexRoute
+  '/checker/audit-review/': typeof CheckerAuditReviewIndexRoute
+  '/checker/dashboard/': typeof CheckerDashboardIndexRoute
+  '/checker/knowledge-center/': typeof CheckerKnowledgeCenterIndexRoute
+  '/checker/org-dashboard/': typeof CheckerOrgDashboardIndexRoute
+  '/checker/org-staff/': typeof CheckerOrgStaffIndexRoute
   '/checker/shelf/': typeof CheckerShelfIndexRoute
-  '/checker/shelves': typeof CheckerShelvesIndexRoute
-  '/checker/store-settings': typeof CheckerStoreSettingsIndexRoute
-  '/checker/stores': typeof CheckerStoresIndexRoute
+  '/checker/shelves/': typeof CheckerShelvesIndexRoute
+  '/checker/store-settings/': typeof CheckerStoreSettingsIndexRoute
+  '/checker/stores/': typeof CheckerStoresIndexRoute
   '/maker/audits/': typeof MakerAuditsIndexRoute
-  '/maker/dashboard': typeof MakerDashboardIndexRoute
+  '/maker/dashboard/': typeof MakerDashboardIndexRoute
   '/maker/historical-analysis/': typeof MakerHistoricalAnalysisIndexRoute
-  '/maker/manual-audits': typeof MakerManualAuditsIndexRoute
-  '/maker/shelf': typeof MakerShelfIndexRoute
+  '/maker/manual-audits/': typeof MakerManualAuditsIndexRoute
+  '/maker/shelf/': typeof MakerShelfIndexRoute
   '/maker/shelves/': typeof MakerShelvesIndexRoute
-  '/maker/store-settings': typeof MakerStoreSettingsIndexRoute
+  '/maker/store-settings/': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
   '/admin/$storeId/reports/shelf-level': typeof AdminStoreIdReportsShelfLevelRoute
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
   '/admin/$storeId/shelf/$shelfId': typeof AdminStoreIdShelfShelfIdRouteWithChildren
   '/admin/$storeId/shelf/new': typeof AdminStoreIdShelfNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
-  '/admin/$storeId/shelf': typeof AdminStoreIdShelfIndexRoute
-  '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdIndexRoute
-  '/checker/reports/adhoc': typeof CheckerReportsAdhocIndexRoute
-  '/checker/reports/shelf-level': typeof CheckerReportsShelfLevelIndexRoute
-  '/checker/reports/store-level': typeof CheckerReportsStoreLevelIndexRoute
-  '/checker/reports/view': typeof CheckerReportsViewIndexRoute
-  '/checker/review/$auditId': typeof CheckerReviewAuditIdIndexRoute
-  '/checker/shelf/$shelfId': typeof CheckerShelfShelfIdIndexRoute
-  '/checker/shelf/new': typeof CheckerShelfNewIndexRoute
+  '/admin/$storeId/shelf/': typeof AdminStoreIdShelfIndexRoute
+  '/checker/audit-report/$auditId/': typeof CheckerAuditReportAuditIdIndexRoute
+  '/checker/reports/adhoc/': typeof CheckerReportsAdhocIndexRoute
+  '/checker/reports/shelf-level/': typeof CheckerReportsShelfLevelIndexRoute
+  '/checker/reports/store-level/': typeof CheckerReportsStoreLevelIndexRoute
+  '/checker/reports/view/': typeof CheckerReportsViewIndexRoute
+  '/checker/review/$auditId/': typeof CheckerReviewAuditIdIndexRoute
+  '/checker/shelf/$shelfId/': typeof CheckerShelfShelfIdIndexRoute
+  '/checker/shelf/new/': typeof CheckerShelfNewIndexRoute
   '/maker/audits/adhoc/': typeof MakerAuditsAdhocIndexRoute
   '/maker/audits/planogram/': typeof MakerAuditsPlanogramIndexRoute
-  '/maker/historical-analysis/$analysisId': typeof MakerHistoricalAnalysisAnalysisIdIndexRoute
-  '/maker/reports/view': typeof MakerReportsViewIndexRoute
+  '/maker/historical-analysis/$analysisId/': typeof MakerHistoricalAnalysisAnalysisIdIndexRoute
+  '/maker/reports/view/': typeof MakerReportsViewIndexRoute
   '/admin/$storeId/audits/adhoc/new': typeof AdminStoreIdAuditsAdhocNewRoute
   '/admin/$storeId/audits/planogram/new': typeof AdminStoreIdAuditsPlanogramNewRoute
   '/admin/$storeId/reports/view/$reportId': typeof AdminStoreIdReportsViewReportIdRoute
   '/admin/$storeId/shelf/$shelfId/analysis': typeof AdminStoreIdShelfShelfIdAnalysisRoute
-  '/checker/reports/view/$reportId': typeof CheckerReportsViewReportIdIndexRoute
-  '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewIndexRoute
-  '/maker/audits/planogram/$shelfId': typeof MakerAuditsPlanogramShelfIdIndexRoute
-  '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewIndexRoute
-  '/maker/shelves/$shelfId/edit': typeof MakerShelvesShelfIdEditIndexRoute
-  '/maker/audits/planogram/run/$shelfId': typeof MakerAuditsPlanogramRunShelfIdIndexRoute
+  '/checker/reports/view/$reportId/': typeof CheckerReportsViewReportIdIndexRoute
+  '/maker/audits/adhoc/new/': typeof MakerAuditsAdhocNewIndexRoute
+  '/maker/audits/planogram/$shelfId/': typeof MakerAuditsPlanogramShelfIdIndexRoute
+  '/maker/audits/planogram/new/': typeof MakerAuditsPlanogramNewIndexRoute
+  '/maker/shelves/$shelfId/edit/': typeof MakerShelvesShelfIdEditIndexRoute
+  '/maker/audits/planogram/run/$shelfId/': typeof MakerAuditsPlanogramRunShelfIdIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -780,9 +780,9 @@ export interface FileRouteTypes {
     | '/admin/$storeId'
     | '/admin/'
     | '/checker/'
-    | '/login'
+    | '/login/'
     | '/maker/'
-    | '/profile'
+    | '/profile/'
     | '/maker/audits/adhoc'
     | '/maker/audits/planogram'
     | '/admin/$storeId/audit-review'
@@ -790,56 +790,56 @@ export interface FileRouteTypes {
     | '/admin/$storeId/knowledge-center'
     | '/admin/$storeId/store-settings'
     | '/admin/stores/new'
-    | '/admin/dashboard'
-    | '/admin/organization-settings'
-    | '/admin/store-settings'
-    | '/admin/stores'
-    | '/admin/users'
-    | '/checker/audit-review'
-    | '/checker/dashboard'
-    | '/checker/knowledge-center'
-    | '/checker/org-dashboard'
-    | '/checker/org-staff'
+    | '/admin/dashboard/'
+    | '/admin/organization-settings/'
+    | '/admin/store-settings/'
+    | '/admin/stores/'
+    | '/admin/users/'
+    | '/checker/audit-review/'
+    | '/checker/dashboard/'
+    | '/checker/knowledge-center/'
+    | '/checker/org-dashboard/'
+    | '/checker/org-staff/'
     | '/checker/shelf/'
-    | '/checker/shelves'
-    | '/checker/store-settings'
-    | '/checker/stores'
+    | '/checker/shelves/'
+    | '/checker/store-settings/'
+    | '/checker/stores/'
     | '/maker/audits/'
-    | '/maker/dashboard'
+    | '/maker/dashboard/'
     | '/maker/historical-analysis/'
-    | '/maker/manual-audits'
-    | '/maker/shelf'
+    | '/maker/manual-audits/'
+    | '/maker/shelf/'
     | '/maker/shelves/'
-    | '/maker/store-settings'
+    | '/maker/store-settings/'
     | '/admin/$storeId/reports/adhoc'
     | '/admin/$storeId/reports/shelf-level'
     | '/admin/$storeId/reports/store-level'
     | '/admin/$storeId/shelf/$shelfId'
     | '/admin/$storeId/shelf/new'
     | '/checker/shelf/$shelfId/analysis'
-    | '/admin/$storeId/shelf'
-    | '/checker/audit-report/$auditId'
-    | '/checker/reports/adhoc'
-    | '/checker/reports/shelf-level'
-    | '/checker/reports/store-level'
-    | '/checker/reports/view'
-    | '/checker/review/$auditId'
-    | '/checker/shelf/$shelfId'
-    | '/checker/shelf/new'
+    | '/admin/$storeId/shelf/'
+    | '/checker/audit-report/$auditId/'
+    | '/checker/reports/adhoc/'
+    | '/checker/reports/shelf-level/'
+    | '/checker/reports/store-level/'
+    | '/checker/reports/view/'
+    | '/checker/review/$auditId/'
+    | '/checker/shelf/$shelfId/'
+    | '/checker/shelf/new/'
     | '/maker/audits/adhoc/'
     | '/maker/audits/planogram/'
-    | '/maker/historical-analysis/$analysisId'
-    | '/maker/reports/view'
+    | '/maker/historical-analysis/$analysisId/'
+    | '/maker/reports/view/'
     | '/admin/$storeId/audits/adhoc/new'
     | '/admin/$storeId/audits/planogram/new'
     | '/admin/$storeId/reports/view/$reportId'
     | '/admin/$storeId/shelf/$shelfId/analysis'
-    | '/checker/reports/view/$reportId'
-    | '/maker/audits/adhoc/new'
-    | '/maker/audits/planogram/$shelfId'
-    | '/maker/audits/planogram/new'
-    | '/maker/shelves/$shelfId/edit'
-    | '/maker/audits/planogram/run/$shelfId'
+    | '/checker/reports/view/$reportId/'
+    | '/maker/audits/adhoc/new/'
+    | '/maker/audits/planogram/$shelfId/'
+    | '/maker/audits/planogram/new/'
+    | '/maker/shelves/$shelfId/edit/'
+    | '/maker/audits/planogram/run/$shelfId/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1027,7 +1027,7 @@ declare module '@tanstack/react-router' {
     '/_app': {
       id: '/_app'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1062,7 +1062,7 @@ declare module '@tanstack/react-router' {
     '/profile/': {
       id: '/profile/'
       path: '/profile'
-      fullPath: '/profile'
+      fullPath: '/profile/'
       preLoaderRoute: typeof ProfileIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1076,7 +1076,7 @@ declare module '@tanstack/react-router' {
     '/login/': {
       id: '/login/'
       path: '/login'
-      fullPath: '/login'
+      fullPath: '/login/'
       preLoaderRoute: typeof LoginIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -1174,7 +1174,7 @@ declare module '@tanstack/react-router' {
     '/maker/store-settings/': {
       id: '/maker/store-settings/'
       path: '/store-settings'
-      fullPath: '/maker/store-settings'
+      fullPath: '/maker/store-settings/'
       preLoaderRoute: typeof MakerStoreSettingsIndexRouteImport
       parentRoute: typeof MakerRouteRoute
     }
@@ -1188,14 +1188,14 @@ declare module '@tanstack/react-router' {
     '/maker/shelf/': {
       id: '/maker/shelf/'
       path: '/shelf'
-      fullPath: '/maker/shelf'
+      fullPath: '/maker/shelf/'
       preLoaderRoute: typeof MakerShelfIndexRouteImport
       parentRoute: typeof MakerRouteRoute
     }
     '/maker/manual-audits/': {
       id: '/maker/manual-audits/'
       path: '/manual-audits'
-      fullPath: '/maker/manual-audits'
+      fullPath: '/maker/manual-audits/'
       preLoaderRoute: typeof MakerManualAuditsIndexRouteImport
       parentRoute: typeof MakerRouteRoute
     }
@@ -1209,7 +1209,7 @@ declare module '@tanstack/react-router' {
     '/maker/dashboard/': {
       id: '/maker/dashboard/'
       path: '/dashboard'
-      fullPath: '/maker/dashboard'
+      fullPath: '/maker/dashboard/'
       preLoaderRoute: typeof MakerDashboardIndexRouteImport
       parentRoute: typeof MakerRouteRoute
     }
@@ -1223,21 +1223,21 @@ declare module '@tanstack/react-router' {
     '/checker/stores/': {
       id: '/checker/stores/'
       path: '/stores'
-      fullPath: '/checker/stores'
+      fullPath: '/checker/stores/'
       preLoaderRoute: typeof CheckerStoresIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/store-settings/': {
       id: '/checker/store-settings/'
       path: '/store-settings'
-      fullPath: '/checker/store-settings'
+      fullPath: '/checker/store-settings/'
       preLoaderRoute: typeof CheckerStoreSettingsIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/shelves/': {
       id: '/checker/shelves/'
       path: '/shelves'
-      fullPath: '/checker/shelves'
+      fullPath: '/checker/shelves/'
       preLoaderRoute: typeof CheckerShelvesIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
@@ -1251,70 +1251,70 @@ declare module '@tanstack/react-router' {
     '/checker/org-staff/': {
       id: '/checker/org-staff/'
       path: '/org-staff'
-      fullPath: '/checker/org-staff'
+      fullPath: '/checker/org-staff/'
       preLoaderRoute: typeof CheckerOrgStaffIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/org-dashboard/': {
       id: '/checker/org-dashboard/'
       path: '/org-dashboard'
-      fullPath: '/checker/org-dashboard'
+      fullPath: '/checker/org-dashboard/'
       preLoaderRoute: typeof CheckerOrgDashboardIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/knowledge-center/': {
       id: '/checker/knowledge-center/'
       path: '/knowledge-center'
-      fullPath: '/checker/knowledge-center'
+      fullPath: '/checker/knowledge-center/'
       preLoaderRoute: typeof CheckerKnowledgeCenterIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/dashboard/': {
       id: '/checker/dashboard/'
       path: '/dashboard'
-      fullPath: '/checker/dashboard'
+      fullPath: '/checker/dashboard/'
       preLoaderRoute: typeof CheckerDashboardIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/audit-review/': {
       id: '/checker/audit-review/'
       path: '/audit-review'
-      fullPath: '/checker/audit-review'
+      fullPath: '/checker/audit-review/'
       preLoaderRoute: typeof CheckerAuditReviewIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/admin/users/': {
       id: '/admin/users/'
       path: '/users'
-      fullPath: '/admin/users'
+      fullPath: '/admin/users/'
       preLoaderRoute: typeof AdminUsersIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/stores/': {
       id: '/admin/stores/'
       path: '/stores'
-      fullPath: '/admin/stores'
+      fullPath: '/admin/stores/'
       preLoaderRoute: typeof AdminStoresIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/store-settings/': {
       id: '/admin/store-settings/'
       path: '/store-settings'
-      fullPath: '/admin/store-settings'
+      fullPath: '/admin/store-settings/'
       preLoaderRoute: typeof AdminStoreSettingsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/organization-settings/': {
       id: '/admin/organization-settings/'
       path: '/organization-settings'
-      fullPath: '/admin/organization-settings'
+      fullPath: '/admin/organization-settings/'
       preLoaderRoute: typeof AdminOrganizationSettingsIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/dashboard/': {
       id: '/admin/dashboard/'
       path: '/dashboard'
-      fullPath: '/admin/dashboard'
+      fullPath: '/admin/dashboard/'
       preLoaderRoute: typeof AdminDashboardIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
@@ -1370,14 +1370,14 @@ declare module '@tanstack/react-router' {
     '/maker/reports/view/': {
       id: '/maker/reports/view/'
       path: '/view'
-      fullPath: '/maker/reports/view'
+      fullPath: '/maker/reports/view/'
       preLoaderRoute: typeof MakerReportsViewIndexRouteImport
       parentRoute: typeof MakerReportsRouteRoute
     }
     '/maker/historical-analysis/$analysisId/': {
       id: '/maker/historical-analysis/$analysisId/'
       path: '/$analysisId'
-      fullPath: '/maker/historical-analysis/$analysisId'
+      fullPath: '/maker/historical-analysis/$analysisId/'
       preLoaderRoute: typeof MakerHistoricalAnalysisAnalysisIdIndexRouteImport
       parentRoute: typeof MakerHistoricalAnalysisRouteRoute
     }
@@ -1398,63 +1398,63 @@ declare module '@tanstack/react-router' {
     '/checker/shelf/new/': {
       id: '/checker/shelf/new/'
       path: '/new'
-      fullPath: '/checker/shelf/new'
+      fullPath: '/checker/shelf/new/'
       preLoaderRoute: typeof CheckerShelfNewIndexRouteImport
       parentRoute: typeof CheckerShelfRouteRoute
     }
     '/checker/shelf/$shelfId/': {
       id: '/checker/shelf/$shelfId/'
       path: '/$shelfId'
-      fullPath: '/checker/shelf/$shelfId'
+      fullPath: '/checker/shelf/$shelfId/'
       preLoaderRoute: typeof CheckerShelfShelfIdIndexRouteImport
       parentRoute: typeof CheckerShelfRouteRoute
     }
     '/checker/review/$auditId/': {
       id: '/checker/review/$auditId/'
       path: '/review/$auditId'
-      fullPath: '/checker/review/$auditId'
+      fullPath: '/checker/review/$auditId/'
       preLoaderRoute: typeof CheckerReviewAuditIdIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/reports/view/': {
       id: '/checker/reports/view/'
       path: '/reports/view'
-      fullPath: '/checker/reports/view'
+      fullPath: '/checker/reports/view/'
       preLoaderRoute: typeof CheckerReportsViewIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/reports/store-level/': {
       id: '/checker/reports/store-level/'
       path: '/reports/store-level'
-      fullPath: '/checker/reports/store-level'
+      fullPath: '/checker/reports/store-level/'
       preLoaderRoute: typeof CheckerReportsStoreLevelIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/reports/shelf-level/': {
       id: '/checker/reports/shelf-level/'
       path: '/reports/shelf-level'
-      fullPath: '/checker/reports/shelf-level'
+      fullPath: '/checker/reports/shelf-level/'
       preLoaderRoute: typeof CheckerReportsShelfLevelIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/reports/adhoc/': {
       id: '/checker/reports/adhoc/'
       path: '/reports/adhoc'
-      fullPath: '/checker/reports/adhoc'
+      fullPath: '/checker/reports/adhoc/'
       preLoaderRoute: typeof CheckerReportsAdhocIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/checker/audit-report/$auditId/': {
       id: '/checker/audit-report/$auditId/'
       path: '/audit-report/$auditId'
-      fullPath: '/checker/audit-report/$auditId'
+      fullPath: '/checker/audit-report/$auditId/'
       preLoaderRoute: typeof CheckerAuditReportAuditIdIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
     '/admin/$storeId/shelf/': {
       id: '/admin/$storeId/shelf/'
       path: '/shelf'
-      fullPath: '/admin/$storeId/shelf'
+      fullPath: '/admin/$storeId/shelf/'
       preLoaderRoute: typeof AdminStoreIdShelfIndexRouteImport
       parentRoute: typeof AdminStoreIdRoute
     }
@@ -1503,35 +1503,35 @@ declare module '@tanstack/react-router' {
     '/maker/shelves/$shelfId/edit/': {
       id: '/maker/shelves/$shelfId/edit/'
       path: '/$shelfId/edit'
-      fullPath: '/maker/shelves/$shelfId/edit'
+      fullPath: '/maker/shelves/$shelfId/edit/'
       preLoaderRoute: typeof MakerShelvesShelfIdEditIndexRouteImport
       parentRoute: typeof MakerShelvesRouteRoute
     }
     '/maker/audits/planogram/new/': {
       id: '/maker/audits/planogram/new/'
       path: '/new'
-      fullPath: '/maker/audits/planogram/new'
+      fullPath: '/maker/audits/planogram/new/'
       preLoaderRoute: typeof MakerAuditsPlanogramNewIndexRouteImport
       parentRoute: typeof MakerAuditsPlanogramRouteRoute
     }
     '/maker/audits/planogram/$shelfId/': {
       id: '/maker/audits/planogram/$shelfId/'
       path: '/$shelfId'
-      fullPath: '/maker/audits/planogram/$shelfId'
+      fullPath: '/maker/audits/planogram/$shelfId/'
       preLoaderRoute: typeof MakerAuditsPlanogramShelfIdIndexRouteImport
       parentRoute: typeof MakerAuditsPlanogramRouteRoute
     }
     '/maker/audits/adhoc/new/': {
       id: '/maker/audits/adhoc/new/'
       path: '/new'
-      fullPath: '/maker/audits/adhoc/new'
+      fullPath: '/maker/audits/adhoc/new/'
       preLoaderRoute: typeof MakerAuditsAdhocNewIndexRouteImport
       parentRoute: typeof MakerAuditsAdhocRouteRoute
     }
     '/checker/reports/view/$reportId/': {
       id: '/checker/reports/view/$reportId/'
       path: '/reports/view/$reportId'
-      fullPath: '/checker/reports/view/$reportId'
+      fullPath: '/checker/reports/view/$reportId/'
       preLoaderRoute: typeof CheckerReportsViewReportIdIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
@@ -1566,7 +1566,7 @@ declare module '@tanstack/react-router' {
     '/maker/audits/planogram/run/$shelfId/': {
       id: '/maker/audits/planogram/run/$shelfId/'
       path: '/run/$shelfId'
-      fullPath: '/maker/audits/planogram/run/$shelfId'
+      fullPath: '/maker/audits/planogram/run/$shelfId/'
       preLoaderRoute: typeof MakerAuditsPlanogramRunShelfIdIndexRouteImport
       parentRoute: typeof MakerAuditsPlanogramRouteRoute
     }

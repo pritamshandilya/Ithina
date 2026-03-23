@@ -18,6 +18,7 @@ import {
   type OrgUserType,
   type UpsertUserPayload,
   updateStore,
+  updateStoreComplianceSettings,
 } from "../api/org";
 import { storesKeys as checkerStoresKeys } from "./useStores";
 
@@ -141,6 +142,24 @@ export function useUpdateStore() {
       storeId: string;
       data: Parameters<typeof updateStore>[1];
     }) => updateStore(storeId, data),
+    onSuccess: (_, { storeId }) => {
+      invalidateAllStoreQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });
+    },
+  });
+}
+
+export function useUpdateStoreComplianceSettings() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({
+      storeId,
+      data,
+    }: {
+      storeId: string;
+      data: Parameters<typeof updateStoreComplianceSettings>[1];
+    }) => updateStoreComplianceSettings(storeId, data),
     onSuccess: (_, { storeId }) => {
       invalidateAllStoreQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });

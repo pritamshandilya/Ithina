@@ -1,7 +1,9 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { useStore } from "@/providers/store";
-import { useOrgStores } from "@/queries/checker";
 import { useEffect } from "react";
+
+import { useStore } from "@/providers/store";
+import type { Store } from "@/providers/store/types";
+import { useOrgStores } from "@/queries/checker";
 
 export const Route = createFileRoute("/admin/$storeId")({
   component: AdminStoreLayout,
@@ -9,18 +11,42 @@ export const Route = createFileRoute("/admin/$storeId")({
 
 function AdminStoreLayout() {
   const { storeId } = Route.useParams();
-  const { setSelectedStore, selectedStore } = useStore();
-  const { data: stores } = useOrgStores();
+  const { selectedStore, setSelectedStore } = useStore();
+  const { data: stores, isSuccess } = useOrgStores();
 
   useEffect(() => {
-    if (stores && storeId) {
-      // Find store by name or ID
-      const store = stores.find(s => s.name === storeId || s.id === storeId);
-      if (store && selectedStore?.id !== store.id) {
-        setSelectedStore(store);
+    if (!storeId) return;
+
+    const placeholder: Store = { id: storeId, name: storeId };
+
+    if (!isSuccess || !stores) {
+      if (selectedStore?.id !== storeId) {
+        setSelectedStore(placeholder);
       }
+      return;
     }
-  }, [stores, storeId, setSelectedStore, selectedStore]);
+
+    const matched =
+      stores.find((s) => s.id === storeId || s.name === storeId) ??
+      stores.find(
+        (s) =>
+          s.id?.toLowerCase() === storeId.toLowerCase() ||
+          s.name?.toLowerCase() === storeId.toLowerCase(),
+      );
+
+    if (matched) {
+      const sameStore =
+        selectedStore?.id === matched.id && selectedStore?.name === matched.name;
+      if (!sameStore) {
+        setSelectedStore(matched);
+      }
+      return;
+    }
+
+    if (selectedStore?.id !== storeId) {
+      setSelectedStore(placeholder);
+    }
+  }, [storeId, stores, isSuccess, selectedStore?.id, setSelectedStore]);
 
   return <Outlet />;
 }

@@ -9,6 +9,7 @@ export const Route = createFileRoute("/admin/$storeId/shelf/new")({
       .object({
         associateShelfId: z.string().optional(),
         associateShelfName: z.string().optional(),
+        templateId: z.string().optional(),
       })
       .parse(search),
 });

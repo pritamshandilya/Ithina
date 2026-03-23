@@ -2,13 +2,13 @@
  * useComplianceRuleSets Hook
  *
  * Fetches compliance rule sets for adhoc analysis selection.
- * Rule sets are created in the Checker's Knowledge Center.
+ * Rule sets are created in Store Settings (admin / maker).
  */
 
 import { useQuery } from "@tanstack/react-query";
 
 import { useSelectedStoreId } from "@/providers/store";
-import { fetchComplianceRuleSetsForAnalysis } from "@/queries/checker/api/knowledge-center";
+import { fetchComplianceRuleSetsForAnalysis } from "@/queries/maker/api/compliance-rule-sets";
 
 export const complianceRuleSetsKeys = {
   all: ["compliance-rule-sets"] as const,

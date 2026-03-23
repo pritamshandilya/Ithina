@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRulesByRuleSetId } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { ComplianceRule, RuleSeverity } from "@/types/checker";
 
 export interface ComplianceRuleViewSheetProps {
@@ -92,10 +92,10 @@ export function ComplianceRuleViewSheet({
   ruleSet,
   ruleSetName,
 }: ComplianceRuleViewSheetProps) {
-  const ruleSetId =
-    ruleSet?.id ??
-    (ruleSetName === "Default Rules" ? "default-rules" : null);
-  const { data: rules, isLoading } = useRulesByRuleSetId(open ? ruleSetId : null);
+  const ruleSetId = ruleSet?.id ?? null;
+  const { data: rules, isLoading, isError } = useRulesByRuleSetId(
+    open ? ruleSetId : null,
+  );
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -150,6 +150,11 @@ export function ComplianceRuleViewSheet({
                     <Skeleton className="h-24 w-full rounded-lg" />
                     <Skeleton className="h-24 w-full rounded-lg" />
                   </div>
+                ) : isError ? (
+                  <p className="text-sm text-destructive py-4">
+                    Could not load rules for this set. It may have been removed or the id is
+                    invalid.
+                  </p>
                 ) : rules && rules.length > 0 ? (
                   rules.map((rule) => <RuleCard key={rule.ruleId} rule={rule} />)
                 ) : (

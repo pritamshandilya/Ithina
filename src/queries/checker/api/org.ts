@@ -46,6 +46,8 @@ interface OrgStoreApiModel {
   created_by_user_id: string;
   name: string;
   address: string;
+  region?: string;
+  status?: "Active" | "Inactive" | "active" | "inactive";
   currency: string;
   default_dimension_unit?: string;
   maker_ids?: string[];
@@ -55,16 +57,19 @@ interface OrgStoreApiModel {
 }
 
 function mapOrgStore(store: OrgStoreApiModel): Store {
+  const normalizedStatus =
+    store.status === "inactive" || store.status === "Inactive" ? "Inactive" : "Active";
   return {
     id: store.id,
     name: store.name,
     address: store.address,
+    region: store.region,
     currency: store.currency,
     default_dimensions: store.default_dimension_unit,
     maker_ids: store.maker_ids,
     user_ids: store.checker_ids,
     created: store.created_at,
-    status: "Active",
+    status: normalizedStatus,
   };
 }
 
@@ -129,12 +134,16 @@ export async function fetchStoreUsers(
 export async function createStore(data: {
   name: string;
   address: string;
+  region: string;
+  status: "Active" | "Inactive";
   currency: string;
   default_dimensions: string;
 }): Promise<Store> {
   const payload = {
     name: data.name,
     address: data.address,
+    region: data.region,
+    status: data.status,
     currency: data.currency,
     default_dimension_unit: data.default_dimensions,
   };
@@ -153,6 +162,8 @@ export async function updateStore(
   data: {
     name: string;
     address: string;
+    region: string;
+    status: "Active" | "Inactive";
     currency: string;
     default_dimensions: string;
   },
@@ -160,6 +171,8 @@ export async function updateStore(
   const payload: any = {
     name: data.name,
     address: data.address,
+    region: data.region,
+    status: data.status,
     currency: data.currency,
     default_dimension_unit: data.default_dimensions,
   };

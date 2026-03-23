@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
@@ -31,14 +31,33 @@ export const Route = createFileRoute("/maker/audits/planogram/new/")({
       shelfId: (search.shelfId as string) || undefined,
     };
   },
-  component: AddPOGAnalysisPage,
+  component: MakerPOGAnalysisRouteComponent,
 });
 
-export function AddPOGAnalysisPage() {
+type AddPOGAnalysisPageSearch = {
+  shelfId?: string;
+};
+
+type AddPOGAnalysisPageProps = {
+  searchOverride?: AddPOGAnalysisPageSearch;
+};
+
+function MakerPOGAnalysisRouteComponent() {
+  const search = Route.useSearch();
+  return <AddPOGAnalysisPage searchOverride={search} />;
+}
+
+export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams({ strict: false }) as { storeId?: string };
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { shelfId } = Route.useSearch();
+  const { shelfId } = searchOverride ?? {};
+  const isAdmin = location.pathname.includes("/admin/");
+  const backPath = isAdmin && params.storeId
+    ? `/admin/${params.storeId}/shelf`
+    : "/maker/audits/planogram";
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves, isLoading: shelvesLoading } = useShelves();
   const assignPlanogramMutation = useAssignPlanogramToShelf();
@@ -75,7 +94,7 @@ export function AddPOGAnalysisPage() {
         arrangement,
       });
       toast({ title: "Analysis configured", description: "POG Analysis is now ready for the selected shelf." });
-      navigate({ to: "/maker/audits/planogram" });
+      navigate({ to: backPath as any });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to configure analysis");
     } finally {
@@ -86,6 +105,7 @@ export function AddPOGAnalysisPage() {
     selectedPlanogramId,
     selectedShelfId,
     planogramPayload,
+    backPath,
     navigate,
     queryClient,
     toast,
@@ -102,7 +122,7 @@ export function AddPOGAnalysisPage() {
 
           <header className="flex items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
-              <Link to="/maker/audits/planogram">
+              <Link to={backPath as any}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>

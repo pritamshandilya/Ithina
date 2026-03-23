@@ -1,20 +1,31 @@
-import { useContext } from "react";
+import { useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
 
-import { StoreContext } from "./context";
+import { selectSelectedStore } from "@/store/selectors";
+import type { StoreContextValue } from "./types";
 
 export * from "./provider";
 export * from "./types";
 
-export function useStore() {
-  const context = useContext(StoreContext);
 
-  if (!context) {
-    throw new Error("useStore must be used within a StoreProvider");
-  }
+export function useStore(): StoreContextValue {
+  const selectedStore = useSelector(selectSelectedStore);
+  const dispatch = useDispatch();
 
-  return context;
+  const setSelectedStore = useCallback(
+    (store: StoreContextValue["selectedStore"]) => {
+      dispatch({ type: "store/setCurrentStore", payload: store });
+    },
+    [dispatch],
+  );
+
+  return {
+    selectedStore,
+    setSelectedStore,
+    isStoreSelected: selectedStore !== null,
+  };
 }
 
 export function useSelectedStoreId(): string | undefined {
-  return useStore().selectedStore?.id;
+  return useSelector(selectSelectedStore)?.id;
 }

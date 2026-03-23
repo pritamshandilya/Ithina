@@ -26,6 +26,7 @@ import { useDraftAudits, useDeleteDraft } from "@/queries/maker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 export interface DraftAuditsSectionProps {
   /**
@@ -43,6 +44,7 @@ export function DraftAuditsSection({
   onResume,
   className,
 }: DraftAuditsSectionProps) {
+  const { toast } = useToast();
   const { data: drafts, isLoading, error } = useDraftAudits();
   const deleteDraftMutation = useDeleteDraft();
 
@@ -53,7 +55,11 @@ export function DraftAuditsSection({
     if (onResume) {
       onResume(auditId, shelfId);
     } else {
-      alert("Resume draft functionality will navigate to audit editor in Phase 2");
+      toast({
+        title: "Coming soon",
+        description:
+          "Resume draft functionality will navigate to the audit editor in Phase 2.",
+      });
     }
   };
 

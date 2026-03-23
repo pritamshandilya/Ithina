@@ -189,8 +189,9 @@ export function ShelfDetailPage() {
       {
         onSuccess: () => {
           toast({
-            title: "Success",
+            title: "Shelf updated",
             description: "Shelf details updated successfully.",
+            variant: "success",
           });
           setIsEditing(false);
         },

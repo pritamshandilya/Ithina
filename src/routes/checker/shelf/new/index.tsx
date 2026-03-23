@@ -28,7 +28,10 @@ import {
 import type { PlanogramArrangement } from "@/types/planogram";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
-import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { useDimensionUnits } from "@/queries/checker";
+import { useShelfTemplates } from "@/queries/checker";
+import type { ShelfTemplate } from "@/types/shelf-template";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
@@ -79,21 +82,41 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const [dimWidth, setDimWidth] = useState("");
   const [dimHeight, setDimHeight] = useState("");
   const [dimDepth, setDimDepth] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
 
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const defaultDimensionUnit = useMemo(() => {
+  const { data: dimensionUnits = [] } = useDimensionUnits();
+  const { data: shelfTemplates = [], isLoading: templatesLoading } =
+    useShelfTemplates();
+
+  const selectedTemplate = useMemo<ShelfTemplate | null>(() => {
+    if (!selectedTemplateId) return null;
+    return shelfTemplates.find((t) => t.id === selectedTemplateId) ?? null;
+  }, [shelfTemplates, selectedTemplateId]);
+
+  const defaultDimensionUnit = useMemo<StoreDimensionUnit>(() => {
     const raw = (selectedStore as any)?.default_dimensions as string | undefined;
     if (!raw) return "mm";
     const value = raw.toLowerCase();
-    const match = STORE_DIMENSION_UNITS.find(
+    const match = dimensionUnits.find(
       (unit) =>
         value === unit.toLowerCase() ||
         value.endsWith(` ${unit.toLowerCase()}`),
-    );
+    ) as StoreDimensionUnit | undefined;
     return match ?? "mm";
-  }, [selectedStore]);
+  }, [selectedStore, dimensionUnits]);
+
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    setFixtureType(selectedTemplate.fixtureType);
+    setDimWidth(String(selectedTemplate.width));
+    setDimHeight(String(selectedTemplate.height));
+    setDimDepth(String(selectedTemplate.depth));
+    if (selectedTemplate.zone) setZone(selectedTemplate.zone);
+    if (selectedTemplate.section) setSection(selectedTemplate.section);
+  }, [selectedTemplate]);
 
   useEffect(() => {
     if (isAssociateMode && associateShelfName) {
@@ -169,7 +192,11 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
             },
           },
         });
-        toast({ title: "Shelf created", description: "Your shelf has been created successfully." });
+        toast({
+          title: "Shelf created",
+          description: "Your shelf has been created successfully.",
+          variant: "success",
+        });
         navigate({ to: shelfListPath as any });
       }
     } catch (err) {
@@ -281,6 +308,31 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
 
                   {!isAssociateMode && (
                     <>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor="shelf-template">Shelf template</Label>
+                          <span className="text-xs text-muted-foreground">
+                            Auto-fills fixture, dimensions, zone, section
+                          </span>
+                        </div>
+                        {templatesLoading ? (
+                          <Skeleton className="h-9 w-full" />
+                        ) : (
+                          <Select
+                            id="shelf-template"
+                            value={selectedTemplateId}
+                            onChange={(e) => setSelectedTemplateId(e.target.value)}
+                          >
+                            <option value="">No template</option>
+                            {shelfTemplates.map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                          </Select>
+                        )}
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="aisle-number">Aisle number</Label>

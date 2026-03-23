@@ -99,8 +99,9 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
       {
         onSuccess: () => {
           toast({
-            title: "Success",
+            title: "Shelf updated",
             description: "Shelf details updated successfully.",
+            variant: "success",
           });
           handleClose();
         },

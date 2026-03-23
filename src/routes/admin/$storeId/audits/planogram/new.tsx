@@ -7,5 +7,10 @@ export const Route = createFileRoute("/admin/$storeId/audits/planogram/new")({
       shelfId: (search.shelfId as string) || undefined,
     };
   },
-  component: AddPOGAnalysisPage,
+  component: AdminPOGAnalysisRouteComponent,
 });
+
+function AdminPOGAnalysisRouteComponent() {
+  const search = Route.useSearch();
+  return <AddPOGAnalysisPage searchOverride={search} />;
+}

@@ -37,7 +37,7 @@ export function StoreOnboardingBasicStep({
       <CardHeader>
         <CardTitle>Basic store details</CardTitle>
         <CardDescription>
-          Name and locate your store. Region is required by the API. You can refine settings later.
+          Name and locate your store. You can refine settings later.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

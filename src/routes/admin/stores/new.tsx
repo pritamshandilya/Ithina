@@ -248,7 +248,6 @@ function StoreOnboardingPage() {
         .filter((n) => n.length > 0);
       mergeStoreDefaults(storeId, { fixtureTypes: fixtureNames });
       void queryClient.invalidateQueries({ queryKey: storeDefaultsKeys.all });
-
       const templatePayload: ShelfTemplateCreateInput[] = shelfTemplatesConfig.map((tpl) => ({
         name: tpl.name.trim(),
         description: tpl.description.trim() || undefined,
@@ -293,7 +292,6 @@ function StoreOnboardingPage() {
           );
         }
       }
-
       setCreatedStore(store as StoreSetting);
       toast({
         title: "Store created",

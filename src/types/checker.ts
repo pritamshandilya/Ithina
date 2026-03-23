@@ -180,6 +180,8 @@ export interface Store {
  * Store configuration shape used by checker store management screens.
  */
 export interface StoreSetting extends Store {
+  region: string;
+  status: "Active" | "Inactive";
   currency: string;
   default_dimensions: string;
 }

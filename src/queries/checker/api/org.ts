@@ -47,7 +47,8 @@ interface OrgStoreApiModel {
   name: string;
   address: string;
   region?: string;
-  is_active: boolean;
+  is_active?: boolean;
+  status?: "Active" | "Inactive" | "active" | "inactive";
   currency: string;
   default_dimension_unit?: string;
   default_compliance_rule_set_id?: string | null;
@@ -58,7 +59,18 @@ interface OrgStoreApiModel {
 }
 
 function mapOrgStore(store: OrgStoreApiModel): Store {
-  const normalizedStatus = store.is_active ? "Active" : "Inactive";
+  const normalizedStatus =
+    typeof store.is_active === "boolean"
+      ? store.is_active
+        ? "Active"
+        : "Inactive"
+      : store.status === "inactive" || store.status === "Inactive"
+        ? "Inactive"
+        : "Active";
+  const isActive =
+    typeof store.is_active === "boolean"
+      ? store.is_active
+      : normalizedStatus === "Active";
   return {
     id: store.id,
     name: store.name,
@@ -67,7 +79,7 @@ function mapOrgStore(store: OrgStoreApiModel): Store {
     currency: store.currency,
     default_dimensions: store.default_dimension_unit,
     default_compliance_rule_set_id: store.default_compliance_rule_set_id ?? null,
-    is_active: store.is_active,
+    is_active: isActive,
     maker_ids: store.maker_ids,
     user_ids: store.checker_ids,
     created: store.created_at,

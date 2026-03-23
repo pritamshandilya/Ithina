@@ -8,7 +8,6 @@ export type ShelfTemplateFixturePreset =
 
 /** Stored on templates and sent to shelf/fixture flows; may be a preset or a custom store label. */
 export type ShelfTemplateFixtureType = string;
-
 export interface ShelfTemplate {
   id: string;
   name: string;

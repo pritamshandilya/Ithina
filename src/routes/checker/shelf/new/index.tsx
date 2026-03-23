@@ -30,7 +30,8 @@ import type { PlanogramArrangement } from "@/types/planogram";
 import type { ShelfTemplate } from "@/types/shelf-template";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
-import { STORE_DIMENSION_UNITS } from "@/lib/constants/dimensions";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { useDimensionUnits } from "@/queries/checker";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
@@ -101,17 +102,34 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
-  const defaultDimensionUnit = useMemo(() => {
+  const { data: dimensionUnits = [] } = useDimensionUnits();
+
+  const selectedTemplate = useMemo<ShelfTemplate | null>(() => {
+    if (!selectedTemplateId) return null;
+    return shelfTemplates.find((t) => t.id === selectedTemplateId) ?? null;
+  }, [shelfTemplates, selectedTemplateId]);
+
+  const defaultDimensionUnit = useMemo<StoreDimensionUnit>(() => {
     const raw = (selectedStore as any)?.default_dimensions as string | undefined;
     if (!raw) return "mm";
     const value = raw.toLowerCase();
-    const match = STORE_DIMENSION_UNITS.find(
+    const match = dimensionUnits.find(
       (unit) =>
         value === unit.toLowerCase() ||
         value.endsWith(` ${unit.toLowerCase()}`),
-    );
+    ) as StoreDimensionUnit | undefined;
     return match ?? "mm";
-  }, [selectedStore]);
+  }, [selectedStore, dimensionUnits]);
+
+  useEffect(() => {
+    if (!selectedTemplate) return;
+    setFixtureType(selectedTemplate.fixtureType);
+    setDimWidth(String(selectedTemplate.width));
+    setDimHeight(String(selectedTemplate.height));
+    setDimDepth(String(selectedTemplate.depth));
+    if (selectedTemplate.zone) setZone(selectedTemplate.zone);
+    if (selectedTemplate.section) setSection(selectedTemplate.section);
+  }, [selectedTemplate]);
 
   const fixtureTypeOptions = useMemo(() => {
     const presetValues = new Set(
@@ -229,7 +247,11 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
             },
           },
         });
-        toast({ title: "Shelf created", description: "Your shelf has been created successfully." });
+        toast({
+          title: "Shelf created",
+          description: "Your shelf has been created successfully.",
+          variant: "success",
+        });
         navigate({ to: shelfListPath as any });
       }
     } catch (err) {

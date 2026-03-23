@@ -34,7 +34,6 @@ export function StoreOnboardingTeamStep({
           Makers and checkers you select will have access to this store.
         </CardDescription>
       </CardHeader>
-
       <CardContent className="space-y-4">
         {!hasStore ? (
           <Skeleton className="h-40 w-full" />

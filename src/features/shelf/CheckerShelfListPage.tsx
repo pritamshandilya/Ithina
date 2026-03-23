@@ -14,6 +14,7 @@ import {
   PLANOGRAM_PAGE_SIZE_OPTIONS,
   PlanogramActionsMenu,
 } from "@/components/planogram/planogram-table-columns";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -143,6 +144,10 @@ export function CheckerShelfListPage({
     row: PlanogramShelfRow;
     anchor: { x: number; y: number };
   } | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [shelfIdPendingDelete, setShelfIdPendingDelete] = useState<string | null>(
+    null,
+  );
   const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
   const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
     useState<ComplianceRuleSetSummary | null>(null);
@@ -301,32 +306,34 @@ export function CheckerShelfListPage({
   );
 
   const handleDeleteShelf = useCallback(
-    async (shelfId: string) => {
-      if (
-        !confirm(
-          "Are you sure you want to delete this shelf? This action cannot be undone.",
-        )
-      )
-        return;
-      try {
-        await deleteShelfMutation.mutateAsync(shelfId);
-        toast({
-          title: "Shelf deleted",
-          description: "The shelf has been removed successfully.",
-        });
-      } catch (err) {
-        toast({
-          title: "Error",
-          description:
-            err instanceof Error ? err.message : "Failed to delete shelf",
-          variant: "destructive",
-        });
-      } finally {
-        setActionsMenu(null);
-      }
+    (shelfId: string) => {
+      setShelfIdPendingDelete(shelfId);
+      setDeleteConfirmOpen(true);
+      setActionsMenu(null);
     },
-    [deleteShelfMutation, toast],
+    [],
   );
+
+  const confirmDeleteShelf = useCallback(async () => {
+    if (!shelfIdPendingDelete) return;
+    try {
+      await deleteShelfMutation.mutateAsync(shelfIdPendingDelete);
+      toast({
+        title: "Shelf deleted",
+        description: "The shelf has been removed successfully.",
+        variant: "success",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to delete shelf",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteConfirmOpen(false);
+      setShelfIdPendingDelete(null);
+    }
+  }, [deleteShelfMutation, shelfIdPendingDelete, toast]);
 
   const tableColumns = useMemo(
     () =>
@@ -345,6 +352,22 @@ export function CheckerShelfListPage({
 
   return (
     <>
+      <ConfirmModal
+        isOpen={deleteConfirmOpen}
+        onClose={() => {
+          if (deleteShelfMutation.isPending) return;
+          setDeleteConfirmOpen(false);
+          setShelfIdPendingDelete(null);
+        }}
+        onConfirm={confirmDeleteShelf}
+        title="Delete shelf?"
+        description="Are you sure you want to delete this shelf? This action cannot be undone."
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        variant="destructive"
+        isLoading={deleteShelfMutation.isPending}
+      />
+
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
           <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -377,6 +400,7 @@ export function CheckerShelfListPage({
                   toast({
                     title: "Bulk delete (frontend only)",
                     description: `You selected ${count} shelf${count === 1 ? "" : "s"}. Backend delete is not wired yet.`,
+                    variant: "warning",
                   });
                 }}
               >
@@ -395,6 +419,7 @@ export function CheckerShelfListPage({
                     toast({
                       title: "Bulk add (frontend only)",
                       description: `Loaded file "${file.name}". Parsing and upload will be wired to the backend later.`,
+                      variant: "success",
                     });
                   };
                   input.click();

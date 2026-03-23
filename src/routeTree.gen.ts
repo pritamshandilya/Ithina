@@ -43,6 +43,7 @@ import { Route as CheckerStoresIndexRouteImport } from './routes/checker/stores/
 import { Route as CheckerStoreSettingsIndexRouteImport } from './routes/checker/store-settings/index'
 import { Route as CheckerShelvesIndexRouteImport } from './routes/checker/shelves/index'
 import { Route as CheckerShelfIndexRouteImport } from './routes/checker/shelf/index'
+import { Route as CheckerShelfTemplatesIndexRouteImport } from './routes/checker/shelf-templates/index'
 import { Route as CheckerOrgStaffIndexRouteImport } from './routes/checker/org-staff/index'
 import { Route as CheckerOrgDashboardIndexRouteImport } from './routes/checker/org-dashboard/index'
 import { Route as CheckerKnowledgeCenterIndexRouteImport } from './routes/checker/knowledge-center/index'
@@ -55,6 +56,7 @@ import { Route as AdminOrganizationSettingsIndexRouteImport } from './routes/adm
 import { Route as AdminDashboardIndexRouteImport } from './routes/admin/dashboard/index'
 import { Route as AdminStoresNewRouteImport } from './routes/admin/stores/new'
 import { Route as AdminStoreIdStoreSettingsRouteImport } from './routes/admin/$storeId/store-settings'
+import { Route as AdminStoreIdShelfTemplatesRouteImport } from './routes/admin/$storeId/shelf-templates'
 import { Route as AdminStoreIdKnowledgeCenterRouteImport } from './routes/admin/$storeId/knowledge-center'
 import { Route as AdminStoreIdDashboardRouteImport } from './routes/admin/$storeId/dashboard'
 import { Route as AdminStoreIdAuditReviewRouteImport } from './routes/admin/$storeId/audit-review'
@@ -262,6 +264,12 @@ const CheckerShelfIndexRoute = CheckerShelfIndexRouteImport.update({
   path: '/',
   getParentRoute: () => CheckerShelfRouteRoute,
 } as any)
+const CheckerShelfTemplatesIndexRoute =
+  CheckerShelfTemplatesIndexRouteImport.update({
+    id: '/shelf-templates/',
+    path: '/shelf-templates/',
+    getParentRoute: () => CheckerRouteRoute,
+  } as any)
 const CheckerOrgStaffIndexRoute = CheckerOrgStaffIndexRouteImport.update({
   id: '/org-staff/',
   path: '/org-staff/',
@@ -324,6 +332,12 @@ const AdminStoreIdStoreSettingsRoute =
   AdminStoreIdStoreSettingsRouteImport.update({
     id: '/store-settings',
     path: '/store-settings',
+    getParentRoute: () => AdminStoreIdRoute,
+  } as any)
+const AdminStoreIdShelfTemplatesRoute =
+  AdminStoreIdShelfTemplatesRouteImport.update({
+    id: '/shelf-templates',
+    path: '/shelf-templates',
     getParentRoute: () => AdminStoreIdRoute,
   } as any)
 const AdminStoreIdKnowledgeCenterRoute =
@@ -550,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
   '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard/': typeof AdminDashboardIndexRoute
@@ -562,6 +577,7 @@ export interface FileRoutesByFullPath {
   '/checker/knowledge-center/': typeof CheckerKnowledgeCenterIndexRoute
   '/checker/org-dashboard/': typeof CheckerOrgDashboardIndexRoute
   '/checker/org-staff/': typeof CheckerOrgStaffIndexRoute
+  '/checker/shelf-templates/': typeof CheckerShelfTemplatesIndexRoute
   '/checker/shelf/': typeof CheckerShelfIndexRoute
   '/checker/shelves/': typeof CheckerShelvesIndexRoute
   '/checker/store-settings/': typeof CheckerStoreSettingsIndexRoute
@@ -622,6 +638,7 @@ export interface FileRoutesByTo {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
   '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard': typeof AdminDashboardIndexRoute
@@ -634,6 +651,7 @@ export interface FileRoutesByTo {
   '/checker/knowledge-center': typeof CheckerKnowledgeCenterIndexRoute
   '/checker/org-dashboard': typeof CheckerOrgDashboardIndexRoute
   '/checker/org-staff': typeof CheckerOrgStaffIndexRoute
+  '/checker/shelf-templates': typeof CheckerShelfTemplatesIndexRoute
   '/checker/shelf': typeof CheckerShelfIndexRoute
   '/checker/shelves': typeof CheckerShelvesIndexRoute
   '/checker/store-settings': typeof CheckerStoreSettingsIndexRoute
@@ -705,6 +723,7 @@ export interface FileRoutesById {
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
+  '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
   '/admin/stores/new': typeof AdminStoresNewRoute
   '/admin/dashboard/': typeof AdminDashboardIndexRoute
@@ -717,6 +736,7 @@ export interface FileRoutesById {
   '/checker/knowledge-center/': typeof CheckerKnowledgeCenterIndexRoute
   '/checker/org-dashboard/': typeof CheckerOrgDashboardIndexRoute
   '/checker/org-staff/': typeof CheckerOrgStaffIndexRoute
+  '/checker/shelf-templates/': typeof CheckerShelfTemplatesIndexRoute
   '/checker/shelf/': typeof CheckerShelfIndexRoute
   '/checker/shelves/': typeof CheckerShelvesIndexRoute
   '/checker/store-settings/': typeof CheckerStoreSettingsIndexRoute
@@ -788,6 +808,7 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/shelf-templates'
     | '/admin/$storeId/store-settings'
     | '/admin/stores/new'
     | '/admin/dashboard/'
@@ -800,6 +821,7 @@ export interface FileRouteTypes {
     | '/checker/knowledge-center/'
     | '/checker/org-dashboard/'
     | '/checker/org-staff/'
+    | '/checker/shelf-templates/'
     | '/checker/shelf/'
     | '/checker/shelves/'
     | '/checker/store-settings/'
@@ -860,6 +882,7 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/shelf-templates'
     | '/admin/$storeId/store-settings'
     | '/admin/stores/new'
     | '/admin/dashboard'
@@ -872,6 +895,7 @@ export interface FileRouteTypes {
     | '/checker/knowledge-center'
     | '/checker/org-dashboard'
     | '/checker/org-staff'
+    | '/checker/shelf-templates'
     | '/checker/shelf'
     | '/checker/shelves'
     | '/checker/store-settings'
@@ -942,6 +966,7 @@ export interface FileRouteTypes {
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
     | '/admin/$storeId/knowledge-center'
+    | '/admin/$storeId/shelf-templates'
     | '/admin/$storeId/store-settings'
     | '/admin/stores/new'
     | '/admin/dashboard/'
@@ -954,6 +979,7 @@ export interface FileRouteTypes {
     | '/checker/knowledge-center/'
     | '/checker/org-dashboard/'
     | '/checker/org-staff/'
+    | '/checker/shelf-templates/'
     | '/checker/shelf/'
     | '/checker/shelves/'
     | '/checker/store-settings/'
@@ -1248,6 +1274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerShelfIndexRouteImport
       parentRoute: typeof CheckerShelfRouteRoute
     }
+    '/checker/shelf-templates/': {
+      id: '/checker/shelf-templates/'
+      path: '/shelf-templates'
+      fullPath: '/checker/shelf-templates/'
+      preLoaderRoute: typeof CheckerShelfTemplatesIndexRouteImport
+      parentRoute: typeof CheckerRouteRoute
+    }
     '/checker/org-staff/': {
       id: '/checker/org-staff/'
       path: '/org-staff'
@@ -1330,6 +1363,13 @@ declare module '@tanstack/react-router' {
       path: '/store-settings'
       fullPath: '/admin/$storeId/store-settings'
       preLoaderRoute: typeof AdminStoreIdStoreSettingsRouteImport
+      parentRoute: typeof AdminStoreIdRoute
+    }
+    '/admin/$storeId/shelf-templates': {
+      id: '/admin/$storeId/shelf-templates'
+      path: '/shelf-templates'
+      fullPath: '/admin/$storeId/shelf-templates'
+      preLoaderRoute: typeof AdminStoreIdShelfTemplatesRouteImport
       parentRoute: typeof AdminStoreIdRoute
     }
     '/admin/$storeId/knowledge-center': {
@@ -1592,6 +1632,7 @@ interface AdminStoreIdRouteChildren {
   AdminStoreIdAuditReviewRoute: typeof AdminStoreIdAuditReviewRoute
   AdminStoreIdDashboardRoute: typeof AdminStoreIdDashboardRoute
   AdminStoreIdKnowledgeCenterRoute: typeof AdminStoreIdKnowledgeCenterRoute
+  AdminStoreIdShelfTemplatesRoute: typeof AdminStoreIdShelfTemplatesRoute
   AdminStoreIdStoreSettingsRoute: typeof AdminStoreIdStoreSettingsRoute
   AdminStoreIdReportsAdhocRoute: typeof AdminStoreIdReportsAdhocRoute
   AdminStoreIdReportsShelfLevelRoute: typeof AdminStoreIdReportsShelfLevelRoute
@@ -1608,6 +1649,7 @@ const AdminStoreIdRouteChildren: AdminStoreIdRouteChildren = {
   AdminStoreIdAuditReviewRoute: AdminStoreIdAuditReviewRoute,
   AdminStoreIdDashboardRoute: AdminStoreIdDashboardRoute,
   AdminStoreIdKnowledgeCenterRoute: AdminStoreIdKnowledgeCenterRoute,
+  AdminStoreIdShelfTemplatesRoute: AdminStoreIdShelfTemplatesRoute,
   AdminStoreIdStoreSettingsRoute: AdminStoreIdStoreSettingsRoute,
   AdminStoreIdReportsAdhocRoute: AdminStoreIdReportsAdhocRoute,
   AdminStoreIdReportsShelfLevelRoute: AdminStoreIdReportsShelfLevelRoute,
@@ -1675,6 +1717,7 @@ interface CheckerRouteRouteChildren {
   CheckerKnowledgeCenterIndexRoute: typeof CheckerKnowledgeCenterIndexRoute
   CheckerOrgDashboardIndexRoute: typeof CheckerOrgDashboardIndexRoute
   CheckerOrgStaffIndexRoute: typeof CheckerOrgStaffIndexRoute
+  CheckerShelfTemplatesIndexRoute: typeof CheckerShelfTemplatesIndexRoute
   CheckerShelvesIndexRoute: typeof CheckerShelvesIndexRoute
   CheckerStoreSettingsIndexRoute: typeof CheckerStoreSettingsIndexRoute
   CheckerStoresIndexRoute: typeof CheckerStoresIndexRoute
@@ -1695,6 +1738,7 @@ const CheckerRouteRouteChildren: CheckerRouteRouteChildren = {
   CheckerKnowledgeCenterIndexRoute: CheckerKnowledgeCenterIndexRoute,
   CheckerOrgDashboardIndexRoute: CheckerOrgDashboardIndexRoute,
   CheckerOrgStaffIndexRoute: CheckerOrgStaffIndexRoute,
+  CheckerShelfTemplatesIndexRoute: CheckerShelfTemplatesIndexRoute,
   CheckerShelvesIndexRoute: CheckerShelvesIndexRoute,
   CheckerStoreSettingsIndexRoute: CheckerStoreSettingsIndexRoute,
   CheckerStoresIndexRoute: CheckerStoresIndexRoute,

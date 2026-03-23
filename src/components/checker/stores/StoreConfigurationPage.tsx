@@ -1,5 +1,6 @@
 import MainLayout from "@/components/layouts/main";
 import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
+import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
 import {
@@ -65,6 +67,7 @@ const DEFAULT_FIXTURE_TYPES = [
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "Store Profile", icon: StoreIcon },
   { id: "defaults", label: "Store Defaults", icon: Settings },
+  { id: "defaults", label: "Store Defaults", icon: Settings },
   { id: "team", label: "Staff", icon: Users },
 ];
 
@@ -103,7 +106,10 @@ export function StoreConfigurationPage({
     address: "",
     region: "",
     status: "Active" as "Active" | "Inactive",
+    region: "",
+    status: "Active" as "Active" | "Inactive",
     currency: "USD",
+    default_dimensions: "mm" as StoreDimensionUnit,
     default_dimensions: "mm" as StoreDimensionUnit,
   });
 
@@ -139,8 +145,11 @@ export function StoreConfigurationPage({
         address: (selectedStore as any).address || "",
         region: (selectedStore as any).region || "",
         status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
+        region: (selectedStore as any).region || "",
+        status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
         currency: (selectedStore as any).currency || "USD",
         default_dimensions:
+          ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
           ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
       setDefaultComplianceRuleSetId(

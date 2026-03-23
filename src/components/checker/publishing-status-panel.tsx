@@ -26,6 +26,7 @@ import { Send, CheckCircle, XCircle, Clock, RefreshCw } from "lucide-react";
 import { usePublishedAudits } from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 import { format, formatDistanceToNow } from "date-fns";
 import type { PublishedAudit } from "@/types/checker";
 
@@ -77,11 +78,15 @@ export function PublishingStatusPanel({
   storeId,
   className = "",
 }: PublishingStatusPanelProps) {
+  const { toast } = useToast();
   const { data: audits, isLoading, error } = usePublishedAudits(storeId);
 
   // Handle retry (placeholder for Phase 2)
   const handleRetry = (_auditId: string) => {
-    alert("Retry functionality will be implemented in Phase 2");
+    toast({
+      title: "Coming soon",
+      description: "Retry functionality will be implemented in Phase 2.",
+    });
   };
 
   return (

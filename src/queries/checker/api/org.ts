@@ -58,6 +58,15 @@ interface OrgStoreApiModel {
   updated_at: string;
 }
 
+interface UpdateStorePayload {
+  name: string;
+  address: string;
+  region: string;
+  is_active: boolean;
+  currency: string;
+  default_dimension_unit: string;
+}
+
 function mapOrgStore(store: OrgStoreApiModel): Store {
   const normalizedStatus =
     typeof store.is_active === "boolean"
@@ -190,7 +199,7 @@ export async function updateStore(
     default_dimensions: string;
   },
 ): Promise<Store> {
-  const payload: any = {
+  const payload: UpdateStorePayload = {
     name: data.name,
     address: data.address,
     region: data.region,

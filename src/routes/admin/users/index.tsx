@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Search, UserPlus } from "lucide-react";
+import { Pencil, Search, Trash2, UserPlus } from "lucide-react";
 import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -16,6 +16,10 @@ import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
 import type { UpsertUserPayload } from "@/queries/checker/api/org";
+import { renderToStaticMarkup } from "react-dom/server";
+import {
+  type DataTableCell,
+} from "@/components/ui/data-table";
 
 export const Route = createFileRoute("/admin/users/")({
   component: AdminUsersPage,
@@ -97,7 +101,7 @@ function AdminUsersPage() {
       minWidth: 220,
       headerHozAlign: "left",
       hozAlign: "left",
-      formatter: (cell: any) => {
+      formatter: (cell: DataTableCell<AuthSessionUser>) => {
         const member = cell.getData() as AuthSessionUser;
         const initials = `${member.firstName?.[0] ?? "U"}${member.lastName?.[0] ?? "U"}`;
         return `
@@ -119,7 +123,7 @@ function AdminUsersPage() {
       title: "Role",
       field: "role",
       width: 150,
-      formatter: (cell: any) => {
+      formatter: (cell: DataTableCell<AuthSessionUser>) => {
         const role = cell.getValue() as AuthSessionUser["role"];
         const label = role.charAt(0).toUpperCase() + role.slice(1);
         return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border ${getRoleBadgeClasses(role)}">${label}</span>`;
@@ -129,7 +133,7 @@ function AdminUsersPage() {
       title: "Status",
       field: "isActive",
       width: 120,
-      formatter: (cell: any) => {
+      formatter: (cell: DataTableCell<AuthSessionUser>) => {
         const active = cell.getValue() as boolean;
         const statusCls = active ? "bg-chart-2" : "bg-muted-foreground/30";
         const textCls = active ? "text-chart-2" : "text-muted-foreground";
@@ -145,9 +149,11 @@ function AdminUsersPage() {
       title: "Last Login",
       field: "lastLoginAt",
       width: 180,
-      formatter: (cell: any) => {
+      formatter: (cell: DataTableCell<AuthSessionUser>) => {
         const dateVal = cell.getValue();
-        if (!dateVal) return `<span class="text-muted-foreground">Never</span>`;
+        if (typeof dateVal !== "string" || !dateVal) {
+          return `<span class="text-muted-foreground">Never</span>`;
+        }
         const date = new Date(dateVal);
         return `<span class="text-sm text-muted-foreground">${formatDistanceToNow(date, { addSuffix: true })}</span>`;
       },
@@ -159,20 +165,25 @@ function AdminUsersPage() {
       headerSort: false,
       hozAlign: "right",
       formatter: () => {
+        const editIcon = renderToStaticMarkup(<Pencil size={16} />);
+        const deleteIcon = renderToStaticMarkup(<Trash2 size={16} />);
         return `
           <div class="flex items-center justify-end gap-1.5">
             <button class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                ${editIcon}
             </button>
             <button class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-trash-2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
+                ${deleteIcon}
             </button>
           </div>
         `;
       },
-      cellClick: (e: any, cell: any) => {
+      cellClick: (e: unknown, cell: DataTableCell<AuthSessionUser>) => {
         const user = cell.getData() as AuthSessionUser;
-        const target = e.target.closest("button");
+        const target =
+          e && typeof e === "object" && "target" in e && e.target instanceof Element
+            ? e.target.closest("button")
+            : null;
         if (target?.classList.contains("edit-btn")) {
           setSelectedUser(user);
           setFormMode("edit");

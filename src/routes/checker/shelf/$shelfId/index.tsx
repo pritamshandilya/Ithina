@@ -30,9 +30,12 @@ export const Route = createFileRoute("/checker/shelf/$shelfId/")({
 });
 
 export function ShelfDetailPage() {
-  const params = useParams({ strict: false }) as any;
-  const shelfId = params.shelfId as string;
-  const storeId = params.storeId as string | undefined;
+  const params = useParams({ strict: false }) as {
+    shelfId: string;
+    storeId?: string;
+  };
+  const shelfId = params.shelfId;
+  const storeId = params.storeId;
   
   const location = useLocation();
   const { toast } = useToast();
@@ -213,7 +216,7 @@ export function ShelfDetailPage() {
           });
           setIsEditing(false);
         },
-        onError: (updateError: any) => {
+        onError: (updateError: Error) => {
           toast({
             variant: "destructive",
             title: "Error",
@@ -440,7 +443,7 @@ export function ShelfDetailPage() {
                         <p className="text-sm text-muted-foreground mt-1">Planogram is currently associated with this shelf.</p>
                       </div>
                       <Button variant="outline" size="sm" asChild>
-                        <Link to={analysisPath as any} params={{ shelfId, storeId } as any}>
+                        <Link to={analysisPath as never} params={{ shelfId, storeId } as never}>
                           View
                         </Link>
                       </Button>
@@ -458,7 +461,7 @@ export function ShelfDetailPage() {
                             analysis requires a planogram.
                           </p>
                           <Button className="mt-4" size="sm" asChild>
-                            <Link to={basePogNewPath as any} params={{ storeId } as any} search={{ shelfId: shelf.id } as any}>
+                            <Link to={basePogNewPath as never} params={{ storeId } as never} search={{ shelfId: shelf.id } as never}>
                               Associate Planogram
                             </Link>
                           </Button>
@@ -486,7 +489,7 @@ export function ShelfDetailPage() {
             <h3 className="text-lg font-semibold px-1">Quick Analysis</h3>
             <div 
               className="rounded-2xl border border-border/50 bg-gradient-to-br from-chart-2/10 via-background to-background p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer group"
-              onClick={() => navigate({ to: baseAdhocNewPath as any, params: { storeId } as any, search: { shelfId: shelf.id } as any })}
+              onClick={() => navigate({ to: baseAdhocNewPath as never, params: { storeId } as never, search: { shelfId: shelf.id } as never })}
             >
               <div className="flex items-start gap-4">
                 <div className="p-3 rounded-xl bg-chart-2/20 text-chart-2">

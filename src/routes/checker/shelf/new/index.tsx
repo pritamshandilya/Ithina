@@ -68,7 +68,7 @@ type AddPlanogramPageProps = {
 export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams({ strict: false }) as any;
+  const params = useParams({ strict: false }) as { storeId?: string };
   const currentSearch = (location.search ?? {}) as AddPlanogramPageSearch;
   const { associateShelfId, associateShelfName, templateId, addMode } =
     searchOverride ?? currentSearch;
@@ -116,7 +116,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   }, [shelfTemplates, selectedTemplateId]);
 
   const defaultDimensionUnit = useMemo<StoreDimensionUnit>(() => {
-    const raw = (selectedStore as any)?.default_dimensions as string | undefined;
+    const raw = selectedStore?.default_dimensions;
     if (!raw) return "mm";
     const value = raw.toLowerCase();
     const match = dimensionUnits.find(
@@ -247,7 +247,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
           arrangement,
         });
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
-        navigate({ to: shelfListPath as any });
+        navigate({ to: shelfListPath as never });
       } else if (!isAssociateMode) {
         const fixtureTypeValue = fixtureType.trim() || "gondola";
         const fixtureWidth = Number(dimWidth) || 1;
@@ -308,7 +308,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
           description: "Your shelf has been created successfully.",
           variant: "success",
         });
-        navigate({ to: shelfListPath as any });
+        navigate({ to: shelfListPath as never });
       }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to save");
@@ -352,7 +352,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
 
           <header className="flex items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to={shelfListPath as any}>
+              <Link to={shelfListPath as never}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>

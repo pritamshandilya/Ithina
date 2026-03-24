@@ -45,7 +45,7 @@ export function ShelfRow({
   className,
 }: ShelfRowProps) {
   const { selectedStore } = useStore();
-  const storeUnits = (selectedStore as any)?.default_dimensions as string | undefined;
+  const storeUnits = selectedStore?.default_dimensions;
   const units = fixture?.units ?? storeUnits ?? UNITS;
   const hasShelfWidth = shelf.width != null;
   const hasShelfDepth = shelf.depth != null;

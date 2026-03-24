@@ -8,7 +8,6 @@ import {
 } from "@/queries/maker/api/planogram";
 import {
   generateMakerDashboardStats,
-  generateMockAdhocAnalyses,
   generateMockAudits,
   generateMockQuickStats,
   generateMockShelves,
@@ -16,6 +15,7 @@ import {
   getReturnedAudits,
 } from "@/lib/api/mock-data";
 import { apiClient, ApiError } from "@/queries/shared";
+import { getAnalysisApiClient } from "@/queries/analysis";
 import { getShelf, mapShelfResponseToShelf } from "./shelves";
 import type { Store } from "@/types/checker";
 import type {
@@ -384,11 +384,6 @@ export async function deleteDraft(auditId: string): Promise<void> {
 export async function fetchAdhocAnalyses(
   storeId?: string,
 ): Promise<AdhocAnalysis[]> {
-  await simulateNetworkDelay(300);
-
-  // In production, this would be:
-  // const response = await api.get('/maker/adhoc-analyses', { params: { storeId } });
-  // return response.data;
-
-  return generateMockAdhocAnalyses(storeId);
+  const analysisApiClient = getAnalysisApiClient();
+  return analysisApiClient.fetchAdhocAnalyses({ storeId });
 }

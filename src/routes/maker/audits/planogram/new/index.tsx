@@ -94,7 +94,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
         arrangement,
       });
       toast({ title: "Analysis configured", description: "POG Analysis is now ready for the selected shelf." });
-      navigate({ to: backPath as any });
+      navigate({ to: backPath as never });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to configure analysis");
     } finally {
@@ -122,7 +122,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
 
           <header className="flex items-center gap-2">
             <Button variant="ghost" size="icon" asChild>
-              <Link to={backPath as any}>
+              <Link to={backPath as never}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back</span>
               </Link>

@@ -12,6 +12,12 @@ import "tabulator-tables/dist/css/tabulator.css";
 
 import { cn } from "@/lib/utils";
 
+export interface DataTableCell<T = object> {
+  getData: () => T;
+  getValue: () => unknown;
+  getElement: () => HTMLElement;
+}
+
 /**
  * Minimal column definition for DataTable.
  * Extend with any Tabulator column options (formatter, sorter, width, etc.)
@@ -28,7 +34,9 @@ export interface DataTableColumn<T = object> {
   /** Optional min width */
   minWidth?: number;
   /** Optional formatter - Tabulator passes cell component; return HTML string or HTMLElement */
-  formatter?: (cell: unknown) => string | HTMLElement | false;
+  formatter?: (cell: DataTableCell<T>) => string | HTMLElement | false;
+  /** Optional cell click handler */
+  cellClick?: (event: unknown, cell: DataTableCell<T>) => void;
   /** Optional header sort */
   headerSort?: boolean;
   /** Header filter type: "input" | "number" | "list" etc.; set false to disable for this column */
@@ -42,7 +50,7 @@ export interface DataTableProps<T = object> {
   /** Row data */
   data: T[];
   /** Optional row click handler; receives row data and event */
-  onRowClick?: (row: T, event: any) => void;
+  onRowClick?: (row: T, event: unknown) => void;
   /** Optional field name used as unique row id (default: "id") */
   rowIdField?: keyof T | string;
   /** Optional class name for the wrapper div */

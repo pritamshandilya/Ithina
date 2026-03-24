@@ -9,9 +9,13 @@ import {
   useStoreUsers,
 } from "@/queries/checker";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { Store } from "@/types/checker";
+import type { Store } from "@/providers/store/types";
 import { Input } from "@/components/ui/input";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  DataTable,
+  type DataTableCell,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import type { AuthSessionUser } from "@/lib/auth/session";
 
 interface StoreUserAssignmentModalProps {
@@ -69,7 +73,7 @@ export function StoreUserAssignmentModal({
             minWidth: 220,
             headerHozAlign: "left",
             hozAlign: "left",
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<AuthSessionUser>) => {
                 const user = cell.getData() as AuthSessionUser;
                 const initials = `${user.firstName?.[0] ?? "U"}${user.lastName?.[0] ?? "U"}`;
                 return `
@@ -89,7 +93,7 @@ export function StoreUserAssignmentModal({
             title: "Role",
             field: "role",
             width: 120,
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<AuthSessionUser>) => {
                 const role = cell.getValue() as AuthSessionUser["role"];
                 const label = role.charAt(0).toUpperCase() + role.slice(1);
                 return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border bg-muted/40 text-muted-foreground">${label}</span>`;
@@ -108,7 +112,7 @@ export function StoreUserAssignmentModal({
                     </button>
                 `;
             },
-            cellClick: (_e: any, cell: any) => {
+            cellClick: (_e, cell: DataTableCell<AuthSessionUser>) => {
                 const user = cell.getData() as AuthSessionUser;
                 void handleAssign(user.id);
             },

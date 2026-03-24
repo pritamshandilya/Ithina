@@ -69,14 +69,22 @@ export {
   useStoreUsers,
   useCreateStore,
   useUpdateStore,
+  useUpdateStoreComplianceSettings,
   useUpdateUser,
   useUserById,
 } from "./useOrgData";
-export { useDimensionUnits, dimensionKeys } from "./useDimensionUnits";
+
+export { useDimensionUnits } from "./useDimensionUnits";
+
 export {
+  shelfTemplatesKeys,
   useShelfTemplates,
   useCreateShelfTemplate,
   useUpdateShelfTemplate,
   useDeleteShelfTemplate,
-  shelfTemplateKeys,
 } from "./useShelfTemplates";
+
+export {
+  storeDefaultsKeys,
+  useStoreFixtureTypes,
+} from "./useStoreFixtureTypes";

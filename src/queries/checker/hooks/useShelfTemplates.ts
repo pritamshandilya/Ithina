@@ -1,68 +1,82 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { useStore } from "@/providers/store";
+import type { ShelfTemplateCreateInput, ShelfTemplateUpdateInput } from "@/types/shelf-template";
 import {
-  createShelfTemplate,
-  deleteShelfTemplate,
   fetchShelfTemplates,
+  createShelfTemplate,
   updateShelfTemplate,
+  deleteShelfTemplate,
 } from "@/queries/checker/api/shelf-templates";
-import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
-import { useSelectedStoreId, useStore } from "@/providers/store";
-import type {
-  ShelfTemplateCreateInput,
-  ShelfTemplateUpdateInput,
-} from "@/types/shelf-template";
 
-export const shelfTemplateKeys = {
+export const shelfTemplatesKeys = {
   all: ["shelf-templates"] as const,
-  list: (storeId: string | undefined) =>
-    [...shelfTemplateKeys.all, "list", storeId ?? "no-store"] as const,
+  byStore: (storeId: string | undefined, unit: string) =>
+    [...shelfTemplatesKeys.all, storeId ?? "all", unit] as const,
 };
 
+function getSelectedUnit(selectedStore: ReturnType<typeof useStore>["selectedStore"]) {
+  const unit = (selectedStore as any)?.default_dimensions;
+  return (unit === "mm" || unit === "cm" || unit === "inch" ? unit : "mm") as "mm" | "cm" | "inch";
+}
+
 export function useShelfTemplates() {
-  const storeId = useSelectedStoreId();
   const { selectedStore } = useStore();
-  const defaultUnit =
-    ((selectedStore as any)?.default_dimensions as StoreDimensionUnit | undefined) ?? "mm";
+  const storeId = selectedStore?.id;
+  const unit = getSelectedUnit(selectedStore);
+
   return useQuery({
-    queryKey: [...shelfTemplateKeys.list(storeId), defaultUnit],
-    queryFn: () => fetchShelfTemplates(storeId!, defaultUnit),
+    queryKey: shelfTemplatesKeys.byStore(storeId, unit),
+    queryFn: () => fetchShelfTemplates(storeId!, unit),
     enabled: !!storeId,
-    staleTime: 60_000,
+    staleTime: 2 * 60 * 1000,
   });
 }
 
 export function useCreateShelfTemplate() {
-  const storeId = useSelectedStoreId();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+  const { selectedStore } = useStore();
+  const storeId = selectedStore?.id;
+
   return useMutation({
-    mutationFn: (input: ShelfTemplateCreateInput) =>
-      createShelfTemplate(storeId!, input),
+    mutationFn: (payload: ShelfTemplateCreateInput) => {
+      if (!storeId) throw new Error("Store not selected");
+      return createShelfTemplate(storeId, payload);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: shelfTemplateKeys.all });
+      void queryClient.invalidateQueries({ queryKey: shelfTemplatesKeys.all });
     },
   });
 }
 
 export function useUpdateShelfTemplate() {
-  const storeId = useSelectedStoreId();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+  const { selectedStore } = useStore();
+  const storeId = selectedStore?.id;
+
   return useMutation({
-    mutationFn: (input: ShelfTemplateUpdateInput) =>
-      updateShelfTemplate(storeId!, input),
+    mutationFn: (payload: ShelfTemplateUpdateInput) => {
+      if (!storeId) throw new Error("Store not selected");
+      return updateShelfTemplate(storeId, payload);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: shelfTemplateKeys.all });
+      void queryClient.invalidateQueries({ queryKey: shelfTemplatesKeys.all });
     },
   });
 }
 
 export function useDeleteShelfTemplate() {
-  const storeId = useSelectedStoreId();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
+  const { selectedStore } = useStore();
+  const storeId = selectedStore?.id;
+
   return useMutation({
-    mutationFn: (id: string) => deleteShelfTemplate(storeId!, id),
+    mutationFn: (id: string) => {
+      if (!storeId) throw new Error("Store not selected");
+      return deleteShelfTemplate(storeId, id);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: shelfTemplateKeys.all });
+      void queryClient.invalidateQueries({ queryKey: shelfTemplatesKeys.all });
     },
   });
 }

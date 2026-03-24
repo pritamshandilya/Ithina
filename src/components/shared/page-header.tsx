@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LayoutNotificationsAction } from "./layout-notifications-action";
@@ -5,9 +6,11 @@ import { LayoutNotificationsAction } from "./layout-notifications-action";
 interface PageHeaderProps {
     title: string;
     description?: string;
+    /** e.g. back button — rendered before the icon/title block */
+    leading?: ReactNode;
     icon?: LucideIcon;
     iconColor?: string;
-    children?: React.ReactNode;
+    children?: ReactNode;
     className?: string;
     showNotifications?: boolean;
 }
@@ -21,6 +24,7 @@ interface PageHeaderProps {
 export function PageHeader({
     title,
     description,
+    leading,
     icon: Icon,
     iconColor = "text-accent",
     children,
@@ -30,7 +34,8 @@ export function PageHeader({
     return (
         <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between", className)}>
             <div className="min-w-0">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3">
+                    {leading}
                     {Icon && (
                         <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10 shrink-0">
                             <Icon className={cn("size-5", iconColor)} />

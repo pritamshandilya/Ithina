@@ -34,7 +34,7 @@ import type {
   ReportKeyFinding,
   ReportIssueCategory,
 } from "@/lib/analysis";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 
 export interface ReportSnippetsViewProps {
   /** Shelf image preview URL */

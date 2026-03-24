@@ -1,10 +1,13 @@
 import { Edit3, Layers3, LayoutPanelLeft, Maximize, Plus, ShieldCheck, Trash2 } from "lucide-react";
-import { Dispatch, SetStateAction } from "react";
+import { useState, type Dispatch, type SetStateAction } from "react";
 
 import { ShelfTemplateModal, type ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
+import {
+  StoreFixtureModal,
+  type StoreFixtureModalValues,
+} from "@/components/common/store-fixture-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
@@ -12,14 +15,22 @@ import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 export type ConfigSection = "fixtures" | "shelfTemplates" | "rules" | "dimensions";
 
 export type FixtureConfig = {
-  name: string;
-  detail: string;
+  id?: string;
+  store_id?: string;
+  type: string;
+  width: string;
+  height: string;
+  depth: string;
+  dimension_unit: StoreDimensionUnit;
+  section: string;
+  aisle: string;
+  zone: string;
 };
 
 export type ShelfTemplateConfig = {
   name: string;
   description: string;
-  fixtureType: "gondola" | "wall_shelving" | "end_cap" | "freezer" | "cooler";
+  fixtureType: string;
   zone: string;
   section: string;
   width: string;
@@ -34,8 +45,6 @@ interface StoreOnboardingConfigStepProps {
   setConfigVisited: Dispatch<SetStateAction<Record<ConfigSection, boolean>>>;
   fixtureTypes: FixtureConfig[];
   setFixtureTypes: Dispatch<SetStateAction<FixtureConfig[]>>;
-  newFixture: FixtureConfig;
-  setNewFixture: Dispatch<SetStateAction<FixtureConfig>>;
   shelfTemplatesConfig: ShelfTemplateConfig[];
   setShelfTemplatesConfig: Dispatch<SetStateAction<ShelfTemplateConfig[]>>;
   newTemplate: ShelfTemplateConfig;
@@ -50,6 +59,9 @@ interface StoreOnboardingConfigStepProps {
   setConfigForm: Dispatch<SetStateAction<{ default_dimensions: StoreDimensionUnit }>>;
   canContinueConfig: boolean;
   isCreating: boolean;
+  seedComplianceRuleSet: boolean;
+  setSeedComplianceRuleSet: Dispatch<SetStateAction<boolean>>;
+  shelfFixtureLabels: string[];
   onBack: () => void;
   onCreateStore: () => void;
 }
@@ -61,8 +73,6 @@ export function StoreOnboardingConfigStep({
   setConfigVisited,
   fixtureTypes,
   setFixtureTypes,
-  newFixture,
-  setNewFixture,
   shelfTemplatesConfig,
   setShelfTemplatesConfig,
   newTemplate,
@@ -77,9 +87,74 @@ export function StoreOnboardingConfigStep({
   setConfigForm,
   canContinueConfig,
   isCreating,
+  seedComplianceRuleSet,
+  setSeedComplianceRuleSet,
+  shelfFixtureLabels,
   onBack,
   onCreateStore,
 }: StoreOnboardingConfigStepProps) {
+  const [fixtureModalOpen, setFixtureModalOpen] = useState(false);
+  const [editingFixtureIndex, setEditingFixtureIndex] = useState<number | null>(null);
+  const [fixtureModalInitialValues, setFixtureModalInitialValues] = useState<
+    Partial<StoreFixtureModalValues>
+  >({});
+
+  const openCreateFixture = () => {
+    setEditingFixtureIndex(null);
+    setFixtureModalInitialValues({
+      dimensionUnit: configForm.default_dimensions,
+    });
+    setFixtureModalOpen(true);
+  };
+
+  const openEditFixture = (fixture: FixtureConfig, idx: number) => {
+    setEditingFixtureIndex(idx);
+    setFixtureModalInitialValues({
+      type: fixture.type,
+      width: fixture.width,
+      height: fixture.height,
+      depth: fixture.depth,
+      dimensionUnit: fixture.dimension_unit,
+      section: fixture.section,
+      aisle: fixture.aisle,
+      zone: fixture.zone,
+    });
+    setFixtureModalOpen(true);
+  };
+
+  const saveFixtureFromModal = (values: StoreFixtureModalValues) => {
+    const type = values.type.trim();
+    if (!type) return;
+
+    const entry: FixtureConfig = {
+      type,
+      width: values.width.trim() || "120",
+      height: values.height.trim() || "200",
+      depth: values.depth.trim() || "45",
+      dimension_unit: values.dimensionUnit,
+      section: values.section.trim() || "General",
+      aisle: values.aisle.trim() || "A1",
+      zone: values.zone.trim() || "General",
+    };
+
+    if (editingFixtureIndex !== null) {
+      setFixtureTypes((prev) =>
+        prev.map((item, idx) => {
+          if (idx !== editingFixtureIndex) return item;
+          return {
+            ...item,
+            ...entry,
+          };
+        }),
+      );
+    } else {
+      setFixtureTypes((prev) => [...prev, entry]);
+    }
+
+    setEditingFixtureIndex(null);
+    setFixtureModalOpen(false);
+  };
+
   return (
     <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
       <CardHeader>
@@ -155,58 +230,53 @@ export function StoreOnboardingConfigStep({
                     type="button"
                     size="sm"
                     className="h-8 gap-1.5 bg-chart-2 text-white hover:opacity-90"
-                    onClick={() => {
-                      const name = newFixture.name.trim();
-                      if (!name) return;
-                      setFixtureTypes((prev) => [
-                        ...prev,
-                        {
-                          name,
-                          detail: newFixture.detail.trim() || "Custom fixture type",
-                        },
-                      ]);
-                      setNewFixture({ name: "", detail: "" });
-                    }}
+                    onClick={openCreateFixture}
                   >
                     <Plus className="size-3.5" />
                     Add fixture
                   </Button>
                 </div>
-                <div className="grid gap-2 sm:grid-cols-[2fr_3fr]">
-                  <Input
-                    placeholder="Name (e.g. Island Display)"
-                    value={newFixture.name}
-                    onChange={(e) => setNewFixture((prev) => ({ ...prev, name: e.target.value }))}
-                    className="h-8 text-xs"
-                  />
-                  <Input
-                    placeholder="Short description"
-                    value={newFixture.detail}
-                    onChange={(e) => setNewFixture((prev) => ({ ...prev, detail: e.target.value }))}
-                    className="h-8 text-xs"
-                  />
-                </div>
                 <div className="max-h-[320px] overflow-y-auto pr-1">
                   <div className="space-y-1.5 text-sm text-foreground">
                     {fixtureTypes.map((item, idx) => (
                       <div
-                        key={`${item.name}-${idx}`}
+                        key={`${item.type}-${idx}`}
                         className="flex items-center justify-between rounded-lg border border-border bg-card/60 px-3 py-2"
                       >
                         <div>
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.detail}</p>
+                          <p className="font-medium">{item.type}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.width}x{item.height}x{item.depth} {item.dimension_unit}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Section: {item.section} · Aisle: {item.aisle} · Zone: {item.zone}
+                          </p>
+                          {item.id && item.store_id && (
+                            <p className="text-[10px] text-muted-foreground">
+                              id: {item.id} · store_id: {item.store_id}
+                            </p>
+                          )}
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() =>
-                            setFixtureTypes((prev) => prev.filter((_, i) => i !== idx))
-                          }
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openEditFixture(item, idx)}
+                            aria-label={`Edit ${item.type}`}
+                          >
+                            <Edit3 className="size-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() =>
+                              setFixtureTypes((prev) => prev.filter((_, i) => i !== idx))
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -296,17 +366,31 @@ export function StoreOnboardingConfigStep({
             )}
 
             {activeConfigSection === "rules" && (
-              <section className="rounded-xl border border-border bg-background/40 p-4 space-y-3">
+              <section className="rounded-xl border border-border bg-background/40 p-4 space-y-4">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="size-4 text-accent" />
-                  <h3 className="text-sm font-semibold text-foreground">Compliance Rules</h3>
+                  <h3 className="text-sm font-semibold text-foreground">Compliance rule set</h3>
                 </div>
-                <ul className="space-y-1.5 text-sm text-foreground">
-                  <li>Min facing: 1</li>
-                  <li>Max gap: 2&quot;</li>
-                  <li>FIFO required for perishables</li>
-                  <li>Label alignment: required</li>
-                </ul>
+                <p className="text-xs text-muted-foreground">
+                  You can add more rule sets later from store settings or the knowledge center.
+                </p>
+                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card/60 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-1 size-4 rounded border-border text-accent focus-visible:ring-2 focus-visible:ring-accent"
+                    checked={seedComplianceRuleSet}
+                    onChange={(e) => setSeedComplianceRuleSet(e.target.checked)}
+                  />
+                  <span className="space-y-1 text-sm">
+                    <span className="font-medium text-foreground">
+                      Create default compliance rule set
+                    </span>
+                    <span className="block text-muted-foreground">
+                      Seeds one active VISUAL rule (baseline threshold) and assigns it as this
+                      store&apos;s default rule set.
+                    </span>
+                  </span>
+                </label>
               </section>
             )}
 
@@ -367,6 +451,23 @@ export function StoreOnboardingConfigStep({
         onSave={saveShelfTemplateFromModal}
         mode={editingTemplateIndex !== null ? "edit" : "create"}
         initialValues={newTemplate}
+        extraFixtureTypeOptions={shelfFixtureLabels}
+        fixtureDepthByType={Object.fromEntries(
+          fixtureTypes.map((fixture) => [fixture.type, fixture.depth]),
+        )}
+        fixtureUnitByType={Object.fromEntries(
+          fixtureTypes.map((fixture) => [fixture.type, fixture.dimension_unit]),
+        )}
+      />
+      <StoreFixtureModal
+        isOpen={fixtureModalOpen}
+        onClose={() => {
+          setFixtureModalOpen(false);
+          setEditingFixtureIndex(null);
+        }}
+        onSave={saveFixtureFromModal}
+        mode={editingFixtureIndex !== null ? "edit" : "create"}
+        initialValues={fixtureModalInitialValues}
       />
     </Card>
   );

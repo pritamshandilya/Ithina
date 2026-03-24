@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Edit3, Plus, Trash2 } from "lucide-react";
+import { Link, useLocation } from "@tanstack/react-router";
+import { Edit3, PackagePlus, Plus, Trash2 } from "lucide-react";
 
 import { ShelfTemplateModal } from "@/components/common/shelf-template-modal";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import {
   useCreateShelfTemplate,
   useDeleteShelfTemplate,
   useShelfTemplates,
+  useStoreFixtureTypes,
   useUpdateShelfTemplate,
 } from "@/queries/checker";
 import type {
@@ -17,6 +19,7 @@ import type {
   ShelfTemplateCreateInput,
 } from "@/types/shelf-template";
 import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
+import { useSelectedStoreId } from "@/providers/store";
 
 function toNumberOr(value: string, fallback: number): number {
   const n = Number(value);
@@ -29,6 +32,11 @@ interface ShelfTemplatesContentProps {
 
 export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesContentProps) {
   const { toast } = useToast();
+  const location = useLocation();
+  const storeId = useSelectedStoreId();
+  const isAdminShelfContext =
+    location.pathname.includes("/admin/") && Boolean(storeId);
+  const { data: extraFixtureLabels = [] } = useStoreFixtureTypes();
   const { data: templates = [], isLoading } = useShelfTemplates();
   const createMutation = useCreateShelfTemplate();
   const updateMutation = useUpdateShelfTemplate();
@@ -187,7 +195,33 @@ export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesC
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center justify-end gap-1">
+                    {storeId ? (
+                      isAdminShelfContext ? (
+                        <Button variant="outline" size="sm" className="h-8 gap-1 px-2" asChild>
+                          <Link
+                            to="/admin/$storeId/shelf/new"
+                            params={{ storeId }}
+                            search={{ templateId: tpl.id }}
+                            aria-label={`Create shelf from template ${tpl.name}`}
+                          >
+                            <PackagePlus className="size-3.5 shrink-0" aria-hidden />
+                            <span className="hidden sm:inline">Use</span>
+                          </Link>
+                        </Button>
+                      ) : (
+                        <Button variant="outline" size="sm" className="h-8 gap-1 px-2" asChild>
+                          <Link
+                            to="/checker/shelf/new"
+                            search={{ templateId: tpl.id }}
+                            aria-label={`Create shelf from template ${tpl.name}`}
+                          >
+                            <PackagePlus className="size-3.5 shrink-0" aria-hidden />
+                            <span className="hidden sm:inline">Use</span>
+                          </Link>
+                        </Button>
+                      )
+                    ) : null}
                     <Button
                       variant="ghost"
                       size="icon"
@@ -249,6 +283,7 @@ export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesC
         isSaving={createMutation.isPending || updateMutation.isPending}
         mode={mode}
         initialValues={form}
+        extraFixtureTypeOptions={extraFixtureLabels}
       />
     </>
   );

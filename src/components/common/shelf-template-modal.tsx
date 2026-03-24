@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,67 @@ import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import type { ShelfTemplateFixtureType } from "@/types/shelf-template";
 
-const FIXTURE_OPTIONS: Array<{ value: ShelfTemplateFixtureType; label: string }> = [
+const PRESET_FIXTURE_OPTIONS: Array<{ value: ShelfTemplateFixtureType; label: string }> = [
   { value: "gondola", label: "Gondola" },
   { value: "wall_shelving", label: "Wall Shelving" },
   { value: "end_cap", label: "End Cap" },
   { value: "freezer", label: "Freezer" },
   { value: "cooler", label: "Cooler" },
 ];
+
+function fixtureLabelDedupeKey(s: string): string {
+  return s
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "");
+}
+
+const PRESET_DEDUPE_KEYS = new Set(
+  PRESET_FIXTURE_OPTIONS.flatMap((p) => [
+    fixtureLabelDedupeKey(p.label),
+    fixtureLabelDedupeKey(p.value.replace(/_/g, " ")),
+  ]),
+);
+
+const EXTRA_LABELS_EQUIVALENT_TO_PRESET = new Set(
+  [
+    "Gondola (standard)",
+    "Cooler/Chiller",
+    "Wall Unit",
+  ].map((s) => fixtureLabelDedupeKey(s)),
+);
+
+export function buildShelfTemplateFixtureSelectOptions(
+  extraFixtureLabels: string[] | undefined,
+): Array<{ value: string; label: string }> {
+  const out: Array<{ value: string; label: string }> = [...PRESET_FIXTURE_OPTIONS];
+  const seenValue = new Set(out.map((o) => o.value.toLowerCase()));
+  const seenLabel = new Set(out.map((o) => o.label.toLowerCase()));
+  const seenDedupeKeys = new Set(
+    out.flatMap((o) => [fixtureLabelDedupeKey(o.label), fixtureLabelDedupeKey(o.value)]),
+  );
+
+  for (const raw of extraFixtureLabels ?? []) {
+    const label = raw.trim();
+    if (!label) continue;
+    const lower = label.toLowerCase();
+    const dedupeKey = fixtureLabelDedupeKey(label);
+
+    if (seenLabel.has(lower)) continue;
+    if (seenValue.has(lower)) continue;
+    if (seenDedupeKeys.has(dedupeKey)) continue;
+
+    if (PRESET_FIXTURE_OPTIONS.some((p) => p.value.toLowerCase() === lower)) continue;
+    if (PRESET_DEDUPE_KEYS.has(dedupeKey)) continue;
+    if (EXTRA_LABELS_EQUIVALENT_TO_PRESET.has(dedupeKey)) continue;
+
+    seenLabel.add(lower);
+    seenValue.add(lower);
+    seenDedupeKeys.add(dedupeKey);
+    out.push({ value: label, label });
+  }
+  return out;
+}
 
 export type ShelfTemplateModalValues = {
   name: string;
@@ -44,6 +98,10 @@ interface ShelfTemplateModalProps {
   isSaving?: boolean;
   mode?: "create" | "edit";
   initialValues?: Partial<ShelfTemplateModalValues>;
+  /** Store default fixture names (e.g. from onboarding or Store Defaults). */
+  extraFixtureTypeOptions?: string[];
+  fixtureDepthByType?: Record<string, string | number>;
+  fixtureUnitByType?: Record<string, string>;
 }
 
 export function ShelfTemplateModal({
@@ -53,19 +111,91 @@ export function ShelfTemplateModal({
   isSaving = false,
   mode = "create",
   initialValues,
+  extraFixtureTypeOptions,
+  fixtureDepthByType,
+  fixtureUnitByType,
 }: ShelfTemplateModalProps) {
   const [form, setForm] = useState<ShelfTemplateModalValues>({
     ...EMPTY_VALUES,
     ...initialValues,
   });
 
+  const fixtureOptions = useMemo(
+    () => buildShelfTemplateFixtureSelectOptions(extraFixtureTypeOptions),
+    [extraFixtureTypeOptions],
+  );
+
+  const depthByType = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [rawKey, rawDepth] of Object.entries(fixtureDepthByType ?? {})) {
+      const key = rawKey.trim();
+      if (!key) continue;
+      const depth = String(rawDepth).trim();
+      if (!depth) continue;
+      map.set(key.toLowerCase(), depth);
+      map.set(fixtureLabelDedupeKey(key), depth);
+    }
+    return map;
+  }, [fixtureDepthByType]);
+
+  const unitByType = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [rawKey, rawUnit] of Object.entries(fixtureUnitByType ?? {})) {
+      const key = rawKey.trim();
+      const unit = rawUnit.trim();
+      if (!key || !unit) continue;
+      map.set(key.toLowerCase(), unit);
+      map.set(fixtureLabelDedupeKey(key), unit);
+    }
+    return map;
+  }, [fixtureUnitByType]);
+
+  const resolveDepthForFixtureType = (fixtureTypeValue: string): string | undefined => {
+    const normalizedValue = fixtureTypeValue.trim().toLowerCase();
+    const dedupeValue = fixtureLabelDedupeKey(fixtureTypeValue);
+    const optionLabel =
+      fixtureOptions.find((option) => option.value === fixtureTypeValue)?.label ?? "";
+    const normalizedLabel = optionLabel.toLowerCase();
+    const dedupeLabel = fixtureLabelDedupeKey(optionLabel);
+
+    return (
+      depthByType.get(normalizedValue) ??
+      depthByType.get(dedupeValue) ??
+      depthByType.get(normalizedLabel) ??
+      depthByType.get(dedupeLabel)
+    );
+  };
+
+  const resolveUnitForFixtureType = (fixtureTypeValue: string): string | undefined => {
+    const normalizedValue = fixtureTypeValue.trim().toLowerCase();
+    const dedupeValue = fixtureLabelDedupeKey(fixtureTypeValue);
+    const optionLabel =
+      fixtureOptions.find((option) => option.value === fixtureTypeValue)?.label ?? "";
+    const normalizedLabel = optionLabel.toLowerCase();
+    const dedupeLabel = fixtureLabelDedupeKey(optionLabel);
+
+    return (
+      unitByType.get(normalizedValue) ??
+      unitByType.get(dedupeValue) ??
+      unitByType.get(normalizedLabel) ??
+      unitByType.get(dedupeLabel)
+    );
+  };
+
+  const selectedFixtureUnit = resolveUnitForFixtureType(form.fixtureType);
+
   useEffect(() => {
     if (!isOpen) return;
-    setForm({
+    const merged: ShelfTemplateModalValues = {
       ...EMPTY_VALUES,
       ...initialValues,
-    });
-  }, [isOpen, initialValues]);
+    };
+    const allowed = new Set(fixtureOptions.map((o) => o.value));
+    if (!allowed.has(merged.fixtureType)) {
+      merged.fixtureType = fixtureOptions[0]?.value ?? "gondola";
+    }
+    setForm(merged);
+  }, [isOpen, initialValues, fixtureOptions]);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl" showCloseButton>
@@ -76,7 +206,9 @@ export function ShelfTemplateModal({
               {mode === "create" ? "New Shelf Template" : "Edit Shelf Template"}
             </h3>
             <p className="text-xs text-muted-foreground mt-1">
-              Templates are mocked and saved per-store (frontend-only).
+              Five standard fixture types are always listed. Your store’s custom fixture names
+              (from onboarding or Store Defaults) are added below—names that duplicate a standard
+              type are hidden so the list stays short.
             </p>
           </div>
         </div>
@@ -110,15 +242,18 @@ export function ShelfTemplateModal({
               <Select
                 id="tpl-fixture"
                 value={form.fixtureType}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const selectedFixtureType = e.target.value;
+                  const depthFromFixture = resolveDepthForFixtureType(selectedFixtureType);
                   setForm((f) => ({
                     ...f,
-                    fixtureType: e.target.value as ShelfTemplateFixtureType,
-                  }))
-                }
+                    fixtureType: selectedFixtureType,
+                    depth: depthFromFixture ?? f.depth,
+                  }));
+                }}
               >
-                {FIXTURE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
+                {fixtureOptions.map((o) => (
+                  <option key={`${o.value}-${o.label}`} value={o.value}>
                     {o.label}
                   </option>
                 ))}
@@ -148,7 +283,12 @@ export function ShelfTemplateModal({
               />
             </div>
             <div className="grid gap-2">
-              <Label>Dimensions (W × H × D)</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Dimensions (W × H × D)</Label>
+                {selectedFixtureUnit ? (
+                  <span className="text-xs text-muted-foreground">Unit: {selectedFixtureUnit}</span>
+                ) : null}
+              </div>
               <div className="flex items-center gap-1.5">
                 <Input
                   value={form.width}
@@ -193,4 +333,3 @@ export function ShelfTemplateModal({
     </Modal>
   );
 }
-

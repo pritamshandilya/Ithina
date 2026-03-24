@@ -164,6 +164,16 @@ export interface Store {
    * Store dimension system
    */
   default_dimensions?: string;
+
+  /**
+   * Default compliance rule-set identifier for this store.
+   */
+  default_compliance_rule_set_id?: string | null;
+
+  /**
+   * Backend source of truth for active status.
+   */
+  is_active?: boolean;
 }
 
 /**

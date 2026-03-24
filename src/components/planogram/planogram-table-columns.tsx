@@ -1,7 +1,7 @@
 import type React from "react";
 import { format } from "date-fns";
 import type { DataTableColumn } from "@/components/ui/data-table";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { Button } from "@/components/ui/button";

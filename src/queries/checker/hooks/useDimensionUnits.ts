@@ -1,16 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
-import { fetchDimensionUnits } from "@/queries/shared/dimensions";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 
-export const dimensionKeys = {
-  all: ["dimensions"] as const,
-  units: () => [...dimensionKeys.all, "units"] as const,
-};
+const STORE_DIMENSION_UNITS: StoreDimensionUnit[] = ["mm", "cm", "inch"];
 
 export function useDimensionUnits() {
-  return useQuery({
-    queryKey: dimensionKeys.units(),
-    queryFn: fetchDimensionUnits,
-  });
+  const data = useMemo(() => [...STORE_DIMENSION_UNITS] as StoreDimensionUnit[], []);
+  return { data };
 }
 

@@ -19,9 +19,12 @@ export {
 } from "./useDraftAudits";
 export { useStores, storesKeys } from "./useStores";
 export { useCreateShelf } from "./useCreateShelf";
+export { useCreateFixture } from "./useCreateFixture";
+export { useStoreFixtures } from "./useStoreFixtures";
 export { useMakerAudits, makerAuditsKeys } from "./useMakerAudits";
 export { useAdhocAnalyses, adhocAnalysesKeys } from "./useAdhocAnalyses";
 export { useComplianceRuleSets, complianceRuleSetsKeys } from "./useComplianceRuleSets";
+export { useCreateComplianceRuleSet } from "./useCreateComplianceRuleSet";
 export { useRulesByRuleSetId, rulesByRuleSetIdKeys } from "./useRulesByRuleSetId";
 export { usePlanogramList, planogramListKeys } from "./usePlanogramList";
 export { usePlanogramById } from "./usePlanogramById";

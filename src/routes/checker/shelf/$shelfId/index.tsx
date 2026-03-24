@@ -7,7 +7,7 @@
  * - Planogram association status
  * - Actions: Edit, Run Analysis, Run Adhoc
  */
-import { createFileRoute, useNavigate, useLocation, useParams } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Edit3, Play, Scan, Settings, Info, Save, X } from "lucide-react";
 import { useState } from "react";
 
@@ -34,7 +34,6 @@ export function ShelfDetailPage() {
   const shelfId = params.shelfId as string;
   const storeId = params.storeId as string | undefined;
   
-  const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
   const updateShelfMutation = useUpdateShelf();
@@ -53,13 +52,28 @@ export function ShelfDetailPage() {
 
   const isAdmin = location.pathname.includes("/admin/");
 
-  const backToShelvesPath = isAdmin ? `/admin/${storeId}/shelf/` : "/checker/shelf/";
+  const backToShelvesPath =
+    isAdmin && storeId ? `/admin/${storeId}/shelf/` : "/checker/shelf/";
   
   const { data: shelf, isLoading, error } = useShelf(shelfId);
+
+  const backButton = (
+    <Button variant="ghost" size="icon" className="shrink-0" asChild>
+      <Link to={backToShelvesPath as never} aria-label="Back to shelves">
+        <ArrowLeft className="size-4" aria-hidden />
+      </Link>
+    </Button>
+  );
 
   if (isLoading) {
     return (
       <MainLayout>
+        <div className="border-b border-border px-3 py-3 sm:px-4 lg:px-6">
+          <div className="mx-auto flex max-w-screen-2xl items-center gap-2">
+            {backButton}
+            <Skeleton className="h-9 flex-1 max-w-md" />
+          </div>
+        </div>
         <div className="p-6 space-y-6">
           <Skeleton className="h-12 w-1/3" />
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -75,17 +89,21 @@ export function ShelfDetailPage() {
   if (error || !shelf) {
     return (
       <MainLayout>
+        <div className="border-b border-border px-3 py-3 sm:px-4 lg:px-6">
+          <div className="mx-auto flex max-w-screen-2xl items-center gap-2">
+            {backButton}
+            <span className="text-sm font-medium text-muted-foreground">Shelf detail</span>
+          </div>
+        </div>
         <div className="flex flex-col items-center justify-center p-12 text-center h-[60vh]">
           <Info className="size-12 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold">Shelf not found</h2>
           <p className="text-muted-foreground mt-2">The shelf you're looking for doesn't exist or you don't have access.</p>
-          <Button asChild className="mt-6" variant="outline">
-          <Button asChild className="mt-6" variant="outline" onClick={() => navigate({ to: backToShelvesPath as any })}>
-            <span>
-              <ArrowLeft className="size-4 mr-2" />
-              Back to Shelves
-            </span>
-          </Button>
+          <Button asChild className="mt-6 gap-2" variant="outline">
+            <Link to={backToShelvesPath as never}>
+              <ArrowLeft className="size-4" aria-hidden />
+              Back to shelves
+            </Link>
           </Button>
         </div>
       </MainLayout>
@@ -210,6 +228,7 @@ export function ShelfDetailPage() {
     <MainLayout
       pageHeader={
         <PageHeader
+          leading={backButton}
           title={effectiveShelfName}
           description={`Shelf Id: ${effectiveShelfCode}`}
         >

@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useShelves, useComplianceRuleSets, usePlanogramList } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";

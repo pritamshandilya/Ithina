@@ -5,34 +5,17 @@
  * Matches the backend ShelfCreateRequest / ShelfUpdateRequest DTOs.
  */
 
-export interface ShelfFixtureDimensionsPayload {
-  width: number;
-  height: number;
-  depth: number;
-}
-
-export interface ShelfFixtureLocationPayload {
-  section: string;
-  aisle: string;
-  zone: string;
-}
-
-export interface ShelfFixturePayload {
-  type: string;
-  dimensions: ShelfFixtureDimensionsPayload;
-  dimension_unit: string;
-  physical_location: ShelfFixtureLocationPayload;
-}
-
 /**
- * Payload for POST /shelves
- * Either fixture_id (existing fixture) or fixture (new fixture) must be provided.
+ * Payload for POST /shelves.
+ * Backend now requires an existing fixture_id plus shelf measurements.
  */
 export interface CreateShelfPayload {
   shelf_id: string;
   name: string;
-  fixture_id?: string;
-  fixture?: ShelfFixturePayload;
+  fixture_id: string;
+  width: number;
+  height: number;
+  vertical_position: number;
 }
 
 export interface ShelfFixtureDimensionsUpdateRequest {

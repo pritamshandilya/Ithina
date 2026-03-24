@@ -47,9 +47,11 @@ interface OrgStoreApiModel {
   name: string;
   address: string;
   region?: string;
+  is_active?: boolean;
   status?: "Active" | "Inactive" | "active" | "inactive";
   currency: string;
   default_dimension_unit?: string;
+  default_compliance_rule_set_id?: string | null;
   maker_ids?: string[];
   checker_ids?: string[];
   created_at: string;
@@ -58,7 +60,17 @@ interface OrgStoreApiModel {
 
 function mapOrgStore(store: OrgStoreApiModel): Store {
   const normalizedStatus =
-    store.status === "inactive" || store.status === "Inactive" ? "Inactive" : "Active";
+    typeof store.is_active === "boolean"
+      ? store.is_active
+        ? "Active"
+        : "Inactive"
+      : store.status === "inactive" || store.status === "Inactive"
+        ? "Inactive"
+        : "Active";
+  const isActive =
+    typeof store.is_active === "boolean"
+      ? store.is_active
+      : normalizedStatus === "Active";
   return {
     id: store.id,
     name: store.name,
@@ -66,6 +78,8 @@ function mapOrgStore(store: OrgStoreApiModel): Store {
     region: store.region,
     currency: store.currency,
     default_dimensions: store.default_dimension_unit,
+    default_compliance_rule_set_id: store.default_compliance_rule_set_id ?? null,
+    is_active: isActive,
     maker_ids: store.maker_ids,
     user_ids: store.checker_ids,
     created: store.created_at,
@@ -80,6 +94,13 @@ export async function fetchOrganization(): Promise<OrganizationInfo> {
 export async function fetchOrgStores(): Promise<Store[]> {
   const stores = await apiClient.get<OrgStoreApiModel[]>("/stores");
   return stores.map(mapOrgStore);
+}
+
+export async function fetchScopedStore(storeId: string): Promise<Store> {
+  const store = await apiClient.get<OrgStoreApiModel>("/store", undefined, {
+    headers: { "X-Store-Id": storeId },
+  });
+  return mapOrgStore(store);
 }
 
 export async function fetchStoreById(storeId: string): Promise<Store> {
@@ -135,15 +156,16 @@ export async function createStore(data: {
   name: string;
   address: string;
   region: string;
-  status: "Active" | "Inactive";
   currency: string;
   default_dimensions: string;
+  // Store onboarding creates new stores as active by default.
+  is_active?: boolean;
 }): Promise<Store> {
   const payload = {
     name: data.name,
     address: data.address,
     region: data.region,
-    status: data.status,
+    is_active: data.is_active ?? true,
     currency: data.currency,
     default_dimension_unit: data.default_dimensions,
   };
@@ -172,7 +194,7 @@ export async function updateStore(
     name: data.name,
     address: data.address,
     region: data.region,
-    status: data.status,
+    is_active: data.status === "Active",
     currency: data.currency,
     default_dimension_unit: data.default_dimensions,
   };
@@ -180,6 +202,26 @@ export async function updateStore(
   const store = await apiClient.put<OrgStoreApiModel>("/store", payload, {
     headers: { "X-Store-Id": storeId },
   });
+  return mapOrgStore(store);
+}
+
+export async function updateStoreComplianceSettings(
+  storeId: string,
+  data: {
+    default_compliance_rule_set_id: string | null;
+  },
+): Promise<Store> {
+  const payload = {
+    default_compliance_rule_set_id: data.default_compliance_rule_set_id,
+  };
+
+  const store = await apiClient.put<OrgStoreApiModel>(
+    "/store/compliance-settings",
+    payload,
+    {
+      headers: { "X-Store-Id": storeId },
+    },
+  );
   return mapOrgStore(store);
 }
 
@@ -215,7 +257,7 @@ export async function updateUser(
   userId: string,
   payload: Partial<UpsertUserPayload>,
 ): Promise<AuthSessionUser> {
-  const user = await apiClient.patch<OrgUserApiModel>(`/users/${userId}`, payload);
+  const user = await apiClient.put<OrgUserApiModel>(`/users/${userId}`, payload);
   return mapOrgUser(user);
 }
 

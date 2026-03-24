@@ -13,7 +13,7 @@ import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useRulesByRuleSetId } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/queries/checker/api/knowledge-center";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { ComplianceRule, RuleSeverity } from "@/types/checker";
 
 export interface SendForApprovalModalProps {
@@ -37,16 +37,10 @@ export function SendForApprovalModal({
 }: SendForApprovalModalProps) {
   const [notes, setNotes] = useState("");
 
-  const ruleSetId = useMemo(() => {
-    const id =
-      selectedRuleSet?.id ??
-      (selectedRuleSetName === "Default Rules" ? "default-rules" : null);
-    return id;
-  }, [selectedRuleSet?.id, selectedRuleSetName]);
+  const ruleSetId = useMemo(() => selectedRuleSet?.id ?? null, [selectedRuleSet?.id]);
 
-  const { data: rules, isLoading: isRulesLoading } = useRulesByRuleSetId(
-    isOpen ? ruleSetId : null,
-  );
+  const { data: rules, isLoading: isRulesLoading, isError: isRulesError } =
+    useRulesByRuleSetId(isOpen ? ruleSetId : null);
   const resolvedRules = rules ?? [];
   const resolvedRulesCount = selectedRuleSet?.rulesCount ?? resolvedRules.length;
   const resolvedEnabledCount =
@@ -54,8 +48,7 @@ export function SendForApprovalModal({
     resolvedRules.filter((rule) => rule.enabled !== false).length;
   const resolvedRuleSetName = selectedRuleSet?.name ?? selectedRuleSetName ?? null;
   const resolvedRuleSetDescription = selectedRuleSet?.description;
-  const isDefaultSet =
-    selectedRuleSet?.isDefault ?? ruleSetId === "default-rules";
+  const isDefaultSet = selectedRuleSet?.isDefault ?? false;
 
   const handleSubmit = () => {
     if (isLoading) return;
@@ -213,6 +206,11 @@ export function SendForApprovalModal({
                       <Skeleton className="h-24 w-full rounded-lg" />
                       <Skeleton className="h-24 w-full rounded-lg" />
                     </div>
+                  ) : isRulesError ? (
+                    <p className="text-sm text-destructive py-2">
+                      Could not load rules for this set. It may have been removed or the id is
+                      invalid.
+                    </p>
                   ) : resolvedRules.length > 0 ? (
                     resolvedRules.map((rule) => <RuleCard key={rule.ruleId} rule={rule} />)
                   ) : (

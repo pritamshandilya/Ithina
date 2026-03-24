@@ -1,10 +1,13 @@
-export type ShelfTemplateFixtureType =
+/** Canonical preset keys; store-specific labels (e.g. "Hangers") are also allowed. */
+export type ShelfTemplateFixturePreset =
   | "gondola"
   | "wall_shelving"
   | "end_cap"
   | "freezer"
   | "cooler";
 
+/** Stored on templates and sent to shelf/fixture flows; may be a preset or a custom store label. */
+export type ShelfTemplateFixtureType = string;
 export interface ShelfTemplate {
   id: string;
   name: string;

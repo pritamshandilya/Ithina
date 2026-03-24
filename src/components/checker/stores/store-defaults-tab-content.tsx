@@ -8,13 +8,15 @@ import { Input } from "@/components/ui/input";
 import type { ShelfTemplate } from "@/types/shelf-template";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { cn } from "@/lib/utils";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { StoreFixtureApiModel } from "@/queries/checker/api/fixtures";
 
 type DefaultsTab = "fixtures" | "templates" | "rules" | "units";
 
 type StoreTemplateForm = {
   name: string;
   description: string;
-  fixtureType: "gondola" | "wall_shelving" | "end_cap" | "freezer" | "cooler";
+  fixtureType: string;
   zone: string;
   section: string;
   width: string;
@@ -24,16 +26,27 @@ type StoreTemplateForm = {
 
 interface StoreDefaultsTabContentProps {
   canEdit: boolean;
+  canEditFixtureTypes?: boolean;
+  onOpenAddFixtureModal?: () => void;
+  isCreatingFixture?: boolean;
+  /** Admin and maker: create rule sets and choose default; checker stays read-only. */
+  canManageComplianceRuleSets: boolean;
+  onOpenCreateRuleSetModal: () => void;
+  onSaveComplianceDefault: () => void | Promise<void>;
+  isSavingComplianceDefault: boolean;
   activeDefaultsTab: DefaultsTab;
   setActiveDefaultsTab: Dispatch<SetStateAction<DefaultsTab>>;
   fixtureTypes: string[];
-  setFixtureTypes: Dispatch<SetStateAction<string[]>>;
+  fixtures: StoreFixtureApiModel[];
+  setFixtureTypes: (value: SetStateAction<string[]>) => void;
   newFixture: string;
   setNewFixture: Dispatch<SetStateAction<string>>;
-  complianceRules: string[];
-  setComplianceRules: Dispatch<SetStateAction<string[]>>;
-  newRule: string;
-  setNewRule: Dispatch<SetStateAction<string>>;
+  onEditFixture?: (fixture: StoreFixtureApiModel) => void;
+  onDeleteFixture?: (fixture: StoreFixtureApiModel) => void;
+  isFixtureLocked?: (fixture: StoreFixtureApiModel) => boolean;
+  complianceRuleSets: ComplianceRuleSetSummary[];
+  defaultComplianceRuleSetId: string;
+  setDefaultComplianceRuleSetId: Dispatch<SetStateAction<string>>;
   shelfTemplates: ShelfTemplate[];
   shelfTemplatesLoading: boolean;
   deleteTemplate: (id: string) => void;
@@ -62,16 +75,26 @@ interface StoreDefaultsTabContentProps {
 
 export function StoreDefaultsTabContent({
   canEdit,
+  canEditFixtureTypes = false,
+  onOpenAddFixtureModal,
+  isCreatingFixture = false,
+  canManageComplianceRuleSets,
+  onOpenCreateRuleSetModal,
+  onSaveComplianceDefault,
+  isSavingComplianceDefault,
   activeDefaultsTab,
   setActiveDefaultsTab,
   fixtureTypes,
+  fixtures,
   setFixtureTypes,
   newFixture,
   setNewFixture,
-  complianceRules,
-  setComplianceRules,
-  newRule,
-  setNewRule,
+  onEditFixture,
+  onDeleteFixture,
+  isFixtureLocked,
+  complianceRuleSets,
+  defaultComplianceRuleSetId,
+  setDefaultComplianceRuleSetId,
   shelfTemplates,
   shelfTemplatesLoading,
   deleteTemplate,
@@ -131,7 +154,19 @@ export function StoreDefaultsTabContent({
                     <LayoutPanelLeft className="size-4 text-accent" />
                     <p className="text-sm font-semibold text-foreground">Fixture Types</p>
                   </div>
-                  {canEdit && (
+                  {canEdit && onOpenAddFixtureModal ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={onOpenAddFixtureModal}
+                      disabled={isCreatingFixture}
+                    >
+                      <Plus className="size-3.5" />
+                      {isCreatingFixture ? "Adding..." : "Add fixture"}
+                    </Button>
+                  ) : null}
+                  {canEdit && canEditFixtureTypes && (
                     <div className="flex items-center gap-2">
                       <Input
                         value={newFixture}
@@ -160,46 +195,65 @@ export function StoreDefaultsTabContent({
                     <thead className="bg-muted/40 sticky top-0">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Fixture Type</th>
-                        {canEdit && <th className="px-3 py-2 w-12" />}
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Dimensions</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Location</th>
+                        {canEdit && <th className="px-3 py-2 w-24" />}
                       </tr>
                     </thead>
                     <tbody>
-                      {fixtureTypes.map((item, idx) => (
-                        <tr key={`${item}-${idx}`} className="border-t border-border/60">
-                          <td className="px-3 py-2">
-                            {canEdit ? (
-                              <Input
-                                value={item}
-                                onChange={(e) =>
-                                  setFixtureTypes((prev) =>
-                                    prev.map((v, i) => (i === idx ? e.target.value : v)),
-                                  )
-                                }
-                                className="h-8 text-xs"
-                              />
-                            ) : (
-                              item
-                            )}
-                          </td>
-                          {canEdit && (
-                            <td className="px-2 py-2">
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  setFixtureTypes((prev) => prev.filter((_, i) => i !== idx))
-                                }
-                              >
-                                <Trash2 className="size-3.5 text-destructive" />
-                              </Button>
+                      {fixtures.map((fixture) => {
+                        const isLocked = isFixtureLocked?.(fixture) ?? false;
+                        return (
+                          <tr key={fixture.id} className="border-t border-border/60">
+                            <td className="px-3 py-2">{fixture.type}</td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {fixture.width}×{fixture.height}×{fixture.depth} {fixture.dimension_unit}
                             </td>
-                          )}
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {fixture.section} / {fixture.aisle} / {fixture.zone}
+                            </td>
+                            {canEdit && (
+                              <td className="px-2 py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    onClick={() => onEditFixture?.(fixture)}
+                                    disabled={isLocked}
+                                  >
+                                    <Edit3 className="size-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    onClick={() => onDeleteFixture?.(fixture)}
+                                    disabled={isLocked}
+                                  >
+                                    <Trash2 className="size-3.5 text-destructive" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      {fixtures.length === 0 && (
+                        <tr className="border-t border-border/60">
+                          <td className="px-3 py-2 text-muted-foreground" colSpan={canEdit ? 4 : 3}>
+                            No fixtures found for this store.
+                          </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
+                {!canEditFixtureTypes && (
+                  <p className="text-xs text-muted-foreground">
+                    Fixture types are sourced from backend fixtures for this store.
+                  </p>
+                )}
               </section>
             )}
 
@@ -270,77 +324,77 @@ export function StoreDefaultsTabContent({
 
             {activeDefaultsTab === "rules" && (
               <section className="xl:col-span-2 rounded-xl border border-border bg-background/40 p-4 space-y-3">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
                     <ClipboardList className="size-4 text-accent" />
-                    <p className="text-sm font-semibold text-foreground">Compliance Rules</p>
+                    <p className="text-sm font-semibold text-foreground">Compliance Rule Sets</p>
                   </div>
-                  {canEdit && (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={newRule}
-                        onChange={(e) => setNewRule(e.target.value)}
-                        placeholder="Add rule"
-                        className="h-8 w-48 text-xs"
-                      />
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canManageComplianceRuleSets && (
                       <Button
                         type="button"
                         size="sm"
-                        className="h-8 px-2"
-                        onClick={() => {
-                          const value = newRule.trim();
-                          if (!value) return;
-                          setComplianceRules((prev) => [...prev, value]);
-                          setNewRule("");
-                        }}
+                        className="h-8 gap-1"
+                        onClick={onOpenCreateRuleSetModal}
                       >
                         <Plus className="size-3.5" />
+                        New rule set
                       </Button>
-                    </div>
-                  )}
+                    )}
+                    {canManageComplianceRuleSets && !canEdit && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-8"
+                        onClick={() => void onSaveComplianceDefault()}
+                        disabled={isSavingComplianceDefault}
+                      >
+                        {isSavingComplianceDefault ? "Saving…" : "Save default"}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Default rule set for this store</p>
+                  <select
+                    value={defaultComplianceRuleSetId}
+                    onChange={(e) => setDefaultComplianceRuleSetId(e.target.value)}
+                    className="h-10 w-full rounded-md border border-border bg-background/50 px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
+                    disabled={!canEdit && !canManageComplianceRuleSets}
+                  >
+                    <option value="">No default rule set</option>
+                    {complianceRuleSets.map((set) => (
+                      <option key={set.id} value={set.id}>
+                        {set.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="max-h-[360px] overflow-y-auto rounded-lg border border-border">
                   <table className="w-full text-sm">
                     <thead className="bg-muted/40 sticky top-0">
                       <tr>
-                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rule</th>
-                        {canEdit && <th className="px-3 py-2 w-12" />}
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rule set</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Rules</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Enabled</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {complianceRules.map((rule, idx) => (
-                        <tr key={`${rule}-${idx}`} className="border-t border-border/60">
-                          <td className="px-3 py-2">
-                            {canEdit ? (
-                              <Input
-                                value={rule}
-                                onChange={(e) =>
-                                  setComplianceRules((prev) =>
-                                    prev.map((v, i) => (i === idx ? e.target.value : v)),
-                                  )
-                                }
-                                className="h-8 text-xs"
-                              />
-                            ) : (
-                              rule
-                            )}
-                          </td>
-                          {canEdit && (
-                            <td className="px-2 py-2">
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  setComplianceRules((prev) => prev.filter((_, i) => i !== idx))
-                                }
-                              >
-                                <Trash2 className="size-3.5 text-destructive" />
-                              </Button>
-                            </td>
-                          )}
+                      {complianceRuleSets.map((set) => (
+                        <tr key={set.id} className="border-t border-border/60">
+                          <td className="px-3 py-2">{set.name}</td>
+                          <td className="px-3 py-2 tabular-nums">{set.rulesCount}</td>
+                          <td className="px-3 py-2 tabular-nums">{set.enabledCount}</td>
                         </tr>
                       ))}
+                      {complianceRuleSets.length === 0 && (
+                        <tr className="border-t border-border/60">
+                          <td className="px-3 py-2 text-muted-foreground" colSpan={3}>
+                            No compliance rule sets found for this store.
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -391,6 +445,7 @@ export function StoreDefaultsTabContent({
             isSaving={isTemplateSaving}
             mode={editingTemplateId ? "edit" : "create"}
             initialValues={templateInitialValues}
+            extraFixtureTypeOptions={fixtureTypes}
           />
         </CardContent>
       </Card>

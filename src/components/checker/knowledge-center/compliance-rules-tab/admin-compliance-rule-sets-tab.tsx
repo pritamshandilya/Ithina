@@ -63,7 +63,7 @@ export function AdminComplianceRuleSetsTabContent() {
 
   useEffect(() => {
     if (!selectedStore) return;
-    setDefaultRuleSetId((selectedStore as any).default_compliance_rule_set_id ?? "");
+    setDefaultRuleSetId(selectedStore.default_compliance_rule_set_id ?? "");
   }, [selectedStore]);
 
   const filteredSets = useMemo(() => {

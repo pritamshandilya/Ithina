@@ -1,26 +1,16 @@
-/**
- * Planogram API – fetch planograms from third party (mocked)
- * In production, replace with real third-party API calls
- */
-
-import { PLANOGRAM_POC_001, PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
-import type { PlanogramArrangement, PlanogramPayload, PlanogramSummary } from "@/types/planogram";
+import { getAnalysisApiClient } from "@/queries/analysis";
+import type {
+  PlanogramArrangement,
+  PlanogramPayload,
+  PlanogramSummary,
+} from "@/types/planogram";
 import type { Shelf } from "@/types/maker";
-
-const PLANOGRAMS: PlanogramPayload[] = [PLANOGRAM_POC_001, PLANOGRAM_POC_002];
-
-/** In-memory store for planogram-created shelves (wireframe; replace with API in production) */
-const createdPlanogramShelves: Shelf[] = [];
-
-function delay(ms = 300): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * Get shelves created via planogram visual builder (for merging with assigned shelves)
  */
 export function getCreatedPlanogramShelves(): Shelf[] {
-  return [...createdPlanogramShelves];
+  return getAnalysisApiClient().getCreatedPlanogramShelves();
 }
 
 /**
@@ -30,33 +20,7 @@ export function getCreatedPlanogramShelves(): Shelf[] {
  * @returns Promise<PlanogramSummary[]>
  */
 export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSummary[]> {
-  await delay(300);
-
-  return PLANOGRAMS.map((p) => {
-    const { planogram, metadata } = p;
-    const fixture = planogram.fixture;
-    const loc = planogram.physicalLocation;
-    const productCount =
-      metadata?.totalSKUs ??
-      fixture.shelves.reduce((sum, s) => sum + s.products.length, 0);
-    return {
-      id: planogram.id,
-      name: planogram.name,
-      shelfCount: fixture.shelves.length,
-      productCount,
-      dimensions: `${fixture.width}×${fixture.height} ${planogram.storeConfig?.units ?? "mm"}`,
-      location: planogram.location ?? metadata?.location,
-      zone: loc?.zone,
-      aisle: loc?.aisle,
-      bay: loc?.bay,
-      section: loc?.section,
-      fixtureType: fixture.type,
-      fixtureId: fixture.fixtureId,
-      width: fixture.width,
-      height: fixture.height,
-      depth: fixture.depth,
-    };
-  });
+  return getAnalysisApiClient().fetchPlanogramList(_storeId);
 }
 
 /**
@@ -66,10 +30,7 @@ export async function fetchPlanogramList(_storeId?: string): Promise<PlanogramSu
  * @returns Promise<PlanogramPayload | null>
  */
 export async function fetchPlanogramById(id: string): Promise<PlanogramPayload | null> {
-  await delay(200);
-
-  const found = PLANOGRAMS.find((p) => p.planogram.id === id);
-  return found ?? null;
+  return getAnalysisApiClient().fetchPlanogramById(id);
 }
 
 /**
@@ -87,26 +48,13 @@ export async function saveShelfArrangement(
   arrangement: PlanogramArrangement,
   _storeId: string
 ): Promise<Shelf> {
-  await delay(500);
-
-  const shelf: Shelf = {
-    id: `shelf-planogram-${Date.now()}`,
-    aisleNumber: 1,
-    bayNumber: 1,
+  return getAnalysisApiClient().saveShelfArrangement(
     shelfName,
-    description: `Planogram: ${planogramId}`,
-    status: "never-audited",
-    assignedTo: "user-001",
     planogramId,
     arrangement,
-  };
-
-  createdPlanogramShelves.push(shelf);
-  return shelf;
+    _storeId,
+  );
 }
-
-/** Overlay for planogram assignments to existing shelves (mock wireframe) */
-const assignPlanogramOverlays = new Map<string, { planogramId: string; arrangement: PlanogramArrangement }>();
 
 /**
  * Assign a planogram to an existing shelf (for shelves created without a planogram).
@@ -121,26 +69,15 @@ export async function assignPlanogramToShelf(
   planogramId: string,
   arrangement: PlanogramArrangement
 ): Promise<Shelf | null> {
-  await delay(400);
-
-  assignPlanogramOverlays.set(shelfId, { planogramId, arrangement });
-
-  // Also update in-memory shelves if present
-  const idx = createdPlanogramShelves.findIndex((s) => s.id === shelfId);
-  if (idx >= 0) {
-    createdPlanogramShelves[idx] = {
-      ...createdPlanogramShelves[idx],
-      planogramId,
-      arrangement,
-    };
-    return createdPlanogramShelves[idx];
-  }
-
-  return { id: shelfId, planogramId, arrangement } as Shelf;
+  return getAnalysisApiClient().assignPlanogramToShelf(
+    shelfId,
+    planogramId,
+    arrangement,
+  );
 }
 
 export function getAssignPlanogramOverlays(): Map<string, { planogramId: string; arrangement: PlanogramArrangement }> {
-  return assignPlanogramOverlays;
+  return getAnalysisApiClient().getAssignPlanogramOverlays();
 }
 
 /**
@@ -154,14 +91,5 @@ export async function updateShelfArrangement(
   shelfId: string,
   arrangement: PlanogramArrangement
 ): Promise<Shelf | null> {
-  await delay(400);
-
-  const idx = createdPlanogramShelves.findIndex((s) => s.id === shelfId);
-  if (idx < 0) return null;
-
-  createdPlanogramShelves[idx] = {
-    ...createdPlanogramShelves[idx],
-    arrangement,
-  };
-  return createdPlanogramShelves[idx];
+  return getAnalysisApiClient().updateShelfArrangement(shelfId, arrangement);
 }

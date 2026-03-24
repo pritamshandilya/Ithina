@@ -9,7 +9,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, Pencil, Play, Archive, Copy } from "lucide-react";
 
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  DataTable,
+  type DataTableCell,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import {
@@ -358,11 +362,17 @@ export function RuleVersionsTab() {
         headerSort: false,
         headerFilter: false,
         formatter: () => actionsCellHtml(),
-        cellClick: (e: MouseEvent, cell: { getData: () => VersionDisplayRow }) => {
-          const target = (e as unknown as { target: HTMLElement }).target as HTMLElement;
+        cellClick: (e: unknown, cell: DataTableCell<VersionDisplayRow>) => {
+          const target =
+            e && typeof e === "object" && "target" in e && e.target instanceof HTMLElement
+              ? e.target
+              : null;
+          if (!target) return;
           const btn = target.closest?.("[data-action]");
           if (!btn) return;
-          (e as unknown as { stopPropagation?: () => void }).stopPropagation?.();
+          if (e && typeof e === "object" && "stopPropagation" in e && typeof e.stopPropagation === "function") {
+            e.stopPropagation();
+          }
           const action = btn.getAttribute("data-action");
           const row = cell.getData();
           if (action === "open-menu") {

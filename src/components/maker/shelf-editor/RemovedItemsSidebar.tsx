@@ -10,8 +10,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 interface RemovedItemsSidebarProps {
-    items: any[];
-    shelves: any[];
+    items: Array<{
+        sku: string;
+        name: string;
+        brand?: string;
+        facings: number;
+        depth: number;
+    }>;
+    shelves: Array<{
+        shelfNumber: number;
+        name: string;
+    }>;
     onRestore: (removedIdx: number, targetLevelIdx: number) => void;
 }
 

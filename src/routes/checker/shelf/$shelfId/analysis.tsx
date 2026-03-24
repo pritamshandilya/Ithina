@@ -69,7 +69,7 @@ function deepCopyShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
 export function PlanogramAnalysisViewPage() {
   const { shelfId } = Route.useParams() as { shelfId: string };
   const location = useLocation();
-  const params = useParams({ strict: false }) as any;
+  const params = useParams({ strict: false }) as { storeId?: string };
   const { toast } = useToast();
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
@@ -621,7 +621,7 @@ export function PlanogramAnalysisViewPage() {
         <div className="mx-auto max-w-screen-2xl space-y-4">
           <header className="flex flex-wrap items-center gap-4">
             <Button variant="ghost" size="icon" asChild>
-              <Link to={detailPath as any}>
+              <Link to={detailPath as never}>
                 <ArrowLeft className="size-4" aria-hidden />
                 <span className="sr-only">Back to Details</span>
               </Link>

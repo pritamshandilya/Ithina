@@ -1,7 +1,17 @@
 import { cn } from "@/lib/utils";
 
 interface ProductDataTableProps {
-    products: any[];
+    products: Array<{
+        sku: string;
+        name: string;
+        brand?: string;
+        category: string;
+        shelfNumber?: number;
+        facings: number;
+        depth: number;
+        currentStock: number;
+        optimalStock: number;
+    }>;
 }
 
 export function ProductDataTable({ products }: ProductDataTableProps) {

@@ -58,12 +58,14 @@ export function CheckerAuditReviewPage() {
   const [rejectReason, setRejectReason] = useState("");
 
   const handleAuditClick = useCallback(
-    (auditId: string, event?: any) => {
+    (auditId: string, event?: unknown) => {
       // If we are currently showing a modal, don't navigate
       if (auditToApprove || auditToReject || auditToDelete) return;
 
       // If the click originated from an action button, don't trigger review navigation
-      if (event?.target?.closest?.("button")) return;
+      const target =
+        event && typeof event === "object" && "target" in event ? event.target : null;
+      if (target instanceof Element && target.closest("button")) return;
 
       navigate({ to: "/checker/review/$auditId", params: { auditId } });
     },

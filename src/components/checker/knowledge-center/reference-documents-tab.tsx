@@ -5,23 +5,16 @@
  * Phase 1.5 UX: show the document-to-rules workflow clearly.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle,
-  Bot,
-  CheckCircle2,
-  ChevronDown,
-  Clock3,
   FileText,
-  Link2,
-  Pencil,
   Search,
   Upload,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Modal } from "@/components/ui/modal";
 import {
   useComplianceRules,
   useReferenceDocuments,
@@ -30,186 +23,24 @@ import {
 } from "@/queries/checker";
 import { useToast } from "@/hooks/use-toast";
 import { mockCheckerUser } from "@/lib/api/mock-data";
-import { format } from "date-fns";
 import type { ReferenceDocument } from "@/types/checker";
-
-interface RuleOption {
-  ruleId: string;
-  ruleName: string;
-}
-
-type ExtractionStatus = "uploaded" | "processing" | "ready" | "imported" | "failed";
-
-const FLOW_STEPS = [
-  { title: "Upload Policy", desc: "Add your store policy PDF." },
-  { title: "AI Extracts", desc: "Generate candidate rules from policy text." },
-  { title: "Review", desc: "Validate and refine extracted candidates." },
-  { title: "Create Drafts", desc: "Promote accepted candidates to drafts." },
-] as const;
-
-function getStatusUi(status: ExtractionStatus): { classes: string; label: string } {
-  const map: Record<ExtractionStatus, { classes: string; label: string }> = {
-    uploaded: {
-      classes: "bg-muted/70 text-muted-foreground border-border",
-      label: "Uploaded",
-    },
-    processing: {
-      classes: "bg-accent/10 text-accent border-accent/30",
-      label: "Processing",
-    },
-    ready: {
-      classes: "bg-chart-2/20 text-chart-2 border-chart-2/30",
-      label: "Extraction Ready",
-    },
-    imported: {
-      classes: "bg-chart-4/20 text-chart-4 border-chart-4/30",
-      label: "Draft Rules Created",
-    },
-    failed: {
-      classes: "bg-destructive/15 text-destructive border-destructive/40",
-      label: "Failed",
-    },
-  };
-  return map[status];
-}
-
-function RuleSelectorDropdown({
-  rules,
-  selectedIds,
-  onChange,
-  placeholder = "Select rules to link",
-  triggerClassName,
-}: {
-  rules: RuleOption[];
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-  placeholder?: string;
-  triggerClassName?: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
-
-  const filteredRules = useMemo(() => {
-    if (!search.trim()) return rules;
-    const q = search.toLowerCase();
-    return rules.filter(
-      (r) =>
-        r.ruleId.toLowerCase().includes(q) || r.ruleName.toLowerCase().includes(q)
-    );
-  }, [rules, search]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as Node;
-      if (
-        panelRef.current?.contains(target) ||
-        triggerRef.current?.contains(target)
-      ) {
-        return;
-      }
-      setIsOpen(false);
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  const handleToggle = useCallback(
-    (ruleId: string, checked: boolean) => {
-      if (checked) onChange([...selectedIds, ruleId]);
-      else onChange(selectedIds.filter((id) => id !== ruleId));
-    },
-    [selectedIds, onChange]
-  );
-
-  const handleSelectAll = useCallback(() => {
-    const ids = filteredRules.map((r) => r.ruleId);
-    const allSelected = ids.every((id) => selectedIds.includes(id));
-    if (allSelected) onChange(selectedIds.filter((id) => !ids.includes(id)));
-    else onChange([...new Set([...selectedIds, ...ids])]);
-  }, [filteredRules, selectedIds, onChange]);
-
-  const label = selectedIds.length > 0 ? `${selectedIds.length} selected` : placeholder;
-
-  return (
-    <div className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => setIsOpen((o) => !o)}
-        className={
-          triggerClassName ??
-          "flex w-full min-w-[200px] items-center justify-between gap-2 rounded-md border border-border bg-card px-3 py-2 text-left text-sm hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-        }
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-      >
-        <span className={selectedIds.length > 0 ? "text-foreground" : "text-muted-foreground"}>{label}</span>
-        <ChevronDown className={`size-4 shrink-0 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-      </button>
-
-      {isOpen && (
-        <div
-          ref={panelRef}
-          className="absolute left-0 top-full z-50 mt-1 min-w-[280px] rounded-md border border-border bg-popover shadow-lg"
-        >
-          <div className="border-b border-border p-2">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-              <Input
-                type="search"
-                placeholder="Search rules..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="h-8 pl-8 text-sm"
-                autoFocus
-              />
-            </div>
-            <div className="mt-2 flex gap-1">
-              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={handleSelectAll}>
-                {filteredRules.every((r) => selectedIds.includes(r.ruleId)) ? "Deselect all" : "Select all"}
-              </Button>
-              {selectedIds.length > 0 && (
-                <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={() => onChange([])}>
-                  Clear
-                </Button>
-              )}
-            </div>
-          </div>
-          <div className="max-h-60 overflow-y-auto p-1">
-            {filteredRules.length === 0 ? (
-              <p className="px-2 py-4 text-center text-sm text-muted-foreground">No rules match</p>
-            ) : (
-              filteredRules.map((r) => (
-                <label
-                  key={r.ruleId}
-                  className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-muted/50"
-                >
-                  <Checkbox
-                    checked={selectedIds.includes(r.ruleId)}
-                    onCheckedChange={(checked: boolean | "indeterminate") => handleToggle(r.ruleId, checked === true)}
-                  />
-                  <span className="truncate">{r.ruleId} - {r.ruleName}</span>
-                </label>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { ReferenceDocumentRow } from "./reference-document-row";
+import { ReferenceDocumentsFileUpload } from "./reference-documents-file-upload";
+import { RuleSelectorDropdown } from "./rule-selector-dropdown";
+import type { ExtractionStatus } from "./reference-documents-tab.types";
+import { FLOW_STEPS, getStatusUi } from "./reference-documents-tab.utils";
 
 export function ReferenceDocumentsTab() {
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [selectedRuleIds, setSelectedRuleIds] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editLinkedRuleIds, setEditLinkedRuleIds] = useState<string[]>([]);
   const [extractionStatus, setExtractionStatus] = useState<Record<string, ExtractionStatus>>({});
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState("");
+  const [isSimulatingUpload, setIsSimulatingUpload] = useState(false);
+  const [showUploadPanel, setShowUploadPanel] = useState(false);
 
   const { data: documents, isLoading, error } = useReferenceDocuments();
   const { data: rules } = useComplianceRules();
@@ -241,48 +72,61 @@ export function ReferenceDocumentsTab() {
     });
   }, [documents, searchQuery, rules, extractionStatus]);
 
-  const handleUploadClick = () => fileInputRef.current?.click();
+  const simulateUploadApiCall = useCallback(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      toast({
-        title: "Invalid file type",
-        description: "Only PDF documents are supported in Phase 1.",
-        variant: "destructive",
-      });
-      e.target.value = "";
-      return;
-    }
+  const handleUploadFiles = useCallback(
+    async (files: File[]) => {
+      if (!files.length) return;
+      setUploadError("");
+      setIsSimulatingUpload(true);
 
-    uploadDoc.mutate(
-      {
-        name: file.name,
-        uploadedBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`,
-        linkedRuleIds: selectedRuleIds,
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Document uploaded",
-            description: selectedRuleIds.length
-              ? `Linked to ${selectedRuleIds.length} rule(s).`
-              : `${file.name} has been uploaded.`,
+      try {
+        // Simulated API call wrapper. Replace this function with the real API call later.
+        await simulateUploadApiCall();
+
+        for (const file of files) {
+          await new Promise<void>((resolve, reject) => {
+            uploadDoc.mutate(
+              {
+                name: file.name,
+                uploadedBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`,
+                linkedRuleIds: selectedRuleIds,
+              },
+              {
+                onSuccess: () => resolve(),
+                onError: (err) => reject(err),
+              }
+            );
           });
-          e.target.value = "";
-        },
-        onError: (err) => {
-          toast({
-            title: "Upload failed",
-            description: err instanceof Error ? err.message : "Could not upload document.",
-            variant: "destructive",
-          });
-          e.target.value = "";
-        },
+        }
+
+        toast({
+          title: "Document uploaded",
+          description:
+            files.length === 1
+              ? selectedRuleIds.length
+                ? `Linked to ${selectedRuleIds.length} rule(s).`
+                : `${files[0].name} has been uploaded.`
+              : `${files.length} files uploaded successfully.`,
+        });
+        setQueuedFiles([]);
+        setShowUploadPanel(false);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Could not upload document.";
+        setUploadError(message);
+        toast({
+          title: "Upload failed",
+          description: message,
+          variant: "destructive",
+        });
+      } finally {
+        setIsSimulatingUpload(false);
       }
-    );
-  };
+    },
+    [selectedRuleIds, simulateUploadApiCall, toast, uploadDoc]
+  );
 
   const runExtraction = useCallback((documentId: string) => {
     setExtractionStatus((prev) => ({ ...prev, [documentId]: "processing" }));
@@ -352,10 +196,16 @@ export function ReferenceDocumentsTab() {
           <h2 className="text-lg font-semibold text-foreground">Reference Documents</h2>
           <p className="text-sm text-muted-foreground">Upload policy documents, extract candidate rules, and create drafts.</p>
         </div>
-        <input ref={fileInputRef} type="file" accept=".pdf" onChange={handleFileChange} className="hidden" />
-        <Button onClick={handleUploadClick} disabled={uploadDoc.isPending}>
+        <Button
+          type="button"
+          onClick={() => {
+            setUploadError("");
+            setShowUploadPanel(true);
+          }}
+          disabled={isSimulatingUpload || uploadDoc.isPending}
+        >
           <Upload className="size-4" />
-          {uploadDoc.isPending ? "Uploading..." : "Upload Policy PDF"}
+          Add New Doc
         </Button>
       </div>
 
@@ -382,6 +232,52 @@ export function ReferenceDocumentsTab() {
         </div>
       )}
 
+      <Modal
+        isOpen={showUploadPanel}
+        onClose={() => {
+          if (isSimulatingUpload || uploadDoc.isPending) return;
+          setShowUploadPanel(false);
+          setQueuedFiles([]);
+          setUploadError("");
+        }}
+        className="max-w-3xl"
+      >
+        <div className="rounded-lg border border-border bg-card p-6 shadow-lg min-h-[520px]">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-base font-semibold text-foreground">Add New Document</p>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setShowUploadPanel(false);
+                setQueuedFiles([]);
+                setUploadError("");
+              }}
+              disabled={isSimulatingUpload || uploadDoc.isPending}
+            >
+              Cancel
+            </Button>
+          </div>
+          <ReferenceDocumentsFileUpload
+            onFileSelect={(files) => setQueuedFiles(files ?? [])}
+            onUpload={handleUploadFiles}
+            uploadedFiles={queuedFiles}
+            isProcessing={isSimulatingUpload || uploadDoc.isPending}
+            error={uploadError}
+            acceptedFileTypes=".pdf"
+            maxFileSizeMB={5}
+            maxTotalSizeMB={25}
+            multiple={false}
+            maxFiles={1}
+            title="Upload Policy PDF"
+            description="Drag and drop a policy document, then upload."
+            variant="default"
+            showPreview
+          />
+        </div>
+      </Modal>
+
       {documents && documents.length > 0 && (
         <div className="mt-3 shrink-0 relative">
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
@@ -406,9 +302,16 @@ export function ReferenceDocumentsTab() {
             <div className="flex min-h-full flex-col items-center justify-center gap-4 p-10 text-center">
               <FileText className="size-12 text-muted-foreground" />
               <p className="text-muted-foreground">No documents yet. Upload a policy PDF to start.</p>
-              <Button onClick={handleUploadClick}>
+              <Button
+                type="button"
+                onClick={() => {
+                  setUploadError("");
+                  setShowUploadPanel(true);
+                }}
+                disabled={isSimulatingUpload || uploadDoc.isPending}
+              >
                 <Upload className="size-4" />
-                Upload Policy PDF
+                Add New Doc
               </Button>
             </div>
           ) : !filteredDocuments.length ? (
@@ -425,7 +328,7 @@ export function ReferenceDocumentsTab() {
           ) : (
             <div className="divide-y divide-border">
               {filteredDocuments.map((doc) => (
-                <DocumentRow
+                <ReferenceDocumentRow
                   key={doc.id}
                   document={doc}
                   ruleNames={ruleNames}
@@ -446,110 +349,6 @@ export function ReferenceDocumentsTab() {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
-}
-
-function DocumentRow({
-  document,
-  ruleNames,
-  rules,
-  isEditing,
-  editLinkedRuleIds,
-  onEditLinkedRuleIdsChange,
-  onStartEdit,
-  onSaveEdit,
-  onCancelEdit,
-  isSaving,
-  extractionStatus,
-  onRunExtraction,
-  onReviewCandidates,
-  onCreateDraftRules,
-}: {
-  document: ReferenceDocument;
-  ruleNames: Map<string, string>;
-  rules: Array<{ ruleId: string; ruleName: string }>;
-  isEditing: boolean;
-  editLinkedRuleIds: string[];
-  onEditLinkedRuleIdsChange: (ids: string[]) => void;
-  onStartEdit: () => void;
-  onSaveEdit: () => void;
-  onCancelEdit: () => void;
-  isSaving: boolean;
-  extractionStatus: ExtractionStatus;
-  onRunExtraction: () => void;
-  onReviewCandidates: () => void;
-  onCreateDraftRules: () => void;
-}) {
-  const linkedLabels = document.linkedRuleIds.map((id) => ruleNames.get(id) || id);
-  const statusUi = getStatusUi(extractionStatus);
-
-  return (
-    <div className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-start gap-3 min-w-0">
-        <div className="rounded-lg bg-muted p-2 shrink-0">
-          <FileText className="size-5 text-muted-foreground" />
-        </div>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="font-medium truncate">{document.name}</p>
-            <span className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${statusUi.classes}`}>
-              {extractionStatus === "processing" ? <Clock3 className="mr-1 size-3" /> : null}
-              {extractionStatus === "ready" ? <Bot className="mr-1 size-3" /> : null}
-              {extractionStatus === "imported" ? <CheckCircle2 className="mr-1 size-3" /> : null}
-              {extractionStatus === "failed" ? <AlertTriangle className="mr-1 size-3" /> : null}
-              {statusUi.label}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            Uploaded {format(new Date(document.uploadedDate), "MMM d, yyyy")} by {document.uploadedBy}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2 sm:items-end">
-        {isEditing ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
-            <RuleSelectorDropdown
-              rules={rules}
-              selectedIds={editLinkedRuleIds}
-              onChange={onEditLinkedRuleIdsChange}
-              placeholder="Select rules to link"
-              triggerClassName="flex min-w-[180px] items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={isSaving}>Cancel</Button>
-              <Button size="sm" onClick={onSaveEdit} disabled={isSaving}>{isSaving ? "Saving..." : "Save"}</Button>
-            </div>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground max-w-[520px]">
-              {document.linkedRuleIds.length > 0 ? (
-                <>
-                  <Link2 className="size-4 shrink-0" />
-                  <span className="truncate">Linked to {linkedLabels.join(", ")}</span>
-                </>
-              ) : (
-                <span className="italic">Not linked to any rules</span>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <Button variant="ghost" size="sm" onClick={onStartEdit} className="text-muted-foreground hover:text-foreground" aria-label="Edit rule links">
-                <Pencil className="size-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={onRunExtraction} disabled={extractionStatus === "processing"}>
-                <Bot className="size-4" />
-                {extractionStatus === "processing" ? "Extracting..." : "Extract Rules"}
-              </Button>
-              <Button variant="outline" size="sm" onClick={onReviewCandidates}>Review</Button>
-              <Button size="sm" onClick={onCreateDraftRules} disabled={extractionStatus !== "ready" && extractionStatus !== "imported"}>
-                Create Drafts
-              </Button>
-            </div>
-          </>
-        )}
       </div>
     </div>
   );

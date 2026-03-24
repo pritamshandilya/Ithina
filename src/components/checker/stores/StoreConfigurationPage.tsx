@@ -4,7 +4,11 @@ import { StoreFixtureModal, type StoreFixtureModalValues } from "@/components/co
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  DataTable,
+  type DataTableCell,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
@@ -141,15 +145,15 @@ export function StoreConfigurationPage({
     if (selectedStore) {
       setFormData({
         name: selectedStore.name || "",
-        address: (selectedStore as any).address || "",
-        region: (selectedStore as any).region || "",
-        status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
-        currency: (selectedStore as any).currency || "USD",
+        address: selectedStore.address || "",
+        region: selectedStore.region || "",
+        status: selectedStore.status || "Active",
+        currency: selectedStore.currency || "USD",
         default_dimensions:
-          ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
+          (selectedStore.default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
       setDefaultComplianceRuleSetId(
-        (selectedStore as any).default_compliance_rule_set_id ?? "",
+        selectedStore.default_compliance_rule_set_id ?? "",
       );
     }
   }, [selectedStore]);
@@ -497,7 +501,7 @@ export function StoreConfigurationPage({
         minWidth: 220,
         headerHozAlign: "left",
         hozAlign: "left",
-        formatter: (cell: any) => {
+        formatter: (cell: DataTableCell<AuthSessionUser>) => {
           const member = cell.getData() as AuthSessionUser;
           const initials = `${member.firstName?.[0] ?? "U"}${member.lastName?.[0] ?? "U"}`;
           return `
@@ -517,7 +521,7 @@ export function StoreConfigurationPage({
         title: "Role",
         field: "role",
         width: 140,
-        formatter: (cell: any) => {
+        formatter: (cell: DataTableCell<AuthSessionUser>) => {
           const role = cell.getValue() as AuthSessionUser["role"];
           const label = role.charAt(0).toUpperCase() + role.slice(1);
           return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold border bg-muted/40 text-muted-foreground">${label}</span>`;
@@ -531,7 +535,7 @@ export function StoreConfigurationPage({
               width: 90,
               headerSort: false,
               hozAlign: "right" as const,
-              formatter: (cell: any) => {
+              formatter: (cell: DataTableCell<AuthSessionUser>) => {
                 const user = cell.getData() as AuthSessionUser;
                 if (user.role === "admin") return "";
                 return `
@@ -540,7 +544,7 @@ export function StoreConfigurationPage({
                   </button>
                 `;
               },
-              cellClick: (_e: any, cell: any) => {
+              cellClick: (_e: unknown, cell: DataTableCell<AuthSessionUser>) => {
                 const user = cell.getData() as AuthSessionUser;
                 if (!selectedStore || user.role === "admin") return;
                 void removeStoreUserMutation.mutateAsync({
@@ -708,7 +712,7 @@ export function StoreConfigurationPage({
           <StoreUserAssignmentModal
             isOpen={isStaffModalOpen}
             onClose={() => setIsStaffModalOpen(false)}
-            store={selectedStore as any}
+            store={selectedStore}
           />
         )}
 

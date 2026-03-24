@@ -217,15 +217,15 @@ export default function Sidenav() {
     if (enabledCoreNav.has("approvals")) {
       items.push({ 
         label: "Audit Review", 
-        to: (isAdminStoreView ? `${storePrefix}/audit-review` : "/approvals") as any, 
+        to: (isAdminStoreView ? `${storePrefix}/audit-review` : "/approvals") as never, 
         icon: ShieldCheck 
       });
     }
-    items.push({ label: "Shelves", to: `${storePrefix}/shelf` as any, icon: Rows3 });
+    items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
-        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as any,
+        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as never,
         icon: Library,
       });
     }
@@ -233,9 +233,9 @@ export default function Sidenav() {
       label: "Reports",
       icon: FileBarChart,
       items: [
-        { label: "Store Level", to: `${storePrefix}/reports/store-level` as any },
-        { label: "Shelf Level", to: `${storePrefix}/reports/shelf-level` as any },
-        { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as any },
+        { label: "Store Level", to: `${storePrefix}/reports/store-level` as never },
+        { label: "Shelf Level", to: `${storePrefix}/reports/shelf-level` as never },
+        { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as never },
       ],
     });
     // Store settings:
@@ -244,7 +244,7 @@ export default function Sidenav() {
     if (isAdminStoreView) {
       items.push({
         label: "Store Settings",
-        to: `${storePrefix}/store-settings` as any,
+        to: `${storePrefix}/store-settings` as never,
         icon: Settings,
       });
     } else {
@@ -313,7 +313,7 @@ export default function Sidenav() {
                     icon: LayoutDashboard,
                   })}
                 >
-                  <Link to={(role === "admin" && selectedStore && !isOrgContext ? `/admin/${selectedStore.name}/dashboard` : "/dashboard") as any}>
+                  <Link to={(role === "admin" && selectedStore && !isOrgContext ? `/admin/${selectedStore.name}/dashboard` : "/dashboard") as never}>
                     <LayoutDashboard />
                     Dashboard
                   </Link>

@@ -2,7 +2,11 @@ import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+    DataTable,
+    type DataTableCell,
+    type DataTableColumn,
+} from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Edit2, Globe, MapPin, Maximize, Plus, Search, Store, Trash2, Users } from "lucide-react";
@@ -40,7 +44,7 @@ export function StoresPage() {
         );
     }, [stores, searchQuery]);
 
-    const handleEditStore = async (updatedStore: any) => {
+    const handleEditStore = async (updatedStore: Omit<StoreSetting, "id">) => {
         if (!selectedStore) return;
         try {
             await updateStoreMutation.mutateAsync({
@@ -65,7 +69,7 @@ export function StoresPage() {
         }
     };
 
-    const handleViewStore = (store: any) => {
+    const handleViewStore = (store: StoreSetting) => {
         setGlobalSelectedStore(store);
         if (currentUser?.role === "admin") {
             navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.id } });
@@ -81,7 +85,7 @@ export function StoresPage() {
             minWidth: 200,
             hozAlign: "left",
             headerHozAlign: "left",
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const store = cell.getData() as StoreSetting;
                 const storeIcon = renderToStaticMarkup(<Store size={20} />);
                 return `
@@ -103,7 +107,7 @@ export function StoresPage() {
             minWidth: 250,
             hozAlign: "left",
             headerHozAlign: "left",
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const value = cell.getValue() || "—";
                 const pinIcon = renderToStaticMarkup(<MapPin size={14} />);
                 return `
@@ -118,7 +122,7 @@ export function StoresPage() {
             title: "Region",
             field: "region",
             width: 130,
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const value = cell.getValue() || "—";
                 return `<span class="text-sm text-muted-foreground">${value}</span>`;
             },
@@ -127,7 +131,7 @@ export function StoresPage() {
             title: "Status",
             field: "status",
             width: 120,
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const value = (cell.getValue() as "Active" | "Inactive" | undefined) || "Active";
                 const statusClass =
                   value === "Inactive"
@@ -140,7 +144,7 @@ export function StoresPage() {
             title: "Settings",
             field: "currency",
             width: 150,
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const store = cell.getData() as StoreSetting;
                 const globeIcon = renderToStaticMarkup(<Globe size={12} className="opacity-70" />);
                 const dimensionsIcon = renderToStaticMarkup(<Maximize size={12} className="opacity-70" />);
@@ -164,10 +168,10 @@ export function StoresPage() {
             width: 100,
             hozAlign: "center",
             headerHozAlign: "center",
-            formatter: (cell: any) => {
+            formatter: (cell: DataTableCell<StoreSetting>) => {
                 const store = cell.getData() as StoreSetting;
                 const makerCount = store.maker_ids?.length || 0;
-                const userCount = (store as any).user_ids?.length || 0;
+                const userCount = store.user_ids?.length || 0;
                 const count = makerCount + userCount;
                 return `
                     <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 border border-accent/20 text-accent">
@@ -200,10 +204,14 @@ export function StoresPage() {
                     </div>
                 `;
             },
-            cellClick: (e: any, cell: any) => {
-            e.stopPropagation();
+            cellClick: (e: unknown, cell: DataTableCell<StoreSetting>) => {
+            if (e && typeof e === "object" && "stopPropagation" in e && typeof e.stopPropagation === "function") {
+                e.stopPropagation();
+            }
                 const store = cell.getData() as StoreSetting;
-                const target = e.target.closest("button");
+                const target = e && typeof e === "object" && "target" in e && e.target instanceof Element
+                    ? e.target.closest("button")
+                    : null;
                 if (target?.classList.contains("edit-btn")) {
                     setSelectedStore(store);
                     setIsEditModalOpen(true);

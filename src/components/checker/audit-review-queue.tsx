@@ -18,7 +18,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { LayoutGridIcon, Search, TableIcon } from "lucide-react";
 
 import { AuditQueueCard } from "@/components/checker/audit-queue-card";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  DataTable,
+  type DataTableCell,
+  type DataTableColumn,
+} from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { AuditQueueFilter, AuditQueueSort } from "@/types/checker-ui";
@@ -267,8 +271,9 @@ export function AuditReviewQueue({
       ...AUDIT_BASE_TABLE_COLUMNS,
       {
         ...ACTIONS_COLUMN,
-        cellClick: (event: unknown, cell: { getData: () => CheckerAudit; getElement: () => HTMLElement }) => {
-          const e = event as MouseEvent;
+        cellClick: (event: unknown, cell: DataTableCell<CheckerAudit>) => {
+          const e = event as MouseEvent | undefined;
+          if (!e) return;
           e.stopPropagation();
 
           const target = e.target as HTMLElement;

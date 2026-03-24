@@ -16,7 +16,7 @@ export const shelfTemplatesKeys = {
 };
 
 function getSelectedUnit(selectedStore: ReturnType<typeof useStore>["selectedStore"]) {
-  const unit = (selectedStore as any)?.default_dimensions;
+  const unit = selectedStore?.default_dimensions;
   return (unit === "mm" || unit === "cm" || unit === "inch" ? unit : "mm") as "mm" | "cm" | "inch";
 }
 

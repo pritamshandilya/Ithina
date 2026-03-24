@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { readStoreFixtureTypeLabels } from "@/lib/store-defaults-storage";
+import { fetchStoreFixtures } from "@/queries/checker/api/fixtures";
 import { useStore } from "@/providers/store";
 
 export const storeDefaultsKeys = {
@@ -15,7 +15,18 @@ export function useStoreFixtureTypes() {
 
   return useQuery({
     queryKey: storeDefaultsKeys.fixtureTypes(storeId),
-    queryFn: () => readStoreFixtureTypeLabels(storeId),
+    queryFn: async () => {
+      const fixtures = await fetchStoreFixtures();
+      const uniqueTypes = new Set<string>();
+
+      for (const fixture of fixtures) {
+        const type = fixture.type.trim();
+        if (!type) continue;
+        uniqueTypes.add(type);
+      }
+
+      return Array.from(uniqueTypes).sort((a, b) => a.localeCompare(b));
+    },
     enabled: !!storeId,
     staleTime: 60 * 1000,
   });

@@ -30,7 +30,7 @@ export function getShelf(shelfId: string): Promise<ShelfResponse> {
 
 /**
  * Create a new shelf.
- * Supply either `fixture_id` (existing fixture) or `fixture` (new fixture inline).
+ * Supply `fixture_id` and shelf dimensions.
  *
  * @param payload - CreateShelfPayload
  */

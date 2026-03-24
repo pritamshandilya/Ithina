@@ -10,6 +10,7 @@ export const Route = createFileRoute("/admin/$storeId/shelf/new")({
         associateShelfId: z.string().optional(),
         associateShelfName: z.string().optional(),
         templateId: z.string().optional(),
+        addMode: z.enum(["manual", "template"]).optional(),
       })
       .parse(search),
 });

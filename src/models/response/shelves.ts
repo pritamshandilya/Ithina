@@ -11,6 +11,9 @@ export interface ShelfResponse {
   fixture_id: string;
   shelf_id: string;
   name: string;
+  width: number;
+  height: number;
+  vertical_position: number;
   fixture_type: string;
   fixture_width: number;
   fixture_height: number;

@@ -1,8 +1,11 @@
-import { Check } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 import type { AuthSessionUser } from "@/lib/auth/session";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export interface StoreOnboardingTeamStepProps {
@@ -12,7 +15,7 @@ export interface StoreOnboardingTeamStepProps {
   selectedUserIds: Set<string>;
   isFinishing: boolean;
   onToggleUser: (userId: string) => void;
-  onBack: () => void;
+  onBulkSelectionChange: (userIds: string[], selected: boolean) => void;
   onFinish: () => void | Promise<void>;
 }
 
@@ -23,9 +26,34 @@ export function StoreOnboardingTeamStep({
   selectedUserIds,
   isFinishing,
   onToggleUser,
-  onBack,
+  onBulkSelectionChange,
   onFinish,
 }: StoreOnboardingTeamStepProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredUsers = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return assignableUsers;
+
+    return assignableUsers.filter((user) => {
+      const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.toLowerCase();
+      const email = (user.email ?? "").toLowerCase();
+      const role = (user.role ?? "").toLowerCase();
+      return fullName.includes(query) || email.includes(query) || role.includes(query);
+    });
+  }, [assignableUsers, searchQuery]);
+
+  const selectedCount = selectedUserIds.size;
+
+  const allFilteredSelected =
+    filteredUsers.length > 0 &&
+    filteredUsers.every((user) => selectedUserIds.has(user.id));
+  const someFilteredSelected = filteredUsers.some((user) =>
+    selectedUserIds.has(user.id),
+  );
+  const headerCheckboxState: boolean | "indeterminate" =
+    allFilteredSelected ? true : someFilteredSelected ? "indeterminate" : false;
+
   return (
     <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
       <CardHeader>
@@ -44,45 +72,89 @@ export function StoreOnboardingTeamStep({
             No makers or checkers available to assign yet.
           </p>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {assignableUsers.map((user) => {
-              const selected = selectedUserIds.has(user.id);
-              return (
-                <button
-                  key={user.id}
-                  type="button"
-                  onClick={() => onToggleUser(user.id)}
-                  className={`flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors ${
-                    selected
-                      ? "border-accent bg-accent/10 text-accent"
-                      : "border-border bg-background/40 text-foreground hover:border-accent/60"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/10 text-xs font-semibold text-accent">
-                      {user.firstName?.[0] ?? "U"}
-                      {user.lastName?.[0] ?? "U"}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">
-                        {user.firstName} {user.lastName}
-                      </p>
-                      <p className="truncate text-[11px] text-muted-foreground">
-                        {user.email}
-                      </p>
-                    </div>
-                  </div>
-                  {selected && <Check className="size-4 shrink-0 text-accent" />}
-                </button>
-              );
-            })}
-          </div>
+          <>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-xs text-muted-foreground">
+                {selectedCount} user{selectedCount === 1 ? "" : "s"} selected
+              </p>
+              <div className="relative w-full sm:w-72">
+                <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search by name, email, or role"
+                  className="pl-8"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-hidden rounded-lg border border-border bg-background/30">
+              <div className="max-h-[420px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/70 text-muted-foreground backdrop-blur-sm">
+                    <tr>
+                      <th className="w-12 px-3 py-2 text-left font-medium">
+                        <Checkbox
+                          checked={headerCheckboxState}
+                          disabled={filteredUsers.length === 0}
+                          onCheckedChange={(value: boolean | "indeterminate") => {
+                            const select = value === true;
+                            onBulkSelectionChange(
+                              filteredUsers.map((u) => u.id),
+                              select,
+                            );
+                          }}
+                          aria-label="Select all users in this list"
+                        />
+                      </th>
+                      <th className="px-3 py-2 text-left font-medium">Name</th>
+                      <th className="px-3 py-2 text-left font-medium">Email</th>
+                      <th className="px-3 py-2 text-left font-medium">Role</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
+                          No users match your search.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((user) => {
+                        const selected = selectedUserIds.has(user.id);
+                        return (
+                          <tr
+                            key={user.id}
+                            className={`border-t border-border/70 transition-colors ${
+                              selected ? "bg-accent/10" : "hover:bg-muted/40"
+                            }`}
+                          >
+                            <td className="px-3 py-2">
+                              <Checkbox
+                                checked={selected}
+                                onCheckedChange={() => onToggleUser(user.id)}
+                                aria-label={`Select ${user.firstName} ${user.lastName}`}
+                              />
+                            </td>
+                            <td className="px-3 py-2 font-medium text-foreground">
+                              {user.firstName} {user.lastName}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">{user.email}</td>
+                            <td className="px-3 py-2 capitalize text-muted-foreground">
+                              {user.role}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
         )}
 
-        <div className="flex justify-between pt-2">
-          <Button type="button" variant="outline" onClick={onBack}>
-            Back
-          </Button>
+        <div className="flex justify-end pt-2">
           <Button
             type="button"
             className="min-w-[160px]"

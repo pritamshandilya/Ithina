@@ -20,10 +20,12 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAssignPlanogramToShelf,
+  useCreateFixture,
   useCreateShelf,
   usePlanogramById,
   usePlanogramList,
   useShelves,
+  useStoreFixtures,
 } from "@/queries/maker";
 import { useShelfTemplates, useStoreFixtureTypes } from "@/queries/checker";
 import type { PlanogramArrangement } from "@/types/planogram";
@@ -41,22 +43,22 @@ export const Route = createFileRoute("/checker/shelf/new/")({
         associateShelfId: z.string().optional(),
         associateShelfName: z.string().optional(),
         templateId: z.string().optional(),
+        addMode: z.enum(["manual", "template"]).optional(),
       })
       .parse(search),
 });
 
-const PRESET_FIXTURE_OPTIONS: { value: string; label: string }[] = [
-  { value: "gondola", label: "Gondola" },
-  { value: "wall_shelving", label: "Wall shelving" },
-  { value: "end_cap", label: "End cap" },
-  { value: "freezer", label: "Freezer" },
-  { value: "cooler", label: "Cooler" },
-];
+const fixtureTypeDedupeKey = (value: string) =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[_\s-]+/g, "");
 
 type AddPlanogramPageSearch = {
   associateShelfId?: string;
   associateShelfName?: string;
   templateId?: string;
+  addMode?: "manual" | "template";
 };
 
 type AddPlanogramPageProps = {
@@ -67,9 +69,10 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams({ strict: false }) as any;
-  const routeSearch = Route.useSearch();
-  const { associateShelfId, associateShelfName, templateId } =
-    searchOverride ?? routeSearch;
+  const currentSearch = (location.search ?? {}) as AddPlanogramPageSearch;
+  const { associateShelfId, associateShelfName, templateId, addMode } =
+    searchOverride ?? currentSearch;
+  const isManualEntryMode = addMode === "manual";
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
   const shelfListPath =
@@ -80,6 +83,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const { data: shelfTemplates = [], isLoading: shelfTemplatesLoading } =
     useShelfTemplates();
   const { data: extraFixtureLabels = [] } = useStoreFixtureTypes();
+  const { data: storeFixtures = [], isLoading: fixturesLoading } =
+    useStoreFixtures();
+  const createFixtureMutation = useCreateFixture();
   const createShelfMutation = useCreateShelf();
   const assignPlanogramMutation = useAssignPlanogramToShelf();
   const isAssociateMode = !!associateShelfId;
@@ -132,21 +138,36 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   }, [selectedTemplate]);
 
   const fixtureTypeOptions = useMemo(() => {
-    const presetValues = new Set(
-      PRESET_FIXTURE_OPTIONS.map((o) => o.value.toLowerCase()),
-    );
-    const extras = extraFixtureLabels
-      .filter((label) => !presetValues.has(label.trim().toLowerCase()))
-      .map((label) => ({ value: label, label }));
-    const base = [...PRESET_FIXTURE_OPTIONS, ...extras];
-    if (
-      fixtureType &&
-      !base.some((o) => o.value === fixtureType)
-    ) {
-      return [...base, { value: fixtureType, label: fixtureType }];
+    const seen = new Set<string>();
+    const deduped: { value: string; label: string }[] = [];
+
+    for (const label of extraFixtureLabels) {
+      const trimmed = label.trim();
+      const key = fixtureTypeDedupeKey(trimmed);
+      if (!trimmed || !key || seen.has(key)) continue;
+      seen.add(key);
+      deduped.push({ value: trimmed, label: trimmed });
     }
-    return base;
-  }, [extraFixtureLabels, fixtureType]);
+
+    return deduped;
+  }, [extraFixtureLabels]);
+
+  const fixtureDepthByType = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const fixture of storeFixtures) {
+      if (fixture.dimension_unit !== defaultDimensionUnit) continue;
+      const key = fixtureTypeDedupeKey(fixture.type);
+      if (!key || map.has(key)) continue;
+      map.set(key, String(fixture.depth));
+    }
+    return map;
+  }, [storeFixtures, defaultDimensionUnit]);
+
+  const resolveDepthForFixtureType = useCallback(
+    (nextFixtureType: string): string | undefined =>
+      fixtureDepthByType.get(fixtureTypeDedupeKey(nextFixtureType)),
+    [fixtureDepthByType],
+  );
 
   const applyShelfTemplate = useCallback((tpl: ShelfTemplate) => {
     setFixtureType(tpl.fixtureType);
@@ -228,24 +249,59 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
         navigate({ to: shelfListPath as any });
       } else if (!isAssociateMode) {
-          // Map UI fields to real API CreateShelfPayload
+        const fixtureTypeValue = fixtureType.trim() || "gondola";
+        const fixtureWidth = Number(dimWidth) || 1;
+        const fixtureHeight = Number(dimHeight) || 1;
+        const fixtureDepth = Number(dimDepth) || 1;
+        const aisleValue = aisleNumber === "" ? "" : String(aisleNumber);
+        const zoneValue = zone.trim() || "General";
+        const sectionValue = section.trim() || "General";
+
+        const normalize = (v: string) => v.trim().toLowerCase();
+        // Backend stores floats; use tolerance to avoid spurious mismatches.
+        const floatEq = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+
+        const matchedFixture = !fixturesLoading
+          ? storeFixtures.find((f) => {
+              return (
+                normalize(f.type) === normalize(fixtureTypeValue) &&
+                normalize(f.dimension_unit) === normalize(defaultDimensionUnit) &&
+                normalize(f.section) === normalize(sectionValue) &&
+                normalize(f.aisle) === normalize(aisleValue) &&
+                normalize(f.zone) === normalize(zoneValue) &&
+                floatEq(f.width, fixtureWidth) &&
+                floatEq(f.height, fixtureHeight) &&
+                floatEq(f.depth, fixtureDepth)
+              );
+            })
+          : undefined;
+
+        const fixtureId = matchedFixture
+          ? matchedFixture.id
+          : (
+              await createFixtureMutation.mutateAsync({
+                type: fixtureTypeValue,
+                dimensions: {
+                  width: fixtureWidth,
+                  height: fixtureHeight,
+                  depth: fixtureDepth,
+                },
+                dimension_unit: defaultDimensionUnit,
+                physical_location: {
+                  aisle: aisleValue,
+                  zone: zoneValue,
+                  section: sectionValue,
+                },
+              })
+            ).id;
+
         await createShelfMutation.mutateAsync({
           shelf_id: `S${aisleNumber}-${bayNumber}`, // Unique business ID
           name: shelfName.trim(),
-          fixture: {
-            type: fixtureType.trim() || "gondola",
-            dimensions: {
-              width: Number(dimWidth) || 0,
-              height: Number(dimHeight) || 0,
-              depth: Number(dimDepth) || 300, // Default to 300mm if not provided to satisfy gt=0
-            },
-              dimension_unit: defaultDimensionUnit,
-            physical_location: {
-              aisle: String(aisleNumber),
-              zone: zone.trim() || "General",
-              section: section.trim() || "General",
-            },
-          },
+          fixture_id: fixtureId,
+          width: fixtureWidth,
+          height: fixtureHeight,
+          vertical_position: 0,
         });
         toast({
           title: "Shelf created",
@@ -276,6 +332,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     defaultDimensionUnit,
     shelfListPath,
     planogramPayload,
+    storeFixtures,
+    fixturesLoading,
+    createFixtureMutation,
     createShelfMutation,
     assignPlanogramMutation,
     navigate,
@@ -314,7 +373,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                   <CardDescription>
                     {isAssociateMode
                       ? "Select a planogram to associate with this shelf."
-                      : "Start from a saved template or enter details to create a new shelf."}
+                      : isManualEntryMode
+                        ? "Enter details to create a new shelf."
+                        : "Start from a saved template or enter details to create a new shelf."}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -366,41 +427,43 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
 
                   {!isAssociateMode && (
                     <>
-                      <div className="space-y-2">
-                        <Label htmlFor="shelf-template-select">
-                          Shelf template (optional)
-                        </Label>
-                        {shelfTemplatesLoading ? (
-                          <Skeleton className="h-9 w-full" />
-                        ) : (
-                          <Select
-                            id="shelf-template-select"
-                            value={selectedTemplateId}
-                            onChange={(e) => {
-                              const id = e.target.value;
-                              setSelectedTemplateId(id);
-                              const tpl = shelfTemplates.find((t) => t.id === id);
-                              if (tpl) {
-                                applyShelfTemplate(tpl);
-                              }
-                            }}
-                            aria-label="Apply shelf template"
-                          >
-                            <option value="">None — enter manually</option>
-                            {shelfTemplates.map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                          </Select>
-                        )}
-                        {shelfTemplates.length === 0 && !shelfTemplatesLoading ? (
-                          <p className="text-xs text-muted-foreground">
-                            No templates yet. Add templates under Shelves → Shelf
-                            Templates or Store Defaults.
-                          </p>
-                        ) : null}
-                      </div>
+                      {!isManualEntryMode ? (
+                        <div className="space-y-2">
+                          <Label htmlFor="shelf-template-select">
+                            Shelf template (optional)
+                          </Label>
+                          {shelfTemplatesLoading ? (
+                            <Skeleton className="h-9 w-full" />
+                          ) : (
+                            <Select
+                              id="shelf-template-select"
+                              value={selectedTemplateId}
+                              onChange={(e) => {
+                                const id = e.target.value;
+                                setSelectedTemplateId(id);
+                                const tpl = shelfTemplates.find((t) => t.id === id);
+                                if (tpl) {
+                                  applyShelfTemplate(tpl);
+                                }
+                              }}
+                              aria-label="Apply shelf template"
+                            >
+                              <option value="">None — enter manually</option>
+                              {shelfTemplates.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                  {t.name}
+                                </option>
+                              ))}
+                            </Select>
+                          )}
+                          {shelfTemplates.length === 0 && !shelfTemplatesLoading ? (
+                            <p className="text-xs text-muted-foreground">
+                              No templates yet. Add templates under Shelves → Shelf
+                              Templates or Store Defaults.
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -462,7 +525,15 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                           <Select
                             id="fixture-type"
                             value={fixtureType}
-                            onChange={(e) => setFixtureType(e.target.value)}
+                            onChange={(e) => {
+                              const nextFixtureType = e.target.value;
+                              const depthFromFixture =
+                                resolveDepthForFixtureType(nextFixtureType);
+                              setFixtureType(nextFixtureType);
+                              if (depthFromFixture) {
+                                setDimDepth(depthFromFixture);
+                              }
+                            }}
                           >
                             <option value="">Choose...</option>
                             {fixtureTypeOptions.map((opt) => (

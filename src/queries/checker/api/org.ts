@@ -156,15 +156,16 @@ export async function createStore(data: {
   name: string;
   address: string;
   region: string;
-  status: "Active" | "Inactive";
   currency: string;
   default_dimensions: string;
+  // Store onboarding creates new stores as active by default.
+  is_active?: boolean;
 }): Promise<Store> {
   const payload = {
     name: data.name,
     address: data.address,
     region: data.region,
-    is_active: data.status === "Active",
+    is_active: data.is_active ?? true,
     currency: data.currency,
     default_dimension_unit: data.default_dimensions,
   };

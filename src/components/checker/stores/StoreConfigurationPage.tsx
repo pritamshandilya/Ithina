@@ -1,6 +1,6 @@
 import MainLayout from "@/components/layouts/main";
 import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
-import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
+import { StoreFixtureModal, type StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +8,6 @@ import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { AuthSessionUser } from "@/lib/auth/session";
-import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
 import {
@@ -18,23 +17,22 @@ import {
   useShelfTemplates,
   useStoreFixtureTypes,
   useStoreUsers,
-  storeDefaultsKeys,
   useUpdateShelfTemplate,
   useUpdateStore,
   useUpdateStoreComplianceSettings,
 } from "@/queries/checker";
-import { useQueryClient } from "@tanstack/react-query";
 import { useComplianceRuleSets } from "@/queries/maker";
 import {
   Settings,
   Store as StoreIcon,
   Users,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
 import { StoreDefaultsTabContent } from "./store-defaults-tab-content";
 import { StoreProfileTab } from "./store-profile-tab";
-import { mergeStoreDefaults } from "@/lib/store-defaults-storage";
 import { AuthSessionService } from "@/lib/auth/session";
 import { CreateComplianceRuleSetModal } from "@/components/common/create-compliance-rule-set-modal";
 import { ApiError } from "@/queries/shared";
@@ -42,6 +40,14 @@ import { useCreateComplianceRuleSet } from "@/queries/maker";
 import type { CreateComplianceRuleSetInput } from "@/queries/maker/api/compliance-rule-sets";
 import type { StoreSetting } from "@/types/checker";
 import type { ShelfTemplateCreateInput, ShelfTemplateFixtureType } from "@/types/shelf-template";
+import {
+  createStoreFixture,
+  deleteStoreFixture,
+  fetchStoreFixtures,
+  updateStoreFixture,
+  type StoreFixtureApiModel,
+} from "@/queries/checker/api/fixtures";
+import { storeDefaultsKeys } from "@/queries/checker/hooks/useStoreFixtureTypes";
 
 type Tab = "profile" | "defaults" | "team";
 type DefaultsTab = "fixtures" | "templates" | "rules" | "units";
@@ -56,17 +62,8 @@ type StoreTemplateForm = {
   depth: string;
 };
 
-const DEFAULT_FIXTURE_TYPES = [
-  "Gondola (standard)",
-  "Endcap",
-  "Cooler/Chiller",
-  "Checkout Lane",
-  "Wall Unit",
-];
-
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: "profile", label: "Store Profile", icon: StoreIcon },
-  { id: "defaults", label: "Store Defaults", icon: Settings },
   { id: "defaults", label: "Store Defaults", icon: Settings },
   { id: "team", label: "Staff", icon: Users },
 ];
@@ -78,6 +75,7 @@ interface StoreConfigurationPageProps {
 export function StoreConfigurationPage({
   canEdit = false,
 }: StoreConfigurationPageProps) {
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { selectedStore, setSelectedStore } = useGlobalStore();
   const sessionUser = useSyncExternalStore(
@@ -87,6 +85,7 @@ export function StoreConfigurationPage({
   );
   const canManageComplianceRuleSets =
     sessionUser?.role === "admin" || sessionUser?.role === "maker";
+  const isAdmin = sessionUser?.role === "admin";
   const updateStoreMutation = useUpdateStore();
   const updateStoreComplianceSettingsMutation = useUpdateStoreComplianceSettings();
   const createComplianceRuleSetMutation = useCreateComplianceRuleSet();
@@ -94,11 +93,7 @@ export function StoreConfigurationPage({
     selectedStore?.id ?? "",
   );
   const removeStoreUserMutation = useRemoveStoreUser();
-  const queryClient = useQueryClient();
-  const storeIdForDefaults = selectedStore?.id ?? "";
-  const { data: cachedFixtureLabels = [], isFetched: fixtureLabelsFetched } =
-    useStoreFixtureTypes();
-  const lastHydratedFixtureStoreId = useRef<string>("");
+  const { data: fixtureTypes = [] } = useStoreFixtureTypes();
 
   const [activeTab, setActiveTab] = useState<Tab>("profile");
   const [formData, setFormData] = useState({
@@ -106,16 +101,11 @@ export function StoreConfigurationPage({
     address: "",
     region: "",
     status: "Active" as "Active" | "Inactive",
-    region: "",
-    status: "Active" as "Active" | "Inactive",
     currency: "USD",
-    default_dimensions: "mm" as StoreDimensionUnit,
     default_dimensions: "mm" as StoreDimensionUnit,
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
-  const [fixtureTypes, setFixtureTypes] = useState<string[]>(DEFAULT_FIXTURE_TYPES);
-  const [hasHydratedFixtureTypes, setHasHydratedFixtureTypes] = useState(false);
   const [newFixture, setNewFixture] = useState("");
   const [defaultComplianceRuleSetId, setDefaultComplianceRuleSetId] = useState("");
   const [newTemplate, setNewTemplate] = useState<StoreTemplateForm>({
@@ -136,7 +126,16 @@ export function StoreConfigurationPage({
   const updateTemplateMutation = useUpdateShelfTemplate();
   const deleteTemplateMutation = useDeleteShelfTemplate();
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [fixtureModalOpen, setFixtureModalOpen] = useState(false);
+  const [isCreatingFixture, setIsCreatingFixture] = useState(false);
+  const [editingFixture, setEditingFixture] = useState<StoreFixtureApiModel | null>(null);
   const [createRuleSetModalOpen, setCreateRuleSetModalOpen] = useState(false);
+  const { data: fixtures = [] } = useQuery({
+    queryKey: ["maker", "fixtures", "list", selectedStore?.id ?? "no-store"],
+    queryFn: fetchStoreFixtures,
+    enabled: !!selectedStore?.id,
+    staleTime: 60 * 1000,
+  });
 
   useEffect(() => {
     if (selectedStore) {
@@ -145,11 +144,8 @@ export function StoreConfigurationPage({
         address: (selectedStore as any).address || "",
         region: (selectedStore as any).region || "",
         status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
-        region: (selectedStore as any).region || "",
-        status: ((selectedStore as any).status as "Active" | "Inactive" | undefined) || "Active",
         currency: (selectedStore as any).currency || "USD",
         default_dimensions:
-          ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
           ((selectedStore as any).default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
       setDefaultComplianceRuleSetId(
@@ -157,25 +153,6 @@ export function StoreConfigurationPage({
       );
     }
   }, [selectedStore]);
-
-  useEffect(() => {
-    if (!storeIdForDefaults || !fixtureLabelsFetched) return;
-    if (lastHydratedFixtureStoreId.current === storeIdForDefaults) return;
-    lastHydratedFixtureStoreId.current = storeIdForDefaults;
-    setHasHydratedFixtureTypes(false);
-    setFixtureTypes(
-      cachedFixtureLabels.length > 0 ? cachedFixtureLabels : DEFAULT_FIXTURE_TYPES,
-    );
-    setHasHydratedFixtureTypes(true);
-  }, [storeIdForDefaults, fixtureLabelsFetched, cachedFixtureLabels]);
-
-  useEffect(() => {
-    const storeId = selectedStore?.id;
-    if (!storeId) return;
-    if (!hasHydratedFixtureTypes) return;
-    mergeStoreDefaults(storeId, { fixtureTypes });
-    void queryClient.invalidateQueries({ queryKey: storeDefaultsKeys.all });
-  }, [selectedStore?.id, fixtureTypes, hasHydratedFixtureTypes, queryClient]);
 
   if (!selectedStore) {
     return (
@@ -209,6 +186,65 @@ export function StoreConfigurationPage({
       toast({
         title: "Update Failed",
         description: "An error occurred while saving the store settings.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeactivateStore = async () => {
+    if (!selectedStore || !isAdmin) return;
+    try {
+      const updated = await updateStoreMutation.mutateAsync({
+        storeId: selectedStore.id,
+        data: {
+          name: formData.name,
+          address: formData.address,
+          region: formData.region,
+          status: "Inactive",
+          currency: formData.currency,
+          default_dimensions: formData.default_dimensions,
+        },
+      });
+      setSelectedStore(updated);
+      toast({
+        title: "Store deactivated",
+        description: "This store is now inactive.",
+        variant: "warning",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to deactivate store",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleActivateStore = async () => {
+    if (!selectedStore || !isAdmin) return;
+    try {
+      const updated = await updateStoreMutation.mutateAsync({
+        storeId: selectedStore.id,
+        data: {
+          name: formData.name,
+          address: formData.address,
+          region: formData.region,
+          status: "Active",
+          currency: formData.currency,
+          default_dimensions: formData.default_dimensions,
+        },
+      });
+      setSelectedStore(updated);
+      toast({
+        title: "Store activated",
+        description: "This store is now active.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to activate store",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
     }
@@ -354,6 +390,105 @@ export function StoreConfigurationPage({
     setTemplateModalOpen(false);
   };
 
+  const handleCreateFixture = async (values: StoreFixtureModalValues) => {
+    if (!selectedStore || !canEdit) return;
+    const type = values.type.trim();
+    if (!type) {
+      toast({
+        title: "Missing fixture type",
+        description: "Fixture type is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCreatingFixture(true);
+    try {
+      if (editingFixture) {
+        await updateStoreFixture(selectedStore.id, editingFixture.id, {
+          type,
+          dimensions: {
+            width: Number(values.width) || editingFixture.width,
+            height: Number(values.height) || editingFixture.height,
+            depth: Number(values.depth) || editingFixture.depth,
+          },
+          dimension_unit: values.dimensionUnit || formData.default_dimensions,
+          physical_location: {
+            section: values.section.trim() || editingFixture.section,
+            aisle: values.aisle.trim() || editingFixture.aisle,
+            zone: values.zone.trim() || editingFixture.zone,
+          },
+        });
+      } else {
+        await createStoreFixture(selectedStore.id, {
+          type,
+          dimensions: {
+            width: Number(values.width) || 120,
+            height: Number(values.height) || 200,
+            depth: Number(values.depth) || 45,
+          },
+          dimension_unit: values.dimensionUnit || formData.default_dimensions,
+          physical_location: {
+            section: values.section.trim() || "General",
+            aisle: values.aisle.trim() || "A1",
+            zone: values.zone.trim() || "General",
+          },
+        });
+      }
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: storeDefaultsKeys.fixtureTypes(selectedStore.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["maker", "fixtures", "list", selectedStore.id],
+        }),
+      ]);
+      setFixtureModalOpen(false);
+      setEditingFixture(null);
+      toast({
+        title: editingFixture ? "Fixture updated" : "Fixture added",
+        description: editingFixture
+          ? "Fixture has been updated for this store."
+          : "Fixture has been added to this store.",
+      });
+    } catch (error) {
+      toast({
+        title: editingFixture ? "Failed to update fixture" : "Failed to add fixture",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCreatingFixture(false);
+    }
+  };
+
+  const handleDeleteFixture = async (fixture: StoreFixtureApiModel) => {
+    if (!selectedStore || !canEdit) return;
+    try {
+      await deleteStoreFixture(selectedStore.id, fixture.id);
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: storeDefaultsKeys.fixtureTypes(selectedStore.id),
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["maker", "fixtures", "list", selectedStore.id],
+        }),
+      ]);
+      toast({
+        title: "Fixture deleted",
+        description: "Fixture has been removed from this store.",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to delete fixture",
+        description:
+          error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const userColumns: DataTableColumn<AuthSessionUser>[] = useMemo(
     () => [
       {
@@ -452,16 +587,22 @@ export function StoreConfigurationPage({
         {activeTab === "profile" && (
           <StoreProfileTab
             canEdit={canEdit}
+            isAdmin={!!isAdmin}
             formData={formData}
             setFormData={setFormData}
             isSaving={updateStoreMutation.isPending}
             onSave={handleSave}
+            onDeactivate={handleDeactivateStore}
+            onActivate={handleActivateStore}
           />
         )}
 
         {activeTab === "defaults" && (
           <StoreDefaultsTabContent
             canEdit={canEdit}
+            canEditFixtureTypes={false}
+            onOpenAddFixtureModal={() => setFixtureModalOpen(true)}
+            isCreatingFixture={isCreatingFixture}
             canManageComplianceRuleSets={canManageComplianceRuleSets}
             onOpenCreateRuleSetModal={() => setCreateRuleSetModalOpen(true)}
             onSaveComplianceDefault={handleSaveComplianceDefaultOnly}
@@ -469,9 +610,15 @@ export function StoreConfigurationPage({
             activeDefaultsTab={activeDefaultsTab}
             setActiveDefaultsTab={setActiveDefaultsTab}
             fixtureTypes={fixtureTypes}
-            setFixtureTypes={setFixtureTypes}
+            fixtures={fixtures}
+            setFixtureTypes={() => undefined}
             newFixture={newFixture}
             setNewFixture={setNewFixture}
+            onEditFixture={(fixture) => {
+              setEditingFixture(fixture);
+              setFixtureModalOpen(true);
+            }}
+            onDeleteFixture={handleDeleteFixture}
             complianceRuleSets={complianceRuleSets}
             defaultComplianceRuleSetId={defaultComplianceRuleSetId}
             setDefaultComplianceRuleSetId={setDefaultComplianceRuleSetId}
@@ -570,6 +717,30 @@ export function StoreConfigurationPage({
           onClose={() => setCreateRuleSetModalOpen(false)}
           isSubmitting={createComplianceRuleSetMutation.isPending}
           onSubmit={handleCreateComplianceRuleSetSubmit}
+        />
+        <StoreFixtureModal
+          isOpen={fixtureModalOpen}
+          onClose={() => {
+            setFixtureModalOpen(false);
+            setEditingFixture(null);
+          }}
+          onSave={handleCreateFixture}
+          isSaving={isCreatingFixture}
+          mode={editingFixture ? "edit" : "create"}
+          initialValues={
+            editingFixture
+              ? {
+                  type: editingFixture.type,
+                  width: String(editingFixture.width),
+                  height: String(editingFixture.height),
+                  depth: String(editingFixture.depth),
+                  dimensionUnit: editingFixture.dimension_unit as StoreDimensionUnit,
+                  section: editingFixture.section,
+                  aisle: editingFixture.aisle,
+                  zone: editingFixture.zone,
+                }
+              : { dimensionUnit: formData.default_dimensions }
+          }
         />
       </div>
     </MainLayout>

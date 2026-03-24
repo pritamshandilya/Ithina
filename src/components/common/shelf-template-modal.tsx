@@ -100,6 +100,8 @@ interface ShelfTemplateModalProps {
   initialValues?: Partial<ShelfTemplateModalValues>;
   /** Store default fixture names (e.g. from onboarding or Store Defaults). */
   extraFixtureTypeOptions?: string[];
+  fixtureDepthByType?: Record<string, string | number>;
+  fixtureUnitByType?: Record<string, string>;
 }
 
 export function ShelfTemplateModal({
@@ -110,6 +112,8 @@ export function ShelfTemplateModal({
   mode = "create",
   initialValues,
   extraFixtureTypeOptions,
+  fixtureDepthByType,
+  fixtureUnitByType,
 }: ShelfTemplateModalProps) {
   const [form, setForm] = useState<ShelfTemplateModalValues>({
     ...EMPTY_VALUES,
@@ -120,6 +124,65 @@ export function ShelfTemplateModal({
     () => buildShelfTemplateFixtureSelectOptions(extraFixtureTypeOptions),
     [extraFixtureTypeOptions],
   );
+
+  const depthByType = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [rawKey, rawDepth] of Object.entries(fixtureDepthByType ?? {})) {
+      const key = rawKey.trim();
+      if (!key) continue;
+      const depth = String(rawDepth).trim();
+      if (!depth) continue;
+      map.set(key.toLowerCase(), depth);
+      map.set(fixtureLabelDedupeKey(key), depth);
+    }
+    return map;
+  }, [fixtureDepthByType]);
+
+  const unitByType = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const [rawKey, rawUnit] of Object.entries(fixtureUnitByType ?? {})) {
+      const key = rawKey.trim();
+      const unit = rawUnit.trim();
+      if (!key || !unit) continue;
+      map.set(key.toLowerCase(), unit);
+      map.set(fixtureLabelDedupeKey(key), unit);
+    }
+    return map;
+  }, [fixtureUnitByType]);
+
+  const resolveDepthForFixtureType = (fixtureTypeValue: string): string | undefined => {
+    const normalizedValue = fixtureTypeValue.trim().toLowerCase();
+    const dedupeValue = fixtureLabelDedupeKey(fixtureTypeValue);
+    const optionLabel =
+      fixtureOptions.find((option) => option.value === fixtureTypeValue)?.label ?? "";
+    const normalizedLabel = optionLabel.toLowerCase();
+    const dedupeLabel = fixtureLabelDedupeKey(optionLabel);
+
+    return (
+      depthByType.get(normalizedValue) ??
+      depthByType.get(dedupeValue) ??
+      depthByType.get(normalizedLabel) ??
+      depthByType.get(dedupeLabel)
+    );
+  };
+
+  const resolveUnitForFixtureType = (fixtureTypeValue: string): string | undefined => {
+    const normalizedValue = fixtureTypeValue.trim().toLowerCase();
+    const dedupeValue = fixtureLabelDedupeKey(fixtureTypeValue);
+    const optionLabel =
+      fixtureOptions.find((option) => option.value === fixtureTypeValue)?.label ?? "";
+    const normalizedLabel = optionLabel.toLowerCase();
+    const dedupeLabel = fixtureLabelDedupeKey(optionLabel);
+
+    return (
+      unitByType.get(normalizedValue) ??
+      unitByType.get(dedupeValue) ??
+      unitByType.get(normalizedLabel) ??
+      unitByType.get(dedupeLabel)
+    );
+  };
+
+  const selectedFixtureUnit = resolveUnitForFixtureType(form.fixtureType);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -179,12 +242,15 @@ export function ShelfTemplateModal({
               <Select
                 id="tpl-fixture"
                 value={form.fixtureType}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const selectedFixtureType = e.target.value;
+                  const depthFromFixture = resolveDepthForFixtureType(selectedFixtureType);
                   setForm((f) => ({
                     ...f,
-                    fixtureType: e.target.value,
-                  }))
-                }
+                    fixtureType: selectedFixtureType,
+                    depth: depthFromFixture ?? f.depth,
+                  }));
+                }}
               >
                 {fixtureOptions.map((o) => (
                   <option key={`${o.value}-${o.label}`} value={o.value}>
@@ -217,7 +283,12 @@ export function ShelfTemplateModal({
               />
             </div>
             <div className="grid gap-2">
-              <Label>Dimensions (W × H × D)</Label>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Dimensions (W × H × D)</Label>
+                {selectedFixtureUnit ? (
+                  <span className="text-xs text-muted-foreground">Unit: {selectedFixtureUnit}</span>
+                ) : null}
+              </div>
               <div className="flex items-center gap-1.5">
                 <Input
                   value={form.width}

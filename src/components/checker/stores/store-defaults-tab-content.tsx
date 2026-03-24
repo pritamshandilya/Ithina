@@ -9,6 +9,7 @@ import type { ShelfTemplate } from "@/types/shelf-template";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { cn } from "@/lib/utils";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { StoreFixtureApiModel } from "@/queries/checker/api/fixtures";
 
 type DefaultsTab = "fixtures" | "templates" | "rules" | "units";
 
@@ -25,6 +26,9 @@ type StoreTemplateForm = {
 
 interface StoreDefaultsTabContentProps {
   canEdit: boolean;
+  canEditFixtureTypes?: boolean;
+  onOpenAddFixtureModal?: () => void;
+  isCreatingFixture?: boolean;
   /** Admin and maker: create rule sets and choose default; checker stays read-only. */
   canManageComplianceRuleSets: boolean;
   onOpenCreateRuleSetModal: () => void;
@@ -33,9 +37,13 @@ interface StoreDefaultsTabContentProps {
   activeDefaultsTab: DefaultsTab;
   setActiveDefaultsTab: Dispatch<SetStateAction<DefaultsTab>>;
   fixtureTypes: string[];
-  setFixtureTypes: Dispatch<SetStateAction<string[]>>;
+  fixtures: StoreFixtureApiModel[];
+  setFixtureTypes: (value: SetStateAction<string[]>) => void;
   newFixture: string;
   setNewFixture: Dispatch<SetStateAction<string>>;
+  onEditFixture?: (fixture: StoreFixtureApiModel) => void;
+  onDeleteFixture?: (fixture: StoreFixtureApiModel) => void;
+  isFixtureLocked?: (fixture: StoreFixtureApiModel) => boolean;
   complianceRuleSets: ComplianceRuleSetSummary[];
   defaultComplianceRuleSetId: string;
   setDefaultComplianceRuleSetId: Dispatch<SetStateAction<string>>;
@@ -67,6 +75,9 @@ interface StoreDefaultsTabContentProps {
 
 export function StoreDefaultsTabContent({
   canEdit,
+  canEditFixtureTypes = false,
+  onOpenAddFixtureModal,
+  isCreatingFixture = false,
   canManageComplianceRuleSets,
   onOpenCreateRuleSetModal,
   onSaveComplianceDefault,
@@ -74,9 +85,13 @@ export function StoreDefaultsTabContent({
   activeDefaultsTab,
   setActiveDefaultsTab,
   fixtureTypes,
+  fixtures,
   setFixtureTypes,
   newFixture,
   setNewFixture,
+  onEditFixture,
+  onDeleteFixture,
+  isFixtureLocked,
   complianceRuleSets,
   defaultComplianceRuleSetId,
   setDefaultComplianceRuleSetId,
@@ -139,7 +154,19 @@ export function StoreDefaultsTabContent({
                     <LayoutPanelLeft className="size-4 text-accent" />
                     <p className="text-sm font-semibold text-foreground">Fixture Types</p>
                   </div>
-                  {canEdit && (
+                  {canEdit && onOpenAddFixtureModal ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 px-2"
+                      onClick={onOpenAddFixtureModal}
+                      disabled={isCreatingFixture}
+                    >
+                      <Plus className="size-3.5" />
+                      {isCreatingFixture ? "Adding..." : "Add fixture"}
+                    </Button>
+                  ) : null}
+                  {canEdit && canEditFixtureTypes && (
                     <div className="flex items-center gap-2">
                       <Input
                         value={newFixture}
@@ -168,46 +195,65 @@ export function StoreDefaultsTabContent({
                     <thead className="bg-muted/40 sticky top-0">
                       <tr>
                         <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Fixture Type</th>
-                        {canEdit && <th className="px-3 py-2 w-12" />}
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Dimensions</th>
+                        <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Location</th>
+                        {canEdit && <th className="px-3 py-2 w-24" />}
                       </tr>
                     </thead>
                     <tbody>
-                      {fixtureTypes.map((item, idx) => (
-                        <tr key={`${item}-${idx}`} className="border-t border-border/60">
-                          <td className="px-3 py-2">
-                            {canEdit ? (
-                              <Input
-                                value={item}
-                                onChange={(e) =>
-                                  setFixtureTypes((prev) =>
-                                    prev.map((v, i) => (i === idx ? e.target.value : v)),
-                                  )
-                                }
-                                className="h-8 text-xs"
-                              />
-                            ) : (
-                              item
-                            )}
-                          </td>
-                          {canEdit && (
-                            <td className="px-2 py-2">
-                              <Button
-                                type="button"
-                                size="icon-sm"
-                                variant="ghost"
-                                onClick={() =>
-                                  setFixtureTypes((prev) => prev.filter((_, i) => i !== idx))
-                                }
-                              >
-                                <Trash2 className="size-3.5 text-destructive" />
-                              </Button>
+                      {fixtures.map((fixture) => {
+                        const isLocked = isFixtureLocked?.(fixture) ?? false;
+                        return (
+                          <tr key={fixture.id} className="border-t border-border/60">
+                            <td className="px-3 py-2">{fixture.type}</td>
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {fixture.width}×{fixture.height}×{fixture.depth} {fixture.dimension_unit}
                             </td>
-                          )}
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {fixture.section} / {fixture.aisle} / {fixture.zone}
+                            </td>
+                            {canEdit && (
+                              <td className="px-2 py-2">
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    onClick={() => onEditFixture?.(fixture)}
+                                    disabled={isLocked}
+                                  >
+                                    <Edit3 className="size-3.5" />
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="icon-sm"
+                                    variant="ghost"
+                                    onClick={() => onDeleteFixture?.(fixture)}
+                                    disabled={isLocked}
+                                  >
+                                    <Trash2 className="size-3.5 text-destructive" />
+                                  </Button>
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
+                      {fixtures.length === 0 && (
+                        <tr className="border-t border-border/60">
+                          <td className="px-3 py-2 text-muted-foreground" colSpan={canEdit ? 4 : 3}>
+                            No fixtures found for this store.
+                          </td>
                         </tr>
-                      ))}
+                      )}
                     </tbody>
                   </table>
                 </div>
+                {!canEditFixtureTypes && (
+                  <p className="text-xs text-muted-foreground">
+                    Fixture types are sourced from backend fixtures for this store.
+                  </p>
+                )}
               </section>
             )}
 

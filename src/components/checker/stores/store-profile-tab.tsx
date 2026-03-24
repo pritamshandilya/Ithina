@@ -19,13 +19,25 @@ type StoreProfileTabFormData = {
 
 export interface StoreProfileTabProps {
   canEdit: boolean;
+  isAdmin: boolean;
   formData: StoreProfileTabFormData;
   setFormData: Dispatch<SetStateAction<StoreProfileTabFormData>>;
   isSaving: boolean;
   onSave: (e: FormEvent) => void | Promise<void>;
+  onDeactivate: () => void | Promise<void>;
+  onActivate: () => void | Promise<void>;
 }
 
-export function StoreProfileTab({ canEdit, formData, setFormData, isSaving, onSave }: StoreProfileTabProps) {
+export function StoreProfileTab({
+  canEdit,
+  isAdmin,
+  formData,
+  setFormData,
+  isSaving,
+  onSave,
+  onDeactivate,
+  onActivate,
+}: StoreProfileTabProps) {
   if (!formData) {
     return (
       <div className="space-y-6">
@@ -94,35 +106,38 @@ export function StoreProfileTab({ canEdit, formData, setFormData, isSaving, onSa
             />
           </div>
 
-          <div className="grid gap-2">
-            <label className="text-sm font-medium text-foreground" htmlFor="store-status">
-              Status
-            </label>
-            <select
-              id="store-status"
-              value={formData.status}
-              onChange={(e) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  status: (e.target.value as "Active" | "Inactive") ?? "Active",
-                }))
-              }
-              disabled={!canEdit}
-              className="h-10 w-full rounded-md border border-border bg-background/50 px-3 text-sm font-medium text-foreground shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
         </div>
 
-        {canEdit && (
-          <div className="flex justify-end pt-2">
-            <Button type="submit" disabled={isSaving} className="min-w-[150px]">
-              {isSaving ? "Saving..." : "Save"}
+        <div className="flex justify-between items-center pt-2 gap-2">
+          {isAdmin && canEdit && formData.status === "Active" && (
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={isSaving}
+              onClick={() => void onDeactivate()}
+            >
+              Deactivate store
             </Button>
-          </div>
-        )}
+          )}
+          {isAdmin && canEdit && formData.status === "Inactive" && (
+            <Button
+              type="button"
+              className="bg-chart-2 text-white hover:opacity-90"
+              disabled={isSaving}
+              onClick={() => void onActivate()}
+            >
+              Activate store
+            </Button>
+          )}
+
+          {canEdit && (
+            <div className="flex justify-end flex-1">
+              <Button type="submit" disabled={isSaving} className="min-w-[150px]">
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          )}
+        </div>
       </CardContent>
     </form>
     </Card>

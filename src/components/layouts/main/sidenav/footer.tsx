@@ -1,100 +1,163 @@
-import { ChevronsUpDown, LogOut } from "lucide-react";
-
+import { Building2, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { useAppDispatch, useAppSelector } from "@/store/hooks";
+import { toggleTheme } from "@/store/slices/ui-slice";
 
+// ─── Small helper — avoids repeating button layout ──────────────────────────
+function MenuItem({
+  icon,
+  label,
+  onClick,
+  variant = "default",
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: () => void;
+  variant?: "default" | "danger";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm transition-colors",
+        variant === "danger"
+          ? "text-rose-400 hover:bg-rose-400/[0.08] hover:text-rose-300"
+          : "text-slate-300 hover:bg-white/[0.05] hover:text-white",
+      )}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 export default function SidenavFooter() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const isDark = useAppSelector((s) => s.ui.isDarkMode);
   const user = SimulatedAuthService.getCurrentUser();
 
-  if (!user) {
-    return (
-      <div className="shrink-0 border-t border-ithina-border/40 bg-black/20 p-4">
-        <div className="flex items-center gap-3">
-          <div className="size-10 shrink-0 rounded-full border border-ithina-border bg-ithina-panel" />
-          <div className="overflow-hidden">
-            <p className="truncate text-sm font-medium text-white">Guest</p>
-            <p className="truncate font-mono text-[10px] text-slate-500">
-              Not signed in
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
-  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const handleLogout = () => {
     SimulatedAuthService.logout();
     navigate({ to: "/login" });
   };
 
+  if (!user) {
+    return (
+      <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
+        <div className="flex items-center gap-3">
+          <div className="size-9 shrink-0 rounded-full border border-ithina-border bg-ithina-panel" />
+          <p className="text-sm font-medium text-white">Guest</p>
+        </div>
+      </div>
+    );
+  }
+
+  const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
+  const fullName = `${user.firstName} ${user.lastName}`;
+
   return (
-    <div className="shrink-0 border-t border-ithina-border/40 bg-gradient-to-t from-black/30 to-transparent p-4">
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="flex w-full items-center gap-3 rounded-lg p-1.5 text-left transition-all duration-200 hover:bg-white/[0.04]">
-            <Avatar className="size-9 shrink-0 rounded-full border border-ithina-purple/20 shadow-[0_0_8px_rgba(168,85,247,0.1)]">
-              <AvatarFallback className="rounded-full bg-ithina-purple/10 text-xs font-semibold text-ithina-purple">
+    <div className="relative shrink-0" ref={ref}>
+
+      {/* ── Upward popup ── */}
+      {open && (
+        <div className="absolute bottom-full left-2 right-2 mb-1 overflow-hidden rounded-xl border border-ithina-border bg-ithina-sidebar shadow-2xl z-50">
+
+          {/* User info header */}
+          <div className="flex items-center gap-3 border-b border-ithina-border/60 px-4 py-3.5">
+            <Avatar className="size-9 shrink-0 rounded-full border border-ithina-purple/30">
+              <AvatarFallback className="rounded-full bg-ithina-purple/20 text-xs font-bold text-ithina-purple">
                 {initials}
               </AvatarFallback>
             </Avatar>
-
-            <div className="min-w-0 flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-white">
-                {user.firstName} {user.lastName}
-              </p>
-              <p className="truncate font-mono text-[10px] text-slate-500">
-                {user.email}
-              </p>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{fullName}</p>
+              <p className="truncate font-mono text-[10px] text-slate-500">{user.email}</p>
+              <p className="truncate font-mono text-[10px] text-slate-600">Category Manager</p>
             </div>
+          </div>
 
-            <ChevronsUpDown className="ml-auto size-4 shrink-0 text-slate-600" />
-          </button>
-        </DropdownMenuTrigger>
+          {/* Menu items */}
+          <div className="p-1">
+            <MenuItem
+              icon={<User className="size-4 text-slate-500" />}
+              label="Profile"
+            />
+            <MenuItem
+              icon={<Building2 className="size-4 text-slate-500" />}
+              label="Store Settings"
+              onClick={() => {
+                navigate({ to: "/store-settings" });
+                setOpen(false);
+              }}
+            />
+            <MenuItem
+              icon={
+                isDark ? (
+                  <Sun className="size-4 text-slate-500" />
+                ) : (
+                  <Moon className="size-4 text-slate-500" />
+                )
+              }
+              label={isDark ? "Light Mode" : "Dark Mode"}
+              onClick={() => dispatch(toggleTheme())}
+            />
+          </div>
 
-        <DropdownMenuContent
-          className="w-56 rounded-lg"
-          side="right"
-          align="end"
-          sideOffset={8}
-        >
-          <DropdownMenuLabel className="p-0 font-normal">
-            <div className="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
-              <Avatar className="size-8 rounded-lg">
-                <AvatarFallback className="rounded-lg bg-ithina-purple/10 text-xs font-semibold text-ithina-purple">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+          <div className="border-t border-ithina-border/60 p-1">
+            <MenuItem
+              icon={<LogOut className="size-4" />}
+              label="Log out"
+              onClick={handleLogout}
+              variant="danger"
+            />
+          </div>
+        </div>
+      )}
 
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">
-                  {user.firstName} {user.lastName}
-                </span>
-                <span className="truncate text-xs">{user.email}</span>
-              </div>
-            </div>
-          </DropdownMenuLabel>
+      {/* ── Profile trigger button ── */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center gap-3 border-t border-white/[0.05] bg-black/20 p-4 text-left transition-colors hover:bg-black/30"
+      >
+        <Avatar className="size-9 shrink-0 rounded-full border border-ithina-purple/30">
+          <AvatarFallback className="rounded-full bg-ithina-purple/20 text-xs font-bold text-ithina-purple">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
 
-          <DropdownMenuSeparator />
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <p className="truncate text-sm font-medium leading-tight text-white">{fullName}</p>
+          <p className="truncate font-mono text-[10px] text-slate-500">Category Manager</p>
+        </div>
 
-          <DropdownMenuItem onClick={handleLogout}>
-            <LogOut />
-            Log out
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <ChevronDown
+          className={cn(
+            "size-3.5 shrink-0 text-slate-600 transition-transform duration-200",
+            open && "rotate-180",
+          )}
+        />
+      </button>
     </div>
   );
 }

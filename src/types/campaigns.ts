@@ -4,6 +4,12 @@ export interface CampaignListItem {
   id: string;
   name: string;
   status: CampaignListStatus;
+  /**
+   * Prototype-only UI fields (used for the campaign pipeline breadcrumb in /campaigns).
+   * Backend integration may provide this later; keeping optional avoids breaking API payloads.
+   */
+  pipeline?: string[];
+  paused?: boolean;
   skus: number;
   hardware: string[];
   date: string;
@@ -47,3 +53,16 @@ export interface CampaignTableColumn {
 }
 
 export type CampaignFilterOption = "All" | CampaignListStatus;
+
+export interface CampaignCreateForm {
+  name: string;
+  status: CampaignListStatus;
+  skus: number;
+  hardware: string;
+  initiator: string;
+  scheduled_date: string;
+}
+
+export interface CampaignEditForm extends CampaignCreateForm {
+  id: string;
+}

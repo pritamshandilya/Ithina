@@ -7,13 +7,15 @@ import type { WizardMode } from "./mode-chooser";
 
 interface WizardStepHeaderProps {
   mode: WizardMode;
+  inputMode?: "ai" | "csv";
   currentStep: number; // 1-indexed
   steps: string[];
   onBack: () => void;
 }
 
-function WizardStepHeader({ mode, currentStep, steps, onBack }: WizardStepHeaderProps) {
+function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack }: WizardStepHeaderProps) {
   const isNl = mode === "nl";
+  const isCsvNl = isNl && inputMode === "csv";
 
   return (
     <div className="flex shrink-0 items-center gap-5 border-b border-ithina-border px-8 pb-4 pt-5">
@@ -31,17 +33,23 @@ function WizardStepHeader({ mode, currentStep, steps, onBack }: WizardStepHeader
         <div
           className={cn(
             "flex size-6 items-center justify-center rounded-lg",
-            isNl ? "bg-ithina-purple" : "border border-ithina-border bg-ithina-bg",
+            isCsvNl
+              ? "border border-ithina-border bg-ithina-bg"
+              : isNl
+                ? "bg-ithina-purple"
+                : "border border-ithina-border bg-ithina-bg",
           )}
         >
-          {isNl ? (
+          {isCsvNl ? (
+            <CloudUpload className="size-3.5 text-slate-300" />
+          ) : isNl ? (
             <Zap className="size-3.5 text-white" />
           ) : (
             <CloudUpload className="size-3.5 text-slate-400" />
           )}
         </div>
-        <span className={cn("text-xs font-semibold", isNl ? "text-ithina-purple" : "text-slate-300")}>
-          {isNl ? "NL Generation" : "Manual Creation"}
+        <span className={cn("text-xs font-semibold", isCsvNl ? "text-slate-300" : isNl ? "text-ithina-purple" : "text-slate-300")}>
+          {isCsvNl ? "CSV Upload" : isNl ? "AI Assisted" : "Manual Upload"}
         </span>
       </div>
 
@@ -103,12 +111,18 @@ function WizardStepHeader({ mode, currentStep, steps, onBack }: WizardStepHeader
         })}
       </div>
 
-      {/* Step counter badge */}
-      <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-ithina-border bg-ithina-bg px-3 py-1">
-        <span className="text-[10px] font-bold text-ithina-purple">{currentStep}</span>
-        <span className="text-[10px] text-slate-600">/</span>
-        <span className="text-[10px] font-medium text-slate-400">{steps.length}</span>
-      </div>
+      {isNl ? (
+        <div className="flex shrink-0 items-center gap-2 text-[10px] font-mono text-slate-500">
+          <span className="inline-block size-1.5 rounded-full bg-amber-400" />
+          Draft, auto-saved
+        </div>
+      ) : (
+        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-ithina-border bg-ithina-bg px-3 py-1">
+          <span className="text-[10px] font-bold text-ithina-purple">{currentStep}</span>
+          <span className="text-[10px] text-slate-600">/</span>
+          <span className="text-[10px] font-medium text-slate-400">{steps.length}</span>
+        </div>
+      )}
     </div>
   );
 }

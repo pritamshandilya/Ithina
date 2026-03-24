@@ -1,10 +1,15 @@
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
-import PageHeader from "@/components/shared/page-header";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { activateCampaign, setStagedSkus } from "@/store/slices/campaign-slice";
+import {
+  activateCampaign,
+  activateCampaignWithId,
+  setPendingApproval,
+  setStagedSkus,
+} from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
   appendGridRow,
@@ -14,7 +19,6 @@ import {
   removeGridRow,
   resetWizard,
   setCampaignNamed,
-  setConstraints as setWizardConstraints,
   setCsvConfirmed,
   setCsvFileName,
   setCsvRows,
@@ -24,18 +28,23 @@ import {
   setWMode,
   setWStep,
 } from "@/store/slices/wizard-slice";
-import type { HardwareDeviceId, WizardConstraints } from "@/types/wizard";
+import type { HardwareDeviceId } from "@/types/wizard";
 import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
+import { approvalKeys } from "@/hooks/use-approval";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
+import { createCampaignFromWizard } from "@/services/campaigns";
+import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
-import ConstraintBar from "./components/constraint-bar";
 import DataStagingGrid from "./components/data-staging-grid";
 import type { InputMode } from "./components/data-staging-grid";
 import ModeChooser from "./components/mode-chooser";
-import type { WizardMode } from "./components/mode-chooser";
+import type { WizardEntryInput, WizardMode } from "./components/mode-chooser";
 import ScreenSelector from "./components/screen-selector";
 import ManualUpload from "./components/manual-upload";
 import WizardStepHeader from "./components/wizard-step-header";
+import GuardRailsStep from "./components/guard-rails-step";
+import ScheduleStep from "./components/schedule-step";
+import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
 
 interface CsvRow {
   sku: string;
@@ -46,19 +55,27 @@ interface CsvRow {
 }
 
 // Step 0 = mode chooser, steps 1..N = actual steps
-// NL:     step 1 = Intent & Data, step 2 = Select Screens
-// Manual: step 1 = Select Screens, step 2 = Upload Banners
-
-const NL_STEPS = ["Intent & Data", "Select Screens"];
+// NL runtime currently implements first 2 steps, but header follows the new 5-step flow shell.
+const NL_STEPS = ["Select Data", "Select Screens & Design", "Guard Rails", "Schedule", "Submit"];
 const MANUAL_STEPS = ["Select Screens", "Upload Banners"];
 
 export default function Wizard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
 
   // ── Device / upload state (local — not in redux) ───────────────────
   const [selectedDevices, setSelectedDevices] = useState<HardwareDeviceId[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<HardwareDeviceId, string>>>({});
+  const [activeDevice, setActiveDevice] = useState<HardwareDeviceId | null>(null);
+  const [designConfigured, setDesignConfigured] = useState(false);
+  const [showStudio, setShowStudio] = useState(false);
+  const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
+  const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
+    chroma29: [],
+    chroma42: ['2.9"'],
+    lcd: [],
+  });
 
   // ── Redux wizard state ─────────────────────────────────────────────
   const {
@@ -76,6 +93,8 @@ export default function Wizard() {
     campaignNamed,
   } = useAppSelector((s) => s.wizard);
 
+  const campaignName = useAppSelector((s) => s.campaign.name);
+
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -86,12 +105,48 @@ export default function Wizard() {
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
+  const toApprovalHardwareLabel = useCallback((id: HardwareDeviceId): string => {
+    if (id === "chroma29") return 'ESL 2.9"';
+    if (id === "chroma42") return 'ESL 4.2"';
+    return 'LCD 14"';
+  }, []);
+
+  const submitDisplayTags = useMemo((): SubmitDisplayTag[] => {
+    const out: SubmitDisplayTag[] = [];
+    for (const id of selectedDevices) {
+      const sizes = sizeByDevice[id] ?? [];
+      const variant: SubmitDisplayTag["variant"] = id === "lcd" ? "lcd" : "esl";
+      if (sizes.length === 0) {
+        out.push({ label: toApprovalHardwareLabel(id), variant });
+      } else {
+        for (const s of sizes) {
+          out.push({
+            label: id === "lcd" ? `LCD ${s}` : `ESL ${s}`,
+            variant,
+          });
+        }
+      }
+    }
+    return out;
+  }, [selectedDevices, sizeByDevice, toApprovalHardwareLabel]);
+
   // ── Navigation helpers ─────────────────────────────────────────────
-  const handleSelectMode = useCallback((mode: WizardMode) => {
+  const handleSelectMode = useCallback((mode: WizardMode, input: WizardEntryInput) => {
     dispatch(setWMode(mode));
     dispatch(setWStep(1));
-    dispatch(setHasSplit(false));
-    dispatch(setShowGrid(false));
+    dispatch(setWizardInputMode(input));
+    dispatch(setHasSplit(input === "csv"));
+    dispatch(setShowGrid(input === "csv"));
+    setActiveDevice(null);
+    setDesignConfigured(false);
+    setShowStudio(false);
+    setSelectedVariant("B");
+    setSizeByDevice({
+      chroma29: [],
+      chroma42: ['2.9"'],
+      lcd: [],
+    });
+    setSelectedDevices([]);
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -109,6 +164,15 @@ export default function Wizard() {
     setSelectedDevices((prev) =>
       prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id],
     );
+  }, []);
+
+  const handleToggleDeviceSize = useCallback((id: HardwareDeviceId, size: string) => {
+    setSizeByDevice((prev) => {
+      const next = new Set(prev[id] ?? []);
+      if (next.has(size)) next.delete(size);
+      else next.add(size);
+      return { ...prev, [id]: Array.from(next) };
+    });
   }, []);
 
   // ── NL flow ────────────────────────────────────────────────────────
@@ -164,39 +228,71 @@ export default function Wizard() {
     }
   }, [inputText, intentMutation, hasSplit, showGrid, constraints, gridData.length, pushMessage, generateCampaignName, dispatch, addTimer]);
 
-  const handleConstraintChange = useCallback(
-    (c: WizardConstraints) => dispatch(setWizardConstraints(c)),
-    [dispatch],
-  );
+  const handleNlNextFromScreens = useCallback(() => {
+    dispatch(setWStep(3));
+  }, [dispatch]);
 
-  // NL Step 2 → trigger studio generation
-  const handleNlGenerateLayouts = useCallback(async () => {
-    if (selectedDevices.length === 0) return;
-    setError(null);
+  const handleNlNextFromGuardRails = useCallback(() => {
+    dispatch(setWStep(4));
+  }, [dispatch]);
 
-    if (inputMode === "csv" && csvConfirmed) {
-      dispatch(setStagedSkus(csvRows));
-    }
+  const handleNlNextFromSchedule = useCallback(() => {
+    dispatch(setWStep(5));
+  }, [dispatch]);
 
+  const handleNlSubmit = useCallback(async () => {
+    const resolvedName = campaignName || "Untitled Campaign";
+    let resolvedId = `inbox-${Date.now()}`;
     try {
-      const msg = await hwConfirmMutation.mutateAsync(selectedDevices);
-      pushMessage(msg);
-      setIsTyping(true);
-      addTimer(() => {
-        setIsTyping(false);
-        dispatch(resetWizard());
-        dispatch(resetStudio());
-        navigate({ to: "/studio" });
-      }, 3000);
+      const created = await createCampaignFromWizard(resolvedName);
+      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
+      resolvedId = created.id;
     } catch {
-      setError("Failed to confirm hardware. Please try again.");
+      dispatch(activateCampaign(resolvedName));
     }
-  }, [selectedDevices, hwConfirmMutation, pushMessage, inputMode, csvConfirmed, csvRows, dispatch, addTimer, navigate]);
+
+    const now = new Date();
+    const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
+    const hardwareTargets = selectedDevices.length > 0
+      ? selectedDevices.map(toApprovalHardwareLabel)
+      : ['ESL 1.54"'];
+
+    const pendingInboxItem: InboxItem = {
+      id: resolvedId,
+      title: resolvedName,
+      subtitle: "Waiting for approver decision",
+      initiator: "Wizard",
+      skus: gridData.length > 0 ? gridData.length : 3,
+      meta: "Pending",
+      metaVariant: "muted",
+      urgent: false,
+      status: "pending",
+      hardwareTargets,
+      guardRailsLabel: "All Pass",
+      submittedAt,
+    };
+
+    queryClient.setQueryData<InboxItem[] | undefined>(approvalKeys.inbox, (prev) => {
+      if (!prev) return [pendingInboxItem];
+      const withoutDuplicate = prev.filter((item) => item.id !== pendingInboxItem.id);
+      return [pendingInboxItem, ...withoutDuplicate];
+    });
+
+    dispatch(setPendingApproval(true));
+    dispatch(resetWizard());
+    dispatch(resetStudio());
+    navigate({ to: "/approval" });
+  }, [campaignName, dispatch, gridData.length, navigate, queryClient, selectedDevices, toApprovalHardwareLabel]);
 
   // Manual flow confirm
-  const handleManualConfirm = useCallback(() => {
+  const handleManualConfirm = useCallback(async () => {
     const name = "Manual Upload – " + new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
-    dispatch(activateCampaign(name));
+    try {
+      const created = await createCampaignFromWizard(name, "Manual Upload");
+      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
+    } catch {
+      dispatch(activateCampaign(name));
+    }
     dispatch(resetWizard());
     dispatch(resetStudio());
     navigate({ to: "/studio" });
@@ -235,6 +331,10 @@ export default function Wizard() {
       text: `${csvRows.length} SKUs loaded from CSV and staged for creative. ${warningCount ? `<span class="text-amber-400">${warningCount} items have low margin — please review.</span>` : "All margin checks passed."}`,
     });
   }, [csvRows, dispatch, pushMessage]);
+  const handleCsvConfirmAndProceed = useCallback(() => {
+    handleCsvConfirm();
+    dispatch(setWStep(2));
+  }, [handleCsvConfirm, dispatch]);
   const handleRemoveCsvRow = useCallback(
     (idx: number) => dispatch(removeCsvRow(idx)),
     [dispatch],
@@ -249,13 +349,6 @@ export default function Wizard() {
 
   return (
     <>
-      <PageHeader
-        breadcrumbs={[
-          { label: "Promotions Assistant" },
-          { label: "New Campaign", isActive: true },
-        ]}
-        title="Campaign Wizard"
-      />
 
       <div className="relative flex flex-1 flex-col overflow-y-auto">
         {/* Error toast */}
@@ -276,6 +369,7 @@ export default function Wizard() {
           <div className="flex flex-1 flex-col min-h-0">
             <WizardStepHeader
               mode={wMode}
+              inputMode={inputMode}
               currentStep={wStep}
               steps={wSteps}
               onBack={handleBack}
@@ -293,7 +387,7 @@ export default function Wizard() {
                       <span className="text-[9px] font-bold text-white">1</span>
                     </div>
                     <div className="flex-1">
-                      <span className="text-xs font-semibold text-white">Intent & Data Staging</span>
+                      <span className="text-xs font-semibold text-white">Select Data</span>
                       <span className="ml-2 text-[10px] text-slate-500">Describe your promotion and review the AI-staged SKUs</span>
                     </div>
                     <span className="rounded-full border border-ithina-border px-2 py-0.5 font-mono text-[9px] text-slate-600">
@@ -306,7 +400,7 @@ export default function Wizard() {
                         disabled={hwConfirmMutation.isPending}
                         className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Next: Select Screens
+                        Next: Select Screens & Design
                         <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
                         </svg>
@@ -323,9 +417,9 @@ export default function Wizard() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                           </svg>
                         </div>
-                        <h2 className="mb-2 text-2xl font-bold text-white">Campaign Intent Engine</h2>
+                        <h2 className="mb-2 text-2xl font-bold text-white">What's the promotion?</h2>
                         <p className="mx-auto max-w-md text-sm text-slate-400">
-                          Describe your promotion in plain language. AI will fetch live ROOS data, apply margins, and stage the SKUs.
+                          Describe it in plain English - ROOS will find matching SKUs and prices.
                         </p>
                       </div>
                       <div className="w-full max-w-2xl rounded-2xl border border-ithina-border bg-ithina-panel p-5 shadow-xl">
@@ -353,37 +447,15 @@ export default function Wizard() {
                               </svg>
                             </button>
                           </div>
-                          <ConstraintBar disabled={intentMutation.isPending} onChange={handleConstraintChange} />
                         </form>
                       </div>
-                      <button
-                        onClick={handleSwitchToCsv}
-                        className="flex items-center gap-2 rounded-xl border border-ithina-border bg-ithina-panel px-4 py-2.5 text-xs font-medium text-slate-400 transition-all hover:border-ithina-purple/30 hover:text-ithina-purple"
-                      >
-                        <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        Or upload a SKU CSV instead
-                      </button>
                     </div>
                   )}
 
                   {/* Post-submit: split screen (chat + grid) */}
                   {hasSplit && (
-                    <div className="flex flex-1 min-h-0 gap-6 px-8 pb-6 pt-5">
-                      <ChatPanel
-                        messages={messages}
-                        isTyping={isTyping}
-                        inputText={inputText}
-                        onInputChange={setInputText}
-                        onSubmit={handleSubmit}
-                        inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
-                        hasSplit={true}
-                      >
-                        <ConstraintBar disabled={intentMutation.isPending || hwConfirmMutation.isPending} onChange={handleConstraintChange} />
-                      </ChatPanel>
-
-                      {showGrid && (
+                    <div className="flex flex-1 min-h-0 gap-6 overflow-y-auto px-8 pb-6 pt-5">
+                      {inputMode === "csv" ? (
                         <DataStagingGrid
                           data={gridData}
                           isGenerating={hwConfirmMutation.isPending}
@@ -395,10 +467,42 @@ export default function Wizard() {
                           onCsvParsed={handleCsvParsed}
                           onCsvClear={handleCsvClear}
                           onCsvConfirm={handleCsvConfirm}
+                          onCsvConfirmAndProceed={handleCsvConfirmAndProceed}
                           onRemoveCsvRow={handleRemoveCsvRow}
                           onRemoveAllViolations={handleRemoveAllViolations}
                           marginFloor={marginFloor}
+                          hideModeToggle
                         />
+                      ) : (
+                        <>
+                          <ChatPanel
+                            messages={messages}
+                            isTyping={isTyping}
+                            inputText={inputText}
+                            onInputChange={setInputText}
+                            onSubmit={handleSubmit}
+                            inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
+                            hasSplit={true}
+                          />
+
+                          {showGrid && (
+                            <DataStagingGrid
+                              data={gridData}
+                              isGenerating={hwConfirmMutation.isPending}
+                              inputMode={inputMode}
+                              onInputModeChange={handleInputModeChange}
+                              onRemoveGridRow={handleRemoveGridRow}
+                              csvRows={csvRows}
+                              csvFileName={csvFileName}
+                              onCsvParsed={handleCsvParsed}
+                              onCsvClear={handleCsvClear}
+                              onCsvConfirm={handleCsvConfirm}
+                              onRemoveCsvRow={handleRemoveCsvRow}
+                              onRemoveAllViolations={handleRemoveAllViolations}
+                              marginFloor={marginFloor}
+                            />
+                          )}
+                        </>
                       )}
                       {!showGrid && inputMode !== "csv" && (
                         <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-ithina-border bg-ithina-panel">
@@ -422,8 +526,35 @@ export default function Wizard() {
                 totalSteps={wSteps.length}
                 selectedDevices={selectedDevices}
                 onToggleDevice={handleToggleDevice}
-                onNext={handleNlGenerateLayouts}
+                activeDevice={activeDevice}
+                onSetActiveDevice={setActiveDevice}
+                designConfigured={designConfigured}
+                onSetDesignConfigured={setDesignConfigured}
+                showStudio={showStudio}
+                onSetShowStudio={setShowStudio}
+                selectedVariant={selectedVariant}
+                onSetSelectedVariant={setSelectedVariant}
+                sizeByDevice={sizeByDevice}
+                onToggleSize={handleToggleDeviceSize}
+                onNext={handleNlNextFromScreens}
                 storeNumber={constraints.store}
+              />
+            )}
+
+            {wStep === 3 && wMode === "nl" && (
+              <GuardRailsStep onNext={handleNlNextFromGuardRails} />
+            )}
+
+            {wStep === 4 && wMode === "nl" && (
+              <ScheduleStep onNext={handleNlNextFromSchedule} />
+            )}
+
+            {wStep === 5 && wMode === "nl" && (
+              <SubmitReviewStep
+                onSubmit={handleNlSubmit}
+                dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
+                skuCount={gridData.length || csvRows.length}
+                displayTags={submitDisplayTags}
               />
             )}
 
@@ -435,6 +566,16 @@ export default function Wizard() {
                 totalSteps={wSteps.length}
                 selectedDevices={selectedDevices}
                 onToggleDevice={handleToggleDevice}
+                activeDevice={activeDevice}
+                onSetActiveDevice={setActiveDevice}
+                designConfigured={designConfigured}
+                onSetDesignConfigured={setDesignConfigured}
+                showStudio={showStudio}
+                onSetShowStudio={setShowStudio}
+                selectedVariant={selectedVariant}
+                onSetSelectedVariant={setSelectedVariant}
+                sizeByDevice={sizeByDevice}
+                onToggleSize={handleToggleDeviceSize}
                 onNext={() => dispatch(setWStep(2))}
               />
             )}

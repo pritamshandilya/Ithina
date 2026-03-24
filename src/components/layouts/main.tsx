@@ -1,11 +1,20 @@
 import { Outlet, useLocation } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "framer-motion";
+import { useEffect } from "react";
 
 import Header from "./main/header";
 import Sidenav from "./main/sidenav";
+import ContentHeader from "./main/content-header";
+import { useAppSelector } from "@/store/hooks";
 
 export default function MainLayout() {
   const location = useLocation();
+  const isDark = useAppSelector((s) => s.ui.isDarkMode);
+
+  // Sync Redux theme state with the document class used by Tailwind / shadcn
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+  }, [isDark]);
 
   return (
     <div className="flex h-screen w-screen flex-col overflow-hidden">
@@ -15,6 +24,9 @@ export default function MainLayout() {
         <Sidenav />
 
         <main className="relative flex flex-1 flex-col overflow-hidden bg-ithina-bg">
+          {/* Shared breadcrumb + page title header — matches prototype */}
+          <ContentHeader />
+
           <AnimatePresence mode="wait">
             <motion.div
               key={location.pathname}

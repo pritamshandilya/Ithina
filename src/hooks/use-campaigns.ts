@@ -1,6 +1,9 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  approveCampaign,
+  createCampaign,
+  deleteCampaign,
   getCalendarWeekdays,
   getCampaignFilters,
   getCampaignList,
@@ -8,7 +11,10 @@ import {
   getCampaignStatusStyles,
   getCampaignTableColumns,
   getMonthNames,
+  rejectCampaign,
+  updateCampaign,
 } from "@/services/campaigns";
+import type { CampaignCreateForm } from "@/types/campaigns";
 
 export const campaignKeys = {
   all: ["campaigns"] as const,
@@ -82,5 +88,61 @@ export function useMonthNames() {
     queryFn: getMonthNames,
     staleTime: Infinity,
     gcTime: 10 * 60_000,
+  });
+}
+
+export function useCreateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: createCampaign,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useUpdateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, form }: { id: string; form: CampaignCreateForm }) =>
+      updateCampaign(id, form),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useDeleteCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: deleteCampaign,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useApproveCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: approveCampaign,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+}
+
+export function useRejectCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: rejectCampaign,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
 }

@@ -323,6 +323,13 @@
   text-overflow: ellipsis;
 }
 
+.data-table-wrapper[data-prototype="true"] .tabulator-cell {
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
 .data-table-wrapper .tabulator-cell.tabulator-frozen {
   border-right: 2px dotted var(--tabulator-border) !important;
 }
@@ -374,6 +381,10 @@
 
 .data-table-wrapper .tabulator-row.tabulator-selectable:hover {
   cursor: pointer;
+}
+
+.template-preview-esl-pixelated {
+  image-rendering: pixelated;
 }
 
 .data-table-wrapper .tabulator-row .tabulator-responsive-collapse {
@@ -437,4 +448,188 @@
 .data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size option {
   background-color: var(--card);
   color: var(--card-foreground);
+}
+
+/* Approval queue Tabulator — index_3.1.html table chrome (sticky header, row dividers) */
+.data-table-wrapper.approval-queue-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  padding: 0.75rem 1rem;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-row.approval-queue-row-selected {
+  background-color: color-mix(in srgb, var(--primary) 14%, transparent) !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-footer {
+  border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  background-color: color-mix(in srgb, var(--background) 40%, transparent);
+  padding: 0.625rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Campaigns list — index_3.1.html All Campaigns table (Tabulator) */
+.data-table-wrapper.campaigns-tabulator-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-check .tabulator-col-content {
+  padding-left: 1.25rem;
+  padding-right: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-campaign .tabulator-col-content {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-actions .tabulator-col-content {
+  padding-left: 1rem;
+  padding-right: 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  vertical-align: middle;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-check {
+  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-campaign {
+  padding: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-mid {
+  padding: 0.75rem 1rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-actions {
+  padding: 0.75rem 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-row.campaigns-row-selected {
+  background-color: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+}
+
+/* Natural table width + horizontal scroll — avoids fitColumns stretching cells across the viewport */
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-tableholder {
+  scrollbar-gutter: stable;
+}
+
+/* Guard Rails admin — index_3.1 store.guardRails table (Tabulator) */
+.data-table-wrapper.guard-rails-tabulator-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  vertical-align: middle;
+  padding: 0.875rem 1rem;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell.gr-col-actions {
+  padding-right: 1.25rem;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder {
+  scrollbar-gutter: stable;
 }

@@ -2,22 +2,34 @@ import { AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, Plus, Search, T
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { cn } from "@/lib/utils";
 import { useAppDispatch } from "@/store/hooks";
-import { activateCampaign } from "@/store/slices/campaign-slice";
+import { activateCampaign, activateCampaignWithId } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
-import type { CampaignFilterOption, CampaignListItem, CampaignListStatus } from "@/types/campaigns";
+import type { CampaignCreateForm, CampaignFilterOption, CampaignListItem, CampaignListStatus } from "@/types/campaigns";
 import {
   useCalendarWeekdays,
   useCampaignFilters,
   useCampaignList,
   useCampaignStatDefinitions,
   useCampaignStatusStyles,
+  useCreateCampaign,
+  useDeleteCampaign,
   useMonthNames,
+  useUpdateCampaign,
 } from "@/hooks/use-campaigns";
+import CampaignModal from "./components/campaign-modal";
+
+const EMPTY_FORM: CampaignCreateForm = {
+  name: "",
+  status: "Draft",
+  skus: 0,
+  hardware: "",
+  initiator: "",
+  scheduled_date: "",
+};
 
 export default function Campaigns() {
   const navigate = useNavigate();
@@ -30,6 +42,10 @@ export default function Campaigns() {
   const { data: weekdays = [], isLoading: weekdaysLoading } = useCalendarWeekdays();
   const { data: monthNames = [], isLoading: monthsLoading } = useMonthNames();
 
+  const createMutation = useCreateCampaign();
+  const updateMutation = useUpdateCampaign();
+  const deleteMutation = useDeleteCampaign();
+
   const isLoading = listLoading || filtersLoading || statsLoading || stylesLoading || weekdaysLoading || monthsLoading;
   const isError = listError;
 
@@ -38,6 +54,53 @@ export default function Campaigns() {
   const [viewMode, setViewMode] = useState<"table" | "calendar">("table");
   const [calYear, setCalYear] = useState(() => new Date().getFullYear());
   const [calMonth, setCalMonth] = useState(() => new Date().getMonth());
+
+  const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
+  const [modalForm, setModalForm] = useState<CampaignCreateForm>(EMPTY_FORM);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
+  const openCreate = useCallback(() => {
+    setModalForm(EMPTY_FORM);
+    setEditingId(null);
+    setModalMode("create");
+  }, []);
+
+  const openEdit = useCallback((c: CampaignListItem) => {
+    setModalForm({
+      name: c.name,
+      status: c.status,
+      skus: c.skus,
+      hardware: c.hardware.join(", "),
+      initiator: c.initiator,
+      scheduled_date: c.date,
+    });
+    setEditingId(c.id);
+    setModalMode("edit");
+  }, []);
+
+  const closeModal = useCallback(() => {
+    setModalMode(null);
+    setEditingId(null);
+  }, []);
+
+  const handleSave = useCallback(() => {
+    if (modalMode === "create") {
+      createMutation.mutate(modalForm, { onSuccess: closeModal });
+    } else if (modalMode === "edit" && editingId) {
+      updateMutation.mutate({ id: editingId, form: modalForm }, { onSuccess: closeModal });
+    }
+  }, [modalMode, modalForm, editingId, createMutation, updateMutation, closeModal]);
+
+  const handleDelete = useCallback((id: string) => {
+    setDeleteConfirmId(id);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (deleteConfirmId) {
+      deleteMutation.mutate(deleteConfirmId, { onSuccess: () => setDeleteConfirmId(null) });
+    }
+  }, [deleteConfirmId, deleteMutation]);
 
   const filtered = useMemo(() => {
     return campaigns.filter((c) => {
@@ -105,7 +168,7 @@ export default function Campaigns() {
   }, [calYear, calMonth, campaignEvents]);
 
   const openInStudio = useCallback((c: CampaignListItem) => {
-    dispatch(activateCampaign(c.name));
+    dispatch(activateCampaignWithId({ id: c.id, name: c.name }));
     navigate({ to: "/studio" });
   }, [dispatch, navigate]);
 
@@ -185,15 +248,17 @@ export default function Campaigns() {
       {
         title: "Actions",
         field: "id",
-        width: 180,
+        width: 280,
         headerSort: false,
         headerFilter: false,
         hozAlign: "right",
         headerHozAlign: "right",
         formatter: () =>
-          `<div class="flex items-center justify-end gap-2">` +
-          `<button data-action="edit" class="rounded-lg border border-purple-500/20 bg-purple-500/10 px-2.5 py-1.5 text-[10px] font-medium text-purple-400 transition-all hover:bg-purple-500 hover:text-white">Edit in Studio</button>` +
+          `<div class="flex items-center justify-end gap-1.5">` +
+          `<button data-action="quick-edit" class="rounded-lg border border-sky-500/20 bg-sky-500/10 px-2.5 py-1.5 text-[10px] font-medium text-sky-400 transition-all hover:bg-sky-500 hover:text-white">Edit</button>` +
+          `<button data-action="studio" class="rounded-lg border border-purple-500/20 bg-purple-500/10 px-2.5 py-1.5 text-[10px] font-medium text-purple-400 transition-all hover:bg-purple-500 hover:text-white">Studio</button>` +
           `<button data-action="duplicate" class="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-[10px] font-medium text-slate-400 transition-all hover:text-white">Duplicate</button>` +
+          `<button data-action="delete" class="rounded-lg border border-rose-500/20 bg-rose-500/10 px-2.5 py-1.5 text-[10px] font-medium text-rose-400 transition-all hover:bg-rose-500 hover:text-white">Delete</button>` +
           `</div>`,
         cellClick: (_e: MouseEvent, cell: { getData: () => CampaignListItem }) => {
           const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
@@ -201,45 +266,67 @@ export default function Campaigns() {
           if (!btn) return;
           _e.stopPropagation();
           const action = btn.getAttribute("data-action");
-          if (action === "edit") openInStudio(cell.getData());
+          if (action === "quick-edit") openEdit(cell.getData());
+          if (action === "studio") openInStudio(cell.getData());
           if (action === "duplicate") duplicateCampaign(cell.getData());
+          if (action === "delete") handleDelete(cell.getData().id);
         },
       },
     ];
-  }, [statusStyles, openInStudio, duplicateCampaign]);
-
-  const pageHeader = (
-    <PageHeader
-      breadcrumbs={[{ label: "Promotions Assistant" }, { label: "Campaigns", isActive: true }]}
-      title="Campaign History & Schedule"
-      actions={
-        <button
-          onClick={() => navigate({ to: "/wizard" })}
-          className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
-        >
-          <Plus className="size-4" />
-          New Campaign
-        </button>
-      }
-    />
-  );
+  }, [statusStyles, openEdit, openInStudio, duplicateCampaign, handleDelete]);
 
   if (isError) {
     return (
-      <>
-        {pageHeader}
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-          <AlertTriangle className="size-10 text-rose-400" />
-          <h3 className="text-sm font-semibold text-white">Failed to load campaigns</h3>
-          <p className="text-xs text-slate-400">Please refresh the page and try again.</p>
-        </div>
-      </>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
+        <AlertTriangle className="size-10 text-rose-400" />
+        <h3 className="text-sm font-semibold text-white">Failed to load campaigns</h3>
+        <p className="text-xs text-slate-400">Please refresh the page and try again.</p>
+      </div>
     );
   }
 
   return (
     <>
-      {pageHeader}
+      {modalMode && (
+        <CampaignModal
+          mode={modalMode}
+          form={modalForm}
+          onChange={setModalForm}
+          onSave={handleSave}
+          onClose={closeModal}
+          isSaving={createMutation.isPending || updateMutation.isPending}
+        />
+      )}
+
+      {deleteConfirmId && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-ithina-bg/80 p-6 backdrop-blur-sm" role="dialog" aria-modal="true">
+          <div className="flex w-full max-w-sm animate-[fadeIn_0.3s_ease-out] flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-2xl">
+            <header className="flex items-center gap-3 border-b border-ithina-border bg-white/[0.02] px-6 py-4">
+              <AlertTriangle className="size-5 shrink-0 text-rose-400" />
+              <h2 className="text-base font-bold text-white">Delete Campaign</h2>
+            </header>
+            <div className="bg-ithina-bg/50 px-6 py-5">
+              <p className="text-sm text-slate-300">Are you sure you want to delete this campaign? This action cannot be undone.</p>
+            </div>
+            <footer className="flex justify-end gap-3 border-t border-ithina-border bg-white/[0.02] p-4">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                disabled={deleteMutation.isPending}
+                className="px-4 py-2 text-xs font-medium text-slate-400 transition-colors hover:text-white disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={deleteMutation.isPending}
+                className="rounded-lg bg-rose-600 px-5 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {deleteMutation.isPending ? "Deleting…" : "Delete"}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
 
       {isLoading ? (
         <LoadingSpinner label="Loading campaigns..." className="flex-1" />
@@ -284,6 +371,13 @@ export default function Campaigns() {
               ))}
             </div>
             <div className="flex-1" />
+            <button
+              onClick={openCreate}
+              className="flex items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-all hover:bg-ithina-purple-hover"
+            >
+              <Plus className="size-3.5" />
+              New Campaign
+            </button>
             <div className="flex overflow-hidden rounded-lg border border-ithina-border bg-ithina-panel">
               <button onClick={() => setViewMode("table")} className={cn("px-3 py-2 transition-colors", viewMode === "table" ? "bg-ithina-purple/20 text-ithina-purple" : "text-slate-500 hover:text-white")}>
                 <Table2 className="size-4" />

@@ -1,4 +1,4 @@
-import { CloudUpload, FileSpreadsheet, Zap } from "lucide-react";
+import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Zap } from "lucide-react";
 import { memo, useCallback, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -26,9 +26,12 @@ interface DataStagingGridProps {
   onCsvParsed: (rows: CsvRow[], fileName: string) => void;
   onCsvClear: () => void;
   onCsvConfirm: () => void;
+  /** When set (standalone CSV wizard), bottom CTA confirms and advances — matches index_3.1.html */
+  onCsvConfirmAndProceed?: () => void;
   onRemoveCsvRow: (idx: number) => void;
   onRemoveAllViolations: () => void;
   marginFloor: number;
+  hideModeToggle?: boolean;
 }
 
 function DataStagingGrid({
@@ -42,9 +45,11 @@ function DataStagingGrid({
   onCsvParsed,
   onCsvClear,
   onCsvConfirm,
+  onCsvConfirmAndProceed,
   onRemoveCsvRow,
   onRemoveAllViolations,
   marginFloor,
+  hideModeToggle = false,
 }: DataStagingGridProps) {
   const csvInput = useRef<HTMLInputElement>(null);
   const csvWarnings = csvRows.filter((r) => !r.safe).length;
@@ -256,30 +261,42 @@ function DataStagingGrid({
   }, []);
 
   return (
-    <div className="relative flex h-full min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
+    <div
+      className={cn(
+        "relative flex h-full min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-y-auto overflow-x-hidden",
+        hideModeToggle
+          ? "bg-transparent"
+          : "rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl",
+      )}
+    >
+      {!hideModeToggle && (
       <header className="flex shrink-0 items-center justify-between gap-4 border-b border-ithina-border bg-white/[0.01] px-6 py-4">
-        <div className="flex items-center gap-1 rounded-xl border border-ithina-border bg-ithina-bg p-1">
-          <button
-            onClick={() => onInputModeChange("ai")}
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
-              inputMode === "ai" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-            )}
-          >
-            <Zap className="size-3.5" />
-            AI Assisted
-          </button>
-          <button
-            onClick={() => onInputModeChange("csv")}
-            className={cn(
-              "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
-              inputMode === "csv" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-            )}
-          >
-            <FileSpreadsheet className="size-3.5" />
-            CSV Upload
-          </button>
-        </div>
+        {!hideModeToggle ? (
+          <div className="flex items-center gap-1 rounded-xl border border-ithina-border bg-ithina-bg p-1">
+            <button
+              onClick={() => onInputModeChange("ai")}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
+                inputMode === "ai" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
+              )}
+            >
+              <Zap className="size-3.5" />
+              AI Assisted
+            </button>
+            <button
+              onClick={() => onInputModeChange("csv")}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
+                inputMode === "csv" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
+              )}
+            >
+              <FileSpreadsheet className="size-3.5" />
+              CSV Upload
+            </button>
+          </div>
+        ) : (
+          <div />
+        )}
         <div className="ml-auto flex items-center gap-3">
           {inputMode === "ai" && data.length > 0 && (
             <span className="hidden text-xs text-slate-400 lg:block">
@@ -293,36 +310,131 @@ function DataStagingGrid({
           )}
         </div>
       </header>
+      )}
 
       {inputMode === "csv" && (
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className={cn("flex flex-1 flex-col overflow-hidden", hideModeToggle && "overflow-y-auto p-8")}>
           {csvRows.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-6 p-10">
+            <div className={cn("flex flex-1 flex-col items-center justify-center gap-6 p-10", hideModeToggle && "max-w-2xl mx-auto w-full p-0 gap-6")}>
+              <div className="text-center">
+                <h3 className={cn("text-[34px] font-semibold text-white", hideModeToggle && "text-xl font-bold mb-1")}>Upload SKU Data</h3>
+                <p className="mt-1 text-sm text-slate-400">Upload a CSV with SKUs, names and prices.</p>
+              </div>
               <div
                 onClick={() => csvInput.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-                className="group flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-ithina-border p-10 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/5"
+                className={cn(
+                  "group flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-ithina-border p-10 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/5",
+                  hideModeToggle && "max-w-none p-12",
+                )}
               >
                 <div className="flex size-14 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10 transition-transform group-hover:scale-110">
                   <CloudUpload className="size-7 text-ithina-purple" />
                 </div>
                 <div className="text-center">
-                  <p className="mb-1 text-sm font-semibold text-white">Drop your CSV here or click to browse</p>
-                  <p className="text-xs text-slate-500">
-                    Expected columns: <span className="font-mono text-slate-400">SKU, Name, Current Price, Proposed Price</span>
-                  </p>
+                  <p className="mb-1 text-sm font-semibold text-white">Drop CSV or click to browse</p>
+                  <p className="text-xs text-slate-500 font-mono">SKU, Name, Current Price, Proposed Price</p>
                 </div>
-                <span className="rounded-full border border-ithina-purple/20 bg-ithina-purple/10 px-3 py-1 font-mono text-[10px] text-ithina-purple">CSV / TSV accepted</span>
               </div>
               <input ref={csvInput} type="file" accept=".csv,.tsv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-              <button onClick={downloadTemplate} className="flex items-center gap-2 text-xs text-slate-400 transition-colors hover:text-ithina-purple">
-                <CloudUpload className="size-3.5" />
-                Download CSV Template
+              <button
+                type="button"
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 text-xs text-slate-400 transition-colors hover:text-ithina-purple"
+              >
+                {hideModeToggle ? <Download className="size-3.5" /> : <CloudUpload className="size-3.5" />}
+                {hideModeToggle ? "Download template" : "Download CSV Template"}
               </button>
             </div>
+          ) : hideModeToggle ? (
+            <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
+              <div className="text-center">
+                <h3 className="mb-1 text-xl font-bold text-white">Upload SKU Data</h3>
+                <p className="text-sm text-slate-400">Upload a CSV with SKUs, names and prices.</p>
+              </div>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3 rounded-xl border border-ithina-border bg-ithina-panel px-4 py-3">
+                  <CircleCheck className="size-4 shrink-0 text-emerald-400" aria-hidden />
+                  <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">{csvFileName}</span>
+                  <span className="shrink-0 rounded bg-ithina-purple/10 px-2 py-0.5 font-mono text-[10px] text-ithina-purple">
+                    {csvRows.length} rows
+                  </span>
+                  {csvWarnings > 0 && (
+                    <span className="shrink-0 rounded bg-rose-400/10 px-2 py-0.5 font-mono text-[10px] text-rose-400">
+                      {csvWarnings} warnings
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onCsvClear}
+                    className="ml-2 shrink-0 text-xs text-slate-500 transition-colors hover:text-white"
+                  >
+                    Clear
+                  </button>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-ithina-border bg-ithina-panel">
+                  <div className="max-h-64 overflow-y-auto">
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 z-[1] border-b border-ithina-border bg-ithina-sidebar font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                        <tr>
+                          <th className="px-5 py-2.5">SKU</th>
+                          <th className="px-4 py-2.5">Name</th>
+                          <th className="px-4 py-2.5 text-right">Current</th>
+                          <th className="px-4 py-2.5 text-right">Proposed</th>
+                          <th className="px-4 py-2.5 text-center">Safe</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-ithina-border/50">
+                        {csvRows.slice(0, 8).map((row, i) => (
+                          <tr
+                            key={`${row.sku}-${i}`}
+                            className={cn("hover:bg-white/[0.02]", !row.safe && "opacity-60")}
+                          >
+                            <td className="px-5 py-2 font-mono text-xs text-slate-400">{row.sku}</td>
+                            <td className="px-4 py-2 text-slate-200">{row.name}</td>
+                            <td className="px-4 py-2 text-right font-mono text-xs text-slate-500 line-through">
+                              ${row.current}
+                            </td>
+                            <td
+                              className={cn(
+                                "px-4 py-2 text-right font-mono text-xs font-bold",
+                                row.safe ? "text-emerald-400" : "text-rose-400",
+                              )}
+                            >
+                              ${row.proposed}
+                            </td>
+                            <td
+                              className={cn(
+                                "px-4 py-2 text-center text-xs",
+                                row.safe ? "text-emerald-400" : "text-rose-400",
+                              )}
+                            >
+                              {row.safe ? "✓" : "!"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {csvRows.length > 8 && (
+                    <div className="border-t border-ithina-border px-5 py-2 font-mono text-[10px] text-slate-600">
+                      +{csvRows.length - 8} more rows
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => (onCsvConfirmAndProceed ?? onCsvConfirm)()}
+                  className="flex items-center gap-2 self-center rounded-xl bg-ithina-purple px-7 py-3 text-sm font-bold text-white transition-all hover:bg-ithina-purple-hover"
+                >
+                  Confirm &amp; Select Screens
+                  <ArrowRight className="size-4" aria-hidden />
+                </button>
+              </div>
+            </div>
           ) : (
-            <div className="flex flex-1 flex-col min-h-0">
+            <div className="flex min-h-0 flex-1 flex-col">
               <div className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-bg/30 px-6 py-3">
                 <div className="flex items-center gap-3">
                   <span className="text-xs font-medium text-white">{csvFileName}</span>

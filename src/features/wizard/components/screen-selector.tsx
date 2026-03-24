@@ -1,11 +1,13 @@
-import { Check, Zap } from "lucide-react";
-import { memo } from "react";
+import { Check } from "lucide-react";
+import { memo, useMemo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useHardwareDevices } from "@/hooks/use-wizard";
 
 import type { WizardMode } from "./mode-chooser";
+import CampaignStudioModal from "./campaign-studio-modal";
+import NlHardwareStep from "./nl-hardware-step";
 
 interface ScreenSelectorProps {
   mode: WizardMode;
@@ -13,6 +15,16 @@ interface ScreenSelectorProps {
   totalSteps: number;
   selectedDevices: HardwareDeviceId[];
   onToggleDevice: (id: HardwareDeviceId) => void;
+  activeDevice: HardwareDeviceId | null;
+  onSetActiveDevice: (id: HardwareDeviceId | null) => void;
+  designConfigured: boolean;
+  onSetDesignConfigured: (value: boolean) => void;
+  showStudio: boolean;
+  onSetShowStudio: (value: boolean) => void;
+  selectedVariant: "A" | "B" | "C";
+  onSetSelectedVariant: (variant: "A" | "B" | "C") => void;
+  sizeByDevice: Record<HardwareDeviceId, string[]>;
+  onToggleSize: (id: HardwareDeviceId, size: string) => void;
   onNext: () => void;
   storeNumber?: string;
 }
@@ -23,18 +35,22 @@ const previewStyles: Record<HardwareDeviceId, string> = {
   lcd: "aspect-video border border-slate-600 bg-gradient-to-br from-blue-900 to-slate-900 text-white",
 };
 
-const trackStyles: Record<HardwareDeviceId, string> = {
-  chroma29: "border-amber-400/20 bg-amber-400/10 text-amber-400",
-  chroma42: "border-amber-400/20 bg-amber-400/10 text-amber-400",
-  lcd: "border-blue-400/20 bg-blue-400/10 text-blue-400",
-};
-
 function ScreenSelector({
   mode,
   stepNumber,
   totalSteps,
   selectedDevices,
   onToggleDevice,
+  activeDevice,
+  onSetActiveDevice,
+  designConfigured,
+  onSetDesignConfigured,
+  showStudio,
+  onSetShowStudio,
+  selectedVariant,
+  onSetSelectedVariant,
+  sizeByDevice,
+  onToggleSize,
   onNext,
   storeNumber = "4281",
 }: ScreenSelectorProps) {
@@ -47,8 +63,21 @@ function ScreenSelector({
     : "Choose which display types you'll be uploading banners for.";
   const nextLabel = isNl ? "Generate Creative Layouts" : "Next: Upload Banners";
 
+  const designDevice = useMemo<HardwareDeviceId | null>(() => {
+    if (activeDevice && selectedDevices.includes(activeDevice)) return activeDevice;
+    if (selectedDevices.includes("lcd") && (sizeByDevice.lcd?.length ?? 0) > 0) return "lcd";
+    if (selectedDevices.includes("chroma42") && (sizeByDevice.chroma42?.length ?? 0) > 0) return "chroma42";
+    if (selectedDevices.includes("chroma29") && (sizeByDevice.chroma29?.length ?? 0) > 0) return "chroma29";
+    return selectedDevices[0] ?? null;
+  }, [activeDevice, selectedDevices, sizeByDevice]);
+
   return (
-    <div className="flex flex-1 flex-col min-h-0 overflow-y-auto animate-[fadeIn_0.4s_ease-out]">
+    <div
+      className={cn(
+        "flex min-h-0 flex-1 flex-col animate-[fadeIn_0.4s_ease-out]",
+        isNl ? "overflow-hidden" : "overflow-y-auto",
+      )}
+    >
       {/* Step context bar */}
       <div
         className={cn(
@@ -76,6 +105,20 @@ function ScreenSelector({
       </div>
 
       {/* Content */}
+      {isNl ? (
+        <NlHardwareStep
+          selectedDevices={selectedDevices}
+          onToggleDevice={onToggleDevice}
+          activeDevice={activeDevice}
+          onSetActiveDevice={onSetActiveDevice}
+          sizeByDevice={sizeByDevice}
+          onToggleSize={onToggleSize}
+          designConfigured={designConfigured}
+          onSetShowStudio={onSetShowStudio}
+          selectedVariant={selectedVariant}
+          onNext={onNext}
+        />
+      ) : (
       <div className="flex flex-1 flex-col items-center gap-6 p-8">
         <div className="text-center">
           <h3 className="mb-1 text-xl font-bold text-white">{title}</h3>
@@ -127,18 +170,6 @@ function ScreenSelector({
 
                 <h4 className="text-sm font-bold text-white">{device.name}</h4>
                 <p className="mt-0.5 font-mono text-[10px] text-slate-500">{device.resolution} · {device.track}</p>
-                {isNl && (
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <span
-                      className={cn(
-                        "rounded border px-1.5 py-0.5 font-mono text-[9px]",
-                        trackStyles[device.id],
-                      )}
-                    >
-                      {device.track}
-                    </span>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -155,12 +186,9 @@ function ScreenSelector({
               "flex items-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white",
               "shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all",
               "disabled:cursor-not-allowed disabled:opacity-40",
-              isNl
-                ? "bg-ithina-purple hover:bg-ithina-purple-hover"
-                : "bg-ithina-purple hover:bg-ithina-purple-hover",
+              "bg-ithina-purple hover:bg-ithina-purple-hover",
             )}
           >
-            {isNl && <Zap className="size-4" />}
             {nextLabel}
             {!isNl && (
               <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -170,6 +198,22 @@ function ScreenSelector({
           </button>
         </div>
       </div>
+      )}
+
+      {isNl && (
+        <CampaignStudioModal
+          open={showStudio}
+          onClose={() => onSetShowStudio(false)}
+          mode={designDevice === "lcd" ? "lcd" : "esl"}
+          selectedVariant={selectedVariant}
+          onSelectVariant={onSetSelectedVariant}
+          onApply={() => {
+            onSetDesignConfigured(true);
+            onSetShowStudio(false);
+          }}
+        />
+      )}
+
     </div>
   );
 }

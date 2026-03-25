@@ -1,13 +1,13 @@
+import { Plus, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-
 import {
   COMPLIANCE_RULE_SET_NAME_MAX_LENGTH,
   type ComplianceRuleCategory,
@@ -26,7 +26,10 @@ type RuleFormItem = {
 };
 
 function newRuleLocalId(): string {
-  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+  if (
+    typeof crypto !== "undefined" &&
+    typeof crypto.randomUUID === "function"
+  ) {
     return crypto.randomUUID();
   }
   return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
@@ -65,7 +68,17 @@ const RULE_CATEGORIES: ComplianceRuleCategory[] = [
   "EFFICIENCY",
 ];
 
-const STATUS_OPTIONS: ComplianceRuleSetStatus[] = ["DRAFT", "ACTIVE", "RETIRED"];
+const STATUS_OPTIONS: ComplianceRuleSetStatus[] = [
+  "DRAFT",
+  "ACTIVE",
+  "RETIRED",
+];
+
+const RULE_SURFACE_CLASSNAME =
+  "border-border bg-card/80 text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/30";
+
+const RULE_SELECT_CLASSNAME =
+  "h-9 border-border bg-card/80 text-foreground focus-visible:ring-ring focus-visible:ring-offset-0";
 
 export function CreateComplianceRuleSetModal({
   isOpen,
@@ -82,19 +95,21 @@ export function CreateComplianceRuleSetModal({
   const [rules, setRules] = useState<RuleFormItem[]>(() => [createEmptyRule()]);
   const [setAsDefault, setSetAsDefault] = useState(true);
 
-  const title = mode === "create" ? "New Compliance Rule Set" : "Edit Compliance Rule Set";
+  const title =
+    mode === "create" ? "New Compliance Rule Set" : "Edit Compliance Rule Set";
   const submitLabel = mode === "create" ? "Create" : "Save changes";
+  const initialRules = initialValues?.rules;
 
   const normalizedInitialRules = useMemo(() => {
-    if (!initialValues?.rules?.length) return null;
-    return initialValues.rules.map((r) => ({
+    if (!initialRules?.length) return null;
+    return initialRules.map((r) => ({
       name: r.name,
       description: r.description,
       category: r.category,
       threshold: String(r.threshold),
       is_active: r.is_active,
     }));
-  }, [initialValues?.rules]);
+  }, [initialRules]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -103,7 +118,10 @@ export function CreateComplianceRuleSetModal({
     setStatus(initialValues?.status ?? "ACTIVE");
     setRules(
       normalizedInitialRules
-        ? normalizedInitialRules.map((r) => ({ ...r, localId: newRuleLocalId() }))
+        ? normalizedInitialRules.map((r) => ({
+            ...r,
+            localId: newRuleLocalId(),
+          }))
         : [createEmptyRule()],
     );
 
@@ -117,7 +135,10 @@ export function CreateComplianceRuleSetModal({
     initialValues?.status,
   ]);
 
-  const ruleNameSet = useMemo(() => rules.map((r) => r.name.trim().toLowerCase()), [rules]);
+  const ruleNameSet = useMemo(
+    () => rules.map((r) => r.name.trim().toLowerCase()),
+    [rules],
+  );
   const hasDuplicateRuleNames = useMemo(() => {
     const seen = new Set<string>();
     for (const n of ruleNameSet) {
@@ -128,9 +149,28 @@ export function CreateComplianceRuleSetModal({
     return false;
   }, [ruleNameSet]);
 
+  const updateRule = (
+    localId: string,
+    updates: Partial<Omit<RuleFormItem, "localId">>,
+  ) => {
+    setRules((prev) =>
+      prev.map((rule) =>
+        rule.localId === localId ? { ...rule, ...updates } : rule,
+      ),
+    );
+  };
+
+  const removeRule = (localId: string) => {
+    setRules((prev) => {
+      if (prev.length === 1) return [createEmptyRule()];
+      return prev.filter((rule) => rule.localId !== localId);
+    });
+  };
+
   function validate(): { ok: true } | { ok: false; message: string } {
     const trimmedName = name.trim();
-    if (!trimmedName) return { ok: false, message: "Rule set name is required." };
+    if (!trimmedName)
+      return { ok: false, message: "Rule set name is required." };
     if (trimmedName.length > COMPLIANCE_RULE_SET_NAME_MAX_LENGTH) {
       return {
         ok: false,
@@ -138,21 +178,30 @@ export function CreateComplianceRuleSetModal({
       };
     }
 
-    if (rules.length < 1) return { ok: false, message: "At least one rule is required." };
-    if (hasDuplicateRuleNames) return { ok: false, message: "Rule names must be unique." };
+    if (rules.length < 1)
+      return { ok: false, message: "At least one rule is required." };
+    if (hasDuplicateRuleNames)
+      return { ok: false, message: "Rule names must be unique." };
 
     for (let i = 0; i < rules.length; i += 1) {
       const r = rules[i];
-      if (!r.name.trim()) return { ok: false, message: `Rule #${i + 1}: name is required.` };
+      if (!r.name.trim())
+        return { ok: false, message: `Rule #${i + 1}: name is required.` };
       if (!r.description.trim()) {
-        return { ok: false, message: `Rule #${i + 1}: description is required.` };
+        return {
+          ok: false,
+          message: `Rule #${i + 1}: description is required.`,
+        };
       }
       if (!r.threshold.trim()) {
         return { ok: false, message: `Rule #${i + 1}: threshold is required.` };
       }
       const threshold = Number(r.threshold);
       if (!Number.isFinite(threshold)) {
-        return { ok: false, message: `Rule #${i + 1}: threshold must be a number.` };
+        return {
+          ok: false,
+          message: `Rule #${i + 1}: threshold must be a number.`,
+        };
       }
     }
 
@@ -164,7 +213,11 @@ export function CreateComplianceRuleSetModal({
 
     const validation = validate();
     if (!validation.ok) {
-      toast({ title: "Fix form errors", description: validation.message, variant: "destructive" });
+      toast({
+        title: "Fix form errors",
+        description: validation.message,
+        variant: "destructive",
+      });
       return;
     }
 
@@ -189,21 +242,23 @@ export function CreateComplianceRuleSetModal({
       isOpen={isOpen}
       onClose={onClose}
       showCloseButton
-      className="max-w-3xl max-h-[min(90dvh,calc(100vh-2rem))]"
+      className="max-h-[min(90dvh,calc(100vh-2rem))] max-w-3xl"
     >
       <div
-        className="flex w-full max-h-[min(90dvh,calc(100vh-2rem))] flex-col overflow-hidden rounded-lg border border-border bg-card shadow-lg"
+        className="border-border bg-card flex max-h-[min(90dvh,calc(100vh-2rem))] w-full flex-col overflow-hidden rounded-lg border shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-6 pb-4 pt-6 pr-14">
+        <div className="border-border/60 flex shrink-0 items-start justify-between gap-3 border-b px-6 pt-6 pr-14 pb-4">
           <div className="min-w-0">
-            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Configure a compliance rule set and its rules. Store defaults can be updated during creation.
+            <h3 className="text-foreground text-lg font-semibold">{title}</h3>
+            <p className="text-muted-foreground mt-2 text-sm">
+              Configure a compliance rule set and its rules. Store defaults can
+              be updated during creation.
             </p>
           </div>
-          <div className="hidden shrink-0 text-xs text-muted-foreground sm:block">
-            {COMPLIANCE_RULE_SET_NAME_MAX_LENGTH - name.trim().length} chars left
+          <div className="text-muted-foreground hidden shrink-0 text-xs sm:block">
+            {COMPLIANCE_RULE_SET_NAME_MAX_LENGTH - name.trim().length} chars
+            left
           </div>
         </div>
 
@@ -212,8 +267,9 @@ export function CreateComplianceRuleSetModal({
             <div className="grid gap-2">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <Label htmlFor="crs-name">Name</Label>
-                <span className="text-xs text-muted-foreground sm:hidden">
-                  {COMPLIANCE_RULE_SET_NAME_MAX_LENGTH - name.trim().length} chars left
+                <span className="text-muted-foreground text-xs sm:hidden">
+                  {COMPLIANCE_RULE_SET_NAME_MAX_LENGTH - name.trim().length}{" "}
+                  chars left
                 </span>
               </div>
               <Input
@@ -231,7 +287,9 @@ export function CreateComplianceRuleSetModal({
                 <Select
                   id="crs-status"
                   value={status}
-                  onChange={(e) => setStatus(e.target.value as ComplianceRuleSetStatus)}
+                  onChange={(e) =>
+                    setStatus(e.target.value as ComplianceRuleSetStatus)
+                  }
                   disabled={isSubmitting}
                 >
                   {STATUS_OPTIONS.map((s) => (
@@ -252,149 +310,142 @@ export function CreateComplianceRuleSetModal({
                     }
                     disabled={isSubmitting}
                   />
-                  <Label htmlFor="crs-set-default" className="text-sm font-medium">
+                  <Label
+                    htmlFor="crs-set-default"
+                    className="text-sm font-medium"
+                  >
                     Set as default for this store
                   </Label>
                 </div>
               </div>
             </div>
 
-            <section className="space-y-3 rounded-xl border border-border bg-muted/10 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
-                <h4 className="text-sm font-semibold text-foreground">Rules</h4>
+            <section className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h4 className="text-foreground text-sm font-semibold">
+                  Rules ({rules.length})
+                </h4>
                 <Button
                   type="button"
                   size="sm"
-                  className="h-8 gap-1 bg-chart-2 text-white hover:opacity-90"
-                  onClick={() => setRules((prev) => [...prev, createEmptyRule()])}
+                  variant="accent"
+                  className="h-8 gap-1.5 shadow-none"
+                  onClick={() =>
+                    setRules((prev) => [...prev, createEmptyRule()])
+                  }
                   disabled={isSubmitting}
                 >
-                  Add rule
+                  <Plus className="size-4" />
+                  Add Rule
                 </Button>
               </div>
 
-              <div className="space-y-3 pt-1">
+              <div className="space-y-2.5 pt-0.5">
                 {rules.map((r, idx) => (
-                  <div
-                    key={r.localId}
-                    className="rounded-xl border border-border bg-card/80 p-4 shadow-sm space-y-4"
-                  >
-                    <div className="flex flex-wrap items-start justify-between gap-3">
-                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Rule #{idx + 1}
-                      </p>
-                      {rules.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="shrink-0 text-destructive hover:text-destructive"
-                          onClick={() =>
-                            setRules((prev) => prev.filter((x) => x.localId !== r.localId))
-                          }
-                          disabled={isSubmitting}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor={`rule-name-${r.localId}`}>Name</Label>
-                        <Input
-                          id={`rule-name-${r.localId}`}
-                          value={r.name}
-                          onChange={(e) =>
-                            setRules((prev) =>
-                              prev.map((x) =>
-                                x.localId === r.localId ? { ...x, name: e.target.value } : x,
-                              ),
-                            )
-                          }
-                          placeholder="e.g. Baseline visual check"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor={`rule-cat-${r.localId}`}>Category</Label>
-                        <Select
-                          id={`rule-cat-${r.localId}`}
-                          value={r.category}
-                          onChange={(e) =>
-                            setRules((prev) =>
-                              prev.map((x) =>
-                                x.localId === r.localId
-                                  ? { ...x, category: e.target.value as ComplianceRuleCategory }
-                                  : x,
-                              ),
-                            )
-                          }
-                          disabled={isSubmitting}
-                        >
-                          {RULE_CATEGORIES.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    </div>
-
-                    <div className="grid gap-3 sm:grid-cols-2 sm:gap-x-4">
-                      <div className="grid gap-2">
-                        <Label htmlFor={`rule-desc-${r.localId}`}>Description</Label>
-                        <Input
-                          id={`rule-desc-${r.localId}`}
-                          value={r.description}
-                          onChange={(e) =>
-                            setRules((prev) =>
-                              prev.map((x) =>
-                                x.localId === r.localId
-                                  ? { ...x, description: e.target.value }
-                                  : x,
-                              ),
-                            )
-                          }
-                          placeholder="Short description"
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                      <div className="grid gap-2">
-                        <Label htmlFor={`rule-threshold-${r.localId}`}>Threshold</Label>
-                        <Input
-                          id={`rule-threshold-${r.localId}`}
-                          type="number"
-                          step="0.01"
-                          value={r.threshold}
-                          onChange={(e) =>
-                            setRules((prev) =>
-                              prev.map((x) =>
-                                x.localId === r.localId ? { ...x, threshold: e.target.value } : x,
-                              ),
-                            )
-                          }
-                          disabled={isSubmitting}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-0.5">
+                  <div key={r.localId} className="flex items-start gap-2.5">
+                    <div className="flex h-11 shrink-0 items-center">
                       <Checkbox
                         id={`rule-active-${r.localId}`}
                         checked={r.is_active}
                         onCheckedChange={(v: boolean | "indeterminate") =>
-                          setRules((prev) =>
-                            prev.map((x) =>
-                              x.localId === r.localId ? { ...x, is_active: v === true } : x,
-                            ),
-                          )
+                          updateRule(r.localId, { is_active: v === true })
                         }
+                        className="h-5 w-5 rounded-[4px]"
                         disabled={isSubmitting}
+                        aria-label={`Toggle ${r.name || `rule ${idx + 1}`}`}
                       />
-                      <Label htmlFor={`rule-active-${r.localId}`} className="text-sm font-medium">
-                        Rule is active
-                      </Label>
+                    </div>
+
+                    <div className="border-border bg-card/80 min-w-0 flex-1 rounded-xl border p-3 shadow-sm">
+                      <div className="space-y-2.5">
+                        <Input
+                          id={`rule-name-${r.localId}`}
+                          value={r.name}
+                          onChange={(e) =>
+                            updateRule(r.localId, { name: e.target.value })
+                          }
+                          placeholder="Rule name"
+                          className={`${RULE_SURFACE_CLASSNAME} h-10 font-medium`}
+                          disabled={isSubmitting}
+                          aria-label={`Rule ${idx + 1} name`}
+                        />
+
+                        <Input
+                          id={`rule-desc-${r.localId}`}
+                          value={r.description}
+                          onChange={(e) =>
+                            updateRule(r.localId, {
+                              description: e.target.value,
+                            })
+                          }
+                          placeholder="Rule description"
+                          className={`${RULE_SURFACE_CLASSNAME} h-9 text-sm`}
+                          disabled={isSubmitting}
+                          aria-label={`Rule ${idx + 1} description`}
+                        />
+
+                        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
+                            <Select
+                              id={`rule-cat-${r.localId}`}
+                              value={r.category}
+                              onChange={(e) =>
+                                updateRule(r.localId, {
+                                  category: e.target
+                                    .value as ComplianceRuleCategory,
+                                })
+                              }
+                              className={`${RULE_SELECT_CLASSNAME} sm:max-w-[180px]`}
+                              disabled={isSubmitting}
+                              aria-label={`Rule ${idx + 1} category`}
+                            >
+                              {RULE_CATEGORIES.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </Select>
+
+                            <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                              <Label
+                                htmlFor={`rule-threshold-${r.localId}`}
+                                className="text-muted-foreground shrink-0 text-sm font-medium"
+                              >
+                                Threshold:
+                              </Label>
+                              <Input
+                                id={`rule-threshold-${r.localId}`}
+                                type="number"
+                                step="0.01"
+                                value={r.threshold}
+                                onChange={(e) =>
+                                  updateRule(r.localId, {
+                                    threshold: e.target.value,
+                                  })
+                                }
+                                placeholder="0"
+                                className={`${RULE_SURFACE_CLASSNAME} h-8 w-full sm:w-24`}
+                                disabled={isSubmitting}
+                                aria-label={`Rule ${idx + 1} threshold`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="flex justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              className="text-muted-foreground hover:bg-muted hover:text-foreground disabled:hover:text-muted-foreground h-8 w-8 shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
+                              onClick={() => removeRule(r.localId)}
+                              disabled={isSubmitting || rules.length === 1}
+                              aria-label={`Remove ${r.name || `rule ${idx + 1}`}`}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -403,8 +454,13 @@ export function CreateComplianceRuleSetModal({
           </div>
         </div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-border/60 bg-card px-6 py-4">
-          <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+        <div className="border-border/60 bg-card flex shrink-0 justify-end gap-2 border-t px-6 py-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
@@ -415,4 +471,3 @@ export function CreateComplianceRuleSetModal({
     </Modal>
   );
 }
-

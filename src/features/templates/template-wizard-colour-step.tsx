@@ -73,7 +73,7 @@ export function TemplateWizardColourStep({ editTemplate, editFields, setEf, allT
       hwLabel: editTemplate.hwLabel,
       headerText: active?.headerText ?? editFields.headerText,
       headerBg: active?.headerBg ?? editFields.headerBg,
-      productLine: editTemplate.productLine,
+      productLine: editTemplate.productLine ?? undefined,
       tags: [],
       isDefault: false,
       usedCount: 0,

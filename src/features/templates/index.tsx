@@ -47,20 +47,6 @@ function initialManualDraft(): ManualWizardDraft {
   return { name: "", hw: "chroma42", fileName: "" };
 }
 
-// ── ESL restricted palette ────────────────────────────────────────────────
-const ESL_PALETTE = [
-  { hex: "#000000", cls: "bg-black", label: "Black" },
-  { hex: "#FFFFFF", cls: "bg-white", label: "White" },
-  { hex: "#FF0000", cls: "bg-red-600", label: "Red" },
-];
-
-const LAYOUT_OPTIONS = [
-  { id: "price-right",    label: "Name · Price" },
-  { id: "price-center",   label: "Centred" },
-  { id: "stacked",        label: "Stacked" },
-  { id: "price-dominant", label: "Price Focus" },
-];
-
 const TM_WIZARD_STEPS = [
   { id: 1 as const, label: "Select Template" },
   { id: 2 as const, label: "Colour Scheme" },
@@ -71,7 +57,7 @@ export default function TemplateManager() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const { data: templates = [], isLoading: listLoading, isError } = useTemplateList();
-  const { data: hwFilters = [], isLoading: filtersLoading } = useTemplateHwFilters();
+  const { isLoading: filtersLoading } = useTemplateHwFilters();
   const { data: allTags = [], isLoading: tagsLoading } = useTemplateTags();
 
   const isLoading = listLoading || filtersLoading || tagsLoading;

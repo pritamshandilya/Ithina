@@ -3,8 +3,6 @@ import { MOCK_ORG_USERS, MOCK_STORE_PROFILE, MOCK_STORE_STAFF } from "@/mocks/st
 import type { StoreDimensionUnit } from "@/constants/dimensions";
 import type { StoreProfile, StoreStaffMember } from "@/types/store-settings";
 
-const STORE_SETTINGS_STORE_ID = MOCK_STORE_PROFILE.id;
-
 let profileState: StoreProfile = { ...MOCK_STORE_PROFILE };
 let staffState: StoreStaffMember[] = MOCK_STORE_STAFF.map((u) => ({ ...u }));
 

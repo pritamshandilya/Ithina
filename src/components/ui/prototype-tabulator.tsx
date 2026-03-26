@@ -116,7 +116,8 @@ export function PrototypeTabulator<T extends object>({
     const table = tableRef.current;
     if (!container || !isTableReady(table) || !container.isConnected) return;
     try {
-      table.redraw(true);
+      // Tabulator typing can be stricter than the runtime API; cast to access redraw.
+      (table as unknown as { redraw?: (force?: boolean) => void }).redraw?.(true);
     } catch {
       // Ignore transient redraw failures during mount/unmount cycles.
     }
@@ -207,7 +208,10 @@ export function PrototypeTabulator<T extends object>({
   useEffect(() => {
     const table = tableRef.current;
     if (!isTableReady(table)) return;
-    table.setColumns(toTabulatorColumnDefs(columns) as never);
+    // Tabulator typings sometimes omit these methods; cast to keep runtime behavior.
+    (table as unknown as { setColumns?: (cols: unknown) => void }).setColumns?.(
+      toTabulatorColumnDefs(columns) as never,
+    );
     table.setData(dataRef.current.map((row) => ({ ...row })));
     safeRedraw();
   }, [columns, tableBuiltGeneration]);
@@ -215,7 +219,9 @@ export function PrototypeTabulator<T extends object>({
   useEffect(() => {
     const table = tableRef.current;
     if (!isTableReady(table) || tableHeight === undefined) return;
-    table.setHeight(tableHeight as never);
+    (table as unknown as { setHeight?: (height: unknown) => void }).setHeight?.(
+      tableHeight as never,
+    );
     safeRedraw();
   }, [tableHeight, tableBuiltGeneration]);
 

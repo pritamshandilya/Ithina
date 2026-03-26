@@ -90,8 +90,9 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
       (el as HTMLInputElement & { showPicker: () => void }).showPicker();
       return;
     }
-    el.focus();
-    el.click();
+    const input = el as HTMLInputElement;
+    input.focus();
+    input.click();
   };
 
   return (

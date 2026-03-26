@@ -7,9 +7,10 @@ import InsightCard from "./insight-card";
 
 interface InsightsGridProps {
   insights: InsightCardData[];
+  onInsightAction?: (insight: InsightCardData) => void;
 }
 
-function InsightsGrid({ insights }: InsightsGridProps) {
+function InsightsGrid({ insights, onInsightAction }: InsightsGridProps) {
   return (
     <div className="shrink-0">
       <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
@@ -18,7 +19,13 @@ function InsightsGrid({ insights }: InsightsGridProps) {
       </h2>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {insights.map((insight) => (
-          <InsightCard key={insight.id} data={insight} />
+          <InsightCard
+            key={insight.id}
+            data={insight}
+            onAction={
+              onInsightAction ? () => onInsightAction(insight) : undefined
+            }
+          />
         ))}
       </div>
     </div>

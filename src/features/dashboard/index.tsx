@@ -1,19 +1,30 @@
 import { AlertTriangle } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { useCampaignHistory, useInsights, useStatCards } from "@/hooks/use-dashboard";
+import { useAppDispatch } from "@/store/hooks";
+import { setCampaignName } from "@/store/slices/campaign-slice";
+import type { InsightCardData } from "@/types/dashboard";
 
 import CampaignHistoryTable from "./components/campaign-history-table";
 import InsightsGrid from "./components/insights-grid";
 import StatCardsGrid from "./components/stat-cards-grid";
 
 export default function Dashboard() {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const { data: cards = [], isLoading: cardsLoading, isError: cardsError } = useStatCards();
   const { data: insights = [], isLoading: insightsLoading } = useInsights();
   const { data: campaigns = [], isLoading: campaignsLoading } = useCampaignHistory();
 
   const isLoading = cardsLoading || insightsLoading || campaignsLoading;
   const hasError = cardsError;
+
+  const handleInsightAction = (insight: InsightCardData) => {
+    dispatch(setCampaignName(insight.actionLabel));
+    navigate({ to: "/wizard" });
+  };
 
   if (hasError) {
     return (
@@ -32,7 +43,7 @@ export default function Dashboard() {
         ) : (
           <>
             <StatCardsGrid cards={cards} />
-            <InsightsGrid insights={insights} />
+            <InsightsGrid insights={insights} onInsightAction={handleInsightAction} />
             <CampaignHistoryTable campaigns={campaigns} />
           </>
         )}

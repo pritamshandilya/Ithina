@@ -1,4 +1,8 @@
+import { useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+
+import { useAppDispatch } from "@/store/hooks";
+import { setCampaignName } from "@/store/slices/campaign-slice";
 
 type ScheduledItem = {
   id: number;
@@ -53,6 +57,9 @@ const EVENT_DAYS = new Set([21, 22, 24, 28, 29, 31]);
 const TODAY_DAY = 21;
 
 export default function CampaignsScheduledTab() {
+  const navigate = useNavigate();
+  const dispatch = useAppDispatch();
+  const [scheduledItems, setScheduledItems] = useState<ScheduledItem[]>(SCHEDULED_ITEMS);
   const [selectedCalDay, setSelectedCalDay] = useState<number | null>(null);
 
   const calendarCells = useMemo(() => {
@@ -73,7 +80,20 @@ export default function CampaignsScheduledTab() {
     return cells;
   }, []);
 
-  const filtered = selectedCalDay ? SCHEDULED_ITEMS.filter((x) => x.day === selectedCalDay) : SCHEDULED_ITEMS;
+  const filtered = selectedCalDay
+    ? scheduledItems.filter((x) => x.day === selectedCalDay)
+    : scheduledItems;
+
+  const handleEdit = (item: ScheduledItem) => {
+    dispatch(setCampaignName(item.name));
+    navigate({ to: "/wizard" });
+  };
+
+  const handleCancel = (item: ScheduledItem) => {
+    const shouldCancel = window.confirm(`Cancel scheduled campaign "${item.name}"?`);
+    if (!shouldCancel) return;
+    setScheduledItems((prev) => prev.filter((campaign) => campaign.id !== item.id));
+  };
 
   return (
     <div className="flex flex-1 gap-0 min-h-0 overflow-hidden">
@@ -179,7 +199,7 @@ export default function CampaignsScheduledTab() {
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className="bg-ithina-panel border border-ithina-border rounded-2xl p-5 flex items-start justify-between gap-4"
+                className="group bg-ithina-panel border border-ithina-border rounded-2xl p-5 flex items-start justify-between gap-4 transition-all duration-150 hover:border-ithina-purple/40 hover:shadow-[0_0_0_1px_rgba(168,85,247,0.25)]"
               >
                 <div className="min-w-0">
                   <div className="flex items-center gap-3">
@@ -189,26 +209,41 @@ export default function CampaignsScheduledTab() {
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-white truncate">{item.name}</p>
                       <p className="text-[10px] font-mono text-slate-500 mt-0.5 truncate">{item.targets}</p>
-                      <p className="text-[10px] font-mono text-slate-500 mt-1">{item.skus} SKUs</p>
+                      <p className="text-[10px] font-mono text-slate-500 mt-0.5">{item.skus} SKUs</p>
+                      <div className="mt-2">
+                        {item.approvalRequired ? (
+                          <span className="inline-flex h-6 items-center justify-center rounded-lg border border-amber-400/30 bg-amber-400/10 px-2.5 text-[10px] font-semibold text-amber-400 whitespace-nowrap">
+                            Needs Approval
+                          </span>
+                        ) : (
+                          <span className="inline-flex h-6 items-center justify-center rounded-lg border border-emerald-400/30 bg-emerald-900/40 px-2.5 text-[10px] font-semibold text-emerald-400 whitespace-nowrap">
+                            Auto-approved
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="text-right min-w-[140px]">
-                  <p className="text-xs text-slate-500 font-mono whitespace-nowrap">{item.date}</p>
-                  <p className="text-[10px] text-slate-500 font-mono whitespace-nowrap mt-1">{item.time}</p>
-                </div>
-
-                <div className="flex flex-col items-end">
-                  {item.approvalRequired ? (
-                    <span className="inline-flex items-center justify-center text-[10px] font-semibold text-amber-400 bg-amber-400/10 border border-amber-400/30 px-3 py-1.5 rounded-lg whitespace-nowrap">
-                      Needs Approval
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center justify-center text-[10px] font-semibold text-emerald-400 bg-emerald-900/40 border border-emerald-400/30 px-3 py-1.5 rounded-lg whitespace-nowrap">
-                      Auto-approved
-                    </span>
-                  )}
+                <div className="min-w-[120px] text-right">
+                  <p className="text-xs font-semibold text-white whitespace-nowrap">{item.date}</p>
+                  <p className="mt-1 text-[10px] font-mono text-slate-500 whitespace-nowrap">{item.time}</p>
+                  <div className="mt-3 flex items-center justify-end gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
+                    <button
+                      type="button"
+                      onClick={() => handleEdit(item)}
+                      className="inline-flex h-5 min-w-[28px] items-center justify-center rounded-md px-1.5 text-[10px] font-medium text-slate-400 transition-colors hover:text-white hover:bg-white/5"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCancel(item)}
+                      className="inline-flex h-5 min-w-[40px] items-center justify-center rounded-md px-1.5 text-[10px] font-medium text-rose-400 transition-colors hover:text-rose-300 hover:bg-rose-500/10"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

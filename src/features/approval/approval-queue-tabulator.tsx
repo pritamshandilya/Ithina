@@ -30,17 +30,6 @@ type AllRow = {
   date: string;
 };
 
-function statusPill(metaVariant: InboxItem["metaVariant"], label?: string) {
-  const text = label ?? "—";
-  if (metaVariant === "success") {
-    return `<span class="inline-flex items-center gap-1 text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">${text}</span>`;
-  }
-  if (metaVariant === "warning") {
-    return `<span class="inline-flex items-center gap-1 text-[10px] font-mono text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">${text}</span>`;
-  }
-  return `<span class="inline-flex items-center gap-1 text-[10px] font-mono text-slate-400 bg-white/[0.03] px-2 py-0.5 rounded border border-white/10">${text}</span>`;
-}
-
 /** index_3.1.html pending row guard rails (check + All Pass | warning icon + label). */
 function guardRailsPendingHtml(r: InboxItem) {
   const label = r.guardRailsLabel ?? r.meta;
@@ -57,22 +46,11 @@ function hardwarePill(hw: string) {
   return `<span class="text-[9px] font-mono font-medium px-1.5 py-0.5 rounded border bg-amber-400/8 border-amber-400/20 text-amber-300">${hw}</span>`;
 }
 
-function approvedByLabel(initiator: string) {
-  if (initiator === "Auto-Scheduled") return "Store Manager";
-  return initiator;
-}
-
 function deploymentStatusPill(status: "Deployed" | "Scheduled") {
   if (status === "Deployed") {
     return `<span class="inline-flex items-center gap-1 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-[10px] font-mono text-emerald-300">● Deployed</span>`;
   }
   return `<span class="inline-flex items-center gap-1 rounded border border-violet-400/20 bg-violet-400/10 px-2 py-0.5 text-[10px] font-mono text-violet-300">Scheduled</span>`;
-}
-
-function approvedCampaignStatus(row: InboxItem): "Deployed" | "Scheduled" {
-  // Prototype parity: approved list mixes deployed + scheduled outcomes.
-  if (row.title.toLowerCase().includes("spring")) return "Scheduled";
-  return "Deployed";
 }
 
 export default function ApprovalQueueTabulator() {
@@ -214,7 +192,6 @@ export default function ApprovalQueueTabulator() {
   );
 
   const pendingCount = useMemo(() => inbox.filter((i) => i.status === "pending").length, [inbox]);
-  const approvedCount = useMemo(() => inbox.filter((i) => i.status === "approved").length, [inbox]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -625,8 +602,7 @@ export default function ApprovalQueueTabulator() {
         hozAlign: "right",
         width: 260,
         minWidth: 240,
-        formatter: (cell) => {
-          const r = cell.getData() as InboxItem;
+        formatter: () => {
           return `<div class="flex items-center justify-end gap-1.5">
             <button type="button" data-action="approve" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white">
               <svg class="size-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>

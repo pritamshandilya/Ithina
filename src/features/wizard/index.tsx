@@ -340,7 +340,6 @@ export default function Wizard() {
     [dispatch],
   );
   const handleRemoveAllViolations = useCallback(() => dispatch(removeAllCsvViolations()), [dispatch]);
-  const handleSwitchToCsv = useCallback(() => handleInputModeChange("csv"), [handleInputModeChange]);
 
   const marginFloor = parseInt(constraints.marginFloor) / 100;
 

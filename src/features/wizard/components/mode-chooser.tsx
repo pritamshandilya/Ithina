@@ -1,4 +1,4 @@
-import { ArrowRight, CloudUpload, MessageCircle } from "lucide-react";
+import { CloudUpload, MessageCircle } from "lucide-react";
 import { memo } from "react";
 
 import { cn } from "@/lib/utils";

@@ -54,6 +54,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { shelfId } = searchOverride ?? {};
+  const isShelfLocked = !!shelfId;
   const isAdmin = location.pathname.includes("/admin/");
   const backPath = isAdmin && params.storeId
     ? `/admin/${params.storeId}/shelf`
@@ -174,6 +175,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                         value={selectedShelfId}
                         onChange={(e) => setSelectedShelfId(e.target.value)}
                         aria-label="Select shelf"
+                        disabled={isShelfLocked}
                       >
                         <option value="">Select a shelf...</option>
                         {(shelves ?? []).map((s) => (
@@ -184,6 +186,11 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                         ))}
                       </Select>
                     )}
+                    {isShelfLocked ? (
+                      <p className="text-xs text-muted-foreground">
+                        Shelf selection is locked for this analysis run.
+                      </p>
+                    ) : null}
                   </div>
 
                   {saveError && (

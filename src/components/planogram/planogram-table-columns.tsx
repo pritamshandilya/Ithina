@@ -40,6 +40,35 @@ export function createPlanogramColumns({
 
   return [
     {
+      title: "Code",
+      field: "shelfCode",
+      width: 120,
+      sorter: "string",
+      headerSort: true,
+      headerFilter: false,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+        const value = row.shelfCode ?? row.shelf_id ?? "—";
+        return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
+      },
+    },
+    {
+      title: "Shelf Name",
+      field: "shelfName",
+      minWidth: 180,
+      sorter: "string",
+      headerSort: true,
+      headerFilter: false,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+        return `
+        <div class="min-w-0 py-1">
+          <span class="font-medium text-foreground truncate">${row.shelfName}</span>
+        </div>
+      `;
+      },
+    },
+    {
       title: "Aisle",
       field: "aisleCode",
       width: 70,
@@ -67,39 +96,7 @@ export function createPlanogramColumns({
         return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
       },
     },
-    {
-      title: "Shelf Name",
-      field: "shelfName",
-      minWidth: 180,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const skus = row.productsCount ?? 0;
-        const runs = row.lastRun ? "1 run" : "0 runs";
-        const suffix = `(${skus} SKUs · ${runs})`;
-        return `
-        <div class="min-w-0 py-1">
-          <span class="font-medium text-foreground truncate">${row.shelfName}</span>
-          <span class="text-muted-foreground"> ${suffix}</span>
-        </div>
-      `;
-      },
-    },
-    {
-      title: "ID",
-      field: "shelfCode",
-      width: 120,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const value = row.shelfCode ?? row.shelf_id ?? "—";
-        return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
-      },
-    },
+    
     {
       title: "Section",
       field: "section",
@@ -126,15 +123,42 @@ export function createPlanogramColumns({
       },
     },
     {
-      title: "Dimensions",
-      field: "dimensions",
-      width: 110,
-      sorter: "string",
+      title: "Width",
+      field: "width",
+      width: 100,
+      sorter: "number",
       headerSort: true,
       headerFilter: false,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
+        const value = row.width != null ? row.width : "—";
+        return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
+      },
+    },
+    {
+      title: "Height",
+      field: "height",
+      width: 100,
+      sorter: "number",
+      headerSort: true,
+      headerFilter: false,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+        const value = row.height != null ? row.height : "—";
+        return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
+      },
+    },
+    {
+      title: "Depth",
+      field: "depth",
+      width: 100,
+      sorter: "number",
+      headerSort: true,
+      headerFilter: false,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+        const value = row.depth != null ? row.depth : "—";
+        return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
       },
     },
     {
@@ -394,7 +418,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
       ref={setMenuRef}
       data-planogram-actions-menu
       className={cn(
-        "fixed z-[100] w-max min-w-48 max-w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md transition-opacity duration-75",
+        "fixed z-100 w-max min-w-48 max-w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md transition-opacity duration-75",
         placed ? "opacity-100" : "pointer-events-none opacity-0",
       )}
       style={{ left: pos.left, top: pos.top }}
@@ -411,7 +435,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
             }}
           >
             <LayoutGrid className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0">Associate planogram and run analysis</span>
+            <span className="min-w-0">Planogram analysis</span>
           </Button>
           <Button
             type="button"

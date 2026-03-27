@@ -57,8 +57,9 @@ interface AddShelfDetailsCardProps {
   setDimWidth: (value: string) => void;
   dimHeight: string;
   setDimHeight: (value: string) => void;
-  dimDepth: string;
   setDimDepth: (value: string) => void;
+  verticalPosition: string;
+  setVerticalPosition: (value: string) => void;
   saveError: string | null;
   canSave: boolean;
   isSaving: boolean;
@@ -97,8 +98,9 @@ export function AddShelfDetailsCard({
   setDimWidth,
   dimHeight,
   setDimHeight,
-  dimDepth,
   setDimDepth,
+  verticalPosition,
+  setVerticalPosition,
   saveError,
   canSave,
   isSaving,
@@ -150,6 +152,7 @@ export function AddShelfDetailsCard({
             placeholder="e.g., Food & Beverage Shelf"
             value={shelfName}
             onChange={(e) => setShelfName(e.target.value)}
+            autoFocus={!isAssociateMode}
             readOnly={isAssociateMode}
             className={cn(
               duplicateNameError && "border-destructive",
@@ -172,50 +175,36 @@ export function AddShelfDetailsCard({
         {!isAssociateMode && (
           <>
             {!isManualEntryMode ? (
-              <div className="space-y-2">
-                <Label htmlFor="shelf-template-select">Shelf template (optional)</Label>
-                {shelfTemplatesLoading ? (
-                  <Skeleton className="h-9 w-full" />
-                ) : (
-                  <Select
-                    id="shelf-template-select"
-                    value={selectedTemplateId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedTemplateId(id);
-                      const tpl = shelfTemplates.find((t) => t.id === id);
-                      if (tpl) applyShelfTemplate(tpl);
-                    }}
-                    aria-label="Apply shelf template"
-                  >
-                    <option value="">None — enter manually</option>
-                    {shelfTemplates.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.name}
-                      </option>
-                    ))}
-                  </Select>
-                )}
-                {shelfTemplates.length === 0 && !shelfTemplatesLoading ? (
-                  <p className="text-xs text-muted-foreground">
-                    No templates yet. Add templates under Shelves → Shelf Templates
-                    or Store Defaults.
-                  </p>
-                ) : null}
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="shelf-template-select">Shelf template (optional)</Label>
+                  {shelfTemplatesLoading ? (
+                    <Skeleton className="h-9 w-full" />
+                  ) : (
+                    <Select
+                      id="shelf-template-select"
+                      value={selectedTemplateId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedTemplateId(id);
+                        const tpl = shelfTemplates.find((t) => t.id === id);
+                        if (tpl) applyShelfTemplate(tpl);
+                      }}
+                      aria-label="Apply shelf template"
+                    >
+                      <option value="">None — enter manually</option>
+                      {shelfTemplates.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.name}
+                        </option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+              </>
             ) : null}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="aisle-code">Aisle code</Label>
-                <Input
-                  id="aisle-code"
-                  type="text"
-                  placeholder="e.g., A2"
-                  value={aisleCode}
-                  onChange={(e) => setAisleCode(e.target.value)}
-                />
-              </div>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="bay-code">Bay code</Label>
                 <Input
@@ -226,30 +215,6 @@ export function AddShelfDetailsCard({
                   onChange={(e) => setBayCode(e.target.value)}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="zone">Zone</Label>
-                <Input
-                  id="zone"
-                  placeholder="e.g., Grocery"
-                  value={zone}
-                  onChange={(e) => setZone(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="section">Section</Label>
-                <Input
-                  id="section"
-                  placeholder="e.g., Snacks"
-                  value={section}
-                  onChange={(e) => setSection(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="fixture-type">Fixture Type</Label>
                 <Select
@@ -271,38 +236,80 @@ export function AddShelfDetailsCard({
                   ))}
                 </Select>
               </div>
-              <div className="space-y-1.5">
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="section">Section</Label>
+                <Input
+                  id="section"
+                  placeholder="e.g., Chilled"
+                  value={section}
+                  onChange={(e) => setSection(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="aisle-code">Aisle</Label>
+                <Input
+                  id="aisle-code"
+                  type="text"
+                  placeholder="e.g., 90"
+                  value={aisleCode}
+                  onChange={(e) => setAisleCode(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="zone">Zone</Label>
+                <Input
+                  id="zone"
+                  placeholder="e.g., Dairy"
+                  value={zone}
+                  onChange={(e) => setZone(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="vertical-position">Vertical Position</Label>
+                <Input
+                  id="vertical-position"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g., 0"
+                  value={verticalPosition}
+                  onChange={(e) => setVerticalPosition(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="dim-width">Dimensions (W × H × D)</Label>
+                  <Label htmlFor="dim-width">Width</Label>
                   <span className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground">
                     Unit: <span className="ml-1 font-medium">{defaultDimensionUnit}</span>
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Input
-                    id="dim-width"
-                    placeholder="Width"
-                    value={dimWidth}
-                    onChange={(e) => setDimWidth(e.target.value)}
-                    className="h-9"
-                  />
-                  <span className="text-muted-foreground">×</span>
-                  <Input
-                    id="dim-height"
-                    placeholder="Height"
-                    value={dimHeight}
-                    onChange={(e) => setDimHeight(e.target.value)}
-                    className="h-9"
-                  />
-                  <span className="text-muted-foreground">×</span>
-                  <Input
-                    id="dim-depth"
-                    placeholder="Depth"
-                    value={dimDepth}
-                    readOnly
-                    className="h-9"
-                  />
+                <Input
+                  id="dim-width"
+                  placeholder="Width"
+                  value={dimWidth}
+                  onChange={(e) => setDimWidth(e.target.value)}
+                  className="h-9"
+                />
+              </div>
+              <div className="space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="dim-height">Height</Label>
+                  <span className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground">
+                    Unit: <span className="ml-1 font-medium">{defaultDimensionUnit}</span>
+                  </span>
                 </div>
+                <Input
+                  id="dim-height"
+                  placeholder="Height"
+                  value={dimHeight}
+                  onChange={(e) => setDimHeight(e.target.value)}
+                  className="h-9"
+                />
               </div>
             </div>
           </>

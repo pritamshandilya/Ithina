@@ -38,6 +38,24 @@ import type { CreateComplianceRuleSetModalProps } from "@/components/common/crea
 const LOCAL_DEFAULT_RULE_SET_ID = "local-default-compliance-rule-set";
 const DEFAULT_ONBOARDING_RULE_SET_NAME = "Default Rule";
 
+function normalizeCodePart(input: string, fallback: string): string {
+  const cleaned = input.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  return cleaned || fallback;
+}
+
+function buildFixtureCode(
+  fixture: { type: string; aisle: string; zone: string; section: string },
+  index: number,
+): string {
+  const typePart = normalizeCodePart(fixture.type, "FIX").slice(0, 4);
+  const aislePart = normalizeCodePart(fixture.aisle, "A1").slice(0, 4);
+  const zonePart = normalizeCodePart(fixture.zone, "GEN").slice(0, 3);
+  const sectionPart = normalizeCodePart(fixture.section, "GEN").slice(0, 3);
+  const seq = String(index + 1).padStart(2, "0");
+  // Backend-like format.
+  return `F-${typePart}-${aislePart}-${zonePart}-${sectionPart}-${seq}`;
+}
+
 type OnboardingRuleSet = ComplianceRuleSetSummary & {
   payload: CreateComplianceRuleSetInput;
   isLocal: true;
@@ -395,6 +413,7 @@ export function useStoreOnboarding() {
       const fixturesToCreate = fixtureTypes
         .map((fixture) => ({
           type: fixture.type.trim(),
+          code: fixture.code?.trim() || "",
           width: Number(fixture.width) || 120,
           height: Number(fixture.height) || 200,
           depth: Number(fixture.depth) || 45,
@@ -406,6 +425,7 @@ export function useStoreOnboarding() {
         .filter((fixture) => fixture.type.length > 0);
       if (fixturesToCreate.length > 0) {
         const seen = new Set<string>();
+        const seenCodes = new Set<string>();
         const dedupedFixtures = fixturesToCreate.filter((fixture) => {
           const key = [
             fixture.type.toLowerCase(),
@@ -422,9 +442,28 @@ export function useStoreOnboarding() {
           return true;
         });
         const fixtureResults = await Promise.allSettled(
-          dedupedFixtures.map((fixture) =>
+          dedupedFixtures.map((fixture, idx) => {
+            let generatedCode =
+              fixture.code ||
+              buildFixtureCode(
+                {
+                  type: fixture.type,
+                  aisle: fixture.aisle,
+                  zone: fixture.zone,
+                  section: fixture.section,
+                },
+                idx,
+              );
+            // Ensure uniqueness in this batch.
+            while (seenCodes.has(generatedCode)) {
+              generatedCode = `${generatedCode}-${String(seenCodes.size + 1).padStart(2, "0")}`;
+            }
+            seenCodes.add(generatedCode);
+
+            return (
             createStoreFixture(storeId, {
               type: fixture.type,
+              code: generatedCode,
               dimensions: {
                 width: fixture.width,
                 height: fixture.height,
@@ -436,8 +475,9 @@ export function useStoreOnboarding() {
                 aisle: fixture.aisle,
                 zone: fixture.zone,
               },
-            }),
-          ),
+            })
+            );
+          }),
         );
 
         const failedFixtureCount = fixtureResults.filter(

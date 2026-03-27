@@ -22,6 +22,7 @@ export interface StoreFixtureApiModel {
 
 export interface CreateStoreFixturePayload {
   type: string;
+  code?: string;
   dimensions: {
     width: number;
     height: number;

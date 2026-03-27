@@ -21,12 +21,12 @@ export function useUpdateShelf() {
       shelfId: string;
       payload: UpdateShelfPayload;
     }) => updateShelf(shelfId, payload),
-    onSuccess: (_data, { shelfId }) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: ["maker", "shelves", "list"],
       });
       void queryClient.invalidateQueries({
-        queryKey: ["maker", "shelves", "detail", shelfId],
+        queryKey: ["maker", "shelves", "detail"],
       });
     },
   });

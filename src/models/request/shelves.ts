@@ -43,4 +43,8 @@ export interface ShelfFixtureUpdateRequest {
 export interface UpdateShelfPayload {
   code?: string;
   name?: string;
+  fixture_id?: string;
+  width?: number;
+  height?: number;
+  vertical_position?: number;
 }

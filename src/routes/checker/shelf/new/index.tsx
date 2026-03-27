@@ -92,6 +92,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const [dimWidth, setDimWidth] = useState("");
   const [dimHeight, setDimHeight] = useState("");
   const [dimDepth, setDimDepth] = useState("");
+  const [verticalPosition, setVerticalPosition] = useState("0");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const lastSearchTemplateAppliedId = useRef<string | undefined>(undefined);
 
@@ -157,14 +158,20 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     [fixtureDepthByType],
   );
 
-  const applyShelfTemplate = useCallback((tpl: ShelfTemplate) => {
+  const applyShelfTemplate = useCallback(
+    (tpl: ShelfTemplate, options?: { prefillShelfName?: boolean }) => {
+      const prefillShelfName = options?.prefillShelfName ?? true;
     setFixtureType(tpl.fixtureType);
     setZone(tpl.zone ?? "");
     setSection(tpl.section ?? "");
     setDimWidth(String(tpl.width));
     setDimHeight(String(tpl.height));
-    setShelfName((prev) => (prev.trim() ? prev : tpl.name));
-  }, []);
+      if (prefillShelfName) {
+        setShelfName((prev) => (prev.trim() ? prev : tpl.name));
+      }
+    },
+    []
+  );
 
   // Depth comes from the store fixtures API (derived by fixture type + unit).
   useEffect(() => {
@@ -182,7 +189,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     }
     const match = shelfTemplates.find((t) => t.id === templateId);
     if (match) {
-      applyShelfTemplate(match);
+      applyShelfTemplate(match, { prefillShelfName: false });
       setSelectedTemplateId(match.id);
       lastSearchTemplateAppliedId.current = templateId;
     }
@@ -257,8 +264,13 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         const fixtureWidth = Number(dimWidth) || 1;
         const fixtureHeight = Number(dimHeight) || 1;
         const fixtureDepth = Number(dimDepth);
+        const verticalPositionValue = Number(verticalPosition || "0");
         if (!Number.isFinite(fixtureDepth) || fixtureDepth <= 0) {
           setSaveError("Shelf depth is missing for the selected fixture type.");
+          return;
+        }
+        if (!Number.isFinite(verticalPositionValue)) {
+          setSaveError("Vertical position must be a valid number.");
           return;
         }
         const aisleValue = aisleCode.trim();
@@ -310,7 +322,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
           fixture_id: fixtureId,
           width: fixtureWidth,
           height: fixtureHeight,
-          vertical_position: 0,
+          vertical_position: verticalPositionValue,
         });
         toast({
           title: "Shelf created",
@@ -338,6 +350,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     dimWidth,
     dimHeight,
     dimDepth,
+    verticalPosition,
     defaultDimensionUnit,
     shelfListPath,
     planogramPayload,
@@ -393,8 +406,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
                 setDimWidth={setDimWidth}
                 dimHeight={dimHeight}
                 setDimHeight={setDimHeight}
-                dimDepth={dimDepth}
                 setDimDepth={setDimDepth}
+                verticalPosition={verticalPosition}
+                setVerticalPosition={setVerticalPosition}
                 saveError={saveError}
                 canSave={canSave}
                 isSaving={isSaving}

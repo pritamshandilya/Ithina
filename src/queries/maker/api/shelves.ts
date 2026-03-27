@@ -62,16 +62,24 @@ export function deleteShelf(shelfId: string): Promise<void> {
  * This ensures compatibility across the application.
  */
 export function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
-  const aisleCode = res.fixture_aisle ?? "";
+  const shelfCode = res.code ?? res.shelf_id ?? "";
+  const fixtureWidth = res.fixture?.dimensions.width ?? res.fixture_width;
+  const fixtureHeight = res.fixture?.dimensions.height ?? res.fixture_height;
+  const fixtureDepth = res.fixture?.dimensions.depth ?? res.fixture_depth;
+  const dimensionUnit = res.fixture?.dimension_unit ?? res.fixture_dimension_unit;
+  const aisleCode = res.fixture?.physical_location.aisle ?? res.fixture_aisle ?? "";
+  const zone = res.fixture?.physical_location.zone ?? res.fixture_zone;
+  const section = res.fixture?.physical_location.section ?? res.fixture_section;
+  const fixtureType = res.fixture?.type ?? res.fixture_type;
   const bayCode = (() => {
-    const parts = String(res.shelf_id ?? "").split("-");
+    const parts = String(shelfCode).split("-");
     return (parts.at(-1) ?? "").trim();
   })();
 
   return {
     id: res.id,
-    fixtureId: res.fixture_id,
-    shelf_id: res.shelf_id,
+    fixtureId: res.fixture?.id ?? res.fixture_id,
+    shelf_id: shelfCode,
     aisleCode,
     bayCode,
     // Numeric derivatives are intentionally not derived from alphanumeric codes.
@@ -79,12 +87,20 @@ export function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
     aisleNumber: undefined,
     bayNumber: undefined,
     shelfName: res.name,
-    shelfCode: res.shelf_id,
+    shelfCode,
     status: "never-audited",
-    zone: res.fixture_zone,
-    section: res.fixture_section,
-    fixtureType: res.fixture_type,
-    dimensions: `${res.fixture_width}x${res.fixture_height}x${res.fixture_depth} ${res.fixture_dimension_unit}`,
+    zone,
+    section,
+    fixtureType,
+    width: res.width,
+    height: res.height,
+    depth: fixtureDepth,
+    dimensionUnit,
+    dimensions:
+      fixtureWidth != null && fixtureHeight != null && fixtureDepth != null
+        ? `${fixtureWidth}x${fixtureHeight}x${fixtureDepth}${dimensionUnit ? ` ${dimensionUnit}` : ""}`
+        : undefined,
+    verticalPosition: res.vertical_position,
     createdAt: new Date(res.created_at),
     updatedAt: new Date(res.updated_at),
     planogramId: undefined, // Planogram association logic to be added

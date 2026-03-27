@@ -60,12 +60,22 @@ export interface Shelf {
   section?: string;
   /** Type of fixture (e.g., Gondola, Wall Shelving) */
   fixtureType?: string;
+  /** Shelf/fixture width */
+  width?: number;
+  /** Shelf/fixture height */
+  height?: number;
+  /** Fixture depth */
+  depth?: number;
+  /** Unit for dimensions */
+  dimensionUnit?: string;
   /** Dimensions of the fixture */
   dimensions?: string;
   /** Shelf creation timestamp from backend */
   createdAt?: Date;
   /** Shelf update timestamp from backend */
   updatedAt?: Date;
+  /** Shelf vertical position from backend */
+  verticalPosition?: number;
 }
 
 /**

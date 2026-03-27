@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Edit3, Plus, Trash2 } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { useQueryClient, useMutation, useQueries } from "@tanstack/react-query";
 
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,11 +52,22 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function actionCellHtml(): string {
+function actionCellHtml(isDefault: boolean): string {
+  const editIcon = renderToStaticMarkup(<Edit3 className="size-3.5" aria-hidden />);
+  const deleteIcon = renderToStaticMarkup(<Trash2 className="size-3.5" aria-hidden />);
+  const deleteButton = isDefault
+    ? `<button type="button" aria-label="Delete disabled for default rule set" title="Default rule set cannot be deleted" class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md text-muted-foreground/50" disabled>
+        ${deleteIcon}
+      </button>`
+    : `<button type="button" data-action="delete" aria-label="Delete rule set" class="inline-flex size-8 items-center justify-center rounded-md text-destructive hover:bg-destructive/10">
+        ${deleteIcon}
+      </button>`;
   return `
-    <div class="flex justify-end gap-2">
-      <button type="button" data-action="edit" class="inline-flex h-8 items-center rounded-md border border-border px-2 text-xs hover:bg-muted">Edit</button>
-      <button type="button" data-action="delete" class="inline-flex h-8 items-center rounded-md border border-destructive/50 px-2 text-xs text-destructive hover:bg-destructive/10">Delete</button>
+    <div class="flex justify-end gap-1">
+      <button type="button" data-action="edit" aria-label="Edit rule set" class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground">
+        ${editIcon}
+      </button>
+      ${deleteButton}
     </div>
   `;
 }
@@ -71,6 +83,7 @@ export function AdminComplianceRuleSetsTabContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [mode, setMode] = useState<"create" | "edit">("create");
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isEditingDefaultRuleSet, setIsEditingDefaultRuleSet] = useState(false);
   const [initialValues, setInitialValues] = useState<
     CreateComplianceRuleSetModalProps["initialValues"]
   >(undefined);
@@ -137,8 +150,10 @@ export function AdminComplianceRuleSetsTabContent() {
       {
         title: "Rule set",
         field: "name",
-        minWidth: 260,
+        minWidth: 230,
         headerFilter: false,
+        hozAlign: "left",
+        headerHozAlign: "left",
         formatter: (cell: DataTableCell<ComplianceRuleTreeRow>) => {
           const row = cell.getData();
           if (row.isChild) {
@@ -165,17 +180,17 @@ export function AdminComplianceRuleSetsTabContent() {
       {
         title: "Actions",
         field: "id",
-        width: 180,
+        width: 96,
         headerSort: false,
         headerFilter: false,
         formatter: (cell: DataTableCell<ComplianceRuleTreeRow>) => {
           const row = cell.getData();
           if (row.isChild) return "";
-          return actionCellHtml();
+          return actionCellHtml(!!row.isDefault);
         },
         cellClick: (e: unknown, cell: DataTableCell<ComplianceRuleTreeRow>) => {
           const target =
-            e && typeof e === "object" && "target" in e && e.target instanceof HTMLElement
+            e && typeof e === "object" && "target" in e && e.target instanceof Element
               ? e.target
               : null;
           if (!target) return;
@@ -187,6 +202,14 @@ export function AdminComplianceRuleSetsTabContent() {
           if (action === "edit") {
             void openEdit(row.id);
           } else if (action === "delete") {
+            if (row.isDefault) {
+              toast({
+                title: "Delete not allowed",
+                description: "Default rule set cannot be deleted.",
+                variant: "destructive",
+              });
+              return;
+            }
             setConfirmDeleteId(row.id);
           }
         },
@@ -224,6 +247,7 @@ export function AdminComplianceRuleSetsTabContent() {
   const openCreate = () => {
     setMode("create");
     setEditingId(null);
+    setIsEditingDefaultRuleSet(false);
     setInitialValues(undefined);
     setModalOpen(true);
   };
@@ -231,8 +255,10 @@ export function AdminComplianceRuleSetsTabContent() {
   async function openEdit(id: string) {
     try {
       const ruleSet = await fetchComplianceRuleSetById(id);
+      const targetSummary = complianceRuleSets.find((item) => item.id === id);
       setMode("edit");
       setEditingId(id);
+      setIsEditingDefaultRuleSet(!!targetSummary?.isDefault);
       setInitialValues(mapRuleSetToModalInitialValues(ruleSet));
       setModalOpen(true);
     } catch (err) {
@@ -255,6 +281,7 @@ export function AdminComplianceRuleSetsTabContent() {
       }
 
       setModalOpen(false);
+      setIsEditingDefaultRuleSet(false);
     } catch (err) {
       toast({
         title: "Save failed",
@@ -284,13 +311,10 @@ export function AdminComplianceRuleSetsTabContent() {
       <div className="shrink-0">
         <Card noBorder className="bg-card shadow-xl glassmorphism">
           <CardHeader>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
+              {/* <div>
                 <CardTitle className="text-lg">Compliance Rule Sets</CardTitle>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Admin and maker can create, edit, and delete compliance rule sets.
-                </p>
-              </div>
+              </div> */}
 
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" className="h-9 gap-2" onClick={openCreate}>
@@ -340,9 +364,13 @@ export function AdminComplianceRuleSetsTabContent() {
 
       <CreateComplianceRuleSetModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setIsEditingDefaultRuleSet(false);
+        }}
         isSubmitting={createMutation.isPending || updateMutation.isPending}
         mode={mode}
+        lockNameAndStatus={isEditingDefaultRuleSet}
         initialValues={initialValues ?? undefined}
         onSubmit={handleSubmit}
       />

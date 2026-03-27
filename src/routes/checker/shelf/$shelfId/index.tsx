@@ -11,6 +11,7 @@ import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useShelf } from "@/queries/maker";
+import { useStoreFixtureTypes } from "@/queries/checker";
 import { cn } from "@/lib/utils";
 import { EditableField } from "@/components/common";
 import { useUpdateShelf } from "@/queries/maker/hooks/useUpdateShelf";
@@ -31,18 +32,21 @@ export function ShelfDetailPage() {
   const location = useLocation();
   const { toast } = useToast();
   const updateShelfMutation = useUpdateShelf();
+  const { data: fixtureTypeLabels = [] } = useStoreFixtureTypes();
 
   const [isEditing, setIsEditing] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
   const [shelfName, setShelfName] = useState<string>();
   const [shelfCode, setShelfCode] = useState<string>();
   const [aisle, setAisle] = useState<string>();
+  const [bay, setBay] = useState<string>();
   const [zone, setZone] = useState<string>();
   const [section, setSection] = useState<string>();
   const [fixtureType, setFixtureType] = useState<string>();
   const [dimWidth, setDimWidth] = useState<string>();
   const [dimHeight, setDimHeight] = useState<string>();
-  const [dimDepth, setDimDepth] = useState<string>();
+  const [verticalPosition, setVerticalPosition] = useState<string>();
 
   const isAdmin = location.pathname.includes("/admin/");
 
@@ -110,12 +114,32 @@ export function ShelfDetailPage() {
     aisle ??
     shelf.aisleCode ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "");
+  const effectiveBay = bay ?? shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : "");
   const effectiveZone = zone ?? shelf.zone ?? "";
   const effectiveSection = section ?? shelf.section ?? "";
   const effectiveFixtureType = fixtureType ?? shelf.fixtureType ?? "";
-  const [baseWidth = "", baseHeight = "", baseDepth = ""] = (shelf.dimensions ?? "")
-    .split("x")
-    .map((v) => v?.trim() ?? "");
+  const fixtureTypeOptions = (() => {
+    const values = new Set<string>();
+    const options: string[] = [];
+
+    for (const label of fixtureTypeLabels) {
+      const value = label.trim();
+      if (!value || values.has(value.toLowerCase())) continue;
+      values.add(value.toLowerCase());
+      options.push(value);
+    }
+
+    const current = effectiveFixtureType.trim();
+    if (current && !values.has(current.toLowerCase())) {
+      options.unshift(current);
+    }
+
+    return options;
+  })();
+  const baseWidth = shelf.width != null ? String(shelf.width) : "";
+  const baseHeight = shelf.height != null ? String(shelf.height) : "";
+  const baseVerticalPosition =
+    shelf.verticalPosition != null ? String(shelf.verticalPosition) : "0";
 
   const handleStartEditing = () => {
     setIsEditing(true);
@@ -124,15 +148,18 @@ export function ShelfDetailPage() {
     setAisle(
       shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : ""),
     );
+    setBay(shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : ""));
     setZone(shelf.zone ?? "");
     setSection(shelf.section ?? "");
     setFixtureType(shelf.fixtureType ?? "");
-    const [w = "", h = "", d = ""] = (shelf.dimensions ?? "")
+    const [w = "", h = ""] = (shelf.dimensions ?? "")
       .split("x")
       .map((v) => v?.trim() ?? "");
-    setDimWidth(w);
-    setDimHeight(h);
-    setDimDepth(d);
+    setDimWidth(shelf.width != null ? String(shelf.width) : w);
+    setDimHeight(shelf.height != null ? String(shelf.height) : h);
+    setVerticalPosition(
+      shelf.verticalPosition != null ? String(shelf.verticalPosition) : "0",
+    );
   };
 
   const handleCancelEditing = () => {
@@ -140,19 +167,26 @@ export function ShelfDetailPage() {
     setShelfName(undefined);
     setShelfCode(undefined);
     setAisle(undefined);
+    setBay(undefined);
     setZone(undefined);
     setSection(undefined);
     setFixtureType(undefined);
     setDimWidth(undefined);
     setDimHeight(undefined);
-    setDimDepth(undefined);
+    setVerticalPosition(undefined);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const trimmedName = (shelfName ?? shelf.shelfName).trim();
-    const trimmedCode = (shelfCode ?? shelf.shelfCode ?? "").trim();
+    const rawCode = (shelfCode ?? shelf.shelfCode ?? "").trim();
+    const trimmedAisleForCode = effectiveAisle.trim();
+    const trimmedBayForCode = effectiveBay.trim();
+    const derivedCode =
+      trimmedAisleForCode && trimmedBayForCode
+        ? `S${trimmedAisleForCode}-${trimmedBayForCode}`
+        : rawCode;
 
-    if (!trimmedName || !trimmedCode) {
+    if (!trimmedName || !derivedCode) {
       toast({
         variant: "destructive",
         title: "Validation Error",
@@ -163,66 +197,68 @@ export function ShelfDetailPage() {
 
     const w = (dimWidth ?? baseWidth).trim();
     const h = (dimHeight ?? baseHeight).trim();
-    const d = (dimDepth ?? baseDepth).trim();
+    const vPos = (verticalPosition ?? baseVerticalPosition).trim();
+    const numericWidth = Number(w);
+    const numericHeight = Number(h);
+    const numericVerticalPosition = Number(vPos);
 
-    const fixturePayload = {
-      type: (fixtureType ?? shelf.fixtureType)?.trim() || undefined,
-      physical_location:
-        (aisle ?? shelf.aisleCode)?.trim() ||
-          (zone ?? shelf.zone)?.trim() ||
-          (section ?? shelf.section)?.trim()
-          ? {
-              aisle: (aisle ?? shelf.aisleCode)?.trim() || undefined,
-              zone: (zone ?? shelf.zone)?.trim() || undefined,
-              section: (section ?? shelf.section)?.trim() || undefined,
-            }
-          : undefined,
-      dimensions:
-        w || h || d
-          ? {
-              width: w ? Number(w) : undefined,
-              height: h ? Number(h) : undefined,
-              depth: d ? Number(d) : undefined,
-            }
-          : undefined,
-    };
-
-    if (fixturePayload.physical_location && Object.values(fixturePayload.physical_location).every((v) => v === undefined)) {
-      fixturePayload.physical_location = undefined;
+    if (!Number.isFinite(numericWidth) || numericWidth <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Width must be a valid positive number.",
+      });
+      return;
     }
-    if (fixturePayload.dimensions && Object.values(fixturePayload.dimensions).every((v) => v === undefined)) {
-      fixturePayload.dimensions = undefined;
+    if (!Number.isFinite(numericHeight) || numericHeight <= 0) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Height must be a valid positive number.",
+      });
+      return;
+    }
+    if (!Number.isFinite(numericVerticalPosition)) {
+      toast({
+        variant: "destructive",
+        title: "Validation Error",
+        description: "Vertical position must be a valid number.",
+      });
+      return;
     }
 
-    const hasFixtureUpdates = Object.values(fixturePayload).some((v) => v !== undefined);
+    try {
+      setIsSavingDetails(true);
 
-    updateShelfMutation.mutate(
-      {
+      await updateShelfMutation.mutateAsync({
         shelfId,
         payload: {
           name: trimmedName,
-          code: trimmedCode,
-          ...(hasFixtureUpdates ? { fixture: fixturePayload } : {}),
+          code: derivedCode,
+          width: numericWidth,
+          height: numericHeight,
+          vertical_position: numericVerticalPosition,
         },
-      },
-      {
-        onSuccess: () => {
-          toast({
-            title: "Shelf updated",
-            description: "Shelf details updated successfully.",
-            variant: "success",
-          });
-          setIsEditing(false);
-        },
-        onError: (updateError: Error) => {
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: updateError?.message ?? "Failed to update shelf details.",
-          });
-        },
-      }
-    );
+      });
+
+      toast({
+        title: "Shelf updated",
+        description: "Shelf details updated successfully.",
+        variant: "success",
+      });
+      setIsEditing(false);
+    } catch (updateError) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description:
+          updateError instanceof Error
+            ? updateError.message
+            : "Failed to update shelf details.",
+      });
+    } finally {
+      setIsSavingDetails(false);
+    }
   };
 
   return (
@@ -245,7 +281,7 @@ export function ShelfDetailPage() {
                   variant="outline"
                   size="sm"
                   onClick={handleCancelEditing}
-                  disabled={updateShelfMutation.isPending}
+                  disabled={isSavingDetails}
                 >
                   <X className="size-4 mr-1" />
                   Cancel
@@ -253,11 +289,13 @@ export function ShelfDetailPage() {
                 <Button
                   variant="success"
                   size="sm"
-                  onClick={handleSave}
-                  disabled={updateShelfMutation.isPending}
+                  onClick={() => {
+                    void handleSave();
+                  }}
+                  disabled={isSavingDetails}
                 >
                   <Save className="size-4 mr-1" />
-                  {updateShelfMutation.isPending ? "Saving..." : "Save"}
+                  {isSavingDetails ? "Saving..." : "Save"}
                 </Button>
               </>
             )}
@@ -297,9 +335,13 @@ export function ShelfDetailPage() {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     Bay
                   </p>
-                  <p className="text-lg font-bold tabular-nums">
-                    {shelf.bayCode ?? shelf.bayNumber ?? "—"}
-                  </p>
+                  <EditableField
+                    label=""
+                    value={effectiveBay}
+                    isEditing={isEditing}
+                    onChange={setBay}
+                    className="mt-1"
+                  />
                 </div>
                 <div>
                   <EditableField
@@ -344,47 +386,65 @@ export function ShelfDetailPage() {
                   </p>
                 ) : (
                   <Select
-                    value={fixtureType ?? shelf.fixtureType ?? ""}
+                    value={effectiveFixtureType}
                     onChange={(e) => setFixtureType(e.target.value)}
                     aria-label="Fixture Type"
                   >
                     <option value="">Choose...</option>
-                    <option value="gondola">Gondola</option>
-                    <option value="wall_shelving">Wall Shelving</option>
-                    <option value="end_cap">End Cap</option>
-                    <option value="freezer">Freezer</option>
-                    <option value="cooler">Cooler</option>
+                    {fixtureTypeOptions.map((type) => (
+                      <option key={type} value={type}>
+                        {type}
+                      </option>
+                    ))}
                   </Select>
                 )}
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Dimensions (WxHxD)
+                  Dimensions (WxH)
                 </p>
                 {!isEditing ? (
-                  <p className="text-sm font-medium font-mono tabular-nums">
-                    {shelf.dimensions || "—"}
-                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Width</p>
+                      <p className="text-sm font-medium font-mono tabular-nums">{baseWidth || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Height</p>
+                      <p className="text-sm font-medium font-mono tabular-nums">{baseHeight || "—"}</p>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="grid grid-cols-2 gap-2">
                     <Input
                       placeholder="Width"
                       value={dimWidth ?? baseWidth}
                       onChange={(e) => setDimWidth(e.target.value)}
                     />
-                    <span className="text-muted-foreground">×</span>
                     <Input
                       placeholder="Height"
                       value={dimHeight ?? baseHeight}
                       onChange={(e) => setDimHeight(e.target.value)}
                     />
-                    <span className="text-muted-foreground">×</span>
-                    <Input
-                      placeholder="Depth"
-                      value={dimDepth ?? baseDepth}
-                      onChange={(e) => setDimDepth(e.target.value)}
-                    />
                   </div>
+                )}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  Vertical Position
+                </p>
+                {!isEditing ? (
+                  <p className="text-sm font-medium font-mono tabular-nums">
+                    {baseVerticalPosition || "0"}
+                  </p>
+                ) : (
+                  <Input
+                    placeholder="Vertical Position"
+                    type="number"
+                    step="0.01"
+                    value={verticalPosition ?? baseVerticalPosition}
+                    onChange={(e) => setVerticalPosition(e.target.value)}
+                  />
                 )}
               </div>
             </CardContent>

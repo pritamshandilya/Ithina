@@ -55,6 +55,8 @@ export interface AnalysisFlowPageProps {
   onShelfSelect?: (id: string) => void;
   /** Available shelves for selection */
   shelves?: Array<{ id: string; shelfName: string }>;
+  /** Lock shelf selection (e.g. preselected from shelf actions) */
+  isShelfSelectionLocked?: boolean;
 }
 
 export function AnalysisFlowPage({
@@ -66,6 +68,7 @@ export function AnalysisFlowPage({
   selectedShelfId,
   onShelfSelect,
   shelves,
+  isShelfSelectionLocked = false,
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -179,6 +182,7 @@ export function AnalysisFlowPage({
                   value={selectedShelfId || ""}
                   onChange={(e) => onShelfSelect?.(e.target.value)}
                   aria-label="Select shelf"
+                  disabled={isShelfSelectionLocked}
                 >
                   <option value="">No shelf selected (Adhoc)</option>
                   {shelves?.map((s) => (

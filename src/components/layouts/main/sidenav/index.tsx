@@ -157,25 +157,25 @@ export default function Sidenav() {
         icon: ShieldCheck 
       });
     }
+    if (isAdminStoreView) {
+      items.push({
+        label: "Fixtures",
+        to: `${storePrefix}/fixture-types` as never,
+        icon: LayoutPanelLeft,
+      });
+    } else {
+      items.push({
+        label: "Fixtures",
+        to: "/checker/fixture-types",
+        icon: LayoutPanelLeft,
+      });
+    }
     items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
         to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as never,
         icon: Library,
-      });
-    }
-    if (isAdminStoreView) {
-      items.push({
-        label: "Fixture Types",
-        to: `${storePrefix}/fixture-types` as never,
-        icon: LayoutPanelLeft,
-      });
-    } else {
-      items.push({
-        label: "Fixture Types",
-        to: "/checker/fixture-types",
-        icon: LayoutPanelLeft,
       });
     }
     items.push({

@@ -11,6 +11,7 @@ import {
   type DataTableCell,
   type DataTableColumn,
 } from "@/components/ui/data-table";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,8 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
   const [fixtureModalOpen, setFixtureModalOpen] = useState(false);
   const [isCreatingFixture, setIsCreatingFixture] = useState(false);
   const [editingFixture, setEditingFixture] = useState<StoreFixtureApiModel | null>(null);
+  const [fixtureToDelete, setFixtureToDelete] = useState<StoreFixtureApiModel | null>(null);
+  const [isDeletingFixture, setIsDeletingFixture] = useState(false);
   const [defaultDimensionUnit, setDefaultDimensionUnit] = useState<StoreDimensionUnit>("mm");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -154,6 +157,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
 
   const handleDeleteFixture = async (fixture: StoreFixtureApiModel) => {
     if (!canEdit) return;
+    setIsDeletingFixture(true);
     try {
       await deleteStoreFixture(selectedStore.id, fixture.id);
       await Promise.all([
@@ -174,6 +178,9 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         description: error instanceof Error ? error.message : "Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeletingFixture(false);
+      setFixtureToDelete(null);
     }
   };
 
@@ -181,6 +188,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     {
       title: "Fixture Type",
       field: "type",
+      headerFilter: false,
       minWidth: 220,
       hozAlign: "left",
       headerHozAlign: "left",
@@ -195,9 +203,26 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
       },
     },
     {
-      title: "Dimensions",
-      field: "dimension_unit",
-      minWidth: 220,
+      title: "Code",
+      field: "code",
+      headerFilter: false,
+      minWidth: 120,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
+        const fixture = cell.getData();
+        console.log("fixture code", fixture.code);
+        return `
+          <span class="text-xs text-muted-foreground">
+            ${fixture.code ?? "No code"}
+          </span>
+        `;
+      },
+    },
+    {
+      title: "Width",
+      field: "dimensions.width",
+      minWidth: 100,
       headerFilter: false,
       hozAlign: "left",
       headerHozAlign: "left",
@@ -205,7 +230,39 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         const fixture = cell.getData();
         return `
           <span class="text-xs text-muted-foreground">
-            ${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}
+            ${fixture.dimensions.width} ${fixture.dimension_unit}
+          </span>
+        `;
+      },
+    },
+    {
+      title: "Height",
+      field: "dimensions.height",
+      minWidth: 100,
+      headerFilter: false,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
+        const fixture = cell.getData();
+        return `
+          <span class="text-xs text-muted-foreground">
+            ${fixture.dimensions.height} ${fixture.dimension_unit}
+          </span>
+        `;
+      },
+    },
+    {
+      title: "Depth",
+      field: "dimensions.depth",
+      minWidth: 100,
+      headerFilter: false,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
+        const fixture = cell.getData();
+        return `
+          <span class="text-xs text-muted-foreground">
+            ${fixture.dimensions.depth} ${fixture.dimension_unit}
           </span>
         `;
       },
@@ -213,6 +270,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     {
       title: "Section",
       field: "physical_location.section",
+      headerFilter: false,
       minWidth: 150,
       hozAlign: "left",
       headerHozAlign: "left",
@@ -229,6 +287,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
       title: "Aisle",
       field: "physical_location.aisle",
       minWidth: 120,
+      headerFilter: false,
       hozAlign: "left",
       headerHozAlign: "left",
       formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
@@ -244,6 +303,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
       title: "Zone",
       field: "physical_location.zone",
       minWidth: 130,
+      headerFilter: false,
       hozAlign: "left",
       headerHozAlign: "left",
       formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
@@ -306,7 +366,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
                 setDefaultDimensionUnit((fixture.dimension_unit as StoreDimensionUnit) || "mm");
                 setFixtureModalOpen(true);
               } else if (target?.classList.contains("delete-fixture-btn")) {
-                void handleDeleteFixture(fixture);
+                setFixtureToDelete(fixture);
               }
             },
           },
@@ -318,7 +378,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     <MainLayout
       pageHeader={
         <PageHeader
-          title="Fixture Types"
+          title="Fixtures"
           description="View and manage store fixture configuration."
           icon={LayoutPanelLeft}
         />
@@ -375,6 +435,24 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
           isFixtureSaving={isCreatingFixture}
           editingFixture={editingFixture}
           defaultDimensionUnit={defaultDimensionUnit}
+        />
+
+        <ConfirmModal
+          isOpen={!!fixtureToDelete}
+          onClose={() => {
+            if (isDeletingFixture) return;
+            setFixtureToDelete(null);
+          }}
+          onConfirm={() => {
+            if (!fixtureToDelete) return;
+            void handleDeleteFixture(fixtureToDelete);
+          }}
+          title="Delete fixture?"
+          description={`This will permanently delete "${fixtureToDelete?.type ?? "this fixture"}".`}
+          confirmLabel="Delete"
+          cancelLabel="Cancel"
+          variant="destructive"
+          isLoading={isDeletingFixture}
         />
       </div>
     </MainLayout>

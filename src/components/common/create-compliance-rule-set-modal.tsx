@@ -52,6 +52,7 @@ export interface CreateComplianceRuleSetModalProps {
   isSubmitting?: boolean;
   onSubmit: (payload: CreateComplianceRuleSetInput) => void | Promise<void>;
   mode?: "create" | "edit";
+  lockNameAndStatus?: boolean;
   initialValues?: Partial<CreateComplianceRuleSetInput> & {
     /** When editing an existing rule set. */
     id?: string;
@@ -83,6 +84,7 @@ export function CreateComplianceRuleSetModal({
   isSubmitting = false,
   onSubmit,
   mode = "create",
+  lockNameAndStatus = false,
   initialValues,
 }: CreateComplianceRuleSetModalProps) {
   const { toast } = useToast();
@@ -269,7 +271,7 @@ export function CreateComplianceRuleSetModal({
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Baseline Compliance"
-                disabled={isSubmitting}
+                disabled={isSubmitting || lockNameAndStatus}
               />
             </div>
 
@@ -282,7 +284,7 @@ export function CreateComplianceRuleSetModal({
                   onChange={(e) =>
                     setStatus(e.target.value as ComplianceRuleSetStatus)
                   }
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || lockNameAndStatus}
                 >
                   {STATUS_OPTIONS.map((s) => (
                     <option key={s} value={s}>
@@ -404,19 +406,21 @@ export function CreateComplianceRuleSetModal({
                             </div>
                           </div>
 
-                          <div className="flex justify-end">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon-sm"
-                              className="text-muted-foreground hover:bg-muted hover:text-foreground disabled:hover:text-muted-foreground h-8 w-8 shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
-                              onClick={() => removeRule(r.localId)}
-                              disabled={isSubmitting || rules.length === 1}
-                              aria-label={`Remove ${r.name || `rule ${idx + 1}`}`}
-                            >
-                              <Trash2 className="size-4" />
-                            </Button>
-                          </div>
+                          {rules.length > 1 ? (
+                            <div className="flex justify-end">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 w-8 shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
+                                onClick={() => removeRule(r.localId)}
+                                disabled={isSubmitting}
+                                aria-label={`Remove ${r.name || `rule ${idx + 1}`}`}
+                              >
+                                <Trash2 className="size-4" />
+                              </Button>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -436,7 +440,7 @@ export function CreateComplianceRuleSetModal({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={isSubmitting}>
+          <Button type="button" variant="success" onClick={handleSubmit} disabled={isSubmitting}>
             {isSubmitting ? "Saving…" : submitLabel}
           </Button>
         </div>

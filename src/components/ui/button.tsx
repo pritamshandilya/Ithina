@@ -13,7 +13,7 @@ const buttonVariants = cva(
         accent:
           "bg-accent text-white hover:bg-accent/90",
         success:
-          "bg-chart-2 text-white hover:bg-chart-2/90 focus-visible:ring-chart-2/25",
+          "bg-chart-2/85 text-white hover:bg-chart-2/75 focus-visible:ring-chart-2/25",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
         outline:

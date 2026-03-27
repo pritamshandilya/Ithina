@@ -64,15 +64,15 @@ export function KnowledgeCenterPage() {
 
           {/* Tab Navigation */}
           <nav
-            className="mt-3 shrink-0 flex gap-1 rounded-lg border border-border bg-card/50 p-1"
-            aria-label="Knowledge Center sections"
-          >
+        className="flex w-fit flex-wrap items-center gap-1 rounded-xl border border-border bg-muted/30 p-1"
+        aria-label="Knowledge Center sections"
+      >
             {tabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={cn(
-                  "rounded-md px-4 py-2 text-sm font-medium transition-colors",
+                  "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
                   activeTab === tab.id
                     ? "bg-accent text-accent-foreground"
                     : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"

@@ -14,9 +14,9 @@ export function useDeleteShelf() {
 
   return useMutation({
     mutationFn: (shelfId: string) => deleteShelf(shelfId),
-    onSuccess: (_data, shelfId) => {
+    onSuccess: () => {
       queryClient.removeQueries({
-        queryKey: ["maker", "shelves", "detail", shelfId],
+        queryKey: ["maker", "shelves", "detail"],
       });
       void queryClient.invalidateQueries({
         queryKey: ["maker", "shelves", "list"],

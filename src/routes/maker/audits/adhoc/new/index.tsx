@@ -36,6 +36,7 @@ export function NewAdhocAnalysisPage() {
 
   const { data: shelves } = useShelves();
   const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
+  const isShelfLocked = !!shelfId;
 
   return (
     <AnalysisFlowPage
@@ -45,6 +46,7 @@ export function NewAdhocAnalysisPage() {
       selectedShelfId={selectedShelfId}
       onShelfSelect={setSelectedShelfId}
       shelves={shelves}
+      isShelfSelectionLocked={isShelfLocked}
     />
   );
 }

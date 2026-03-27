@@ -78,6 +78,8 @@ import { Route as CheckerReportsAdhocIndexRouteImport } from './routes/checker/r
 import { Route as CheckerAuditReportAuditIdIndexRouteImport } from './routes/checker/audit-report/$auditId/index'
 import { Route as AdminStoreIdShelfIndexRouteImport } from './routes/admin/$storeId/shelf.index'
 import { Route as CheckerShelfShelfIdAnalysisRouteImport } from './routes/checker/shelf/$shelfId/analysis'
+import { Route as CheckerAuditsPlanogramNewRouteImport } from './routes/checker/audits/planogram/new'
+import { Route as CheckerAuditsAdhocNewRouteImport } from './routes/checker/audits/adhoc/new'
 import { Route as AdminStoreIdShelfNewRouteImport } from './routes/admin/$storeId/shelf.new'
 import { Route as AdminStoreIdShelfShelfIdRouteImport } from './routes/admin/$storeId/shelf.$shelfId'
 import { Route as AdminStoreIdReportsStoreLevelRouteImport } from './routes/admin/$storeId/reports/store-level'
@@ -460,6 +462,17 @@ const CheckerShelfShelfIdAnalysisRoute =
     path: '/$shelfId/analysis',
     getParentRoute: () => CheckerShelfRouteRoute,
   } as any)
+const CheckerAuditsPlanogramNewRoute =
+  CheckerAuditsPlanogramNewRouteImport.update({
+    id: '/audits/planogram/new',
+    path: '/audits/planogram/new',
+    getParentRoute: () => CheckerRouteRoute,
+  } as any)
+const CheckerAuditsAdhocNewRoute = CheckerAuditsAdhocNewRouteImport.update({
+  id: '/audits/adhoc/new',
+  path: '/audits/adhoc/new',
+  getParentRoute: () => CheckerRouteRoute,
+} as any)
 const AdminStoreIdShelfNewRoute = AdminStoreIdShelfNewRouteImport.update({
   id: '/shelf/new',
   path: '/shelf/new',
@@ -610,6 +623,8 @@ export interface FileRoutesByFullPath {
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
   '/admin/$storeId/shelf/$shelfId': typeof AdminStoreIdShelfShelfIdRouteWithChildren
   '/admin/$storeId/shelf/new': typeof AdminStoreIdShelfNewRoute
+  '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
+  '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
   '/admin/$storeId/shelf/': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId/': typeof CheckerAuditReportAuditIdIndexRoute
@@ -686,6 +701,8 @@ export interface FileRoutesByTo {
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
   '/admin/$storeId/shelf/$shelfId': typeof AdminStoreIdShelfShelfIdRouteWithChildren
   '/admin/$storeId/shelf/new': typeof AdminStoreIdShelfNewRoute
+  '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
+  '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
   '/admin/$storeId/shelf': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdIndexRoute
@@ -773,6 +790,8 @@ export interface FileRoutesById {
   '/admin/$storeId/reports/store-level': typeof AdminStoreIdReportsStoreLevelRoute
   '/admin/$storeId/shelf/$shelfId': typeof AdminStoreIdShelfShelfIdRouteWithChildren
   '/admin/$storeId/shelf/new': typeof AdminStoreIdShelfNewRoute
+  '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
+  '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
   '/admin/$storeId/shelf/': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId/': typeof CheckerAuditReportAuditIdIndexRoute
@@ -860,6 +879,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/reports/store-level'
     | '/admin/$storeId/shelf/$shelfId'
     | '/admin/$storeId/shelf/new'
+    | '/checker/audits/adhoc/new'
+    | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
     | '/admin/$storeId/shelf/'
     | '/checker/audit-report/$auditId/'
@@ -936,6 +957,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/reports/store-level'
     | '/admin/$storeId/shelf/$shelfId'
     | '/admin/$storeId/shelf/new'
+    | '/checker/audits/adhoc/new'
+    | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
     | '/admin/$storeId/shelf'
     | '/checker/audit-report/$auditId'
@@ -1022,6 +1045,8 @@ export interface FileRouteTypes {
     | '/admin/$storeId/reports/store-level'
     | '/admin/$storeId/shelf/$shelfId'
     | '/admin/$storeId/shelf/new'
+    | '/checker/audits/adhoc/new'
+    | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
     | '/admin/$storeId/shelf/'
     | '/checker/audit-report/$auditId/'
@@ -1545,6 +1570,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerShelfShelfIdAnalysisRouteImport
       parentRoute: typeof CheckerShelfRouteRoute
     }
+    '/checker/audits/planogram/new': {
+      id: '/checker/audits/planogram/new'
+      path: '/audits/planogram/new'
+      fullPath: '/checker/audits/planogram/new'
+      preLoaderRoute: typeof CheckerAuditsPlanogramNewRouteImport
+      parentRoute: typeof CheckerRouteRoute
+    }
+    '/checker/audits/adhoc/new': {
+      id: '/checker/audits/adhoc/new'
+      path: '/audits/adhoc/new'
+      fullPath: '/checker/audits/adhoc/new'
+      preLoaderRoute: typeof CheckerAuditsAdhocNewRouteImport
+      parentRoute: typeof CheckerRouteRoute
+    }
     '/admin/$storeId/shelf/new': {
       id: '/admin/$storeId/shelf/new'
       path: '/shelf/new'
@@ -1764,6 +1803,8 @@ interface CheckerRouteRouteChildren {
   CheckerShelvesIndexRoute: typeof CheckerShelvesIndexRoute
   CheckerStoreSettingsIndexRoute: typeof CheckerStoreSettingsIndexRoute
   CheckerStoresIndexRoute: typeof CheckerStoresIndexRoute
+  CheckerAuditsAdhocNewRoute: typeof CheckerAuditsAdhocNewRoute
+  CheckerAuditsPlanogramNewRoute: typeof CheckerAuditsPlanogramNewRoute
   CheckerAuditReportAuditIdIndexRoute: typeof CheckerAuditReportAuditIdIndexRoute
   CheckerReportsAdhocIndexRoute: typeof CheckerReportsAdhocIndexRoute
   CheckerReportsShelfLevelIndexRoute: typeof CheckerReportsShelfLevelIndexRoute
@@ -1786,6 +1827,8 @@ const CheckerRouteRouteChildren: CheckerRouteRouteChildren = {
   CheckerShelvesIndexRoute: CheckerShelvesIndexRoute,
   CheckerStoreSettingsIndexRoute: CheckerStoreSettingsIndexRoute,
   CheckerStoresIndexRoute: CheckerStoresIndexRoute,
+  CheckerAuditsAdhocNewRoute: CheckerAuditsAdhocNewRoute,
+  CheckerAuditsPlanogramNewRoute: CheckerAuditsPlanogramNewRoute,
   CheckerAuditReportAuditIdIndexRoute: CheckerAuditReportAuditIdIndexRoute,
   CheckerReportsAdhocIndexRoute: CheckerReportsAdhocIndexRoute,
   CheckerReportsShelfLevelIndexRoute: CheckerReportsShelfLevelIndexRoute,

@@ -1,16 +1,16 @@
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
-    DataTable,
-    type DataTableCell,
-    type DataTableColumn,
+  DataTable,
+  type DataTableCell,
+  type DataTableColumn,
 } from "@/components/ui/data-table";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Edit2, Globe, MapPin, Maximize, Plus, Search, Store, Trash2, Users } from "lucide-react";
+import { Edit2, Globe, MapPin, Plus, RulerDimensionLine, Search, Store, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -142,23 +142,29 @@ export function StoresPage() {
             },
         },
         {
-            title: "Settings",
+            title: "Currency",
             field: "currency",
-            width: 150,
+            width: 130,
             formatter: (cell: DataTableCell<StoreSetting>) => {
-                const store = cell.getData() as StoreSetting;
                 const globeIcon = renderToStaticMarkup(<Globe size={12} className="opacity-70" />);
-                const dimensionsIcon = renderToStaticMarkup(<Maximize size={12} className="opacity-70" />);
                 return `
-                    <div class="flex flex-col gap-1">
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            ${globeIcon}
-                            <span>${store.currency || 'USD'}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                            ${dimensionsIcon}
-                            <span>${store.default_dimensions || 'Metric'}</span>
-                        </div>
+                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        ${globeIcon}
+                        <span>${(cell.getValue() as string) || "USD"}</span>
+                    </div>
+                `;
+            },
+        },
+        {
+            title: "Dimensions",
+            field: "default_dimensions",
+            width: 140,
+            formatter: (cell: DataTableCell<StoreSetting>) => {
+                const dimensionsIcon = renderToStaticMarkup(<RulerDimensionLine size={12} className="opacity-70" />);
+                return `
+                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        ${dimensionsIcon}
+                        <span>${(cell.getValue() as string) || "Metric"}</span>
                     </div>
                 `;
             },

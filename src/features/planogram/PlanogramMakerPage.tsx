@@ -33,6 +33,7 @@ function toPlanogramRow(
       dimensions?: string;
     }
   >,
+  defaultComplianceRuleSetName = "Default Rules",
 ): PlanogramShelfRow {
   const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
   const skuCount =
@@ -45,18 +46,18 @@ function toPlanogramRow(
     : undefined;
   const info =
     planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
-  const aisle =
+  const aisleCode =
     info?.aisle ??
-    shelf.aisle ??
+    shelf.aisleCode ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
-    complianceRuleSet: "Default Rules",
+    complianceRuleSet: defaultComplianceRuleSetName,
     categorizeBy: "By Category",
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
-    aisle,
+    aisleCode,
     zone: info?.zone ?? shelf.zone,
     section: info?.section ?? shelf.section,
     fixtureType: info?.fixtureType ?? shelf.fixtureType,
@@ -86,7 +87,7 @@ export function PlanogramMakerPage() {
   >({});
   const [actionsMenu, setActionsMenu] = useState<{
     row: PlanogramShelfRow;
-    anchor: { x: number; y: number };
+    triggerEl: HTMLElement;
   } | null>(null);
   const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
   const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
@@ -96,6 +97,8 @@ export function PlanogramMakerPage() {
   >(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+  /** After mousedown closes menu on the same … trigger, skip the following click so it does not reopen */
+  const skipNextOpenMenuFromTriggerRef = useRef(false);
 
   const planogramMap = useMemo(() => {
     const map = new Map<
@@ -120,9 +123,16 @@ export function PlanogramMakerPage() {
     return map;
   }, [planogramList]);
 
+  const defaultRuleSetName = useMemo(
+    () => ruleSets?.find((s) => s.isDefault)?.name ?? "Default Rules",
+    [ruleSets],
+  );
+
   const planogramRows = useMemo(() => {
-    return (shelves ?? []).map((s) => toPlanogramRow(s, planogramMap));
-  }, [shelves, planogramMap]);
+    return (shelves ?? []).map((s) =>
+      toPlanogramRow(s, planogramMap, defaultRuleSetName),
+    );
+  }, [shelves, planogramMap, defaultRuleSetName]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -132,9 +142,8 @@ export function PlanogramMakerPage() {
         r.shelfName.toLowerCase().includes(q) ||
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
-        String(r.aisleNumber).includes(q) ||
-        r.aisle?.toLowerCase().includes(q) ||
-        String(r.bayNumber).includes(q) ||
+        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
+        String(r.bayCode ?? r.bayNumber ?? "").toLowerCase().includes(q) ||
         r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
@@ -173,28 +182,38 @@ export function PlanogramMakerPage() {
 
   useEffect(() => {
     if (!actionsMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
+    const handlePointerDown = (e: Event) => {
       const target = e.target as Node;
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(target)) {
-        const tableEl = document.querySelector(".data-table-wrapper");
-        if (tableEl?.contains(target)) return;
-        setActionsMenu(null);
+      const menuEl =
+        actionsMenuRef.current ??
+        document.querySelector("[data-planogram-actions-menu]");
+      if (menuEl?.contains(target)) return;
+
+      const triggerBtn = (target as HTMLElement).closest?.(
+        "[data-action=\"open-menu\"]",
+      );
+      if (triggerBtn && triggerBtn === actionsMenu.triggerEl) {
+        skipNextOpenMenuFromTriggerRef.current = true;
       }
+      setActionsMenu(null);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown, {
+      passive: true,
+    });
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
   }, [actionsMenu]);
 
   const handleOpenMenu = useCallback(
-    (row: PlanogramShelfRow, anchor: { x: number; y: number }) => {
-      const menuWidth = 192;
-      const padding = 8;
-      const viewportWidth = window.innerWidth;
-      const x =
-        anchor.x + menuWidth + padding > viewportWidth
-          ? viewportWidth - menuWidth - padding
-          : anchor.x;
-      setActionsMenu({ row, anchor: { ...anchor, x } });
+    (row: PlanogramShelfRow, triggerEl: HTMLElement) => {
+      if (skipNextOpenMenuFromTriggerRef.current) {
+        skipNextOpenMenuFromTriggerRef.current = false;
+        return;
+      }
+      setActionsMenu({ row, triggerEl });
     },
     [],
   );
@@ -211,14 +230,19 @@ export function PlanogramMakerPage() {
 
   const handleViewComplianceRule = useCallback(
     (row: PlanogramShelfRow) => {
-      const ruleSetName = row.complianceRuleSet ?? "Default Rules";
-      const set = (ruleSets ?? []).find((s) => s.name === ruleSetName) ?? null;
-      setComplianceSheetRuleSet(set);
-      setComplianceSheetRuleSetName(ruleSetName);
+      const sets = ruleSets ?? [];
+      const requestedName = row.complianceRuleSet ?? defaultRuleSetName;
+      const matched =
+        sets.find((s) => s.name === requestedName) ??
+        (requestedName === "Default Rules"
+          ? (sets.find((s) => s.isDefault) ?? null)
+          : null);
+      setComplianceSheetRuleSet(matched);
+      setComplianceSheetRuleSetName(matched?.name ?? requestedName);
       setComplianceSheetOpen(true);
       setActionsMenu(null);
     },
-    [ruleSets],
+    [ruleSets, defaultRuleSetName],
   );
 
   const handleNewRun = useCallback(
@@ -267,7 +291,8 @@ export function PlanogramMakerPage() {
             </div>
             <Button
               asChild
-              className="bg-chart-2 text-white hover:opacity-90 shrink-0"
+              variant="success"
+              className="shrink-0"
             >
               <Link
                 to="/maker/audits/planogram/new"
@@ -322,7 +347,8 @@ export function PlanogramMakerPage() {
                 </p>
                 <Button
                   asChild
-                  className="mt-6 bg-chart-2 text-white hover:opacity-90"
+                  variant="success"
+                  className="mt-6"
                 >
                   <Link
                     to="/maker/audits/planogram/new"
@@ -356,8 +382,9 @@ export function PlanogramMakerPage() {
 
       {actionsMenu && (
         <PlanogramActionsMenu
+          ref={actionsMenuRef}
           row={actionsMenu.row}
-          anchor={actionsMenu.anchor}
+          triggerEl={actionsMenu.triggerEl}
           variant="maker"
           onClose={() => setActionsMenu(null)}
           onNewRun={handleNewRun}

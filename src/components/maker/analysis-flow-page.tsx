@@ -220,7 +220,7 @@ export function AnalysisFlowPage({
                     <Button
                       size="sm"
                       onClick={handleRunAnalysis}
-                      className="bg-chart-2 text-white hover:opacity-90"
+                      variant="success"
                     >
                       Run Analysis
                     </Button>
@@ -229,7 +229,7 @@ export function AnalysisFlowPage({
                     <Button
                       size="sm"
                       onClick={triggerFileInput}
-                      className="bg-chart-2 text-white hover:opacity-90"
+                      variant="success"
                     >
                       <Camera className="size-4" aria-hidden />
                       Capture or Upload Shelf Image

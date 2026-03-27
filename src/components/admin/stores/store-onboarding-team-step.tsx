@@ -13,6 +13,8 @@ export interface StoreOnboardingTeamStepProps {
   usersLoading: boolean;
   assignableUsers: AuthSessionUser[];
   selectedUserIds: Set<string>;
+  isCreatingStore: boolean;
+  onCreateStore: () => void | Promise<void>;
   isFinishing: boolean;
   onToggleUser: (userId: string) => void;
   onBulkSelectionChange: (userIds: string[], selected: boolean) => void;
@@ -24,6 +26,8 @@ export function StoreOnboardingTeamStep({
   usersLoading,
   assignableUsers,
   selectedUserIds,
+  isCreatingStore,
+  onCreateStore,
   isFinishing,
   onToggleUser,
   onBulkSelectionChange,
@@ -63,8 +67,35 @@ export function StoreOnboardingTeamStep({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex justify-end">
+          {!hasStore ? (
+            <Button
+              type="button"
+              className="min-w-[160px]"
+              disabled={isCreatingStore}
+              onClick={() => void onCreateStore()}
+            >
+              {isCreatingStore ? "Creating..." : "Create store"}
+            </Button>
+          ) : (
+            <Button
+              variant="accent"
+              type="button"
+              className="min-w-[160px]"
+              disabled={isFinishing}
+              onClick={() => void onFinish()}
+            >
+              {isFinishing ? "Finishing..." : "Finish onboarding"}
+            </Button>
+          )}
+        </div>
+
         {!hasStore ? (
-          <Skeleton className="h-40 w-full" />
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Create the store to assign makers and checkers.
+            </p>
+          </div>
         ) : usersLoading ? (
           <Skeleton className="h-32 w-full" />
         ) : assignableUsers.length === 0 ? (
@@ -154,16 +185,6 @@ export function StoreOnboardingTeamStep({
           </>
         )}
 
-        <div className="flex justify-end pt-2">
-          <Button
-            type="button"
-            className="min-w-[160px]"
-            disabled={isFinishing}
-            onClick={() => void onFinish()}
-          >
-            {isFinishing ? "Finishing..." : "Finish onboarding"}
-          </Button>
-        </div>
       </CardContent>
     </Card>
   );

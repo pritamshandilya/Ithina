@@ -121,7 +121,7 @@ export async function assignUserToStore(
   storeId: string,
   userId: string,
 ): Promise<void> {
-  return apiClient.post<void>(`/store/users/${userId}`, undefined, {
+  return apiClient.put<void>(`/store/users/${userId}`, undefined, {
     headers: { "X-Store-Id": storeId },
   });
 }
@@ -141,7 +141,7 @@ export async function fetchOrgUsers(
   const params: Record<string, string> = {};
   if (userType) params.user_type = userType;
 
-  const users = await apiClient.get<OrgUserApiModel[]>("/users", params);
+  const users = await apiClient.get<OrgUserApiModel[]>("/organization/users", params);
   return users.map(mapOrgUser);
 }
 
@@ -224,13 +224,9 @@ export async function updateStoreComplianceSettings(
     default_compliance_rule_set_id: data.default_compliance_rule_set_id,
   };
 
-  const store = await apiClient.put<OrgStoreApiModel>(
-    "/store/compliance-settings",
-    payload,
-    {
-      headers: { "X-Store-Id": storeId },
-    },
-  );
+  const store = await apiClient.put<OrgStoreApiModel>("/store", payload, {
+    headers: { "X-Store-Id": storeId },
+  });
   return mapOrgStore(store);
 }
 

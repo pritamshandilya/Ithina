@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Plus } from "lucide-react";
 
-import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { useQueryClient, useMutation, useQueries } from "@tanstack/react-query";
 
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -22,8 +22,6 @@ import {
   createComplianceRuleSet,
   updateComplianceRuleSet,
 } from "@/queries/maker/api/compliance-rule-sets";
-import { useUpdateStoreComplianceSettings } from "@/queries/checker";
-import { useStore } from "@/providers/store";
 
 function mapRuleSetToModalInitialValues(ruleSet: Awaited<ReturnType<typeof fetchComplianceRuleSetById>>) {
   return {
@@ -39,13 +37,32 @@ function mapRuleSetToModalInitialValues(ruleSet: Awaited<ReturnType<typeof fetch
   };
 }
 
+type ComplianceRuleTreeRow = {
+  id: string;
+  name: string;
+  rulesCount: number | string;
+  enabledCount: number | string;
+  isDefault?: boolean;
+  isChild?: boolean;
+  _children?: ComplianceRuleTreeRow[];
+};
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function actionCellHtml(): string {
+  return `
+    <div class="flex justify-end gap-2">
+      <button type="button" data-action="edit" class="inline-flex h-8 items-center rounded-md border border-border px-2 text-xs hover:bg-muted">Edit</button>
+      <button type="button" data-action="delete" class="inline-flex h-8 items-center rounded-md border border-destructive/50 px-2 text-xs text-destructive hover:bg-destructive/10">Delete</button>
+    </div>
+  `;
+}
+
 export function AdminComplianceRuleSetsTabContent() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const updateStoreComplianceSettingsMutation = useUpdateStoreComplianceSettings();
-
-  const { selectedStore } = useStore();
-  const storeId = selectedStore?.id;
 
   const { data: complianceRuleSets = [], isLoading } = useComplianceRuleSets();
 
@@ -59,18 +76,124 @@ export function AdminComplianceRuleSetsTabContent() {
   >(undefined);
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  const [defaultRuleSetId, setDefaultRuleSetId] = useState<string>("");
-
-  useEffect(() => {
-    if (!selectedStore) return;
-    setDefaultRuleSetId(selectedStore.default_compliance_rule_set_id ?? "");
-  }, [selectedStore]);
 
   const filteredSets = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return complianceRuleSets;
     return complianceRuleSets.filter((s) => s.name.toLowerCase().includes(q) || s.id.toLowerCase().includes(q));
   }, [complianceRuleSets, search]);
+
+  const ruleSetDetailsQueries = useQueries({
+    queries: complianceRuleSets.map((ruleSet) => ({
+      queryKey: ["compliance-rule-set-detail", ruleSet.id],
+      queryFn: () => fetchComplianceRuleSetById(ruleSet.id),
+      enabled: complianceRuleSets.length > 0,
+      staleTime: 60_000,
+    })),
+  });
+
+  const ruleSetDetailMap = useMemo(() => {
+    const entries = complianceRuleSets.map((ruleSet, idx) => [
+      ruleSet.id,
+      ruleSetDetailsQueries[idx]?.data,
+    ] as const);
+    return new Map(entries);
+  }, [complianceRuleSets, ruleSetDetailsQueries]);
+
+  const tableData = useMemo<ComplianceRuleTreeRow[]>(() => {
+    return filteredSets.map((ruleSet) => {
+      const detail = ruleSetDetailMap.get(ruleSet.id);
+      const children: ComplianceRuleTreeRow[] = detail
+        ? detail.rules.map((rule, idx) => ({
+            id: `${ruleSet.id}-rule-${idx}`,
+            name: `Rule: ${rule.name}`,
+            rulesCount: String(rule.threshold),
+            enabledCount: rule.is_active ? "Yes" : "No",
+            isChild: true,
+          }))
+        : [
+            {
+              id: `${ruleSet.id}-loading`,
+              name: "Loading rules...",
+              rulesCount: "—",
+              enabledCount: "—",
+              isChild: true,
+            },
+          ];
+
+      return {
+        id: ruleSet.id,
+        name: ruleSet.name,
+        rulesCount: ruleSet.rulesCount,
+        enabledCount: ruleSet.enabledCount,
+        isDefault: ruleSet.isDefault,
+        _children: children,
+      };
+    });
+  }, [filteredSets, ruleSetDetailMap]);
+
+  const tableColumns = useMemo<DataTableColumn<ComplianceRuleTreeRow>[]>(
+    () => [
+      {
+        title: "Rule set",
+        field: "name",
+        minWidth: 260,
+        headerFilter: false,
+        formatter: (cell: DataTableCell<ComplianceRuleTreeRow>) => {
+          const row = cell.getData();
+          if (row.isChild) {
+            return `<span class="text-muted-foreground">${escapeHtml(row.name)}</span>`;
+          }
+          const defaultBadge = row.isDefault
+            ? `<span class="ml-2 text-xs rounded-md border border-accent/30 bg-accent/10 text-accent px-2 py-0.5">Default</span>`
+            : "";
+          return `<span class="font-medium text-foreground">${escapeHtml(row.name)}</span>${defaultBadge}`;
+        },
+      },
+      {
+        title: "Rules",
+        field: "rulesCount",
+        width: 120,
+        headerFilter: false,
+      },
+      {
+        title: "Enabled",
+        field: "enabledCount",
+        width: 120,
+        headerFilter: false,
+      },
+      {
+        title: "Actions",
+        field: "id",
+        width: 180,
+        headerSort: false,
+        headerFilter: false,
+        formatter: (cell: DataTableCell<ComplianceRuleTreeRow>) => {
+          const row = cell.getData();
+          if (row.isChild) return "";
+          return actionCellHtml();
+        },
+        cellClick: (e: unknown, cell: DataTableCell<ComplianceRuleTreeRow>) => {
+          const target =
+            e && typeof e === "object" && "target" in e && e.target instanceof HTMLElement
+              ? e.target
+              : null;
+          if (!target) return;
+          const row = cell.getData();
+          if (row.isChild) return;
+          const button = target.closest("[data-action]");
+          if (!button) return;
+          const action = button.getAttribute("data-action");
+          if (action === "edit") {
+            void openEdit(row.id);
+          } else if (action === "delete") {
+            setConfirmDeleteId(row.id);
+          }
+        },
+      },
+    ],
+    [openEdit]
+  );
 
   const invalidateSets = () => {
     void queryClient.invalidateQueries({ queryKey: ["compliance-rule-sets"] });
@@ -105,7 +228,7 @@ export function AdminComplianceRuleSetsTabContent() {
     setModalOpen(true);
   };
 
-  const openEdit = async (id: string) => {
+  async function openEdit(id: string) {
     try {
       const ruleSet = await fetchComplianceRuleSetById(id);
       setMode("edit");
@@ -119,34 +242,16 @@ export function AdminComplianceRuleSetsTabContent() {
         variant: "destructive",
       });
     }
-  };
+  }
 
-  const handleSubmit = async (
-    payload: Parameters<typeof createComplianceRuleSet>[0],
-    options: { setAsDefault: boolean },
-  ) => {
-    if (!storeId) {
-      toast({ title: "Store not selected", description: "Please select a store first.", variant: "destructive" });
-      return;
-    }
+  const handleSubmit = async (payload: Parameters<typeof createComplianceRuleSet>[0]) => {
 
     try {
-      let createdOrUpdatedId: string;
       if (mode === "create") {
-        const created = await createMutation.mutateAsync(payload);
-        createdOrUpdatedId = created.id;
+        await createMutation.mutateAsync(payload);
       } else {
         if (!editingId) throw new Error("Missing rule set id for edit.");
-        const updated = await updateMutation.mutateAsync({ id: editingId, payload });
-        createdOrUpdatedId = updated.id;
-      }
-
-      if (options.setAsDefault) {
-        setDefaultRuleSetId(createdOrUpdatedId);
-        await updateStoreComplianceSettingsMutation.mutateAsync({
-          storeId,
-          data: { default_compliance_rule_set_id: createdOrUpdatedId },
-        });
+        await updateMutation.mutateAsync({ id: editingId, payload });
       }
 
       setModalOpen(false);
@@ -162,7 +267,6 @@ export function AdminComplianceRuleSetsTabContent() {
   const handleDelete = async (id: string) => {
     try {
       await deleteMutation.mutateAsync(id);
-      if (defaultRuleSetId === id) setDefaultRuleSetId("");
       toast({ title: "Rule set deleted", description: "The rule set was removed successfully." });
     } catch (err) {
       toast({
@@ -172,23 +276,6 @@ export function AdminComplianceRuleSetsTabContent() {
       });
     } finally {
       setConfirmDeleteId(null);
-    }
-  };
-
-  const handleDefaultChange = async (value: string) => {
-    if (!storeId) return;
-    try {
-      setDefaultRuleSetId(value);
-      await updateStoreComplianceSettingsMutation.mutateAsync({
-        storeId,
-        data: { default_compliance_rule_set_id: value || null },
-      });
-    } catch (err) {
-      toast({
-        title: "Could not update default",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
     }
   };
 
@@ -225,23 +312,6 @@ export function AdminComplianceRuleSetsTabContent() {
                   placeholder="Search by name or id..."
                 />
               </div>
-              <div className="min-w-[280px]">
-                <Label className="text-xs text-muted-foreground" htmlFor="rule-set-default">
-                  Default for this store
-                </Label>
-                <Select
-                  id="rule-set-default"
-                  value={defaultRuleSetId}
-                  onChange={(e) => void handleDefaultChange(e.target.value)}
-                >
-                  <option value="">No default rule set</option>
-                  {complianceRuleSets.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </Select>
-              </div>
             </div>
           </CardHeader>
 
@@ -249,74 +319,20 @@ export function AdminComplianceRuleSetsTabContent() {
             {isLoading ? (
               <Skeleton className="h-64 w-full rounded-lg" />
             ) : (
-              <div className="max-h-[420px] overflow-y-auto rounded-lg border border-border">
-                <table className="w-full text-sm">
-                  <thead className="bg-muted/40 sticky top-0">
-                    <tr>
-                      <th className="px-3 py-2 text-left font-medium text-xs text-muted-foreground">
-                        Rule set
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium text-xs text-muted-foreground">
-                        Rules
-                      </th>
-                      <th className="px-3 py-2 text-left font-medium text-xs text-muted-foreground">
-                        Enabled
-                      </th>
-                      <th className="px-3 py-2 text-right font-medium text-xs text-muted-foreground">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredSets.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className="px-3 py-6 text-center text-muted-foreground">
-                          No compliance rule sets found.
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredSets.map((s) => (
-                        <tr key={s.id} className="border-t border-border/60">
-                          <td className="px-3 py-2">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-foreground">{s.name}</span>
-                              {s.isDefault && (
-                                <span className="text-xs rounded-md border border-accent/30 bg-accent/10 text-accent px-2 py-0.5">
-                                  Default
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-3 py-2 tabular-nums">{s.rulesCount}</td>
-                          <td className="px-3 py-2 tabular-nums">{s.enabledCount}</td>
-                          <td className="px-3 py-2 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="h-8"
-                                onClick={() => openEdit(s.id)}
-                              >
-                                <Pencil className="size-4" />
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="destructive"
-                                size="sm"
-                                className="h-8"
-                                onClick={() => setConfirmDeleteId(s.id)}
-                              >
-                                <Trash2 className="size-4" />
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable<ComplianceRuleTreeRow>
+                columns={tableColumns}
+                data={tableData}
+                rowIdField="id"
+                emptyMessage="No compliance rule sets found."
+                headerFilters={false}
+                pagination
+                pageSize={10}
+                pageSizeSelector={[5, 10, 20, 50]}
+                dataTree
+                dataTreeChildField="_children"
+                dataTreeStartExpanded={false}
+                dataTreeElementColumn="name"
+              />
             )}
           </CardContent>
         </Card>

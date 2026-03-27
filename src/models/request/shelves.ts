@@ -10,7 +10,7 @@
  * Backend now requires an existing fixture_id plus shelf measurements.
  */
 export interface CreateShelfPayload {
-  shelf_id: string;
+  code: string;
   name: string;
   fixture_id: string;
   width: number;
@@ -41,6 +41,6 @@ export interface ShelfFixtureUpdateRequest {
  * At least one field must be provided.
  */
 export interface UpdateShelfPayload {
-  shelf_id?: string;
+  code?: string;
   name?: string;
 }

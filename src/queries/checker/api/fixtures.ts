@@ -4,13 +4,18 @@ export interface StoreFixtureApiModel {
   id: string;
   store_id: string;
   type: string;
-  width: number;
-  height: number;
-  depth: number;
+  code?: string;
+  dimensions: {
+    width: number;
+    height: number;
+    depth: number;
+  };
   dimension_unit: string;
-  section: string;
-  aisle: string;
-  zone: string;
+  physical_location: {
+    section: string;
+    aisle: string;
+    zone: string;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +37,7 @@ export interface CreateStoreFixturePayload {
 
 export interface UpdateStoreFixturePayload {
   type?: string;
+  code?: string;
   dimensions?: {
     width?: number;
     height?: number;

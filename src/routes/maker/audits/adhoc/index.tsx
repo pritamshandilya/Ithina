@@ -213,7 +213,7 @@ function AdhocAnalysisPage() {
           title="Adhoc Analysis"
           description="Upload a shelf image and let AI analyze your retail space without a planogram."
         >
-          <Button asChild className="bg-chart-2 text-white hover:opacity-90 shrink-0">
+          <Button asChild variant="success" className="shrink-0">
             <Link
               to="/maker/audits/adhoc/new"
               search={{ shelfId: undefined }}
@@ -253,7 +253,7 @@ function AdhocAnalysisPage() {
                   Start by creating a new adhoc analysis. Upload a shelf image and let AI analyze
                   your retail space.
                 </p>
-                <Button asChild className="mt-6 bg-chart-2 text-white hover:opacity-90">
+                <Button asChild variant="success" className="mt-6">
                   <Link
                     to="/maker/audits/adhoc/new"
                     search={{ shelfId: undefined }}

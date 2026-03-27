@@ -33,7 +33,9 @@ function getInitialEditShelfFormValues(shelf: Shelf): EditShelfFormValues {
   return {
     shelfName: shelf.shelfName,
     shelfCode: shelf.shelfCode ?? "",
-    aisle: shelf.aisle || (shelf.aisleNumber ? String(shelf.aisleNumber) : ""),
+    aisle:
+      shelf.aisleCode ??
+      (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : ""),
     zone: shelf.zone ?? "",
     section: shelf.section ?? "",
     fixtureType: shelf.fixtureType ?? "",
@@ -93,7 +95,7 @@ export function EditShelfModal({ shelf, isOpen, onClose }: EditShelfModalProps) 
         shelfId: shelf.id,
         payload: {
           name: formValues.shelfName.trim(),
-          shelf_id: formValues.shelfCode.trim(),
+          code: formValues.shelfCode.trim(),
         },
       },
       {

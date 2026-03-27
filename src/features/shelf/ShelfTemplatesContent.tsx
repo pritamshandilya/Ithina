@@ -151,10 +151,10 @@ export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesC
   };
 
   const card = (
-    <Card className="border-border/60 bg-card/70 shadow-xl glassmorphism">
+    <Card noBorder className="bg-card/70 shadow-none">
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Templates</CardTitle>
-        <Button className="bg-chart-2 text-white hover:opacity-90" onClick={openCreate}>
+        <Button variant="success" onClick={openCreate}>
           <Plus className="size-4" aria-hidden />
           New template
         </Button>
@@ -186,61 +186,13 @@ export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesC
                 key={tpl.id}
                 className="rounded-xl border border-border bg-background/40 p-4 space-y-2"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-foreground">{tpl.name}</p>
-                    {tpl.description && (
-                      <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                        {tpl.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center justify-end gap-1">
-                    {storeId ? (
-                      isAdminShelfContext ? (
-                        <Button variant="outline" size="sm" className="h-8 gap-1 px-2" asChild>
-                          <Link
-                            to="/admin/$storeId/shelf/new"
-                            params={{ storeId }}
-                            search={{ templateId: tpl.id }}
-                            aria-label={`Create shelf from template ${tpl.name}`}
-                          >
-                            <PackagePlus className="size-3.5 shrink-0" aria-hidden />
-                            <span className="hidden sm:inline">Use</span>
-                          </Link>
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" className="h-8 gap-1 px-2" asChild>
-                          <Link
-                            to="/checker/shelf/new"
-                            search={{ templateId: tpl.id }}
-                            aria-label={`Create shelf from template ${tpl.name}`}
-                          >
-                            <PackagePlus className="size-3.5 shrink-0" aria-hidden />
-                            <span className="hidden sm:inline">Use</span>
-                          </Link>
-                        </Button>
-                      )
-                    ) : null}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => openEdit(tpl)}
-                      aria-label={`Edit ${tpl.name}`}
-                    >
-                      <Edit3 className="size-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => remove(tpl)}
-                      aria-label={`Delete ${tpl.name}`}
-                      disabled={deleteMutation.isPending}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </div>
+                <div className="space-y-1">
+                  <p className="truncate font-semibold text-foreground">{tpl.name}</p>
+                  {tpl.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {tpl.description}
+                    </p>
+                  )}
                 </div>
 
                 <div className="grid gap-1 text-xs">
@@ -253,16 +205,77 @@ export function ShelfTemplatesContent({ showHeaderCard = true }: ShelfTemplatesC
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Dimensions</span>
                     <span className="text-foreground font-medium tabular-nums">
-                      {tpl.width}x{tpl.height}x{tpl.depth}
+                      {tpl.width}×{tpl.height}×{tpl.depth}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Zone</span>
-                    <span className="text-foreground">{tpl.zone ?? "-"}</span>
+                    <span className="text-muted-foreground">Location</span>
+                    <span className="text-foreground">
+                      {[tpl.zone, tpl.section]
+                        .filter((v): v is string => Boolean(v && v.trim().length))
+                        .join(" / ") || "-"}
+                    </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Section</span>
-                    <span className="text-foreground">{tpl.section ?? "-"}</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2">
+                  {storeId ? (
+                    isAdminShelfContext ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1 px-2"
+                        asChild
+                      >
+                        <Link
+                          to="/admin/$storeId/shelf/new"
+                          params={{ storeId }}
+                          search={{ templateId: tpl.id }}
+                          aria-label={`Create shelf from template ${tpl.name}`}
+                        >
+                          <PackagePlus className="size-3.5 shrink-0" aria-hidden />
+                          <span className="hidden sm:inline">Use</span>
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1 px-2"
+                        asChild
+                      >
+                        <Link
+                          to="/checker/shelf/new"
+                          search={{ templateId: tpl.id }}
+                          aria-label={`Create shelf from template ${tpl.name}`}
+                        >
+                          <PackagePlus className="size-3.5 shrink-0" aria-hidden />
+                          <span className="hidden sm:inline">Use</span>
+                        </Link>
+                      </Button>
+                    )
+                  ) : (
+                    <span />
+                  )}
+
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="icon-ghost"
+                      size="icon"
+                      onClick={() => openEdit(tpl)}
+                      aria-label={`Edit ${tpl.name}`}
+                    >
+                      <Edit3 className="size-4" />
+                    </Button>
+                    <Button
+                      variant="destructive-ghost"
+                      size="icon"
+                      onClick={() => remove(tpl)}
+                      aria-label={`Delete ${tpl.name}`}
+                      disabled={deleteMutation.isPending}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
                 </div>
               </div>

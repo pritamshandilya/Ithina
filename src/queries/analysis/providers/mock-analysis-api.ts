@@ -61,6 +61,8 @@ export const mockAnalysisApiClient: AnalysisApiClient = {
       id: `shelf-planogram-${Date.now()}`,
       aisleNumber: 1,
       bayNumber: 1,
+      aisleCode: "A1",
+      bayCode: "1",
       shelfName,
       description: `Planogram: ${planogramId}`,
       status: "never-audited",

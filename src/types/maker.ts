@@ -28,9 +28,18 @@ export interface Shelf {
   id: string;
   fixtureId?: string;
   shelf_id?: string;
-  aisleNumber: number;
-  aisle?: string;
-  bayNumber: number;
+  /**
+   * Physical location codes (string by design).
+   * Examples: `A2` for aisle, `01` for bay code (format is store-defined).
+   */
+  aisleCode?: string;
+  bayCode?: string;
+  /**
+   * Legacy numeric fields kept for backwards compatibility with
+   * mock data and older UI paths.
+   */
+  aisleNumber?: number;
+  bayNumber?: number;
   shelfName: string;
   /** String identifier from backend (e.g. S1, SH-01) */
   shelfCode?: string;
@@ -195,8 +204,6 @@ export interface PlanogramShelfRow extends Shelf {
   productsCount?: number;
   /** Issue count from last analysis */
   issuesCount?: number;
-  /** Aisle in planogram style (e.g. A3), from planogram or derived from aisleNumber */
-  aisle?: string;
   /** From planogram physicalLocation */
   zone?: string;
   /** From planogram physicalLocation */

@@ -16,7 +16,7 @@ export function IconButton({
   icon,
   tooltip,
   className,
-  variant = "ghost",
+  variant = "icon-ghost",
   size = "icon",
   ...props
 }: IconButtonProps) {
@@ -24,7 +24,10 @@ export function IconButton({
     <Button
       variant={variant}
       size={size}
-      className={cn("h-8 w-8", className)}
+      className={cn(
+        variant === "icon-ghost" ? "text-muted-foreground" : undefined,
+        className,
+      )}
       // title={tooltip} // Removed to prevent native tooltip overlap with custom tooltip
       {...props}
     >

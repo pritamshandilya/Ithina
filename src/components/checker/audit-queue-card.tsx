@@ -133,7 +133,7 @@ export function AuditQueueCard({
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1 space-y-1">
           <h3 className="text-base font-bold text-card-foreground">
-            Aisle {audit.shelfInfo.aisleNumber}, Bay {audit.shelfInfo.bayNumber}
+            Aisle {audit.shelfInfo.aisleCode}, Bay {audit.shelfInfo.bayCode}
           </h3>
           <p className="text-sm text-muted-foreground truncate">
             {audit.shelfInfo.shelfName}

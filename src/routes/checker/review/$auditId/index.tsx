@@ -280,7 +280,7 @@ function AuditReviewWorkspace() {
                   {audit.shelfInfo.shelfName}
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Aisle {audit.shelfInfo.aisleNumber} • Bay {audit.shelfInfo.bayNumber} • Rule version {audit.ruleVersionUsed}
+                  Aisle {audit.shelfInfo.aisleCode} • Bay {audit.shelfInfo.bayCode} • Rule version {audit.ruleVersionUsed}
                 </p>
               </header>
               <div className="text-left sm:text-right">
@@ -458,7 +458,7 @@ function AuditReviewWorkspace() {
               <Button
                 onClick={handleApprove}
                 disabled={approveAudit.isPending}
-                className="bg-chart-2 text-white hover:opacity-90"
+                variant="success"
               >
                 <CheckCircle className="h-5 w-5" />
                 {approveAudit.isPending ? "Approving..." : "Approve"}

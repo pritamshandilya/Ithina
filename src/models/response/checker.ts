@@ -28,8 +28,8 @@ export interface CheckerAuditResponse {
   ruleVersionUsed: string;
   publishingStatus?: PublishingStatusResponse;
   shelfInfo: {
-    aisleNumber: number;
-    bayNumber: number;
+    aisleCode: string;
+    bayCode: string;
     shelfName: string;
   };
 }
@@ -135,8 +135,8 @@ export interface OverrideActivityResponse {
 export interface PublishedAuditResponse {
   auditId: string;
   shelfInfo: {
-    aisleNumber: number;
-    bayNumber: number;
+    aisleCode: string;
+    bayCode: string;
     shelfName: string;
   };
   status: PublishingStatusResponse;

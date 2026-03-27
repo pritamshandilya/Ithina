@@ -685,7 +685,7 @@ function PlanogramPreviewPage() {
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
-                className="bg-chart-2 text-white hover:opacity-90"
+                variant="success"
               >
                 <Check className="size-4" aria-hidden />
                 {isSaving ? "Saving…" : "Save"}

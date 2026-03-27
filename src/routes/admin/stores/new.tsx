@@ -22,26 +22,30 @@ function StoreOnboardingPage() {
   const navigate = useNavigate();
   const o = useStoreOnboarding();
 
+  const backButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      onClick={() => navigate({ to: "/admin/stores" })}
+      aria-label="Back to Stores"
+    >
+      <ArrowLeft className="size-4" aria-hidden />
+    </Button>
+  );
+
   return (
     <MainLayout
       pageHeader={
         <PageHeader
           title="Create Store"
           description="Onboard a new store with basic settings and staff assignments."
+          leading={backButton}
         >
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate({ to: "/admin/stores" })}
-            className="gap-2"
-          >
-            <ArrowLeft className="size-4" />
-            Back to Stores
-          </Button>
+          {/* Right-side actions intentionally omitted; back button is in `leading`. */}
         </PageHeader>
       }
     >
-      <div className="min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="min-h-0 pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto w-full max-w-screen-2xl space-y-6">
           <StoreOnboardingStepper
             step={o.step}
@@ -88,11 +92,11 @@ function StoreOnboardingPage() {
               configForm={o.configForm}
               setConfigForm={o.setConfigForm}
               canContinueConfig={o.canContinueConfig}
-              isCreating={o.createStoreMutation.isPending}
-              seedComplianceRuleSet={o.seedComplianceRuleSet}
-              setSeedComplianceRuleSet={o.setSeedComplianceRuleSet}
+              defaultComplianceRuleSet={o.defaultComplianceRuleSet}
+              onUpdateDefaultComplianceRuleSet={o.updateDefaultComplianceRuleSet}
               shelfFixtureLabels={o.shelfFixtureLabels}
               onBack={() => o.goToStep(0)}
+              isCreatingStore={o.createStoreMutation.isPending}
               onCreateStore={o.handleCreateStore}
             />
           )}
@@ -103,6 +107,8 @@ function StoreOnboardingPage() {
               usersLoading={o.orgUsersLoading}
               assignableUsers={o.assignableUsers}
               selectedUserIds={o.selectedUserIds}
+              isCreatingStore={o.createStoreMutation.isPending}
+              onCreateStore={o.handleCreateStore}
               isFinishing={o.assignStoreUserMutation.isPending}
               onToggleUser={o.toggleUserSelection}
               onBulkSelectionChange={o.bulkUserSelectionChange}

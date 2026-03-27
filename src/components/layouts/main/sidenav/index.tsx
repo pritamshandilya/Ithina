@@ -6,6 +6,7 @@ import {
   FileSignature,
   History,
   LayoutDashboard,
+  LayoutPanelLeft,
   LayoutGrid,
   Library,
   ListChecks,
@@ -51,72 +52,7 @@ import { useStores as useCheckerStores, useOrgStores } from "@/queries/checker";
 import { useStores as useMakerStores } from "@/queries/maker";
 import SidenavFooter from "./footer";
 import { TeamSwitcher } from "./header-switch";
-
-type NavItem = {
-  label: string;
-  to?: string;
-  hash?: string;
-  icon: typeof LayoutDashboard;
-  items?: { label: string; to: string }[];
-};
-
-function isActiveItem(pathname: string, hash: string, item: NavItem): boolean {
-  if (item.to === "/dashboard") {
-    return (
-      pathname === "/dashboard" ||
-      pathname.startsWith("/admin/dashboard") ||
-      pathname.startsWith("/maker/dashboard") ||
-      pathname.startsWith("/checker/dashboard")
-    );
-  }
-  if (item.to === "/stores") {
-    return (
-      pathname === "/stores" ||
-      pathname.startsWith("/admin/stores")
-    );
-  }
-  if (item.to === "/admin/organization-settings") {
-    return pathname.startsWith("/admin/organization-settings");
-  }
-  if (item.to === "/users") {
-    return pathname === "/users" || pathname.startsWith("/admin/users");
-  }
-  if (item.to === "/approvals") {
-    return (
-      pathname === "/approvals" ||
-      pathname.startsWith("/checker/audit-review") ||
-      pathname.startsWith("/checker/review/") ||
-      pathname.startsWith("/maker/manual-audits")
-    );
-  }
-  if (item.to === "/knowledge-center") {
-    return (
-      pathname === "/knowledge-center" ||
-      pathname.startsWith("/checker/knowledge-center")
-    );
-  }
-  // Audit Review: active on /checker/audit-review and /checker/review/:id
-  if (item.to === "/checker/audit-review") {
-    return pathname === "/checker/audit-review" || pathname.startsWith("/checker/review/");
-  }
-  // Shelves: active on /checker/shelf, /maker/shelf and all sub-routes
-  if (item.to === "/checker/shelf" || item.to === "/maker/shelf") {
-    return pathname === item.to || pathname.startsWith(`${item.to}/`);
-  }
-  // My Audits: active on /maker/audits/*
-  if (item.to === "/maker/audits" || item.to === "/maker/audits/planogram" || item.to === "/maker/audits/adhoc") {
-    return pathname.startsWith("/maker/audits");
-  }
-  if (!item.to) return false;
-  const sameBase = pathname === item.to || pathname.startsWith(`${item.to}/`);
-  if (!sameBase) return false;
-  if (!item.hash) return hash.length === 0;
-  return hash === `#${item.hash}`;
-}
-
-function isMyAuditsActive(pathname: string): boolean {
-  return pathname.startsWith("/maker/audits");
-}
+import { isActiveItem, isMyAuditsActive, type NavItem } from "./nav-utils";
 
 export default function Sidenav() {
   const location = useLocation();
@@ -229,6 +165,19 @@ export default function Sidenav() {
         icon: Library,
       });
     }
+    if (isAdminStoreView) {
+      items.push({
+        label: "Fixture Types",
+        to: `${storePrefix}/fixture-types` as never,
+        icon: LayoutPanelLeft,
+      });
+    } else {
+      items.push({
+        label: "Fixture Types",
+        to: "/checker/fixture-types",
+        icon: LayoutPanelLeft,
+      });
+    }
     items.push({
       label: "Reports",
       icon: FileBarChart,
@@ -238,9 +187,6 @@ export default function Sidenav() {
         { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as never },
       ],
     });
-    // Store settings:
-    // - In admin store view: editable store settings for the selected store
-    // - In checker context: view-only store settings
     if (isAdminStoreView) {
       items.push({
         label: "Store Settings",

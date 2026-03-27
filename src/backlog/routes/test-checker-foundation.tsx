@@ -207,7 +207,7 @@ function TestCheckerFoundationPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 flex-1">
                     <h3 className="font-semibold text-card-foreground">
-                      Aisle {audit.shelfInfo.aisleNumber}, Bay {audit.shelfInfo.bayNumber} - {audit.shelfInfo.shelfName}
+                      Aisle {audit.shelfInfo.aisleCode}, Bay {audit.shelfInfo.bayCode} - {audit.shelfInfo.shelfName}
                     </h3>
                     <p className="text-sm text-muted-foreground">
                       Submitted by {audit.submittedByName} • {audit.mode === "vision-edge" ? "Vision Edge" : "Assist Mode"}
@@ -328,7 +328,7 @@ function TestCheckerFoundationPage() {
               >
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-card-foreground">
-                    Aisle {published.shelfInfo.aisleNumber}, Bay {published.shelfInfo.bayNumber}
+                    Aisle {published.shelfInfo.aisleCode}, Bay {published.shelfInfo.bayCode}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {new Date(published.publishedAt).toLocaleString()}

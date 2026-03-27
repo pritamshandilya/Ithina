@@ -3,9 +3,11 @@ import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
 import { Store, X, Check } from "lucide-react";
 import type { StoreSetting } from "@/types/checker";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { PREDEFINED_CURRENCIES } from "@/lib/constants/currencies";
 
 interface StoreFormModalProps {
     isOpen: boolean;
@@ -168,14 +170,18 @@ export function StoreFormModal({
                             <Label htmlFor="currency" className="text-sm font-medium text-muted-foreground">
                                 Currency <span className="text-destructive">*</span>
                             </Label>
-                            <Input
-                                id="currency"
-                                placeholder="e.g. USD, EUR"
-                                value={formData.currency}
-                                onChange={(e) => updateField("currency", e.target.value)}
-                                className="bg-background border-border focus:border-accent transition-all"
-                                required
-                            />
+                            <Select
+                              id="currency"
+                              value={formData.currency}
+                              onChange={(e) => updateField("currency", e.target.value)}
+                              required
+                            >
+                              {PREDEFINED_CURRENCIES.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </Select>
                         </div>
 
                         <div className="space-y-2">

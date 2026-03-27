@@ -50,10 +50,7 @@ export interface CreateComplianceRuleSetModalProps {
   isOpen: boolean;
   onClose: () => void;
   isSubmitting?: boolean;
-  onSubmit: (
-    payload: CreateComplianceRuleSetInput,
-    options: { setAsDefault: boolean },
-  ) => void | Promise<void>;
+  onSubmit: (payload: CreateComplianceRuleSetInput) => void | Promise<void>;
   mode?: "create" | "edit";
   initialValues?: Partial<CreateComplianceRuleSetInput> & {
     /** When editing an existing rule set. */
@@ -93,7 +90,6 @@ export function CreateComplianceRuleSetModal({
   const [name, setName] = useState("");
   const [status, setStatus] = useState<ComplianceRuleSetStatus>("ACTIVE");
   const [rules, setRules] = useState<RuleFormItem[]>(() => [createEmptyRule()]);
-  const [setAsDefault, setSetAsDefault] = useState(true);
 
   const title =
     mode === "create" ? "New Compliance Rule Set" : "Edit Compliance Rule Set";
@@ -125,11 +121,8 @@ export function CreateComplianceRuleSetModal({
         : [createEmptyRule()],
     );
 
-    // For edits, defaulting to unchecked avoids accidentally changing store defaults.
-    setSetAsDefault(mode === "create");
   }, [
     isOpen,
-    mode,
     normalizedInitialRules,
     initialValues?.name,
     initialValues?.status,
@@ -234,7 +227,7 @@ export function CreateComplianceRuleSetModal({
       })),
     };
 
-    await onSubmit(payload, { setAsDefault });
+    await onSubmit(payload);
   };
 
   return (
@@ -252,8 +245,7 @@ export function CreateComplianceRuleSetModal({
           <div className="min-w-0">
             <h3 className="text-foreground text-lg font-semibold">{title}</h3>
             <p className="text-muted-foreground mt-2 text-sm">
-              Configure a compliance rule set and its rules. Store defaults can
-              be updated during creation.
+              Configure a compliance rule set and its rules.
             </p>
           </div>
           <div className="text-muted-foreground hidden shrink-0 text-xs sm:block">
@@ -281,7 +273,7 @@ export function CreateComplianceRuleSetModal({
               />
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2">
               <div className="grid gap-2">
                 <Label htmlFor="crs-status">Status</Label>
                 <Select
@@ -298,25 +290,6 @@ export function CreateComplianceRuleSetModal({
                     </option>
                   ))}
                 </Select>
-              </div>
-
-              <div className="flex items-end gap-3">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="crs-set-default"
-                    checked={setAsDefault}
-                    onCheckedChange={(v: boolean | "indeterminate") =>
-                      setSetAsDefault(v === true)
-                    }
-                    disabled={isSubmitting}
-                  />
-                  <Label
-                    htmlFor="crs-set-default"
-                    className="text-sm font-medium"
-                  >
-                    Set as default for this store
-                  </Label>
-                </div>
               </div>
             </div>
 

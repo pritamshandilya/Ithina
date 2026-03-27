@@ -1,10 +1,4 @@
-import {
-  Link,
-  useLocation,
-  useNavigate,
-  useParams,
-} from "@tanstack/react-router";
-import { LayoutGrid, Plus, Search } from "lucide-react";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
@@ -16,8 +10,6 @@ import {
 } from "@/components/planogram/planogram-table-columns";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { DataTable } from "@/components/ui/data-table";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -31,6 +23,8 @@ import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import { CheckerShelfEmptyState } from "./checker-shelf-empty-state";
+import { CheckerShelfListToolbar } from "./checker-shelf-list-toolbar";
 
 function toPlanogramRow(
   shelf: Shelf,
@@ -57,9 +51,9 @@ function toPlanogramRow(
   const info =
     planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
 
-  const aisle =
+  const aisleCode =
     info?.aisle ??
-    shelf.aisle ??
+    shelf.aisleCode ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   const zone = info?.zone ?? shelf.zone;
   const section = info?.section ?? shelf.section;
@@ -72,7 +66,7 @@ function toPlanogramRow(
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
-    aisle,
+    aisleCode,
     zone,
     section,
     fixtureType,
@@ -82,7 +76,6 @@ function toPlanogramRow(
 
 export interface CheckerShelfListPageProps {
   shelfDetailPath: string;
-  shelfNewPath: string;
   adhocNewPath: string;
   pogNewPath: string;
 }
@@ -107,7 +100,6 @@ function asRouterSearch(search: Record<string, string | undefined>): never {
 
 export function CheckerShelfListPage({
   shelfDetailPath,
-  shelfNewPath,
   adhocNewPath,
   pogNewPath,
 }: CheckerShelfListPageProps) {
@@ -142,7 +134,7 @@ export function CheckerShelfListPage({
   >({});
   const [actionsMenu, setActionsMenu] = useState<{
     row: PlanogramShelfRow;
-    anchor: { x: number; y: number };
+    triggerEl: HTMLElement;
   } | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [shelfIdPendingDelete, setShelfIdPendingDelete] = useState<string | null>(
@@ -156,6 +148,7 @@ export function CheckerShelfListPage({
   >(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
+  const skipNextOpenMenuFromTriggerRef = useRef(false);
   const [selectedRows, setSelectedRows] = useState<PlanogramShelfRow[]>([]);
 
   const planogramMap = useMemo(() => {
@@ -193,9 +186,8 @@ export function CheckerShelfListPage({
         r.shelfName.toLowerCase().includes(q) ||
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
-        String(r.aisleNumber).includes(q) ||
-        r.aisle?.toLowerCase().includes(q) ||
-        String(r.bayNumber).includes(q) ||
+        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
+        String(r.bayCode ?? r.bayNumber ?? "").toLowerCase().includes(q) ||
         r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
@@ -234,28 +226,38 @@ export function CheckerShelfListPage({
 
   useEffect(() => {
     if (!actionsMenu) return;
-    const handleClickOutside = (e: MouseEvent) => {
+    const handlePointerDown = (e: Event) => {
       const target = e.target as Node;
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(target)) {
-        const tableEl = document.querySelector(".data-table-wrapper");
-        if (tableEl?.contains(target)) return;
-        setActionsMenu(null);
+      const menuEl =
+        actionsMenuRef.current ??
+        document.querySelector("[data-planogram-actions-menu]");
+      if (menuEl?.contains(target)) return;
+
+      const triggerBtn = (target as HTMLElement).closest?.(
+        "[data-action=\"open-menu\"]",
+      );
+      if (triggerBtn && triggerBtn === actionsMenu.triggerEl) {
+        skipNextOpenMenuFromTriggerRef.current = true;
       }
+      setActionsMenu(null);
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("touchstart", handlePointerDown, {
+      passive: true,
+    });
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("touchstart", handlePointerDown);
+    };
   }, [actionsMenu]);
 
   const handleOpenMenu = useCallback(
-    (row: PlanogramShelfRow, anchor: { x: number; y: number }) => {
-      const menuWidth = 192;
-      const padding = 8;
-      const viewportWidth = window.innerWidth;
-      const x =
-        anchor.x + menuWidth + padding > viewportWidth
-          ? viewportWidth - menuWidth - padding
-          : anchor.x;
-      setActionsMenu({ row, anchor: { ...anchor, x } });
+    (row: PlanogramShelfRow, triggerEl: HTMLElement) => {
+      if (skipNextOpenMenuFromTriggerRef.current) {
+        skipNextOpenMenuFromTriggerRef.current = false;
+        return;
+      }
+      setActionsMenu({ row, triggerEl });
     },
     [],
   );
@@ -349,6 +351,39 @@ export function CheckerShelfListPage({
     () => [...PLANOGRAM_PAGE_SIZE_OPTIONS],
     [],
   );
+  const visibleRowsCount = Math.max(
+    0,
+    Math.min(
+      tablePagination.pageSize,
+      filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize,
+    ),
+  );
+
+  const handleBulkDeleteSelected = useCallback(() => {
+    const count = selectedRows.length;
+    if (!count) return;
+    toast({
+      title: "Bulk delete (frontend only)",
+      description: `You selected ${count} shelf${count === 1 ? "" : "s"}. Backend delete is not wired yet.`,
+      variant: "warning",
+    });
+  }, [selectedRows.length, toast]);
+
+  const handleBulkAddShelves = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls,.csv";
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      toast({
+        title: "Bulk add (frontend only)",
+        description: `Loaded file "${file.name}". Parsing and upload will be wired to the backend later.`,
+        variant: "success",
+      });
+    };
+    input.click();
+  }, [toast]);
 
   return (
     <>
@@ -370,80 +405,19 @@ export function CheckerShelfListPage({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:w-80">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground"
-                aria-hidden
-              />
-              <Input
-                placeholder="Search shelves..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-10 bg-background"
-                aria-label="Search shelves"
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={selectedRows.length === 0}
-                className={
-                  selectedRows.length === 0
-                    ? "border-destructive text-destructive/60 cursor-not-allowed opacity-60"
-                    : "border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
-                }
-                onClick={() => {
-                  const count = selectedRows.length;
-                  if (!count) return;
-                  toast({
-                    title: "Bulk delete (frontend only)",
-                    description: `You selected ${count} shelf${count === 1 ? "" : "s"}. Backend delete is not wired yet.`,
-                    variant: "warning",
-                  });
-                }}
-              >
-                Delete selected
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  const input = document.createElement("input");
-                  input.type = "file";
-                  input.accept = ".xlsx,.xls,.csv";
-                  input.onchange = () => {
-                    const file = input.files?.[0];
-                    if (!file) return;
-                    toast({
-                      title: "Bulk add (frontend only)",
-                      description: `Loaded file "${file.name}". Parsing and upload will be wired to the backend later.`,
-                      variant: "success",
-                    });
-                  };
-                  input.click();
-                }}
-              >
-                Bulk add shelves
-              </Button>
-            </div>
-          </div>
+          <CheckerShelfListToolbar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            selectedCount={selectedRows.length}
+            onDeleteSelected={handleBulkDeleteSelected}
+            onBulkAdd={handleBulkAddShelves}
+          />
 
           {filteredRows.length > 0 && (
             <p className="mt-2 shrink-0 text-sm text-muted-foreground">
               Showing{" "}
-              <span className="font-semibold text-foreground">
-                {Math.max(
-                  0,
-                  Math.min(
-                    tablePagination.pageSize,
-                    filteredRows.length -
-                      (tablePagination.page - 1) * tablePagination.pageSize,
-                  ),
-                )}
-              </span>{" "}
-            of{" "}
+              <span className="font-semibold text-foreground">{visibleRowsCount}</span>{" "}
+              of{" "}
               <span className="font-semibold text-foreground">
                 {filteredRows.length}
               </span>{" "}
@@ -458,29 +432,7 @@ export function CheckerShelfListPage({
                 <Skeleton className="h-64 w-full rounded-lg" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                  <LayoutGrid
-                    className="h-7 w-7 text-muted-foreground"
-                    aria-hidden
-                  />
-                </div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  No shelves yet
-                </h3>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Add shelves to run planogram-based compliance analysis.
-                </p>
-                <Button
-                  asChild
-                  className="mt-6 bg-chart-2 text-white hover:opacity-90"
-                >
-                  <Link to={asRouterPath(shelfNewPath)} params={asRouterParams({ storeId })}>
-                    <Plus className="size-4" aria-hidden />
-                    Add Shelf
-                  </Link>
-                </Button>
-              </div>
+              <CheckerShelfEmptyState />
             ) : (
               <div ref={tableWrapperRef}>
                 <DataTable<PlanogramShelfRow>
@@ -506,8 +458,9 @@ export function CheckerShelfListPage({
 
       {actionsMenu && (
         <PlanogramActionsMenu
+          ref={actionsMenuRef}
           row={actionsMenu.row}
-          anchor={actionsMenu.anchor}
+          triggerEl={actionsMenu.triggerEl}
           variant="checker"
           onClose={() => setActionsMenu(null)}
           onNewRun={handleNewRun}

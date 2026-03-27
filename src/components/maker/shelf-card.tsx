@@ -73,7 +73,11 @@ export function ShelfCard({ shelf, onClick, className }: ShelfCardProps) {
       tabIndex={isClickable ? 0 : undefined}
       aria-label={
         isClickable
-          ? `View details for ${shelf.shelfName}, Aisle ${shelf.aisleNumber}, Bay ${shelf.bayNumber}`
+          ? `View details for ${shelf.shelfName}, Aisle ${
+              shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")
+            }, Bay ${
+              shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : "—")
+            }`
           : undefined
       }
     >
@@ -81,7 +85,10 @@ export function ShelfCard({ shelf, onClick, className }: ShelfCardProps) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <h3 className="text-base font-semibold text-card-foreground">
-            Aisle {shelf.aisleNumber} - Bay {shelf.bayNumber}
+            Aisle{" "}
+            {shelf.aisleCode ??
+              (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}{" "}
+            - Bay {shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : "—")}
           </h3>
           <p className="text-sm text-muted-foreground truncate mt-0.5">
             {shelf.shelfName}

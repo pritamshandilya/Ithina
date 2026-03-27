@@ -59,7 +59,7 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
       const shelf = (cell as { getData: () => Shelf }).getData();
       return `
         <div class="flex flex-col gap-1 py-1">
-          <span class="font-medium text-foreground">${shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}</span>
+          <span class="font-medium text-foreground">${shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}</span>
           <span class="text-xs text-muted-foreground">${shelf.zone ?? "—"} · ${shelf.section ?? "—"}</span>
         </div>
       `;
@@ -124,13 +124,15 @@ function ShelfManagementPage() {
       return (
         shelf.shelfName.toLowerCase().includes(query) ||
         shelf.shelfCode?.toLowerCase().includes(query) ||
-        shelf.aisle?.toLowerCase().includes(query) ||
+        shelf.aisleCode?.toLowerCase().includes(query) ||
         shelf.zone?.toLowerCase().includes(query) ||
         shelf.section?.toLowerCase().includes(query) ||
         shelf.fixtureType?.toLowerCase().includes(query) ||
         shelf.notes?.toLowerCase().includes(query) ||
-        String(shelf.aisleNumber).includes(query) ||
-        String(shelf.bayNumber).includes(query)
+        String(shelf.aisleCode ?? "").includes(query) ||
+        String(shelf.bayCode ?? "").includes(query) ||
+        String(shelf.aisleNumber ?? "").includes(query) ||
+        String(shelf.bayNumber ?? "").includes(query)
       );
     }) ?? [];
 
@@ -224,7 +226,7 @@ function ShelfManagementPage() {
                     search: { shelfId: undefined },
                   })
                 }
-                className="bg-chart-2 text-white hover:opacity-90"
+                variant="success"
               >
                 <Plus className="size-4 mr-2" />
                 New Shelf
@@ -316,7 +318,7 @@ function ShelfManagementPage() {
                         <Button
                           onClick={handleCreateSubmit}
                           disabled={isCreating}
-                          className="bg-chart-2 text-white hover:opacity-90"
+                          variant="success"
                         >
                           {isCreating ? "Creating..." : "Create Shelf"}
                         </Button>

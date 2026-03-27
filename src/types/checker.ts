@@ -34,8 +34,8 @@ export interface CheckerAudit extends Audit {
    * Shelf information for display
    */
   shelfInfo: {
-    aisleNumber: number;
-    bayNumber: number;
+    aisleCode: string;
+    bayCode: string;
     shelfName: string;
   };
 }
@@ -297,8 +297,8 @@ export interface PublishedAudit {
    * Shelf identification
    */
   shelfInfo: {
-    aisleNumber: number;
-    bayNumber: number;
+    aisleCode: string;
+    bayCode: string;
     shelfName: string;
   };
 

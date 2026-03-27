@@ -321,7 +321,7 @@ export function ShelfTemplateModal({
               Cancel
             </Button>
             <Button
-              className="bg-chart-2 text-white hover:opacity-90"
+              variant="success"
               onClick={() => void onSave(form)}
               disabled={isSaving}
             >

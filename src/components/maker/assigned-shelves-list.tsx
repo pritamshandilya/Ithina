@@ -26,13 +26,16 @@ const SHELF_TABLE_COLUMNS: DataTableColumn<Shelf>[] = [
   },
   {
     title: "Aisle",
-    field: "aisleNumber",
+    field: "aisleCode",
     sorter: "string",
     width: 90,
     headerSort: true,
     formatter: (cell) => {
       const shelf = (cell as { getData: () => Shelf }).getData();
-      return shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—");
+      return (
+        shelf.aisleCode ??
+        (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")
+      );
     },
   },
   {
@@ -395,7 +398,7 @@ export function AssignedShelvesList({
           columns={SHELF_TABLE_COLUMNS}
           data={filteredShelves}
           rowIdField="id"
-          initialSort={{ field: "aisleNumber", dir: "asc" }}
+          initialSort={{ field: "aisleCode", dir: "asc" }}
           emptyMessage="No shelves match the current filter"
           pageSize={10}
           pageSizeSelector={[5, 10, 20, 50]}

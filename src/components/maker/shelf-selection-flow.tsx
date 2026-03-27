@@ -30,8 +30,8 @@ export function ShelfSelectionFlow({
 
   // Create Mode State
   const [formData, setFormData] = useState({
-    aisleNumber: "",
-    bayNumber: "",
+    aisleCode: "",
+    bayCode: "",
     shelfName: "",
     description: "",
   });
@@ -44,24 +44,28 @@ export function ShelfSelectionFlow({
     return shelves.filter(
       (shelf) =>
         shelf.shelfName.toLowerCase().includes(lowerQuery) ||
-        `aisle ${shelf.aisleNumber}`.toLowerCase().includes(lowerQuery) ||
-        `bay ${shelf.bayNumber}`.toLowerCase().includes(lowerQuery) ||
-        `${shelf.aisleNumber}-${shelf.bayNumber}`.includes(lowerQuery)
+        `aisle ${shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "")}`
+          .toLowerCase()
+          .includes(lowerQuery) ||
+        `bay ${shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : "")}`
+          .toLowerCase()
+          .includes(lowerQuery) ||
+        `${shelf.aisleCode ?? shelf.aisleNumber ?? ""}-${shelf.bayCode ?? shelf.bayNumber ?? ""}`.includes(lowerQuery)
     );
   }, [shelves, searchQuery]);
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onShelfCreate?.({
-      aisleNumber: parseInt(formData.aisleNumber),
-      bayNumber: parseInt(formData.bayNumber),
+      aisleCode: formData.aisleCode,
+      bayCode: formData.bayCode,
       shelfName: formData.shelfName,
       description: formData.description,
     });
   };
 
   const isFormValid =
-    formData.aisleNumber && formData.bayNumber && formData.shelfName;
+    formData.aisleCode && formData.bayCode && formData.shelfName;
 
   return (
     <div className="space-y-6">
@@ -150,11 +154,13 @@ export function ShelfSelectionFlow({
                   <div className="text-left">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-bold uppercase tracking-wider text-accent">
-                        Aisle {shelf.aisleNumber}
+                        Aisle{" "}
+                        {shelf.aisleCode ??
+                          (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}
                       </span>
                       <span className="size-1 rounded-full bg-muted-foreground/30" />
                       <span className="text-xs font-bold uppercase tracking-wider text-accent">
-                        Bay {shelf.bayNumber}
+                        Bay {shelf.bayCode ?? (shelf.bayNumber != null ? shelf.bayNumber : "—")}
                       </span>
                     </div>
                     <h4 className="font-semibold text-card-foreground mt-0.5">
@@ -202,27 +208,27 @@ export function ShelfSelectionFlow({
         >
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="aisleNumber">Aisle Number</Label>
+              <Label htmlFor="aisleCode">Aisle Code</Label>
               <Input
-                id="aisleNumber"
-                type="number"
-                placeholder="e.g. 12"
-                value={formData.aisleNumber}
+                id="aisleCode"
+                type="text"
+                placeholder="e.g. A2"
+                value={formData.aisleCode}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, aisleNumber: e.target.value }))
+                  setFormData((prev) => ({ ...prev, aisleCode: e.target.value }))
                 }
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="bayNumber">Bay Number</Label>
+              <Label htmlFor="bayCode">Bay Code</Label>
               <Input
-                id="bayNumber"
-                type="number"
-                placeholder="e.g. 4"
-                value={formData.bayNumber}
+                id="bayCode"
+                type="text"
+                placeholder="e.g. 01"
+                value={formData.bayCode}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, bayNumber: e.target.value }))
+                  setFormData((prev) => ({ ...prev, bayCode: e.target.value }))
                 }
                 required
               />

@@ -392,6 +392,24 @@
   padding: 0.25rem 0.375rem;
 }
 
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  color-scheme: dark !important;
+  background-color: color-mix(in oklch, var(--card) 88%, black 12%) !important;
+  color: var(--card-foreground) !important;
+  border-color: var(--input) !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select option {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+.data-table-wrapper,
+.data-table-wrapper .tabulator,
+.data-table-wrapper .tabulator-header {
+  color-scheme: dark !important;
+}
+
 .data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
 .data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
   outline: 2px solid var(--ring);
@@ -516,6 +534,32 @@
 .data-table-wrapper .tabulator-cell .tabulator-responsive-collapse-toggle {
   background-color: var(--accent);
   color: var(--accent-foreground);
+}
+
+/* Tree table toggle: force high-contrast white control */
+.data-table-wrapper .tabulator-row .tabulator-data-tree-branch {
+  border-color: #ffffff !important;
+  opacity: 1 !important;
+}
+
+.data-table-wrapper .tabulator-row .tabulator-data-tree-control {
+  width: 14px !important;
+  height: 14px !important;
+  border: 1px solid #ffffff !important;
+  border-radius: 2px !important;
+  background: #ffffff5f !important;
+  color: #f8f8f8 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.data-table-wrapper .tabulator-row .tabulator-data-tree-control::before,
+.data-table-wrapper .tabulator-row .tabulator-data-tree-control::after,
+.data-table-wrapper .tabulator-row .tabulator-data-tree-control span {
+  color: #ffffff !important;
+  border-color: #ffffff !important;
+  opacity: 1 !important;
 }
 
 .data-table-wrapper .tabulator .tabulator-footer {

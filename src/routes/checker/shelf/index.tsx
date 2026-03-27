@@ -94,7 +94,8 @@ export function PlanogramAnalysisPage() {
         <PageHeader title="Shelves" description={pageDescription}>
           {activeTab === "shelves" ? (
             <Button
-              className="bg-chart-2 text-white hover:opacity-90 shrink-0"
+              variant="success"
+              className="shrink-0"
               onClick={() => setIsAddShelfModalOpen(true)}
             >
               <Plus className="size-4" aria-hidden />
@@ -111,7 +112,6 @@ export function PlanogramAnalysisPage() {
           shelvesPanel={
             <CheckerShelfListPage
               shelfDetailPath={shelfDetailPath}
-              shelfNewPath={shelfNewPath}
               adhocNewPath={adhocNewPath}
               pogNewPath={pogNewPath}
             />
@@ -194,7 +194,7 @@ export function PlanogramAnalysisPage() {
               Cancel
             </Button>
             <Button
-              className="bg-chart-2 text-white hover:opacity-90"
+              variant="success"
               onClick={handleContinueAddShelf}
               disabled={!canContinueAddShelf}
             >

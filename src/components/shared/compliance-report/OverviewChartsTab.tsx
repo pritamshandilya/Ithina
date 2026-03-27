@@ -9,7 +9,6 @@
  * Uses placeholder content; will be wired to dynamic data later.
  */
 
-import { useState } from "react";
 import {
   Info,
   Lightbulb,
@@ -23,9 +22,10 @@ import { cn } from "@/lib/utils";
 import type {
   ReportSnippet,
   ReportKeyFinding,
-  ReportShelfCompliance,
   ReportIssueDistribution,
 } from "@/lib/analysis";
+import { OverviewShelfBreakdown } from "./overview-shelf-breakdown";
+import { OverviewSpaceEfficiencyChart } from "./overview-space-efficiency-chart";
 
 export interface OverviewChartsTabProps {
   report: ReportSnippet;
@@ -131,188 +131,6 @@ function DonutChart({
   );
 }
 
-/** Space Efficiency vs Weight – mock data for scatter/bubble chart */
-interface SpaceEfficiencyPoint {
-  name: string;
-  weightKg: number;
-  revenuePerSqFt: number;
-  unitMargin: number;
-  isHighEfficiency: boolean;
-}
-
-const SPACE_EFFICIENCY_DATA: SpaceEfficiencyPoint[] = [
-  { name: "Green Pasta Stack", weightKg: 0.3, revenuePerSqFt: 63.17, unitMargin: 4.58, isHighEfficiency: true },
-  { name: "Yellow Pasta Box", weightKg: 0.45, revenuePerSqFt: 52.1, unitMargin: 6.2, isHighEfficiency: true },
-  { name: "White Pasta Box", weightKg: 0.38, revenuePerSqFt: 48.5, unitMargin: 5.1, isHighEfficiency: true },
-  { name: "Black Pasta Box", weightKg: 0.42, revenuePerSqFt: 41.2, unitMargin: 3.8, isHighEfficiency: false },
-  { name: "Red Pasta Stack", weightKg: 0.25, revenuePerSqFt: 38.9, unitMargin: 2.9, isHighEfficiency: false },
-  { name: "Black Pasta Bag", weightKg: 0.55, revenuePerSqFt: 35.4, unitMargin: 2.1, isHighEfficiency: false },
-  { name: "Potato Chips", weightKg: 0.15, revenuePerSqFt: 95.2, unitMargin: 7.5, isHighEfficiency: true },
-  { name: "Tortilla Chips", weightKg: 0.2, revenuePerSqFt: 72.8, unitMargin: 5.2, isHighEfficiency: true },
-  { name: "Coca-Cola 500ml", weightKg: 0.52, revenuePerSqFt: 58.3, unitMargin: 4.1, isHighEfficiency: false },
-  { name: "Water Bottle 1L", weightKg: 0.55, revenuePerSqFt: 28.4, unitMargin: 1.8, isHighEfficiency: false },
-];
-
-const CHART_WIDTH = 560;
-const CHART_HEIGHT = 200;
-const PADDING = { top: 16, right: 16, bottom: 32, left: 44 };
-const PLOT_WIDTH = CHART_WIDTH - PADDING.left - PADDING.right;
-const PLOT_HEIGHT = CHART_HEIGHT - PADDING.top - PADDING.bottom;
-const X_MIN = 0;
-const X_MAX = 0.6;
-const Y_MIN = 0;
-const Y_MAX = 160;
-const BUBBLE_MIN_SIZE = 6;
-const BUBBLE_MAX_SIZE = 18;
-
-function SpaceEfficiencyChart() {
-  const [tooltip, setTooltip] = useState<SpaceEfficiencyPoint | null>(null);
-
-  const xScale = (v: number) =>
-    PADDING.left + (PLOT_WIDTH * (v - X_MIN)) / (X_MAX - X_MIN);
-  const yScale = (v: number) =>
-    PADDING.top + PLOT_HEIGHT - (PLOT_HEIGHT * (v - Y_MIN)) / (Y_MAX - Y_MIN);
-
-  const marginRange = Math.max(...SPACE_EFFICIENCY_DATA.map((d) => d.unitMargin)) -
-    Math.min(...SPACE_EFFICIENCY_DATA.map((d) => d.unitMargin)) || 1;
-  const bubbleScale = (v: number) =>
-    BUBBLE_MIN_SIZE +
-    ((v - Math.min(...SPACE_EFFICIENCY_DATA.map((d) => d.unitMargin))) / marginRange) *
-      (BUBBLE_MAX_SIZE - BUBBLE_MIN_SIZE);
-
-  return (
-    <div className="flex gap-4">
-      <div className="relative flex-1 min-w-0">
-        <svg
-          viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
-          className="w-full h-[220px] min-h-[220px]"
-          preserveAspectRatio="xMidYMid meet"
-        >
-        {/* Grid lines */}
-        {[40, 80, 120].map((y) => (
-          <line
-            key={y}
-            x1={PADDING.left}
-            y1={yScale(y)}
-            x2={CHART_WIDTH - PADDING.right}
-            y2={yScale(y)}
-            stroke="var(--border)"
-            strokeDasharray="4 4"
-            strokeOpacity={2.0}
-          />
-        ))}
-        {[0.15, 0.3, 0.45].map((xVal) => (
-          <line
-            key={xVal}
-            x1={xScale(xVal)}
-            y1={PADDING.top}
-            x2={xScale(xVal)}
-            y2={CHART_HEIGHT - PADDING.bottom}
-            stroke="var(--border)"
-            strokeDasharray="4 4"
-            strokeOpacity={0.6}
-          />
-        ))}
-
-        {/* X axis labels */}
-        {[0, 0.15, 0.3, 0.45, 0.6].map((xVal) => (
-          <text
-            key={xVal}
-            x={xScale(xVal)}
-            y={CHART_HEIGHT - 8}
-            textAnchor="middle"
-            className="fill-muted-foreground text-[10px]"
-          >
-            {`${xVal}kg`}
-          </text>
-        ))}
-
-        {/* Y axis labels */}
-        {[40, 80, 120, 160].map((y) => (
-          <text
-            key={y}
-            x={PADDING.left - 6}
-            y={yScale(y) + 4}
-            textAnchor="end"
-            className="fill-muted-foreground text-[10px]"
-          >
-            {y}
-          </text>
-        ))}
-
-
-        {/* Bubbles */}
-        {SPACE_EFFICIENCY_DATA.map((d, i) => {
-          const r = bubbleScale(d.unitMargin);
-          const cx = xScale(d.weightKg);
-          const cy = yScale(d.revenuePerSqFt);
-          const fill = d.isHighEfficiency ? "var(--chart-2)" : "#8b5cf6";
-
-          return (
-            <g key={i}>
-              <circle
-                cx={cx}
-                cy={cy}
-                r={r}
-                fill={fill}
-                fillOpacity={0.85}
-                stroke="var(--card)"
-                strokeWidth={1}
-                onMouseEnter={() => setTooltip(d)}
-                onMouseLeave={() => setTooltip(null)}
-                className="cursor-pointer"
-              />
-            </g>
-          );
-        })}
-      </svg>
-
-        {/* Tooltip */}
-        {tooltip && (
-          <div className="absolute left-0 bottom-0 z-10 rounded-lg border border-border bg-card px-3 py-2 shadow-lg text-xs pointer-events-none">
-            <p className="font-semibold text-foreground">{tooltip.name}</p>
-            <p>Weight: {tooltip.weightKg} kg</p>
-            <p>Contrib/SqFt: ${tooltip.revenuePerSqFt.toFixed(2)}</p>
-            <p>Unit Margin: ${tooltip.unitMargin.toFixed(2)}</p>
-          </div>
-        )}
-      </div>
-
-      {/* How to read legend */}
-      <div className="shrink-0 rounded border border-border bg-card/95 px-2.5 py-2 text-[10px] text-muted-foreground w-[130px]">
-        <p className="font-semibold text-foreground mb-1">How to read</p>
-        <p>X = weight (kg)</p>
-        <p>Y = revenue/sq ft</p>
-        <p>bubble = unit margin</p>
-        <p className="mt-1 text-chart-2">Green = high space-efficiency</p>
-        <p className="text-indigo-400">Indigo = lower contribution/sq ft</p>
-      </div>
-    </div>
-  );
-}
-
-/** Placeholder shelf product for Shelf-by-Shelf Breakdown */
-const PLACEHOLDER_SHELF_PRODUCTS: Record<string, Array<{ name: string; status: "matched" | "misplaced" | "missing" | "extra"; count: string }>> = {
-  "Shelf 1": [
-    { name: "Potato Chips 4/4", status: "matched", count: "D3" },
-    { name: "Tortilla Chips 2/2", status: "misplaced", count: "D3" },
-  ],
-  "Shelf 2": [
-    { name: "Coca-Cola 500ml 0/6", status: "missing", count: "D3" },
-    { name: "Water Bottle 1L 0/3", status: "extra", count: "D3" },
-    { name: "Energy Drink 0/6", status: "matched", count: "D3" },
-  ],
-  "Shelf 3": [
-    { name: "Orange Juice 1L 0/4", status: "missing", count: "D3" },
-    { name: "Sports Drink 2/2", status: "matched", count: "D3" },
-    { name: "Iced Tea 500ml 0/6", status: "missing", count: "D3" },
-  ],
-  "Shelf 4": [
-    { name: "Mineral Water 1L 0/3", status: "missing", count: "D3" },
-    { name: "Soft Drink 2L 0/4", status: "missing", count: "D3" },
-    { name: "Pretzels 2/2", status: "misplaced", count: "D3" },
-  ],
-};
 
 export function OverviewChartsTab({ report, className }: OverviewChartsTabProps) {
   const totalDistribution =
@@ -457,106 +275,13 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
       {/* Space Efficiency vs Weight */}
       <ReportCard title="Space Efficiency vs Weight" icon={Leaf}>
         <div className="rounded-lg border border-border bg-muted/10 p-3">
-          <SpaceEfficiencyChart />
+          <OverviewSpaceEfficiencyChart />
         </div>
       </ReportCard>
 
       {/* Shelf-by-Shelf Breakdown */}
       <ReportCard title="Shelf-by-Shelf Breakdown" icon={Layers}>
-        <div className="space-y-4">
-          {report.shelfCompliance.map((shelf: ReportShelfCompliance) => {
-            const products =
-              PLACEHOLDER_SHELF_PRODUCTS[shelf.shelfName] ?? [];
-            const matchedCount = products.filter((p) => p.status === "matched").length;
-            const misplacedCount = products.filter((p) => p.status === "misplaced").length;
-            const missingCount = products.filter((p) => p.status === "missing").length;
-
-            return (
-              <div
-                key={shelf.shelfName}
-                className="border-b border-border pb-6 last:border-b-0 last:pb-0"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-                  <h4 className="text-sm font-semibold text-foreground">
-                    {shelf.shelfName} {shelf.shelfLabel ?? ""}
-                  </h4>
-                  <span className="text-xs text-muted-foreground">
-                    {shelf.units ?? 0} units · {shelf.skuCount ?? 0} SKUs
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="flex-1 h-3 rounded bg-muted/60 overflow-hidden">
-                    <div
-                      className={cn(
-                        "h-full rounded transition-all",
-                        shelf.compliance >= 80
-                          ? "bg-chart-2"
-                          : shelf.compliance > 0
-                            ? "bg-action-warning"
-                            : "bg-muted"
-                      )}
-                      style={{ width: `${shelf.compliance}%` }}
-                    />
-                  </div>
-                  <span
-                    className={cn(
-                      "text-xs font-medium w-10 text-right",
-                      shelf.compliance >= 80
-                        ? "text-chart-2"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    {shelf.compliance}%
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {products.map((p, i) => (
-                    <span
-                      key={i}
-                      className={cn(
-                        "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                        p.status === "matched" &&
-                          "bg-chart-2/20 text-chart-2 border border-chart-2/40",
-                        p.status === "misplaced" &&
-                          "bg-action-warning/20 text-action-warning border border-action-warning/40",
-                        p.status === "missing" &&
-                          "bg-destructive/20 text-destructive border border-destructive/40",
-                        p.status === "extra" &&
-                          "bg-blue-500/20 text-blue-500 border border-blue-500/40"
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "size-1.5 rounded-full shrink-0",
-                          p.status === "matched" && "bg-chart-2",
-                          p.status === "misplaced" && "bg-action-warning",
-                          p.status === "missing" && "bg-destructive",
-                          p.status === "extra" && "bg-blue-500"
-                        )}
-                      />
-                      {p.name}
-                      <span
-                        className={cn(
-                          "rounded px-1 text-[10px]",
-                          p.status === "matched" && "bg-chart-2/30",
-                          p.status === "misplaced" && "bg-action-warning/30",
-                          p.status === "missing" && "bg-destructive/30",
-                          p.status === "extra" && "bg-blue-500/30"
-                        )}
-                      >
-                        {p.count}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {matchedCount} matched {misplacedCount} misplaced {missingCount}{" "}
-                  missing
-                </p>
-              </div>
-            );
-          })}
-        </div>
+        <OverviewShelfBreakdown shelfCompliance={report.shelfCompliance} />
       </ReportCard>
     </div>
   );

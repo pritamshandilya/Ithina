@@ -6,6 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -165,18 +166,28 @@ function AdminUsersPage() {
       headerSort: false,
       hozAlign: "right",
       formatter: () => {
-        const editIcon = renderToStaticMarkup(<Pencil size={16} />);
-        const deleteIcon = renderToStaticMarkup(<Trash2 size={16} />);
-        return `
-          <div class="flex items-center justify-end gap-1.5">
-            <button class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
-                ${editIcon}
-            </button>
-            <button class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
-                ${deleteIcon}
-            </button>
-          </div>
-        `;
+        const editBtn = renderToStaticMarkup(
+          <IconButton
+            type="button"
+            className="edit-btn"
+            variant="icon-ghost"
+            size="icon-sm"
+            aria-label="Edit user"
+            icon={<Pencil size={16} aria-hidden />}
+          />,
+        );
+        const deleteBtn = renderToStaticMarkup(
+          <IconButton
+            type="button"
+            className="delete-btn"
+            variant="destructive-ghost"
+            size="icon-sm"
+            aria-label="Delete user"
+            icon={<Trash2 size={16} aria-hidden />}
+          />,
+        );
+
+        return `<div class="flex items-center justify-end gap-1.5">${editBtn}${deleteBtn}</div>`;
       },
       cellClick: (e: unknown, cell: DataTableCell<AuthSessionUser>) => {
         const user = cell.getData() as AuthSessionUser;

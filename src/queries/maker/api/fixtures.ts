@@ -19,13 +19,17 @@ export interface FixtureResponse {
   id: string;
   store_id: string;
   type: string;
-  width: number;
-  height: number;
-  depth: number;
+  dimensions: {
+    width: number;
+    height: number;
+    depth: number;
+  };
   dimension_unit: string;
-  section: string;
-  aisle: string;
-  zone: string;
+  physical_location: {
+    section: string;
+    aisle: string;
+    zone: string;
+  };
   created_at: string;
   updated_at: string;
 }

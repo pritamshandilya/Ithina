@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { PREDEFINED_CURRENCIES } from "@/lib/constants/currencies";
+import { ChevronRight } from "lucide-react";
 
 interface StoreOnboardingBasicStepProps {
   name: string;
@@ -37,6 +40,17 @@ export function StoreOnboardingBasicStep({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            className="min-w-[140px]"
+            disabled={!canContinue}
+            onClick={onNext}
+          >
+            Next
+            <ChevronRight className="size-4" />
+          </Button>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="store-name">Store name</Label>
           <Input
@@ -58,12 +72,18 @@ export function StoreOnboardingBasicStep({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="store-currency">Currency</Label>
-            <Input
+            <Select
               id="store-currency"
-              placeholder="e.g. USD, EUR"
               value={currency}
               onChange={(e) => onCurrencyChange(e.target.value)}
-            />
+              aria-label="Select store currency"
+            >
+              {PREDEFINED_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="store-region">Region</Label>
@@ -74,11 +94,6 @@ export function StoreOnboardingBasicStep({
               onChange={(e) => onRegionChange(e.target.value)}
             />
           </div>
-        </div>
-        <div className="flex justify-end pt-2">
-          <Button className="min-w-[140px]" disabled={!canContinue} onClick={onNext}>
-            Next
-          </Button>
         </div>
       </CardContent>
     </Card>

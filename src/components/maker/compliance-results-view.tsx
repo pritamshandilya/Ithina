@@ -212,7 +212,7 @@ export function ComplianceResultsView({
                   <Check className="size-4" aria-hidden />
                   Shelf is compliant.
                 </p>
-                <Button onClick={onSubmitAudit} className="w-full bg-chart-2 text-white hover:opacity-90">
+                <Button variant="success" onClick={onSubmitAudit} className="w-full">
                   Submit Audit
                 </Button>
               </>

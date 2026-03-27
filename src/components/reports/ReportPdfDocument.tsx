@@ -19,6 +19,15 @@ import {
   MOCK_ALL_ISSUES_REPORT,
   MOCK_IMAGE_COMPARISON,
 } from "@/lib/analysis";
+import {
+  severityBg,
+  severityBorder,
+  severityColor,
+  statusBg,
+  statusBorder,
+  variantBg,
+  variantBorder,
+} from "./report-pdf-color-utils";
 
 const COLORS = {
   text: "#1a1a1a",
@@ -470,71 +479,3 @@ function PdfTable<T extends { id?: string }>({
   );
 }
 
-function variantBg(v: string): string {
-  const map: Record<string, string> = {
-    misplaced: "rgba(245, 158, 11, 0.15)",
-    missing: "rgba(239, 68, 68, 0.15)",
-    extra: "rgba(59, 130, 246, 0.15)",
-    depth: "rgba(20, 184, 166, 0.15)",
-    analysis: "rgba(167, 139, 250, 0.15)",
-  };
-  return map[v] ?? "rgba(167, 139, 250, 0.15)";
-}
-
-function variantBorder(v: string): string {
-  const map: Record<string, string> = {
-    misplaced: "rgba(245, 158, 11, 0.4)",
-    missing: "rgba(239, 68, 68, 0.4)",
-    extra: "rgba(59, 130, 246, 0.4)",
-    depth: "rgba(20, 184, 166, 0.4)",
-    analysis: "rgba(167, 139, 250, 0.4)",
-  };
-  return map[v] ?? "rgba(167, 139, 250, 0.4)";
-}
-
-function statusBg(s: string): string {
-  const map: Record<string, string> = {
-    matched: "rgba(16, 185, 130, 0.2)",
-    misplaced: "rgba(245, 158, 11, 0.2)",
-    missing: "rgba(239, 68, 68, 0.2)",
-    extra: "rgba(59, 130, 246, 0.2)",
-  };
-  return map[s] ?? COLORS.bgMuted;
-}
-
-function statusBorder(s: string): string {
-  const map: Record<string, string> = {
-    matched: "rgba(16, 185, 130, 0.4)",
-    misplaced: "rgba(245, 158, 11, 0.4)",
-    missing: "rgba(239, 68, 68, 0.4)",
-    extra: "rgba(59, 130, 246, 0.4)",
-  };
-  return map[s] ?? COLORS.border;
-}
-
-function severityBg(s: string): string {
-  const map: Record<string, string> = {
-    LOW: "rgba(16, 185, 130, 0.2)",
-    MEDIUM: "rgba(245, 158, 11, 0.2)",
-    HIGH: "rgba(239, 68, 68, 0.2)",
-  };
-  return map[s] ?? COLORS.bgMuted;
-}
-
-function severityColor(s: string): string {
-  const map: Record<string, string> = {
-    LOW: COLORS.success,
-    MEDIUM: COLORS.warning,
-    HIGH: COLORS.destructive,
-  };
-  return map[s] ?? COLORS.text;
-}
-
-function severityBorder(s: string): string {
-  const map: Record<string, string> = {
-    LOW: "rgba(16, 185, 130, 0.4)",
-    MEDIUM: "rgba(245, 158, 11, 0.4)",
-    HIGH: "rgba(239, 68, 68, 0.4)",
-  };
-  return map[s] ?? COLORS.border;
-}

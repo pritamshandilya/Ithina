@@ -62,16 +62,22 @@ export function deleteShelf(shelfId: string): Promise<void> {
  * This ensures compatibility across the application.
  */
 export function mapShelfResponseToShelf(res: ShelfResponse): Shelf {
-  const aisleMatch = res.fixture_aisle.match(/\d+/);
-  const aisleNumber = aisleMatch ? Number(aisleMatch[0]) : 0;
+  const aisleCode = res.fixture_aisle ?? "";
+  const bayCode = (() => {
+    const parts = String(res.shelf_id ?? "").split("-");
+    return (parts.at(-1) ?? "").trim();
+  })();
 
   return {
     id: res.id,
     fixtureId: res.fixture_id,
     shelf_id: res.shelf_id,
-    aisleNumber,
-    aisle: res.fixture_aisle,
-    bayNumber: 1, // Defaulting to 1
+    aisleCode,
+    bayCode,
+    // Numeric derivatives are intentionally not derived from alphanumeric codes.
+    // UI should render codes directly from `aisleCode`/`bayCode`.
+    aisleNumber: undefined,
+    bayNumber: undefined,
     shelfName: res.name,
     shelfCode: res.shelf_id,
     status: "never-audited",

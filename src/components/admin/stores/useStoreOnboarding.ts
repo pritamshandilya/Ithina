@@ -26,12 +26,48 @@ import {
 import { updateStoreComplianceSettings } from "@/queries/checker/api/org";
 import {
   createComplianceRuleSetForStore,
-  formatDefaultOnboardingComplianceRuleSetName,
+  type CreateComplianceRuleSetInput,
 } from "@/queries/maker/api/compliance-rule-sets";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { StoreSetting } from "@/types/checker";
 import type { ShelfTemplateCreateInput } from "@/types/shelf-template";
 import { replaceShelfTemplates } from "@/queries/checker/api/shelf-templates";
 import { createStoreFixture } from "@/queries/checker/api/fixtures";
+import type { CreateComplianceRuleSetModalProps } from "@/components/common/create-compliance-rule-set-modal";
+
+const LOCAL_DEFAULT_RULE_SET_ID = "local-default-compliance-rule-set";
+const DEFAULT_ONBOARDING_RULE_SET_NAME = "Default Rule";
+
+type OnboardingRuleSet = ComplianceRuleSetSummary & {
+  payload: CreateComplianceRuleSetInput;
+  isLocal: true;
+};
+
+function createDefaultOnboardingRuleSet(): OnboardingRuleSet {
+  const name = DEFAULT_ONBOARDING_RULE_SET_NAME;
+  return {
+    id: LOCAL_DEFAULT_RULE_SET_ID,
+    name,
+    rulesCount: 1,
+    enabledCount: 1,
+    isDefault: true,
+    isLocal: true,
+    payload: {
+      name,
+      status: "ACTIVE",
+      reference_document_id: null,
+      rules: [
+        {
+          name: "Default visual compliance",
+          description: "Baseline visual compliance check for onboarding.",
+          category: "VISUAL",
+          threshold: 95,
+          is_active: true,
+        },
+      ],
+    },
+  };
+}
 
 export function useStoreOnboarding() {
   const navigate = useNavigate();
@@ -47,10 +83,6 @@ export function useStoreOnboarding() {
   const goToStep = (nextStep: OnboardingStep) => {
     if (createdStore && nextStep < 2) {
       setStep(2);
-      return;
-    }
-    if (!createdStore && nextStep === 2) {
-      setStep(0);
       return;
     }
     setStep(nextStep);
@@ -93,7 +125,23 @@ export function useStoreOnboarding() {
     () => new Set(),
   );
 
-  const [seedComplianceRuleSet, setSeedComplianceRuleSet] = useState(true);
+  const [localComplianceRuleSets, setLocalComplianceRuleSets] = useState<OnboardingRuleSet[]>(() => [
+    createDefaultOnboardingRuleSet(),
+  ]);
+  const [defaultComplianceRuleSetId, setDefaultComplianceRuleSetId] = useState(
+    LOCAL_DEFAULT_RULE_SET_ID,
+  );
+  const [complianceRuleSetModalOpen, setComplianceRuleSetModalOpen] = useState(false);
+  const [complianceRuleSetModalMode, setComplianceRuleSetModalMode] = useState<
+    "create" | "edit"
+  >("create");
+  const [editingComplianceRuleSetId, setEditingComplianceRuleSetId] = useState<string | null>(
+    null,
+  );
+  const [complianceRuleSetInitialValues, setComplianceRuleSetInitialValues] = useState<
+    CreateComplianceRuleSetModalProps["initialValues"]
+  >(undefined);
+  const [confirmDeleteRuleSetId, setConfirmDeleteRuleSetId] = useState<string | null>(null);
 
   const canContinueBasic =
     basicForm.name.trim().length > 0 &&
@@ -101,15 +149,170 @@ export function useStoreOnboarding() {
     basicForm.region.trim().length > 0 &&
     basicForm.currency.trim().length > 0;
 
-  const hasVisitedAllConfigSections = useMemo(
-    () => Object.values(configVisited).every(Boolean),
-    [configVisited],
-  );
-
   const canContinueConfig =
-    configForm.default_dimensions.trim().length > 0 && hasVisitedAllConfigSections;
+    configForm.default_dimensions.trim().length > 0 &&
+    fixtureTypes.some((f) => f.type.trim().length > 0) &&
+    shelfTemplatesConfig.some((t) => t.name.trim().length > 0);
 
   const { data: dimensionUnits = [] } = useDimensionUnits();
+
+  const openCreateComplianceRuleSetModal = () => {
+    setComplianceRuleSetModalMode("create");
+    setEditingComplianceRuleSetId(null);
+    setComplianceRuleSetInitialValues(undefined);
+    setComplianceRuleSetModalOpen(true);
+  };
+
+  const openEditDefaultComplianceRuleSetModal = () => {
+    const defaultRuleSet = localComplianceRuleSets.find(
+      (ruleSet) => ruleSet.id === LOCAL_DEFAULT_RULE_SET_ID,
+    );
+    if (!defaultRuleSet) return;
+    setComplianceRuleSetModalMode("edit");
+    setEditingComplianceRuleSetId(defaultRuleSet.id);
+    setComplianceRuleSetInitialValues({
+      name: defaultRuleSet.payload.name,
+      status: defaultRuleSet.payload.status,
+      rules: defaultRuleSet.payload.rules,
+    });
+    setComplianceRuleSetModalOpen(true);
+  };
+
+  const openEditComplianceRuleSetModal = (ruleSetId: string) => {
+    const ruleSet = localComplianceRuleSets.find((item) => item.id === ruleSetId);
+    if (!ruleSet) return;
+    setComplianceRuleSetModalMode("edit");
+    setEditingComplianceRuleSetId(ruleSetId);
+    setComplianceRuleSetInitialValues({
+      name: ruleSet.payload.name,
+      status: ruleSet.payload.status,
+      rules: ruleSet.payload.rules,
+    });
+    setComplianceRuleSetModalOpen(true);
+  };
+
+  const closeComplianceRuleSetModal = () => {
+    setComplianceRuleSetModalOpen(false);
+    setComplianceRuleSetInitialValues(undefined);
+    setEditingComplianceRuleSetId(null);
+    setComplianceRuleSetModalMode("create");
+  };
+
+  const submitComplianceRuleSet = async (
+    payload: CreateComplianceRuleSetInput,
+  ) => {
+    if (complianceRuleSetModalMode === "create") {
+      const localId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? `local-${crypto.randomUUID()}`
+          : `local-${Date.now()}`;
+      const isDefault = false;
+      setLocalComplianceRuleSets((prev) => [
+        ...prev,
+        {
+          id: localId,
+          name: payload.name,
+          rulesCount: payload.rules.length,
+          enabledCount: payload.rules.filter((rule) => rule.is_active).length,
+          isDefault,
+          isLocal: true,
+          payload,
+        },
+      ]);
+      toast({ title: "Rule set staged for onboarding" });
+      closeComplianceRuleSetModal();
+      return;
+    }
+
+    if (!editingComplianceRuleSetId) {
+      toast({
+        title: "Update failed",
+        description: "Missing rule set id for edit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setLocalComplianceRuleSets((prev) =>
+      prev.map((item) => {
+        if (item.id !== editingComplianceRuleSetId) return item;
+        return {
+          ...item,
+          name: payload.name,
+          rulesCount: payload.rules.length,
+          enabledCount: payload.rules.filter((rule) => rule.is_active).length,
+          payload,
+        };
+      }),
+    );
+
+    toast({ title: "Rule set updated" });
+    closeComplianceRuleSetModal();
+  };
+
+  const handleDeleteComplianceRuleSet = async (ruleSetId: string) => {
+    if (ruleSetId === LOCAL_DEFAULT_RULE_SET_ID) {
+      toast({
+        title: "Default rule set is required",
+        description: "The default onboarding rule set can be edited but cannot be deleted.",
+        variant: "destructive",
+      });
+      setConfirmDeleteRuleSetId(null);
+      return;
+    }
+
+    setLocalComplianceRuleSets((prev) => prev.filter((ruleSet) => ruleSet.id !== ruleSetId));
+    toast({
+      title: "Rule set removed",
+      description: "The staged rule set was removed from onboarding.",
+    });
+    setConfirmDeleteRuleSetId(null);
+  };
+
+  const defaultComplianceRuleSet = useMemo(() => {
+    const currentDefault =
+      localComplianceRuleSets.find((ruleSet) => ruleSet.id === defaultComplianceRuleSetId) ??
+      localComplianceRuleSets.find((ruleSet) => ruleSet.id === LOCAL_DEFAULT_RULE_SET_ID);
+
+    if (currentDefault) {
+      return currentDefault.payload;
+    }
+
+    return createDefaultOnboardingRuleSet().payload;
+  }, [defaultComplianceRuleSetId, localComplianceRuleSets]);
+
+  const updateDefaultComplianceRuleSet = (
+    updater:
+      | CreateComplianceRuleSetInput
+      | ((current: CreateComplianceRuleSetInput) => CreateComplianceRuleSetInput),
+  ) => {
+    setLocalComplianceRuleSets((prev) =>
+      prev.map((ruleSet) => {
+        if (ruleSet.id !== LOCAL_DEFAULT_RULE_SET_ID) return ruleSet;
+        const nextPayload =
+          typeof updater === "function"
+            ? updater(ruleSet.payload)
+            : updater;
+        const normalizedPayload: CreateComplianceRuleSetInput = {
+          ...nextPayload,
+          name: DEFAULT_ONBOARDING_RULE_SET_NAME,
+          status: "ACTIVE",
+          rules: (nextPayload.rules.length ? nextPayload.rules : ruleSet.payload.rules).map(
+            (rule, idx) => (idx === 0 ? { ...rule, is_active: true } : rule),
+          ),
+        };
+
+        return {
+          ...ruleSet,
+          name: normalizedPayload.name,
+          rulesCount: normalizedPayload.rules.length,
+          enabledCount: normalizedPayload.rules.filter((rule) => rule.is_active).length,
+          payload: normalizedPayload,
+        };
+      }),
+    );
+    setDefaultComplianceRuleSetId(LOCAL_DEFAULT_RULE_SET_ID);
+  };
 
   const assignableUsers = useMemo(
     () => orgUsers.filter((u) => u.role === "maker" || u.role === "checker"),
@@ -268,32 +471,42 @@ export function useStoreOnboarding() {
         );
       }
 
-      if (seedComplianceRuleSet) {
+      let persistedDefaultComplianceRuleSetId: string | null = null;
+      if (localComplianceRuleSets.length > 0) {
         try {
-          const createdSet = await createComplianceRuleSetForStore(storeId, {
-            name: formatDefaultOnboardingComplianceRuleSetName(basicForm.name),
-            status: "ACTIVE",
-            rules: [
-              {
-                name: "Baseline visual check",
-                description:
-                  "Default onboarding compliance threshold for visual checks. Adjust or extend this rule set later.",
-                category: "VISUAL",
-                threshold: 95,
-                is_active: true,
-              },
-            ],
-          });
-          await updateStoreComplianceSettings(storeId, {
-            default_compliance_rule_set_id: createdSet.id,
-          });
+          const persistedRuleSets = await Promise.all(
+            localComplianceRuleSets.map((ruleSet) =>
+              createComplianceRuleSetForStore(storeId, ruleSet.payload),
+            ),
+          );
+          const defaultLocalIndex = localComplianceRuleSets.findIndex(
+            (ruleSet) => ruleSet.id === defaultComplianceRuleSetId,
+          );
+          persistedDefaultComplianceRuleSetId =
+            defaultLocalIndex >= 0 ? persistedRuleSets[defaultLocalIndex]?.id ?? null : null;
         } catch {
           postCreateWarnings.push(
-            "Default compliance rule set was not created; configure it later under store settings or via the API.",
+            "Some compliance rule sets could not be created during onboarding; you can add them later from store settings.",
           );
         }
       }
-      setCreatedStore(store as StoreSetting);
+
+      let finalizedStore: StoreSetting = store as StoreSetting;
+      if (persistedDefaultComplianceRuleSetId) {
+        try {
+          const updatedStore = await updateStoreComplianceSettings(storeId, {
+            default_compliance_rule_set_id: persistedDefaultComplianceRuleSetId,
+          });
+          finalizedStore = updatedStore as StoreSetting;
+        } catch {
+          postCreateWarnings.push(
+            "Default compliance rule set could not be assigned; configure it later under store settings.",
+          );
+        }
+      }
+
+      setLocalComplianceRuleSets([createDefaultOnboardingRuleSet()]);
+      setCreatedStore(finalizedStore);
       toast({
         title: "Store created",
         description:
@@ -369,8 +582,24 @@ export function useStoreOnboarding() {
     showAddTemplateForm,
     setShowAddTemplateForm,
     selectedUserIds,
-    seedComplianceRuleSet,
-    setSeedComplianceRuleSet,
+    complianceRuleSets: localComplianceRuleSets,
+    defaultComplianceRuleSet,
+    updateDefaultComplianceRuleSet,
+    defaultComplianceRuleSetId,
+    setDefaultComplianceRuleSetId,
+    complianceRuleSetModalOpen,
+    complianceRuleSetModalMode,
+    complianceRuleSetInitialValues,
+    confirmDeleteRuleSetId,
+    setConfirmDeleteRuleSetId,
+    isSubmittingComplianceRuleSet: false,
+    isDeletingComplianceRuleSet: false,
+    openCreateComplianceRuleSetModal,
+    openEditDefaultComplianceRuleSetModal,
+    openEditComplianceRuleSetModal,
+    closeComplianceRuleSetModal,
+    submitComplianceRuleSet,
+    handleDeleteComplianceRuleSet,
     canContinueBasic,
     canContinueConfig,
     dimensionUnits,

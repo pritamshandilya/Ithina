@@ -194,7 +194,8 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                   )}
 
                   <Button
-                    className="w-full bg-chart-2 text-white hover:opacity-90"
+                    variant="success"
+                    className="w-full"
                     disabled={!canSave}
                     onClick={handleSave}
                   >

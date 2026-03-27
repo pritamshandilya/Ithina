@@ -9,6 +9,8 @@ import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 
 export type StoreFixtureModalValues = {
   type: string;
+  /** Optional unique fixture identifier (backend will generate if omitted). */
+  code?: string;
   width: string;
   height: string;
   depth: string;
@@ -20,6 +22,7 @@ export type StoreFixtureModalValues = {
 
 const DEFAULT_VALUES: StoreFixtureModalValues = {
   type: "",
+  code: undefined,
   width: "",
   height: "",
   depth: "",
@@ -46,16 +49,47 @@ export function StoreFixtureModal({
   mode = "create",
   initialValues,
 }: StoreFixtureModalProps) {
+  const normalizeText = (value: string | undefined): string => {
+    if (value === undefined) return "";
+    const trimmed = String(value).trim();
+    if (!trimmed) return "";
+    const lower = trimmed.toLowerCase();
+    if (lower === "undefined" || lower === "null") return "";
+    return trimmed;
+  };
+
+  const normalizeOptionalText = (value: string | undefined): string | undefined => {
+    const normalized = normalizeText(value);
+    return normalized ? normalized : undefined;
+  };
+
   const [form, setForm] = useState<StoreFixtureModalValues>({
     ...DEFAULT_VALUES,
-    ...initialValues,
+    type: normalizeText(initialValues?.type),
+    code: normalizeOptionalText(initialValues?.code),
+    width: normalizeText(initialValues?.width),
+    height: normalizeText(initialValues?.height),
+    depth: normalizeText(initialValues?.depth),
+    dimensionUnit: (initialValues?.dimensionUnit ?? DEFAULT_VALUES.dimensionUnit) as StoreDimensionUnit,
+    section: normalizeText(initialValues?.section),
+    aisle: normalizeText(initialValues?.aisle),
+    zone: normalizeText(initialValues?.zone),
   });
 
   useEffect(() => {
     if (!isOpen) return;
     setForm({
       ...DEFAULT_VALUES,
-      ...initialValues,
+      type: normalizeText(initialValues?.type),
+      code: normalizeOptionalText(initialValues?.code),
+      width: normalizeText(initialValues?.width),
+      height: normalizeText(initialValues?.height),
+      depth: normalizeText(initialValues?.depth),
+      dimensionUnit: (initialValues?.dimensionUnit ??
+        DEFAULT_VALUES.dimensionUnit) as StoreDimensionUnit,
+      section: normalizeText(initialValues?.section),
+      aisle: normalizeText(initialValues?.aisle),
+      zone: normalizeText(initialValues?.zone),
     });
   }, [isOpen, initialValues]);
 
@@ -84,6 +118,16 @@ export function StoreFixtureModal({
             />
           </div>
 
+          <div className="grid gap-2">
+            <Label htmlFor="fixture-code">Fixture Code (optional)</Label>
+            <Input
+              id="fixture-code"
+              value={form.code ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              placeholder="e.g. FG-001"
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">
               <Label htmlFor="fixture-unit">Dimension Unit</Label>
@@ -106,6 +150,7 @@ export function StoreFixtureModal({
               <Label>Dimensions (W × H × D)</Label>
               <div className="flex items-center gap-1.5">
                 <Input
+                  type="number"
                   value={form.width}
                   onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
                   placeholder="Width"
@@ -113,6 +158,7 @@ export function StoreFixtureModal({
                 />
                 <span className="text-muted-foreground">×</span>
                 <Input
+                  type="number"
                   value={form.height}
                   onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
                   placeholder="Height"
@@ -120,6 +166,7 @@ export function StoreFixtureModal({
                 />
                 <span className="text-muted-foreground">×</span>
                 <Input
+                  type="number"
                   value={form.depth}
                   onChange={(e) => setForm((f) => ({ ...f, depth: e.target.value }))}
                   placeholder="Depth"
@@ -164,7 +211,7 @@ export function StoreFixtureModal({
               Cancel
             </Button>
             <Button
-              className="bg-chart-2 text-white hover:opacity-90"
+              variant="success"
               onClick={() => void onSave(form)}
               disabled={isSaving}
             >

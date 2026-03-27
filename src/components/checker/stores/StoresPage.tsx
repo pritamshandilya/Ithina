@@ -1,6 +1,7 @@
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { IconButton } from "@/components/ui/icon-button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
     DataTable,
@@ -162,24 +163,24 @@ export function StoresPage() {
                 `;
             },
         },
-        {
-            title: "Assignments",
-            field: "maker_ids",
-            width: 100,
-            hozAlign: "center",
-            headerHozAlign: "center",
-            formatter: (cell: DataTableCell<StoreSetting>) => {
-                const store = cell.getData() as StoreSetting;
-                const makerCount = store.maker_ids?.length || 0;
-                const userCount = store.user_ids?.length || 0;
-                const count = makerCount + userCount;
-                return `
-                    <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 border border-accent/20 text-accent">
-                        ${count} Users
-                    </span>
-                `;
-            },
-        },
+        // {
+        //     title: "Assignments",
+        //     field: "maker_ids",
+        //     width: 100,
+        //     hozAlign: "center",
+        //     headerHozAlign: "center",
+        //     formatter: (cell: DataTableCell<StoreSetting>) => {
+        //         const store = cell.getData() as StoreSetting;
+        //         const makerCount = store.maker_ids?.length || 0;
+        //         const userCount = store.user_ids?.length || 0;
+        //         const count = makerCount + userCount;
+        //         return `
+        //             <span class="inline-flex px-2 py-0.5 rounded text-[10px] font-bold bg-accent/10 border border-accent/20 text-accent">
+        //                 ${count} Users
+        //             </span>
+        //         `;
+        //     },
+        // },
         {
             title: "Actions",
             field: "actions",
@@ -187,20 +188,41 @@ export function StoresPage() {
             headerSort: false,
             hozAlign: "right",
             formatter: () => {
-                const editIcon = renderToStaticMarkup(<Edit2 size={16} />);
-                const staffIcon = renderToStaticMarkup(<Users size={16} />);
-                const deleteIcon = renderToStaticMarkup(<Trash2 size={16} />);
+                const editBtn = renderToStaticMarkup(
+                    <IconButton
+                        type="button"
+                        className="edit-btn"
+                        variant="icon-ghost"
+                        size="icon-sm"
+                        aria-label="Edit store"
+                        icon={<Edit2 size={16} aria-hidden />}
+                    />,
+                );
+                const staffBtn = renderToStaticMarkup(
+                    <IconButton
+                        type="button"
+                        className="staff-btn"
+                        variant="icon-ghost"
+                        size="icon-sm"
+                        aria-label="Manage staff"
+                        icon={<Users size={16} aria-hidden />}
+                    />,
+                );
+                const deleteBtn = renderToStaticMarkup(
+                    <IconButton
+                        type="button"
+                        className="delete-btn"
+                        variant="destructive-ghost"
+                        size="icon-sm"
+                        aria-label="Delete store"
+                        icon={<Trash2 size={16} aria-hidden />}
+                    />,
+                );
                 return `
                     <div class="flex items-center justify-end gap-1">
-                        <button title="Edit store" class="edit-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
-                            ${editIcon}
-                        </button>
-                        <button title="Manage staff" class="staff-btn p-1.5 hover:bg-accent/10 rounded-md transition-colors text-muted-foreground hover:text-accent">
-                            ${staffIcon}
-                        </button>
-                        <button title="Delete store" class="delete-btn p-1.5 hover:bg-destructive/10 rounded-md transition-colors text-muted-foreground hover:text-destructive">
-                            ${deleteIcon}
-                        </button>
+                        ${editBtn}
+                        ${staffBtn}
+                        ${deleteBtn}
                     </div>
                 `;
             },

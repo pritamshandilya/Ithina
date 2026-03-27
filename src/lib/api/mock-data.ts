@@ -750,8 +750,8 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       publishingStatus,
       submittedByName: makerNames[index % makerNames.length],
       shelfInfo: {
-        aisleNumber: clampAisle(shelf.aisleNumber),
-        bayNumber: normalizeBay(shelf.bayNumber, index + 1),
+        aisleCode: `A${clampAisle(shelf.aisleNumber)}`,
+        bayCode: String(normalizeBay(shelf.bayNumber, index + 1)),
         shelfName: shelf.shelfName,
       },
     };
@@ -786,8 +786,8 @@ export function generateMockPendingAudits(_storeId: string): CheckerAudit[] {
       publishingStatus: "pending",
       submittedByName: makerNames[index % makerNames.length],
       shelfInfo: {
-        aisleNumber: clampAisle(shelf.aisle),
-        bayNumber: normalizeBay(shelf.bay, index + 101),
+        aisleCode: `A${clampAisle(shelf.aisle)}`,
+        bayCode: String(normalizeBay(shelf.bay, index + 101)),
         shelfName: shelf.name,
       },
     };
@@ -905,8 +905,8 @@ export function generateMockPublishedAudits(_storeId: string): PublishedAudit[] 
     published.push({
       auditId: `audit-${shelf.id}`,
       shelfInfo: {
-        aisleNumber: shelf.aisleNumber,
-        bayNumber: shelf.bayNumber,
+        aisleCode: `A${shelf.aisleNumber}`,
+        bayCode: String(shelf.bayNumber),
         shelfName: shelf.shelfName,
       },
       status,

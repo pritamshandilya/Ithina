@@ -1,12 +1,20 @@
-import type React from "react";
+import {
+  forwardRef,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { format } from "date-fns";
 import type { DataTableColumn } from "@/components/ui/data-table";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { Button } from "@/components/ui/button";
-import { FileText, LayoutGrid, Plus, Trash2 } from "lucide-react";
+import { FileText, LayoutGrid, Plus, ScanLine, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
+
+import { cn } from "@/lib/utils";
 
 const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
 
@@ -17,13 +25,8 @@ export const PLANOGRAM_INITIAL_SORT = {
 
 export const PLANOGRAM_PAGE_SIZE_OPTIONS = [5, 10, 20, 50] as const;
 
-export interface PlanogramActionsMenuAnchor {
-  x: number;
-  y: number;
-}
-
 export interface CreatePlanogramColumnsOptions {
-  onOpenMenu: (row: PlanogramShelfRow, anchor: PlanogramActionsMenuAnchor) => void;
+  onOpenMenu: (row: PlanogramShelfRow, triggerEl: HTMLElement) => void;
   ruleSets: ComplianceRuleSetSummary[];
   useShelfIdField?: "id" | "shelf_id";
 }
@@ -38,15 +41,15 @@ export function createPlanogramColumns({
   return [
     {
       title: "Aisle",
-      field: "aisleNumber",
+      field: "aisleCode",
       width: 70,
-      sorter: "number",
+      sorter: "string",
       headerSort: true,
       headerFilter: false,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
         const val =
-          row.aisle ??
+          row.aisleCode ??
           (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ??
           "—";
         return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
@@ -266,8 +269,7 @@ export function createPlanogramColumns({
         const target = (event as { target?: HTMLElement }).target as HTMLElement;
         const btn = target?.closest?.("[data-action]");
         if (!btn || btn.getAttribute("data-action") !== "open-menu") return;
-        const rect = (btn as HTMLElement).getBoundingClientRect();
-        onOpenMenu(cell.getData(), { x: rect.left, y: rect.bottom + 4 });
+        onOpenMenu(cell.getData(), btn as HTMLElement);
       },
     },
   ];
@@ -294,9 +296,31 @@ export function PlanogramStatusCell({
 
 export type PlanogramActionsMenuVariant = "maker" | "checker";
 
+const MENU_VIEWPORT_PAD = 8;
+const MENU_GAP = 4;
+
+function computeMenuPosition(
+  trigger: HTMLElement,
+  menuWidth: number,
+  menuHeight: number,
+): { left: number; top: number } {
+  const rect = trigger.getBoundingClientRect();
+  let left = rect.left;
+  let top = rect.bottom + MENU_GAP;
+  if (left + menuWidth + MENU_VIEWPORT_PAD > window.innerWidth) {
+    left = window.innerWidth - menuWidth - MENU_VIEWPORT_PAD;
+  }
+  left = Math.max(MENU_VIEWPORT_PAD, left);
+  if (top + menuHeight + MENU_VIEWPORT_PAD > window.innerHeight) {
+    top = rect.top - menuHeight - MENU_GAP;
+  }
+  top = Math.max(MENU_VIEWPORT_PAD, top);
+  return { left, top };
+}
+
 export interface PlanogramActionsMenuProps {
   row: PlanogramShelfRow;
-  anchor: PlanogramActionsMenuAnchor;
+  triggerEl: HTMLElement;
   variant: PlanogramActionsMenuVariant;
   onClose: () => void;
   onNewRun?: (shelfId: string) => void;
@@ -305,73 +329,136 @@ export interface PlanogramActionsMenuProps {
   onDeleteShelf?: (shelfId: string) => void;
 }
 
+const actionMenuButtonClass =
+  "flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm text-left whitespace-normal [&_svg]:size-4 [&_svg]:shrink-0";
 
-export function PlanogramActionsMenu({
-  row,
-  anchor,
-  variant,
-  onClose,
-  onNewRun,
-  onViewComplianceRule,
-  onAssociatePlanogram,
-  onDeleteShelf,
-}: PlanogramActionsMenuProps): React.JSX.Element | null {
-  const style: React.CSSProperties = {
-    left: anchor.x,
-    top: anchor.y,
+export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
+  {
+    row,
+    triggerEl,
+    variant,
+    onClose,
+    onNewRun,
+    onViewComplianceRule,
+    onAssociatePlanogram,
+    onDeleteShelf,
+  }: PlanogramActionsMenuProps,
+  ref: Ref<HTMLDivElement>,
+) {
+  const [pos, setPos] = useState({ left: 0, top: 0 });
+  const [placed, setPlaced] = useState(false);
+  const innerRef = useRef<HTMLDivElement | null>(null);
+
+  const setMenuRef = (node: HTMLDivElement | null) => {
+    innerRef.current = node;
+    if (typeof ref === "function") {
+      ref(node);
+    } else if (ref) {
+      ref.current = node;
+    }
   };
+
+  useLayoutEffect(() => {
+    setPlaced(false);
+    const update = () => {
+      const menuNode = innerRef.current;
+      if (!menuNode) return;
+      const mw = menuNode.offsetWidth;
+      const mh = menuNode.offsetHeight;
+      setPos(computeMenuPosition(triggerEl, mw, mh));
+      setPlaced(true);
+    };
+
+    update();
+    const rafId = requestAnimationFrame(update);
+
+    const menuNode = innerRef.current;
+    const ro =
+      menuNode && typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => update())
+        : null;
+    if (menuNode) ro?.observe(menuNode);
+
+    window.addEventListener("scroll", update, true);
+    window.addEventListener("resize", update);
+    return () => {
+      cancelAnimationFrame(rafId);
+      ro?.disconnect();
+      window.removeEventListener("scroll", update, true);
+      window.removeEventListener("resize", update);
+    };
+  }, [triggerEl, row.id, variant, row.planogramId]);
 
   const content = (
     <div
-      className="fixed z-50 min-w-48 overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md"
-      style={style}
+      ref={setMenuRef}
+      data-planogram-actions-menu
+      className={cn(
+        "fixed z-[100] w-max min-w-48 max-w-[min(20rem,calc(100vw-2rem))] overflow-hidden rounded-md border border-border bg-popover p-1 shadow-md transition-opacity duration-75",
+        placed ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+      style={{ left: pos.left, top: pos.top }}
     >
       {variant === "checker" && !row.planogramId ? (
-        <Button
-          type="button"
-          variant="ghost"
-          className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
-          onClick={() => {
-            onAssociatePlanogram?.(row.id);
-            onClose();
-          }}
-        >
-          <LayoutGrid className="text-muted-foreground" />
-          Associate planogram and run analysis
-        </Button>
-      ) : (
         <>
           <Button
             type="button"
-            variant="ghost"
-            className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0"
+            variant="icon-ghost"
+            className={actionMenuButtonClass}
+            onClick={() => {
+              onAssociatePlanogram?.(row.id);
+              onClose();
+            }}
+          >
+            <LayoutGrid className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0">Associate planogram and run analysis</span>
+          </Button>
+          <Button
+            type="button"
+            variant="icon-ghost"
+            className={actionMenuButtonClass}
             onClick={() => {
               onNewRun?.(row.id);
               onClose();
             }}
           >
-            <Plus className="text-muted-foreground" />
-            New
+            <ScanLine className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0">Adhoc analysis</span>
+          </Button>
+        </>
+      ) : (
+        <>
+          <Button
+            type="button"
+            variant="icon-ghost"
+            className={actionMenuButtonClass}
+            onClick={() => {
+              onNewRun?.(row.id);
+              onClose();
+            }}
+          >
+            <Plus className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0">New</span>
           </Button>
           <Button
             type="button"
-            variant="ghost"
-            className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground whitespace-nowrap [&_svg]:size-4 [&_svg]:shrink-0"
+            variant="icon-ghost"
+            className={actionMenuButtonClass}
             onClick={() => {
               onViewComplianceRule?.(row);
               onClose();
             }}
           >
-            <FileText className="text-muted-foreground" />
-            View Compliance Rule
+            <FileText className="shrink-0 text-muted-foreground" />
+            <span className="min-w-0">View Compliance Rule</span>
           </Button>
         </>
       )}
       <div className="-mx-1 my-1 h-px bg-border" />
       <Button
         type="button"
-        variant="ghost"
-        className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm text-destructive hover:bg-destructive/10 [&_svg]:size-4 [&_svg]:shrink-0"
+        variant="destructive-ghost"
+        className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0"
         onClick={() => {
           onDeleteShelf?.(row.id);
           onClose();
@@ -384,4 +471,4 @@ export function PlanogramActionsMenu({
   );
 
   return createPortal(content, document.body);
-}
+});

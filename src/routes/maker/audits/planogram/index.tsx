@@ -24,7 +24,8 @@ function PlanogramAnalysisPage() {
         >
           <Button
             asChild
-            className="bg-chart-2 text-white hover:opacity-90 shrink-0"
+            variant="success"
+            className="shrink-0"
           >
             <Link
               to="/maker/audits/planogram/new"

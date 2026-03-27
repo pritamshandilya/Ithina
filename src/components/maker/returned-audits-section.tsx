@@ -173,7 +173,13 @@ export function ReturnedAuditsSection({
                   </h3>
                   <div className="flex items-center gap-3 text-sm text-muted-foreground">
                     <span>
-                      Aisle {shelf?.aisleNumber || "?"} · Bay {shelf?.bayNumber || "?"}
+                      Aisle{" "}
+                      {shelf?.aisleCode ??
+                        (shelf?.aisleNumber != null
+                          ? `A${shelf.aisleNumber}`
+                          : "?")}{" "}
+                      · Bay{" "}
+                      {shelf?.bayCode ?? (shelf?.bayNumber != null ? String(shelf.bayNumber) : "?")}
                     </span>
                     <span>·</span>
                     <div className="flex items-center gap-1.5">

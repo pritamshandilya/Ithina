@@ -1,12 +1,3 @@
-/**
- * Shelf Detail Page
- * 
- * Provides a comprehensive view of a specific shelf:
- * - Metadata (Aisle, Bay, Zone, Section)
- * - Fixture information
- * - Planogram association status
- * - Actions: Edit, Run Analysis, Run Adhoc
- */
 import { createFileRoute, Link, useLocation, useParams } from "@tanstack/react-router";
 import { ArrowLeft, Edit3, Play, Scan, Settings, Info, Save, X } from "lucide-react";
 import { useState } from "react";
@@ -115,7 +106,10 @@ export function ShelfDetailPage() {
 
   const effectiveShelfName = shelfName ?? shelf.shelfName;
   const effectiveShelfCode = shelfCode ?? shelf.shelfCode ?? "";
-  const effectiveAisle = aisle ?? shelf.aisle ?? (shelf.aisleNumber ? `A${shelf.aisleNumber}` : "");
+  const effectiveAisle =
+    aisle ??
+    shelf.aisleCode ??
+    (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "");
   const effectiveZone = zone ?? shelf.zone ?? "";
   const effectiveSection = section ?? shelf.section ?? "";
   const effectiveFixtureType = fixtureType ?? shelf.fixtureType ?? "";
@@ -127,7 +121,9 @@ export function ShelfDetailPage() {
     setIsEditing(true);
     setShelfName(shelf.shelfName);
     setShelfCode(shelf.shelfCode);
-    setAisle(shelf.aisle ?? (shelf.aisleNumber ? `A${shelf.aisleNumber}` : ""));
+    setAisle(
+      shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : ""),
+    );
     setZone(shelf.zone ?? "");
     setSection(shelf.section ?? "");
     setFixtureType(shelf.fixtureType ?? "");
@@ -172,9 +168,11 @@ export function ShelfDetailPage() {
     const fixturePayload = {
       type: (fixtureType ?? shelf.fixtureType)?.trim() || undefined,
       physical_location:
-        (aisle ?? shelf.aisle)?.trim() || (zone ?? shelf.zone)?.trim() || (section ?? shelf.section)?.trim()
+        (aisle ?? shelf.aisleCode)?.trim() ||
+          (zone ?? shelf.zone)?.trim() ||
+          (section ?? shelf.section)?.trim()
           ? {
-              aisle: (aisle ?? shelf.aisle)?.trim() || undefined,
+              aisle: (aisle ?? shelf.aisleCode)?.trim() || undefined,
               zone: (zone ?? shelf.zone)?.trim() || undefined,
               section: (section ?? shelf.section)?.trim() || undefined,
             }
@@ -203,7 +201,7 @@ export function ShelfDetailPage() {
         shelfId,
         payload: {
           name: trimmedName,
-          shelf_id: trimmedCode,
+          code: trimmedCode,
           ...(hasFixtureUpdates ? { fixture: fixturePayload } : {}),
         },
       },
@@ -253,10 +251,10 @@ export function ShelfDetailPage() {
                   Cancel
                 </Button>
                 <Button
+                  variant="success"
                   size="sm"
                   onClick={handleSave}
                   disabled={updateShelfMutation.isPending}
-                  className="bg-chart-2 text-white hover:opacity-90"
                 >
                   <Save className="size-4 mr-1" />
                   {updateShelfMutation.isPending ? "Saving..." : "Save"}
@@ -299,7 +297,9 @@ export function ShelfDetailPage() {
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     Bay
                   </p>
-                  <p className="text-lg font-bold tabular-nums">{shelf.bayNumber}</p>
+                  <p className="text-lg font-bold tabular-nums">
+                    {shelf.bayCode ?? shelf.bayNumber ?? "—"}
+                  </p>
                 </div>
                 <div>
                   <EditableField
@@ -430,97 +430,6 @@ export function ShelfDetailPage() {
           </Card>
         </div>
 
-        {/* <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold px-1">Planogram Management</h3>
-            <Card className="border-border/50">
-              <CardContent className="p-0">
-                <div className="flex flex-col">
-                  {shelf.planogramId ? (
-                    <div className="p-6 flex items-center justify-between border-b border-border/50">
-                      <div>
-                        <h4 className="font-semibold">{shelf.planogramId}</h4>
-                        <p className="text-sm text-muted-foreground mt-1">Planogram is currently associated with this shelf.</p>
-                      </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={analysisPath as never} params={{ shelfId, storeId } as never}>
-                          View
-                        </Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="p-6 border-b border-border/50">
-                      <div className="flex items-start gap-4">
-                        <div className="p-3 rounded-xl bg-muted/50 text-muted-foreground">
-                          <Layout className="size-6" />
-                        </div>
-                        <div>
-                          <h4 className="font-semibold">No Planogram Associated</h4>
-                          <p className="text-sm text-muted-foreground mt-1 mr-8">
-                            This shelf does not have a reference planogram. Professional compliance 
-                            analysis requires a planogram.
-                          </p>
-                          <Button className="mt-4" size="sm" asChild>
-                            <Link to={basePogNewPath as never} params={{ storeId } as never} search={{ shelfId: shelf.id } as never}>
-                              Associate Planogram
-                            </Link>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <button 
-                    disabled
-                    className="flex items-center justify-between p-4 px-6 text-sm text-muted-foreground hover:bg-muted/30 transition-colors group cursor-not-allowed"
-                  >
-                    <span className="flex items-center">
-                      <Scan className="size-4 mr-3" />
-                      Run Planogram Compliance Analysis
-                    </span>
-                    <Badge variant="secondary" className="text-[9px] uppercase">Planogram Required</Badge>
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold px-1">Quick Analysis</h3>
-            <div 
-              className="rounded-2xl border border-border/50 bg-gradient-to-br from-chart-2/10 via-background to-background p-6 flex items-center justify-between shadow-sm hover:shadow-md transition-all cursor-pointer group"
-              onClick={() => navigate({ to: baseAdhocNewPath as never, params: { storeId } as never, search: { shelfId: shelf.id } as never })}
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3 rounded-xl bg-chart-2/20 text-chart-2">
-                  <Play className="size-6" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-foreground">Run Adhoc Analysis</h4>
-                  <p className="text-sm text-muted-foreground mt-1 mr-4">
-                    Instantly analyze shelf images without a reference planogram. Perfect for 
-                    general SKU detection and counting.
-                  </p>
-                </div>
-              </div>
-              <div className="p-2 rounded-full bg-background border border-border shadow-sm group-hover:translate-x-1 transition-transform">
-                <ChevronRight className="size-5" />
-              </div>
-            </div>
-
-            <Card className="border-border/50 bg-muted/20">
-              <CardHeader className="py-4">
-                <CardTitle className="text-sm font-medium">History</CardTitle>
-                <CardDescription className="text-xs">Recent analysis activities for this shelf</CardDescription>
-              </CardHeader>
-              <CardContent className="pb-6">
-                <div className="text-center py-6">
-                  <p className="text-xs text-muted-foreground italic">No historical data found for this shelf.</p>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div> */}
       </div>
     </MainLayout>
   );

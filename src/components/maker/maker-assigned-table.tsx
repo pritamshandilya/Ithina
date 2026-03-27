@@ -135,8 +135,13 @@ export function MakerAssignedTable({
                       onClick={() => handleRowClick(shelf.id)}
                       role="row"
                     >
-                      <td className="px-4 py-2.5 text-muted-foreground">{shelf.aisleNumber}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{shelf.bayNumber}</td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {shelf.aisleCode ??
+                          (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "—")}
+                      </td>
+                      <td className="px-4 py-2.5 text-muted-foreground">
+                        {shelf.bayCode ?? (shelf.bayNumber != null ? shelf.bayNumber : "—")}
+                      </td>
                       <td className="px-4 py-2.5 font-medium text-foreground truncate max-w-[180px]">
                         {shelf.shelfName}
                       </td>

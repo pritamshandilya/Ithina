@@ -2,11 +2,13 @@ import type { Dispatch, SetStateAction, FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Store } from "lucide-react";
+import { PREDEFINED_CURRENCIES } from "@/lib/constants/currencies";
 
 type StoreProfileTabFormData = {
   name: string;
@@ -74,12 +76,18 @@ export function StoreProfileTab({
             <label className="text-sm font-medium text-foreground" htmlFor="store-currency">
               Currency
             </label>
-            <Input
+            <Select
               id="store-currency"
               value={formData.currency}
               onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
               disabled={!canEdit}
-            />
+            >
+              {PREDEFINED_CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </Select>
           </div>
 
           <div className="grid gap-2 xl:col-span-2">
@@ -106,6 +114,27 @@ export function StoreProfileTab({
             />
           </div>
 
+          <div className="grid gap-2">
+            <label className="text-sm font-medium text-foreground" htmlFor="store-dimension-unit">
+              Default Dimension Unit
+            </label>
+            <Select
+              id="store-dimension-unit"
+              value={formData.default_dimensions}
+              onChange={(e) =>
+                setFormData((prev) => ({
+                  ...prev,
+                  default_dimensions: e.target.value as StoreDimensionUnit,
+                }))
+              }
+              disabled={!canEdit}
+            >
+              <option value="mm">mm</option>
+              <option value="cm">cm</option>
+              <option value="inch">inch</option>
+            </Select>
+          </div>
+
         </div>
 
         <div className="flex justify-between items-center pt-2 gap-2">
@@ -122,7 +151,7 @@ export function StoreProfileTab({
           {isAdmin && canEdit && formData.status === "Inactive" && (
             <Button
               type="button"
-              className="bg-chart-2 text-white hover:opacity-90"
+              variant="success"
               disabled={isSaving}
               onClick={() => void onActivate()}
             >

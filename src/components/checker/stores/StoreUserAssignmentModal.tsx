@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { X, UserPlus, Trash2, Search } from "lucide-react";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   useAssignStoreUser,
   useOrgUsers,
@@ -134,12 +135,14 @@ export function StoreUserAssignmentModal({
                             <p className="text-xs text-muted-foreground">{store.name}</p>
                         </div>
                     </div>
-                    <button
+                    <IconButton
+                        type="button"
+                      variant="icon-ghost"
+                        size="icon-sm"
+                        aria-label="Close"
                         onClick={onClose}
-                        className="p-1 hover:bg-muted rounded-md transition-colors text-muted-foreground"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
+                        icon={<X className="size-4" aria-hidden />}
+                    />
                 </div>
 
                 <div className="p-6 overflow-y-auto space-y-6 flex-1">
@@ -163,15 +166,15 @@ export function StoreUserAssignmentModal({
                                             </div>
                                         </div>
                                         {user.role !== "admin" && (
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
+                                            <IconButton
+                                                type="button"
+                                                variant="destructive-ghost"
+                                                size="icon-sm"
+                                                aria-label={`Remove ${user.firstName} ${user.lastName}`}
                                                 onClick={() => handleRemove(user.id)}
                                                 disabled={removeMutation.isPending}
-                                                className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                            >
-                                                <Trash2 className="size-4" />
-                                            </Button>
+                                                icon={<Trash2 className="size-4" aria-hidden />}
+                                            />
                                         )}
                                     </div>
                                 ))}

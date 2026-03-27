@@ -50,7 +50,10 @@ function toPlanogramRow(
   const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
   const planogramInfo = shelf.planogramId ? planogramMap?.get(shelf.planogramId) : undefined;
   const info = planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
-  const aisle = info?.aisle ?? shelf.aisle ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
+  const aisleCode =
+    info?.aisle ??
+    shelf.aisleCode ??
+    (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : undefined);
   return {
     ...shelf,
     complianceRuleSet: "Default Rules",
@@ -58,7 +61,7 @@ function toPlanogramRow(
     lastRun: shelf.lastAuditDate,
     productsCount: skuCount,
     issuesCount: issues,
-    aisle,
+    aisleCode,
     zone: info?.zone ?? shelf.zone,
     section: info?.section ?? shelf.section,
     fixtureType: info?.fixtureType ?? shelf.fixtureType,
@@ -100,15 +103,15 @@ const PLANOGRAM_COLUMNS: DataTableColumn<PlanogramShelfRow>[] = [
   },
   {
     title: "Aisle",
-    field: "aisleNumber",
+    field: "aisleCode",
     width: 70,
-    sorter: "number",
+    sorter: "string",
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => PlanogramShelfRow }).getData();
       const val =
-        row.aisle ??
+        row.aisleCode ??
         (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ??
         "—";
       return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
@@ -280,9 +283,8 @@ export function MakerShelfPage() {
         r.shelfName.toLowerCase().includes(q) ||
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
-        String(r.aisleNumber).includes(q) ||
-        r.aisle?.toLowerCase().includes(q) ||
-        String(r.bayNumber).includes(q) ||
+        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
+        String(r.bayCode ?? r.bayNumber ?? "").toLowerCase().includes(q) ||
         r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||

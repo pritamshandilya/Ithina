@@ -3,6 +3,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { getCategoryFill, getCategoryAccent } from "@/lib/constants/planogram";
 import { getProductSVG } from "./product-svg-utils";
+import { IconButton } from "@/components/ui/icon-button";
 import type { PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
 
 export interface RemovedItemsSidebarProps {
@@ -110,18 +111,16 @@ function RemovedItemRow({
                   );
                 })}
               </select>
-              <button
+              <IconButton
                 type="button"
                 onClick={handleRestore}
-                disabled={
-                  selectedShelf === "" || isFull(Number(selectedShelf))
-                }
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded bg-chart-2 text-white hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={selectedShelf === "" || isFull(Number(selectedShelf))}
+                variant="success"
+                size="icon-sm"
                 title="Add back to shelf"
                 aria-label={`Add ${item.name} back to shelf`}
-              >
-                <Plus className="size-3" aria-hidden />
-              </button>
+                icon={<Plus className="size-3" aria-hidden />}
+              />
             </div>
           )}
         </div>

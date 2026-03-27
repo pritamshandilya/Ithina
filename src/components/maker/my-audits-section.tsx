@@ -7,12 +7,14 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { FileEdit, AlertCircle, Search } from "lucide-react";
+import { AlertCircle, FileEdit, Search, Trash2 } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
+import { IconButton } from "@/components/ui/icon-button";
 import {
   useShelves,
   useDraftAudits,
@@ -202,7 +204,17 @@ export function MyAuditsSection({
             : "rounded-md bg-chart-2 text-white hover:opacity-90 px-2.5 py-1 text-xs font-medium";
           let html = `<button type="button" class="${primaryClass}" data-action="${isReturned ? "fix" : "resume"}">${primaryLabel}</button>`;
           if (isDraft) {
-            html += ` <button type="button" class="p-1.5 hover:bg-destructive/20 rounded text-muted-foreground hover:text-destructive ml-1" data-action="delete" aria-label="Delete draft"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>`;
+            const deleteDraftBtn = renderToStaticMarkup(
+              <IconButton
+                type="button"
+                variant="destructive-ghost"
+                size="icon-sm"
+                data-action="delete"
+                aria-label="Delete draft"
+                icon={<Trash2 size={14} aria-hidden />}
+              />,
+            );
+            html += ` ${deleteDraftBtn}`;
           }
           return html;
         },

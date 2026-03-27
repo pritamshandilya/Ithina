@@ -179,7 +179,7 @@ export function ReportSnippetsView({
                   <Button
                     size="sm"
                     onClick={() => setSendForApprovalOpen(true)}
-                    className="bg-chart-2 text-white hover:opacity-90"
+                    variant="success"
                   >
                     <Send className="size-4" aria-hidden />
                     Send for Approval

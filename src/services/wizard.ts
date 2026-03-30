@@ -5,6 +5,11 @@ import {
   MOCK_STAGED_SKUS,
   MOCK_STORES,
 } from "@/mocks/wizard";
+<<<<<<< Updated upstream
+=======
+import { apiDelay } from "@/lib/api-delay";
+import { fetchStores } from "@/services/store-api";
+>>>>>>> Stashed changes
 import type {
   ChatMessage,
   HardwareDevice,
@@ -16,7 +21,24 @@ import type {
 } from "@/types/wizard";
 
 export async function getWizardStores(): Promise<WizardStore[]> {
+<<<<<<< Updated upstream
   return MOCK_STORES;
+=======
+  try {
+    const stores = await fetchStores();
+    return stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+      short: `#${store.id.slice(0, 8)}`,
+      address: store.address,
+      displays: 0,
+      activePromos: 0,
+    }));
+  } catch {
+    await apiDelay(300);
+    return MOCK_STORES;
+  }
+>>>>>>> Stashed changes
 }
 
 export async function getWizardMargins(): Promise<WizardMargin[]> {
@@ -45,8 +67,13 @@ export async function submitWizardIntent(
 }
 
 export async function confirmHardwareSelection(
-  _deviceIds: string[],
+  deviceIds: string[],
 ): Promise<ChatMessage> {
+<<<<<<< Updated upstream
+=======
+  void deviceIds;
+  await apiDelay(600);
+>>>>>>> Stashed changes
   return {
     role: "ai",
     text: "Configuring layout parameters for selected hardware targets. Resolving product assets and generating digital backgrounds...",

@@ -7,6 +7,17 @@ export interface InboxItem {
   meta: string;
   metaVariant: "success" | "muted";
   urgent: boolean;
+<<<<<<< Updated upstream
+=======
+  status?: "pending" | "approved" | "rejected";
+
+  // Prototype-only fields (used for the approval queue table layout).
+  hardwareTargets?: string[];
+  guardRailsLabel?: string;
+  submittedAt?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
+>>>>>>> Stashed changes
 }
 
 export interface ValidationCheck {

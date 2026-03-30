@@ -1,10 +1,11 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { isSessionAuthenticated } from "@/lib/auth/session";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    if (SimulatedAuthService.isAuthenticated()) {
+    const skipAuth = import.meta.env.VITE_SKIP_AUTH === "true";
+    if (skipAuth || isSessionAuthenticated()) {
       throw redirect({ to: "/dashboard" });
     }
 

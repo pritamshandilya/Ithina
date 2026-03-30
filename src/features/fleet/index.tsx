@@ -1,8 +1,9 @@
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
+import { useInboxItems } from "@/hooks/use-approval";
 import { useFleetStats, useHardwareAlertQuery, useQueueRows, useResolveAlert } from "@/hooks/use-fleet";
 
 import FleetStats from "./components/fleet-stats";
@@ -12,6 +13,7 @@ import PublishingQueue from "./components/publishing-queue";
 export default function Fleet() {
   const { data: stats = [], isLoading: statsLoading, isError: statsError } = useFleetStats();
   const { data: queueRows = [], isLoading: queueLoading } = useQueueRows();
+  const { data: inbox = [] } = useInboxItems();
   const { data: alert = null } = useHardwareAlertQuery();
   const resolveAlertMutation = useResolveAlert();
 
@@ -19,7 +21,53 @@ export default function Fleet() {
   const [isComplete, setIsComplete] = useState(false);
   const [successRate, setSuccessRate] = useState(99.2);
 
-  const totalCount = queueRows.length > 0 ? queueRows[0].totalTags : 1240;
+  const scheduledToDate = useCallback((dateLabel?: string, timeLabel?: string) => {
+    if (!dateLabel || dateLabel === "Immediate") return null;
+    const clean = dateLabel.replace(/^[A-Za-z]{3},\s*/, "").trim();
+    const [monthRaw, dayRaw] = clean.split(/\s+/);
+    const day = Number(dayRaw);
+    if (!monthRaw || !Number.isFinite(day)) return null;
+    const monthIdx = new Date(`${monthRaw} 1, 2000`).getMonth();
+    if (!Number.isFinite(monthIdx)) return null;
+    const tm = (timeLabel ?? "08:00 AM").match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    let hours = 8;
+    let minutes = 0;
+    if (tm) {
+      hours = Number(tm[1]);
+      minutes = Number(tm[2]);
+      const suffix = (tm[3] ?? "").toUpperCase();
+      if (suffix === "PM" && hours < 12) hours += 12;
+      if (suffix === "AM" && hours === 12) hours = 0;
+    }
+    return new Date(new Date().getFullYear(), monthIdx, day, hours, minutes, 0);
+  }, []);
+
+  const dueRows = useMemo(() => {
+    const now = Date.now();
+    return inbox
+      .filter((item) => item.status === "approved")
+      .filter((item) => {
+        const at = scheduledToDate(item.scheduledDate, item.scheduledTime);
+        return !!at && at.getTime() <= now;
+      })
+      .map((item) => ({
+        name: `${item.title} - Fleet Execution`,
+        target: item.hardwareTargets?.join(", ") ?? "ESL 4.2\"",
+        totalTags: Math.max(item.skus, 1) * 10,
+        completedTags: 0,
+        state: "publishing" as const,
+      }));
+  }, [inbox, scheduledToDate]);
+
+  const runtimeQueueRows = useMemo(() => {
+    const merged = [...dueRows];
+    for (const row of queueRows) {
+      if (!merged.some((x) => x.name === row.name)) merged.push(row);
+    }
+    return merged;
+  }, [dueRows, queueRows]);
+
+  const totalCount = runtimeQueueRows.length > 0 ? runtimeQueueRows[0].totalTags : 1240;
   const [progressCount, setProgressCount] = useState(0);
   const tagsInTransit = totalCount - progressCount;
   const alertCount = hasAlert ? 1 : 0;
@@ -105,7 +153,7 @@ export default function Fleet() {
 
             <div className="grid min-h-[400px] flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
               <PublishingQueue
-                rows={queueRows}
+                rows={runtimeQueueRows}
                 progressCount={progressCount}
                 totalCount={totalCount}
                 isComplete={isComplete}

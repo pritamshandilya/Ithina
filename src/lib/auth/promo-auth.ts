@@ -84,6 +84,34 @@ function mapCurrentUser(payload: AuthCurrentUserResponse): PromoUser {
 }
 
 export class PromoAuthService {
+  static async loginWithForm(
+    username: string,
+    password: string,
+  ): Promise<PromoUser> {
+    const form = new URLSearchParams();
+    form.set("username", username);
+    form.set("password", password);
+
+    const { data: loginData } = await promoApiClient.post<AuthLoginResponse>(
+      `${API_PREFIX}/auth/token`,
+      form,
+      {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      },
+    );
+
+    const { data: me } = await promoApiClient.get<AuthCurrentUserResponse>(
+      `${API_PREFIX}/auth/me`,
+    );
+
+    const user = mapCurrentUser(me);
+    saveUser(user, loginData.expires_in);
+
+    return user;
+  }
+
   static async login(email: string, password: string): Promise<PromoUser> {
     const { data: loginData } = await promoApiClient.post<AuthLoginResponse>(
       `${API_PREFIX}/auth/login`,

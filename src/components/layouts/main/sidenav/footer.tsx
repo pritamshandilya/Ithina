@@ -3,7 +3,6 @@ import { ChevronsUpDown, LogOut } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-<<<<<<< Updated upstream
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,42 +12,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
-=======
-import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { clearSession } from "@/store/slices/session-slice";
-import { toggleTheme } from "@/store/slices/ui-slice";
->>>>>>> Stashed changes
 
 export default function SidenavFooter() {
   const navigate = useNavigate();
-<<<<<<< Updated upstream
   const user = SimulatedAuthService.getCurrentUser();
 
-=======
-  const dispatch = useAppDispatch();
-  const isDark = useAppSelector((s) => s.ui.isDarkMode);
-  const user = useAppSelector((s) => s.session.user);
-
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const handleLogout = () => {
-    dispatch(clearSession());
-    navigate({ to: "/login" });
-  };
-
->>>>>>> Stashed changes
   if (!user) {
     return (
       <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
@@ -82,7 +50,6 @@ export default function SidenavFooter() {
                 {initials}
               </AvatarFallback>
             </Avatar>
-<<<<<<< Updated upstream
 
             <div className="min-w-0 flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-white">
@@ -90,13 +57,6 @@ export default function SidenavFooter() {
               </p>
               <p className="truncate font-mono text-[10px] text-slate-500">
                 {user.email}
-=======
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{fullName}</p>
-              <p className="truncate font-mono text-[10px] text-slate-500">{user.email}</p>
-              <p className="truncate font-mono text-[10px] text-slate-600">
-                {user.role}
->>>>>>> Stashed changes
               </p>
             </div>
 
@@ -127,14 +87,7 @@ export default function SidenavFooter() {
             </div>
           </DropdownMenuLabel>
 
-<<<<<<< Updated upstream
           <DropdownMenuSeparator />
-=======
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <p className="truncate text-sm font-medium leading-tight text-white">{fullName}</p>
-          <p className="truncate font-mono text-[10px] text-slate-500">{user.role}</p>
-        </div>
->>>>>>> Stashed changes
 
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut />

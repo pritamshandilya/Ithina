@@ -6,11 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { setAuthSession, setSelectedStoreId } from "@/lib/auth/session";
-import { login } from "@/services/auth-api";
-import { fetchStores } from "@/services/store-api";
-import { useAppDispatch } from "@/store/hooks";
-import { setAuthenticatedSession, setSelectedStore } from "@/store/slices/session-slice";
+import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -18,7 +14,6 @@ export const Route = createFileRoute("/login")({
 
 function LoginPage() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -32,31 +27,7 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      const loginResponse = await login(formData);
-      setAuthSession(loginResponse.access_token, loginResponse.expires_in);
-      dispatch(
-        setAuthenticatedSession({
-          user: {
-            email: formData.email,
-            firstName: loginResponse.first_name,
-            lastName: loginResponse.last_name,
-            role: loginResponse.role,
-          },
-          organization: loginResponse.organization,
-        }),
-      );
-
-      try {
-        const stores = await fetchStores();
-        const firstStoreId = stores[0]?.id;
-        if (firstStoreId) {
-          dispatch(setSelectedStore(firstStoreId));
-          setSelectedStoreId(firstStoreId);
-        }
-      } catch {
-        // Keep login successful even if stores endpoint is temporarily unavailable.
-      }
-
+      await SimulatedAuthService.login(formData.email, formData.password);
       navigate({ to: "/dashboard" });
     } catch {
       setError("Invalid credentials. Please try again.");
@@ -247,11 +218,11 @@ function LoginPage() {
             </Button>
 
             <p className="text-center text-xs text-gray-500">
-              Shared auth accounts (all use <span className="font-mono">password123</span>):
+              Demo accounts (all use <span className="font-mono">password123</span>):
               <br />
               <span className="font-mono">
-                admin@displaydata.com (Admin), maker@displaydata.com (Maker),
-                checker@displaydata.com (Checker)
+                sarah@displaydata.com (Initiator), marcus@displaydata.com
+                (Approver), david@displaydata.com (Store Ops)
               </span>
             </p>
           </form>

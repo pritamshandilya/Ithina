@@ -1,50 +1,12 @@
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import SidenavFooter from "./footer";
-<<<<<<< Updated upstream
 import { NAV_ITEMS, SIDEBAR_HEADER } from "@/constants/navigation";
 import { cn } from "@/lib/utils";
-=======
-import { NAV_SECTIONS } from "@/constants/navigation";
-import { setSelectedStoreId } from "@/lib/auth/session";
-import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setSelectedStore } from "@/store/slices/session-slice";
-import { setConstraints } from "@/store/slices/wizard-slice";
-import { useWizardStores } from "@/hooks/use-wizard";
-import type { WizardStore } from "@/types/wizard";
->>>>>>> Stashed changes
 
 export default function Sidenav() {
   const location = useLocation();
   const navigate = useNavigate();
-<<<<<<< Updated upstream
-=======
-  const dispatch = useAppDispatch();
-  const { data: stores = [] } = useWizardStores();
-  const constraints = useAppSelector((s) => s.wizard.constraints);
-  const currentStore = stores.find((s) => s.id === constraints.store) ?? stores[0];
-
-  const [storeOpen, setStoreOpen] = useState(false);
-  const storeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (storeRef.current && !storeRef.current.contains(e.target as Node)) {
-        setStoreOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const selectStore = (s: WizardStore) => {
-    dispatch(setSelectedStore(s.id));
-    setSelectedStoreId(s.id);
-    dispatch(setConstraints({ ...constraints, store: s.id }));
-    setStoreOpen(false);
-  };
->>>>>>> Stashed changes
 
   return (
     <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-ithina-border bg-ithina-sidebar">

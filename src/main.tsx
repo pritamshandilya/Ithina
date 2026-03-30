@@ -6,18 +6,17 @@ import { Provider } from "react-redux";
 
 import App from "./App";
 import store from "./store";
-import type { AuthConfig } from "@/lib/auth";
 import { AuthProvider } from "@/providers/auth";
-
-const authConfig: AuthConfig = {
-  serverUrl: import.meta.env.VITE_AUTH_SERVER_URL,
-  redirectUri: import.meta.env.VITE_AUTH_REDIRECT_URI,
-};
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <Provider store={store}>
-      <AuthProvider {...authConfig}>
+      <AuthProvider
+        serverUrl={import.meta.env.VITE_AUTH_SERVER_URL ?? window.location.origin}
+        redirectUri={import.meta.env.VITE_AUTH_REDIRECT_URI ?? window.location.origin}
+        shouldAutoFetchUserInfo={false}
+        shouldAutoRefresh={false}
+      >
         <App />
       </AuthProvider>
     </Provider>

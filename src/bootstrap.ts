@@ -2,16 +2,20 @@ import "./index.css";
 
 import axios from "axios";
 
-import { SimulatedAuthService } from "./lib/auth/simulated-auth";
+import { getAuthToken, getSelectedStoreId } from "./lib/auth/session";
 
 axios.defaults.baseURL = import.meta.env.VITE_N8N_URL;
 axios.defaults.withCredentials = true;
 
 axios.interceptors.request.use(
   (config) => {
-    const user = SimulatedAuthService.getCurrentUser();
-    if (user?.id) {
-      config.headers["X-ID"] = user.id;
+    const token = getAuthToken();
+    const storeId = getSelectedStoreId();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (storeId) {
+      config.headers["X-Store-Id"] = storeId;
     }
     return config;
   },

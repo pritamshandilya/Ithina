@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -27,7 +27,7 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      await SimulatedAuthService.login(formData.email, formData.password);
+      await PromoAuthService.login(formData.email, formData.password);
       navigate({ to: "/dashboard" });
     } catch {
       setError("Invalid credentials. Please try again.");

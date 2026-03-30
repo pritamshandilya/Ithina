@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 
 export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    if (SimulatedAuthService.isAuthenticated()) {
+    if (PromoAuthService.isAuthenticated()) {
       throw redirect({ to: "/dashboard" });
     }
 

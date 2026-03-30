@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleTheme } from "@/store/slices/ui-slice";
 
@@ -42,7 +42,7 @@ export default function SidenavFooter() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const isDark = useAppSelector((s) => s.ui.isDarkMode);
-  const user = SimulatedAuthService.getCurrentUser();
+  const user = PromoAuthService.getCurrentUser();
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -58,8 +58,9 @@ export default function SidenavFooter() {
   }, []);
 
   const handleLogout = () => {
-    SimulatedAuthService.logout();
-    navigate({ to: "/login" });
+    PromoAuthService.logout().finally(() => {
+      navigate({ to: "/login" });
+    });
   };
 
   if (!user) {

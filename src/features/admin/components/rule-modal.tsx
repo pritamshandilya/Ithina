@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { NewRuleForm } from "@/types/admin";
@@ -10,7 +11,7 @@ interface RuleModalProps {
   onClose: () => void;
 }
 
-export default function RuleModal({ form, onChange, onSave, onClose }: RuleModalProps) {
+function RuleModal({ form, onChange, onSave, onClose }: RuleModalProps) {
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-ithina-bg/80 p-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Add category override">
       <div className="flex w-full max-w-lg animate-[fadeIn_0.3s_ease-out] flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-2xl">
@@ -107,3 +108,5 @@ export default function RuleModal({ form, onChange, onSave, onClose }: RuleModal
     </div>
   );
 }
+
+export default memo(RuleModal);

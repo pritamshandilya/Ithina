@@ -1,4 +1,9 @@
-import { MOCK_CAMPAIGNS, MOCK_INSIGHTS, MOCK_STAT_CARDS } from "@/mocks/dashboard";
+import { apiDelay } from "@/lib/api-delay";
+import {
+  MOCK_CAMPAIGNS,
+  MOCK_INSIGHTS,
+  MOCK_STAT_CARDS,
+} from "@/mocks/dashboard";
 import type {
   CampaignRow,
   InsightCardData,
@@ -6,17 +11,16 @@ import type {
 } from "@/types/dashboard";
 
 export async function getDashboardStatCards(): Promise<StatCardData[]> {
-  // In future, replace with axios.get("/api/dashboard/stats")
+  await apiDelay(200);
   return MOCK_STAT_CARDS;
 }
 
 export async function getDashboardInsights(): Promise<InsightCardData[]> {
-  // In future, replace with axios.get("/api/dashboard/insights")
+  await apiDelay(200);
   return MOCK_INSIGHTS;
 }
 
 export async function getCampaignHistory(): Promise<CampaignRow[]> {
-  // In future, replace with axios.get("/api/dashboard/campaigns")
+  await apiDelay(200);
   return MOCK_CAMPAIGNS;
 }
-

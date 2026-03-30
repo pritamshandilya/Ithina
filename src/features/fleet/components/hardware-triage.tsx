@@ -1,4 +1,5 @@
 import { AlertTriangle, CheckCircle, Loader2, RefreshCw } from "lucide-react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareAlert } from "@/types/fleet";
@@ -10,7 +11,7 @@ interface HardwareTriageProps {
   onResolve: () => void;
 }
 
-export default function HardwareTriage({ alert, hasAlert, isResolving, onResolve }: HardwareTriageProps) {
+function HardwareTriage({ alert, hasAlert, isResolving, onResolve }: HardwareTriageProps) {
   return (
     <div className="relative flex flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
       {hasAlert && (
@@ -84,3 +85,5 @@ export default function HardwareTriage({ alert, hasAlert, isResolving, onResolve
     </div>
   );
 }
+
+export default memo(HardwareTriage);

@@ -1,7 +1,9 @@
 import { Plus } from "lucide-react";
+import { memo, useMemo } from "react";
 
-import { cn } from "@/lib/utils";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { ComplianceRule, GlobalDisplayRules } from "@/types/admin";
+import { cn } from "@/lib/utils";
 
 interface ComplianceTabProps {
   rules: ComplianceRule[];
@@ -10,10 +12,67 @@ interface ComplianceTabProps {
   onOpenModal: () => void;
 }
 
-export default function ComplianceTab({ rules, globalRules, onGlobalChange, onOpenModal }: ComplianceTabProps) {
+function ComplianceTab({ rules, globalRules, onGlobalChange, onOpenModal }: ComplianceTabProps) {
+  const columns = useMemo<DataTableColumn<ComplianceRule>[]>(() => [
+    {
+      title: "Category",
+      field: "category",
+      minWidth: 140,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-medium text-white">${val}</span>`;
+      },
+    },
+    {
+      title: "Badge Allowed",
+      field: "badge",
+      width: 130,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => boolean }).getValue();
+        const cls = val
+          ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+          : "border-rose-400/20 bg-rose-400/10 text-rose-400";
+        return `<span class="rounded border px-2 py-0.5 font-mono text-[10px] ${cls}">${val ? "TRUE" : "FALSE"}</span>`;
+      },
+    },
+    {
+      title: "Price Display",
+      field: "priceDisplay",
+      minWidth: 160,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="text-xs text-slate-300">${val}</span>`;
+      },
+    },
+    {
+      title: "Color Restrict",
+      field: "colorRestrict",
+      minWidth: 130,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-[11px] text-slate-400">${val}</span>`;
+      },
+    },
+    {
+      title: "Special Rules",
+      field: "special",
+      minWidth: 200,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => ComplianceRule }).getData();
+        if (row.disclaimer) {
+          return `<span class="inline-block rounded border border-slate-700 bg-black/30 px-2 py-0.5 font-mono text-[10px] text-white">"${row.disclaimer}"</span>`;
+        }
+        return `<span class="italic text-xs text-slate-400">${row.special}</span>`;
+      },
+    },
+  ], []);
+
   return (
     <div className="flex animate-[fadeIn_0.3s_ease-out] flex-col gap-6">
-      {/* Global Display Rules */}
       <section className="rounded-xl border border-ithina-border bg-ithina-panel p-6 shadow-lg">
         <h3 className="mb-5 font-mono text-xs uppercase tracking-widest text-ithina-muted">Global Display Rules</h3>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
@@ -60,7 +119,6 @@ export default function ComplianceTab({ rules, globalRules, onGlobalChange, onOp
         </div>
       </section>
 
-      {/* Category-Specific Overrides */}
       <section className="flex flex-col overflow-hidden rounded-xl border border-ithina-border bg-ithina-panel shadow-lg">
         <header className="flex items-center justify-between border-b border-ithina-border bg-white/[0.01] p-5">
           <h3 className="font-mono text-xs uppercase tracking-widest text-ithina-muted">Category-Specific Overrides</h3>
@@ -72,50 +130,19 @@ export default function ComplianceTab({ rules, globalRules, onGlobalChange, onOp
             New Override
           </button>
         </header>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left whitespace-nowrap">
-            <thead className="bg-ithina-bg/50">
-              <tr className="border-b border-ithina-border font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                <th className="px-6 py-3 pl-8">Category</th>
-                <th className="px-6 py-3 text-center">Badge Allowed</th>
-                <th className="px-6 py-3">Price Display</th>
-                <th className="px-6 py-3">Color Restrict</th>
-                <th className="px-6 py-3">Special Rules</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-ithina-border/50 text-sm">
-              {rules.map((rule) => (
-                <tr key={rule.category} className="transition-colors hover:bg-white/[0.02]">
-                  <td className="px-6 py-4 pl-8 font-medium text-white">{rule.category}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span
-                      className={cn(
-                        "rounded border px-2 py-0.5 font-mono text-[10px]",
-                        rule.badge
-                          ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
-                          : "border-rose-400/20 bg-rose-400/10 text-rose-400",
-                      )}
-                    >
-                      {rule.badge ? "TRUE" : "FALSE"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-300">{rule.priceDisplay}</td>
-                  <td className="px-6 py-4 font-mono text-[11px] text-slate-400">{rule.colorRestrict}</td>
-                  <td className="px-6 py-4 text-xs text-slate-400">
-                    {rule.disclaimer ? (
-                      <span className="inline-block rounded border border-slate-700 bg-black/30 px-2 py-0.5 font-mono text-[10px] text-white">
-                        "{rule.disclaimer}"
-                      </span>
-                    ) : (
-                      <span className="italic">{rule.special}</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable<ComplianceRule>
+          columns={columns}
+          data={rules}
+          rowIdField="category"
+          emptyMessage="No compliance rules defined"
+          pagination={false}
+          headerFilters={false}
+          showRowNumber
+          layout="fitColumns"
+        />
       </section>
     </div>
   );
 }
+
+export default memo(ComplianceTab);

@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { BrandToneConfig, LcdRule } from "@/types/admin";
 
@@ -8,7 +10,7 @@ interface AiCalibrationTabProps {
   onToggleLcd: (key: string) => void;
 }
 
-export default function AiCalibrationTab({ tone, lcdRules, onToneChange, onToggleLcd }: AiCalibrationTabProps) {
+function AiCalibrationTab({ tone, lcdRules, onToneChange, onToggleLcd }: AiCalibrationTabProps) {
   return (
     <div className="grid animate-[fadeIn_0.3s_ease-out] grid-cols-1 gap-6 lg:grid-cols-2">
       {/* LLM Tone & Copy Rules */}
@@ -81,3 +83,5 @@ export default function AiCalibrationTab({ tone, lcdRules, onToneChange, onToggl
     </div>
   );
 }
+
+export default memo(AiCalibrationTab);

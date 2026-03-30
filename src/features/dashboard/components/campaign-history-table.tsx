@@ -1,97 +1,91 @@
-import { Search } from "lucide-react";
-import { useState } from "react";
+import { memo, useMemo } from "react";
 
-import StatusBadge from "@/components/shared/status-badge";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import type { CampaignRow, CampaignStatus } from "@/types/dashboard";
 
-const statusVariantMap: Record<CampaignStatus, "success" | "warning" | "neutral"> = {
-  live: "success",
-  pending: "warning",
-  draft: "neutral",
+const statusVariantStyles: Record<CampaignStatus, string> = {
+  live: "border-emerald-400/30 bg-emerald-400/10 text-emerald-400",
+  pending: "border-amber-400/30 bg-amber-400/10 text-amber-400",
+  draft: "border-slate-600 bg-white/5 text-slate-400",
 };
 
 interface CampaignHistoryTableProps {
   campaigns: CampaignRow[];
 }
 
-export default function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
-  const [searchQuery, setSearchQuery] = useState("");
-
-  const filteredCampaigns = campaigns.filter(
-    (c) =>
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.campaignId.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
+  const columns = useMemo<DataTableColumn<CampaignRow>[]>(() => [
+    {
+      title: "Campaign ID & Name",
+      field: "name",
+      minWidth: 200,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => CampaignRow }).getData();
+        return `<div><span class="block font-medium text-white">${row.name}</span><span class="block font-mono text-[10px] text-slate-500">ID: ${row.campaignId}</span></div>`;
+      },
+    },
+    {
+      title: "Initiator",
+      field: "initiator",
+      width: 120,
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="text-xs text-slate-400">${val}</span>`;
+      },
+    },
+    {
+      title: "Status",
+      field: "status",
+      width: 110,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => CampaignRow }).getData();
+        const cls = statusVariantStyles[row.status] ?? "";
+        const dot = row.status === "live" ? `<span class="size-1.5 animate-pulse rounded-full bg-current inline-block mr-1"></span>` : "";
+        return `<span class="inline-flex items-center gap-1 rounded border px-2 py-0.5 font-mono text-[10px] ${cls}">${dot}${row.statusLabel}</span>`;
+      },
+    },
+    {
+      title: "Hardware Targets",
+      field: "hardwareTargets",
+      minWidth: 150,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => CampaignRow }).getData();
+        const cls = row.status === "draft" ? "italic text-slate-500" : "text-slate-400";
+        return `<span class="text-xs ${cls}">${row.hardwareTargets}</span>`;
+      },
+    },
+    {
+      title: "Last Updated",
+      field: "lastUpdated",
+      width: 140,
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => string }).getValue();
+        return `<span class="font-mono text-xs text-slate-500">${val}</span>`;
+      },
+    },
+  ], []);
 
   return (
     <div className="flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
       <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-4">
         <h3 className="text-sm font-semibold text-white">Campaign History</h3>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
-          <input
-            type="text"
-            placeholder="Search campaigns..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            aria-label="Search campaigns"
-            className="w-48 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-9 pr-3 text-xs text-white transition-colors focus:border-ithina-purple focus:outline-none"
-          />
-        </div>
       </header>
-
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-left whitespace-nowrap">
-          <thead className="sticky top-0 z-10 border-b border-ithina-border bg-ithina-sidebar">
-            <tr className="font-medium text-[10px] uppercase tracking-widest text-ithina-muted">
-              <th className="px-6 py-3 pl-8">Campaign ID & Name</th>
-              <th className="px-4 py-3">Initiator</th>
-              <th className="px-4 py-3">Status</th>
-              <th className="px-4 py-3">Hardware Targets</th>
-              <th className="px-6 py-3 text-right">Last Updated</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-ithina-border/50 text-sm">
-            {filteredCampaigns.map((campaign) => (
-              <CampaignTableRow key={campaign.id} campaign={campaign} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/50 px-6 py-3 text-xs text-slate-500">
-        <span>
-          Showing {filteredCampaigns.length} of {campaigns.length} Campaigns
-        </span>
-        <div className="flex items-center gap-2">
-          <button className="transition-colors hover:text-white" aria-label="Previous page">&larr; Prev</button>
-          <span className="rounded bg-white/5 px-2 py-0.5 font-mono">1</span>
-          <button className="transition-colors hover:text-white" aria-label="Next page">Next &rarr;</button>
-        </div>
-      </div>
+      <DataTable<CampaignRow>
+        columns={columns}
+        data={campaigns}
+        rowIdField="id"
+        emptyMessage="No campaigns found"
+        pageSize={5}
+        pageSizeSelector={[5, 10, 20]}
+        showRowNumber
+        layout="fitColumns"
+      />
     </div>
   );
 }
 
-function CampaignTableRow({ campaign }: { campaign: CampaignRow }) {
-  return (
-    <tr
-      className={`group cursor-pointer transition-colors hover:bg-white/[0.02] ${
-        campaign.status === "pending" ? "border-l-2 border-l-amber-500" : ""
-      } ${campaign.status === "draft" ? "opacity-70 hover:opacity-100" : ""}`}
-    >
-      <td className="px-6 py-4 pl-8">
-        <span className="mb-0.5 block font-medium text-white">{campaign.name}</span>
-        <span className="block font-mono text-[10px] text-slate-500">ID: {campaign.campaignId}</span>
-      </td>
-      <td className="px-4 py-4 text-xs text-slate-400">{campaign.initiator}</td>
-      <td className="px-4 py-4">
-        <StatusBadge label={campaign.statusLabel} variant={statusVariantMap[campaign.status]} showIcon={campaign.status === "live"} />
-      </td>
-      <td className={`px-4 py-4 text-xs ${campaign.status === "draft" ? "italic text-slate-500" : "text-slate-400"}`}>
-        {campaign.hardwareTargets}
-      </td>
-      <td className="px-6 py-4 text-right font-mono text-xs text-slate-500">{campaign.lastUpdated}</td>
-    </tr>
-  );
-}
+export default memo(CampaignHistoryTable);

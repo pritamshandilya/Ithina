@@ -1,61 +1,61 @@
-import { Bell, Moon, Settings, Shield, Sun } from "lucide-react";
-
-import ithinaLogo from "@/assets/ithina_logo.png";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { toggleTheme } from "@/store/slices/ui-slice";
+import { Bell, Plus, Shield } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 
 export default function Header() {
-  const isDarkMode = useAppSelector((state) => state.ui.isDarkMode);
-  const dispatch = useAppDispatch();
-
-  const handleToggleTheme = () => {
-    dispatch(toggleTheme());
-    document.documentElement.classList.toggle("dark");
-  };
+  const navigate = useNavigate();
 
   return (
-    <header className="flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-6 shadow-sm">
+    <header className="relative flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-6 shadow-sm z-40">
+
+      {/* Logo pill — matches prototype .logo-pill style */}
       <div className="flex h-full items-center py-3">
-        <div className="inline-flex items-center rounded-[10px] bg-[#0F172A] px-3.5 py-1.5">
-          <img
-            src={ithinaLogo}
-            alt="Ithina"
-            className="h-[50px] w-auto object-contain"
-          />
+        <div
+          className="inline-flex items-center"
+          style={{ backgroundColor: "#0F172A", borderRadius: 10, padding: "6px 14px" }}
+        >
+          <div className="flex h-[50px] items-center">
+            <span
+              className="select-none text-xl font-bold tracking-tight text-white"
+              style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: "-0.5px" }}
+            >
+              ithina
+            </span>
+            <span className="mb-3 ml-1 inline-block size-1.5 rounded-full bg-purple-400" />
+          </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4 text-[13px] font-medium text-slate-300">
+      <div className="flex items-center gap-3 text-[13px] font-medium text-slate-300">
+
+        {/* ROOS Connected */}
+        <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 font-mono text-[11px] text-emerald-400">
+          <svg className="size-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          ROOS Connected
+        </div>
+
+        {/* Store Manager */}
         <button className="flex items-center gap-2 rounded-md border border-ithina-border bg-ithina-panel px-3 py-1.5 shadow-sm transition-colors hover:bg-ithina-border">
           <Shield className="size-3.5 text-blue-400" />
           Store Manager
         </button>
 
-        <button className="rounded-md border border-ithina-border bg-ithina-panel px-3 py-1.5 shadow-sm transition-colors hover:bg-ithina-border">
-          Intensive
-        </button>
-
-        <button className="relative ml-2 p-1.5 text-slate-400 transition-colors hover:text-white">
+        {/* Notifications */}
+        <button className="relative p-1.5 text-slate-400 transition-colors hover:text-white">
           <Bell className="size-[18px]" />
-          <span className="absolute right-0 top-0 flex size-3.5 items-center justify-center rounded-full border border-ithina-bg bg-red-500 text-[9px] font-bold text-white">
+          <div className="absolute right-0 top-0 flex size-3.5 items-center justify-center rounded-full border border-ithina-bg bg-red-500 text-[9px] font-bold text-white">
             3
-          </span>
+          </div>
         </button>
 
-        <button className="p-1.5 text-slate-400 transition-colors hover:text-white">
-          <Settings className="size-[18px]" />
-        </button>
-
+        {/* New Campaign — primary CTA */}
         <button
-          onClick={handleToggleTheme}
-          title={isDarkMode ? "Light mode" : "Dark mode"}
-          className="ml-1 rounded-md border border-ithina-border p-1.5 text-slate-400 transition-colors hover:text-white"
+          onClick={() => navigate({ to: "/wizard" })}
+          className="flex items-center gap-1.5 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_14px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
         >
-          {isDarkMode ? (
-            <Sun className="size-[18px]" />
-          ) : (
-            <Moon className="size-[18px]" />
-          )}
+          <Plus className="size-3.5" />
+          New Campaign
         </button>
       </div>
     </header>

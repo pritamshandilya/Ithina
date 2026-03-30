@@ -1,6 +1,7 @@
 import { CloudUpload, Plus } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useState } from "react";
 
+import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { cn } from "@/lib/utils";
 import type { HwPalette } from "@/types/admin";
 
@@ -10,24 +11,19 @@ interface BrandAssetsTabProps {
 
 type LogoKey = "bw" | "red";
 
-export default function BrandAssetsTab({ palettes }: BrandAssetsTabProps) {
+function BrandAssetsTab({ palettes }: BrandAssetsTabProps) {
   const [uploading, setUploading] = useState<Record<LogoKey, boolean>>({ bw: false, red: false });
   const [uploaded, setUploaded] = useState<Record<LogoKey, boolean>>({ bw: false, red: false });
-  const timersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    return () => { timersRef.current.forEach(clearTimeout); };
-  }, []);
+  const schedule = useScheduledCallback();
 
   const simulateUpload = useCallback((key: LogoKey) => {
     if (uploaded[key]) return;
     setUploading((prev) => ({ ...prev, [key]: true }));
-    const id = setTimeout(() => {
+    schedule(() => {
       setUploading((prev) => ({ ...prev, [key]: false }));
       setUploaded((prev) => ({ ...prev, [key]: true }));
     }, 1500);
-    timersRef.current.push(id);
-  }, [uploaded]);
+  }, [uploaded, schedule]);
 
   return (
     <div className="grid animate-[fadeIn_0.3s_ease-out] grid-cols-1 gap-6 lg:grid-cols-2">
@@ -178,3 +174,5 @@ function LogoUploadCard({
     </div>
   );
 }
+
+export default memo(BrandAssetsTab);

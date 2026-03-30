@@ -1,3 +1,5 @@
+import { memo } from "react";
+
 import { cn } from "@/lib/utils";
 import type { StatCardData } from "@/types/dashboard";
 
@@ -19,7 +21,7 @@ interface StatCardProps {
   data: StatCardData;
 }
 
-export default function StatCard({ data }: StatCardProps) {
+function StatCard({ data }: StatCardProps) {
   return (
     <div className="rounded-xl border border-ithina-border bg-ithina-panel p-5 shadow-sm">
       <p className="mb-1 font-mono text-[10px] uppercase tracking-widest text-slate-500">
@@ -46,3 +48,5 @@ export default function StatCard({ data }: StatCardProps) {
     </div>
   );
 }
+
+export default memo(StatCard);

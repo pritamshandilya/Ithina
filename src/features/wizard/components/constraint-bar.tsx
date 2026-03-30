@@ -1,5 +1,5 @@
-import { Building2, ChevronDown, Clock, Shield } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { ChevronDown, Clock, Shield } from "lucide-react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type {
@@ -14,8 +14,9 @@ import {
   useWizardMargins,
   useWizardStores,
 } from "@/hooks/use-wizard";
+import { useAppSelector } from "@/store/hooks";
 
-type DropdownKey = "store" | "margin" | "duration" | null;
+type DropdownKey = "margin" | "duration" | null;
 
 interface ConstraintBarProps {
   disabled?: boolean;
@@ -40,23 +41,28 @@ const riskBadge: Record<MarginRisk, string> = {
   Strict: "text-rose-400 bg-rose-900/30",
 };
 
-export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
+function ConstraintBar({ disabled, onChange }: ConstraintBarProps) {
   const { data: stores = [] } = useWizardStores();
   const { data: margins = [] } = useWizardMargins();
   const { data: durations = [] } = useWizardDurations();
+
+  const constraintsStoreId = useAppSelector((s) => s.wizard.constraints.store);
 
   const [selectedStore, setSelectedStore] = useState<WizardStore | null>(null);
   const [selectedMargin, setSelectedMargin] = useState<WizardMargin | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<WizardDuration | null>(null);
   const [open, setOpen] = useState<DropdownKey>(null);
-
-  const storeRef = useRef<HTMLDivElement>(null);
   const marginRef = useRef<HTMLDivElement>(null);
   const durationRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (stores.length > 0 && !selectedStore) setSelectedStore(stores[0]);
-  }, [stores, selectedStore]);
+    if (stores.length === 0) return;
+    const fromConstraints = stores.find((s) => s.id === constraintsStoreId);
+    const target = fromConstraints ?? stores[0];
+    if (!selectedStore || selectedStore.id !== target.id) {
+      setSelectedStore(target);
+    }
+  }, [stores, selectedStore, constraintsStoreId]);
 
   useEffect(() => {
     if (margins.length > 0 && !selectedMargin) setSelectedMargin(margins[0]);
@@ -75,7 +81,7 @@ export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      const refs = [storeRef.current, marginRef.current, durationRef.current];
+      const refs = [marginRef.current, durationRef.current];
       if (!refs.some((r) => r?.contains(e.target as Node))) setOpen(null);
     };
     document.addEventListener("mousedown", handler);
@@ -88,68 +94,6 @@ export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2.5", disabled && "pointer-events-none opacity-40")}>
-      {/* Store */}
-      <div className="relative" ref={storeRef}>
-        <button
-          type="button"
-          onClick={() => toggle("store")}
-          aria-haspopup="listbox"
-          aria-expanded={open === "store"}
-          className={cn(
-            "flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 transition-all",
-            open === "store"
-              ? "border-ithina-purple/50 bg-ithina-purple/5"
-              : "border-ithina-border bg-white/[0.02] hover:border-slate-600 hover:bg-white/[0.05]",
-          )}
-        >
-          <Building2 className={cn("size-3.5 shrink-0 transition-colors", open === "store" ? "text-ithina-purple" : "text-slate-500")} />
-          <div className="text-left leading-none">
-            <span className="mb-0.5 block font-mono text-[9px] uppercase tracking-widest text-slate-500">Store</span>
-            <span className="block font-mono text-xs font-semibold text-white">{selectedStore.short}</span>
-          </div>
-          <ChevronDown className={cn("ml-0.5 size-3 shrink-0 text-slate-600 transition-transform duration-200", open === "store" && "rotate-180 text-ithina-purple")} />
-        </button>
-
-        {open === "store" && (
-          <div className="absolute bottom-full left-0 z-50 mb-2 w-72 overflow-hidden rounded-xl border border-ithina-border bg-ithina-sidebar shadow-2xl">
-            <div className="border-b border-ithina-border/60 px-4 pb-2 pt-3">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-slate-500">Select Target Store</p>
-            </div>
-            <div className="p-1.5">
-              {stores.map((s) => (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => { setSelectedStore(s); setOpen(null); emitChange(s, selectedMargin, selectedDuration); }}
-                  className={cn(
-                    "flex w-full cursor-pointer items-start gap-3 rounded-lg px-3 py-2.5 text-left transition-all",
-                    selectedStore.id === s.id ? "border border-ithina-purple/25 bg-ithina-purple/10" : "border border-transparent hover:bg-white/[0.04]",
-                  )}
-                >
-                  <div className={cn("mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-md", selectedStore.id === s.id ? "bg-ithina-purple/15" : "bg-white/[0.04]")}>
-                    <Building2 className={cn("size-3.5", selectedStore.id === s.id ? "text-ithina-purple" : "text-slate-500")} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="mb-0.5 flex items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-white">{s.name}</span>
-                      {selectedStore.id === s.id && <span className="rounded bg-ithina-purple/10 px-1.5 py-0.5 font-mono text-[9px] text-ithina-purple">ACTIVE</span>}
-                    </div>
-                    <p className="mb-1.5 truncate text-[10px] text-slate-500">{s.address}</p>
-                    <div className="flex items-center gap-3">
-                      <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <span className="inline-block size-1.5 rounded-full bg-emerald-400" /> {s.displays} displays
-                      </span>
-                      <span className="flex items-center gap-1 text-[10px] text-slate-400">
-                        <span className="inline-block size-1.5 rounded-full bg-ithina-purple" /> {s.activePromos} active promos
-                      </span>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
 
       {/* Margin Floor */}
       <div className="relative" ref={marginRef}>
@@ -260,3 +204,5 @@ export default function ConstraintBar({ disabled, onChange }: ConstraintBarProps
     </div>
   );
 }
+
+export default memo(ConstraintBar);

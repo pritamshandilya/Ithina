@@ -1,7 +1,6 @@
 import { AlertTriangle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import PageHeader from "@/components/shared/page-header";
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { useFleetStats, useHardwareAlertQuery, useQueueRows, useResolveAlert } from "@/hooks/use-fleet";
 
@@ -65,30 +64,18 @@ export default function Fleet() {
   const isLoading = statsLoading || queueLoading;
   const hasError = statsError;
 
-  const fleetHeader = (
-    <PageHeader
-      breadcrumbs={[{ label: "Promotions Assistant" }, { label: "Fleet Execution", isActive: true }]}
-      title="Live Network Tracking"
-    />
-  );
-
   if (hasError) {
     return (
-      <>
-        {fleetHeader}
-        <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-          <AlertTriangle className="size-10 text-rose-400" />
-          <h3 className="text-sm font-semibold text-white">Failed to load fleet data</h3>
-          <p className="text-xs text-slate-400">Please refresh the page and try again.</p>
-        </div>
-      </>
+      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
+        <AlertTriangle className="size-10 text-rose-400" />
+        <h3 className="text-sm font-semibold text-white">Failed to load fleet data</h3>
+        <p className="text-xs text-slate-400">Please refresh the page and try again.</p>
+      </div>
     );
   }
 
   return (
     <>
-      {fleetHeader}
-
       {isLoading ? (
         <LoadingSpinner label="Loading fleet data..." className="flex-1" />
       ) : (

@@ -5,8 +5,14 @@ export interface InboxItem {
   initiator: string;
   skus: number;
   meta: string;
-  metaVariant: "success" | "muted";
+  metaVariant: "success" | "muted" | "warning";
   urgent: boolean;
+  status?: "pending" | "approved" | "rejected";
+
+  // Prototype-only fields (used for the approval queue table layout).
+  hardwareTargets?: string[];
+  guardRailsLabel?: string;
+  submittedAt?: string;
 }
 
 export interface ValidationCheck {

@@ -1,10 +1,10 @@
 import { ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { DiffTrack } from "@/types/approval";
 
-export default function VisualDiffViewer() {
+function VisualDiffViewer() {
   const [activeTrack, setActiveTrack] = useState<DiffTrack>("esl");
 
   return (
@@ -103,6 +103,8 @@ function EslDiff() {
     </div>
   );
 }
+
+export default memo(VisualDiffViewer);
 
 function LcdDiff() {
   return (

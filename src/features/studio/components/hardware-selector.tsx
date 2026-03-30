@@ -1,5 +1,5 @@
 import { Check, ChevronDown, Monitor, Smartphone, Tv } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId, HwOption } from "@/types/studio";
@@ -16,7 +16,7 @@ const hwIcons: Record<HardwareDeviceId, React.ReactNode> = {
   lcd: <Tv className="size-4" />,
 };
 
-export default function HardwareSelector({ options, active, onSelect }: HardwareSelectorProps) {
+function HardwareSelector({ options, active, onSelect }: HardwareSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -72,3 +72,5 @@ export default function HardwareSelector({ options, active, onSelect }: Hardware
     </div>
   );
 }
+
+export default memo(HardwareSelector);

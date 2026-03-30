@@ -13,9 +13,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWizardRouteImport } from './routes/_authenticated/wizard'
+import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
 import { Route as AuthenticatedStudioRouteImport } from './routes/_authenticated/studio'
+import { Route as AuthenticatedStoreSettingsRouteImport } from './routes/_authenticated/store-settings'
 import { Route as AuthenticatedFleetRouteImport } from './routes/_authenticated/fleet'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
 import { Route as AuthenticatedApprovalRouteImport } from './routes/_authenticated/approval'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
@@ -38,11 +41,22 @@ const AuthenticatedWizardRoute = AuthenticatedWizardRouteImport.update({
   path: '/wizard',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTemplatesRoute = AuthenticatedTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedStudioRoute = AuthenticatedStudioRouteImport.update({
   id: '/studio',
   path: '/studio',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedStoreSettingsRoute =
+  AuthenticatedStoreSettingsRouteImport.update({
+    id: '/store-settings',
+    path: '/store-settings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedFleetRoute = AuthenticatedFleetRouteImport.update({
   id: '/fleet',
   path: '/fleet',
@@ -51,6 +65,11 @@ const AuthenticatedFleetRoute = AuthenticatedFleetRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedCampaignsRoute = AuthenticatedCampaignsRouteImport.update({
+  id: '/campaigns',
+  path: '/campaigns',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedApprovalRoute = AuthenticatedApprovalRouteImport.update({
@@ -69,9 +88,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/approval': typeof AuthenticatedApprovalRoute
+  '/campaigns': typeof AuthenticatedCampaignsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/fleet': typeof AuthenticatedFleetRoute
+  '/store-settings': typeof AuthenticatedStoreSettingsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/templates': typeof AuthenticatedTemplatesRoute
   '/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRoutesByTo {
@@ -79,9 +101,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/approval': typeof AuthenticatedApprovalRoute
+  '/campaigns': typeof AuthenticatedCampaignsRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/fleet': typeof AuthenticatedFleetRoute
+  '/store-settings': typeof AuthenticatedStoreSettingsRoute
   '/studio': typeof AuthenticatedStudioRoute
+  '/templates': typeof AuthenticatedTemplatesRoute
   '/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRoutesById {
@@ -91,9 +116,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/approval': typeof AuthenticatedApprovalRoute
+  '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/fleet': typeof AuthenticatedFleetRoute
+  '/_authenticated/store-settings': typeof AuthenticatedStoreSettingsRoute
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
+  '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/wizard': typeof AuthenticatedWizardRoute
 }
 export interface FileRouteTypes {
@@ -103,9 +131,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin'
     | '/approval'
+    | '/campaigns'
     | '/dashboard'
     | '/fleet'
+    | '/store-settings'
     | '/studio'
+    | '/templates'
     | '/wizard'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -113,9 +144,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/admin'
     | '/approval'
+    | '/campaigns'
     | '/dashboard'
     | '/fleet'
+    | '/store-settings'
     | '/studio'
+    | '/templates'
     | '/wizard'
   id:
     | '__root__'
@@ -124,9 +158,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/_authenticated/admin'
     | '/_authenticated/approval'
+    | '/_authenticated/campaigns'
     | '/_authenticated/dashboard'
     | '/_authenticated/fleet'
+    | '/_authenticated/store-settings'
     | '/_authenticated/studio'
+    | '/_authenticated/templates'
     | '/_authenticated/wizard'
   fileRoutesById: FileRoutesById
 }
@@ -166,11 +203,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedWizardRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/templates': {
+      id: '/_authenticated/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AuthenticatedTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/studio': {
       id: '/_authenticated/studio'
       path: '/studio'
       fullPath: '/studio'
       preLoaderRoute: typeof AuthenticatedStudioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/store-settings': {
+      id: '/_authenticated/store-settings'
+      path: '/store-settings'
+      fullPath: '/store-settings'
+      preLoaderRoute: typeof AuthenticatedStoreSettingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/fleet': {
@@ -185,6 +236,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/campaigns': {
+      id: '/_authenticated/campaigns'
+      path: '/campaigns'
+      fullPath: '/campaigns'
+      preLoaderRoute: typeof AuthenticatedCampaignsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/approval': {
@@ -207,18 +265,24 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedApprovalRoute: typeof AuthenticatedApprovalRoute
+  AuthenticatedCampaignsRoute: typeof AuthenticatedCampaignsRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedFleetRoute: typeof AuthenticatedFleetRoute
+  AuthenticatedStoreSettingsRoute: typeof AuthenticatedStoreSettingsRoute
   AuthenticatedStudioRoute: typeof AuthenticatedStudioRoute
+  AuthenticatedTemplatesRoute: typeof AuthenticatedTemplatesRoute
   AuthenticatedWizardRoute: typeof AuthenticatedWizardRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedApprovalRoute: AuthenticatedApprovalRoute,
+  AuthenticatedCampaignsRoute: AuthenticatedCampaignsRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedFleetRoute: AuthenticatedFleetRoute,
+  AuthenticatedStoreSettingsRoute: AuthenticatedStoreSettingsRoute,
   AuthenticatedStudioRoute: AuthenticatedStudioRoute,
+  AuthenticatedTemplatesRoute: AuthenticatedTemplatesRoute,
   AuthenticatedWizardRoute: AuthenticatedWizardRoute,
 }
 

@@ -1,4 +1,5 @@
 import { Image } from "lucide-react";
+import { memo } from "react";
 
 import type { AssetInfo } from "@/types/studio";
 
@@ -6,7 +7,7 @@ interface AssetPanelProps {
   asset: AssetInfo;
 }
 
-export default function AssetPanel({ asset }: AssetPanelProps) {
+function AssetPanel({ asset }: AssetPanelProps) {
   return (
     <div className="flex h-40 shrink-0 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl">
       <header className="flex items-center justify-between border-b border-ithina-border bg-white/[0.01] px-5 py-3">
@@ -32,3 +33,5 @@ export default function AssetPanel({ asset }: AssetPanelProps) {
     </div>
   );
 }
+
+export default memo(AssetPanel);

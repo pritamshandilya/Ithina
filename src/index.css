@@ -130,27 +130,31 @@
     @apply bg-background text-foreground;
   }
 
-  @layer base {
-    button:not(:disabled),
-    [role="button"]:not(:disabled) {
-      cursor: pointer;
-    }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
   }
 }
 
+::selection {
+  background-color: rgba(168, 85, 247, 0.3);
+  color: #fff;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background-color: #334155;
-  border-radius: 4px;
+  background-color: rgba(51, 65, 85, 0.6);
+  border-radius: 9999px;
+  transition: background-color 0.2s;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background-color: #475569;
+  background-color: rgba(168, 85, 247, 0.5);
 }
 
 @keyframes scanline {
@@ -161,6 +165,471 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-8px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 6px rgba(168, 85, 247, 0.15); }
+  50% { box-shadow: 0 0 16px rgba(168, 85, 247, 0.35); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+/* ==========================================================================
+   DataTable (Tabulator) – full theme override
+   ========================================================================== */
+
+.data-table-wrapper {
+  --tabulator-bg: var(--card);
+  --tabulator-fg: var(--card-foreground);
+  --tabulator-border: var(--border);
+  --tabulator-header-bg: color-mix(in oklch, var(--card) 100%, black 12%);
+  --tabulator-row-even: color-mix(in oklch, var(--card) 100%, white 3%);
+  --tabulator-row-hover: color-mix(in oklch, var(--accent) 12%, var(--card));
+  --tabulator-sort-icon: var(--muted-foreground);
+  --tabulator-sort-active: var(--accent);
+}
+
+.data-table-container {
+  min-height: 240px;
+}
+
+.data-table-wrapper .tabulator {
+  background-color: var(--tabulator-bg) !important;
+  border: none;
+  color: var(--tabulator-fg);
+  min-width: 100% !important;
+  width: max-content !important;
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  background-color: var(--tabulator-bg) !important;
+  min-width: 100% !important;
+}
+
+.data-table-wrapper .tabulator-tableholder .tabulator-table {
+  background-color: var(--tabulator-bg) !important;
+  min-width: 100% !important;
+  width: max-content !important;
+}
+
+.data-table-wrapper .tabulator-header {
+  background-color: var(--tabulator-header-bg) !important;
+  border-bottom: 2px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col {
+  background-color: var(--tabulator-header-bg) !important;
+  border-right: 1px dotted var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.375rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  color: var(--tabulator-fg);
+  text-align: center;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+  width: 6px;
+  margin-right: -3px;
+  background: color-mix(in oklch, var(--accent) 35%, transparent);
+  cursor: col-resize;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  width: 100%;
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 88%, black 12%);
+  color: var(--card-foreground);
+  font-size: 0.75rem;
+  padding: 0.25rem 0.375rem;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.data-table-wrapper .tabulator-col .tabulator-col-content .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-icon);
+  border-top-color: var(--tabulator-sort-icon);
+}
+
+.data-table-wrapper .tabulator-col.tabulator-col-sortable:hover .tabulator-arrow,
+.data-table-wrapper .tabulator-col.tabulator-sortable .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-active);
+  border-top-color: var(--tabulator-sort-active);
+}
+
+.data-table-wrapper .tabulator-row {
+  min-height: 2rem;
+  background-color: var(--tabulator-bg) !important;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-row-even) !important;
+}
+
+.data-table-wrapper .tabulator-row:hover {
+  background-color: var(--tabulator-row-hover) !important;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected {
+  background-color: color-mix(in oklch, var(--accent) 18%, var(--card)) !important;
+}
+
+.data-table-wrapper .tabulator-cell {
+  background-color: inherit !important;
+  border-right: 1px dotted var(--tabulator-border) !important;
+  border-bottom: 1px solid var(--tabulator-border);
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--tabulator-fg);
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table-wrapper[data-prototype="true"] .tabulator-cell {
+  text-align: left;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen {
+  border-right: 2px dotted var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen.tabulator-frozen-right {
+  border-right: none !important;
+  border-left: 2px dotted var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-track {
+  background: color-mix(in oklch, var(--card) 100%, black 15%);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background: var(--tabulator-border);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+.data-table-wrapper {
+  overflow-x: auto !important;
+}
+
+.data-table-wrapper .tabulator-row:focus-visible,
+.data-table-wrapper .tabulator-cell:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selectable:hover {
+  cursor: pointer;
+}
+
+.template-preview-esl-pixelated {
+  image-rendering: pixelated;
+}
+
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse {
+  background-color: var(--tabulator-row-even) !important;
+  border: 1px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row .tabulator-responsive-collapse table tr td {
+  color: var(--tabulator-fg);
+  border-color: var(--tabulator-border);
+}
+
+.data-table-wrapper .tabulator-cell .tabulator-responsive-collapse-toggle {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+.data-table-wrapper .tabulator .tabulator-footer {
+  border-top: 1px solid var(--tabulator-border);
+  background-color: color-mix(in oklch, var(--card) 96%, black 4%) !important;
+  color: var(--muted-foreground) !important;
+  padding: 0.5rem 0.75rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-footer-contents,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-paginator,
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-counter,
+.data-table-wrapper .tabulator .tabulator-footer span,
+.data-table-wrapper .tabulator .tabulator-footer label {
+  background-color: transparent !important;
+  color: var(--muted-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page {
+  border: 1px solid var(--tabulator-border);
+  background: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  border-radius: 0.375rem;
+  min-width: 2rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page.active {
+  background: color-mix(in oklch, var(--accent) 24%, transparent) !important;
+  border-color: color-mix(in oklch, var(--accent) 50%, transparent);
+  color: var(--card-foreground) !important;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page:disabled {
+  opacity: 0.5;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size {
+  border-radius: 0.375rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in oklch, var(--card) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  padding: 0.25rem 0.375rem;
+}
+
+.data-table-wrapper .tabulator .tabulator-footer .tabulator-page-size option {
+  background-color: var(--card);
+  color: var(--card-foreground);
+}
+
+/* Approval queue Tabulator — index_3.1.html table chrome (sticky header, row dividers) */
+.data-table-wrapper.approval-queue-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid var(--border) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  padding: 0.75rem 1rem;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-row.approval-queue-row-selected {
+  background-color: color-mix(in srgb, var(--primary) 14%, transparent) !important;
+}
+
+.data-table-wrapper.approval-queue-prototype .tabulator-footer {
+  border-top: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  background-color: color-mix(in srgb, var(--background) 40%, transparent);
+  padding: 0.625rem 1.5rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+
+/* Campaigns list — index_3.1.html All Campaigns table (Tabulator) */
+.data-table-wrapper.campaigns-tabulator-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.75rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-check .tabulator-col-content {
+  padding-left: 1.25rem;
+  padding-right: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-campaign .tabulator-col-content {
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-header .camp-col-actions .tabulator-col-content {
+  padding-left: 1rem;
+  padding-right: 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  vertical-align: middle;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-check {
+  padding: 0.75rem 0.75rem 0.75rem 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-campaign {
+  padding: 0.75rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-mid {
+  padding: 0.75rem 1rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-cell.camp-col-actions {
+  padding: 0.75rem 1.25rem;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-row.campaigns-row-selected {
+  background-color: color-mix(in srgb, var(--primary) 12%, transparent) !important;
+}
+
+/* Natural table width + horizontal scroll — avoids fitColumns stretching cells across the viewport */
+.data-table-wrapper.campaigns-tabulator-prototype .tabulator-tableholder {
+  scrollbar-gutter: stable;
+}
+
+/* Guard Rails admin — index_3.1 store.guardRails table (Tabulator) */
+.data-table-wrapper.guard-rails-tabulator-prototype {
+  --tabulator-bg: var(--background);
+  --tabulator-fg: var(--foreground);
+  --tabulator-border: var(--border);
+  --tabulator-row-even: var(--background);
+  --tabulator-row-hover: rgb(255 255 255 / 0.018);
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header {
+  background-color: color-mix(in srgb, var(--sidebar) 95%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent) !important;
+  backdrop-filter: blur(8px);
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header .tabulator-col {
+  border-right: none !important;
+  background-color: transparent !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.875rem 1rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  background: transparent !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell {
+  border-right: none !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  vertical-align: middle;
+  padding: 0.875rem 1rem;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell.gr-col-actions {
+  padding-right: 1.25rem;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder {
+  scrollbar-gutter: stable;
 }

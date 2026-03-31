@@ -31,6 +31,7 @@ import {
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { approvalKeys } from "@/hooks/use-approval";
+import { campaignKeys } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import type { InboxItem } from "@/types/approval";
@@ -71,6 +72,7 @@ export default function Wizard() {
   const [designConfigured, setDesignConfigured] = useState(false);
   const [showStudio, setShowStudio] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
+  const [scheduledAt, setScheduledAt] = useState<{ date: string; time: string }>({ date: "", time: "08:00" });
   const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
     chroma29: [],
     chroma42: ['2.9"'],
@@ -236,7 +238,8 @@ export default function Wizard() {
     dispatch(setWStep(4));
   }, [dispatch]);
 
-  const handleNlNextFromSchedule = useCallback(() => {
+  const handleNlNextFromSchedule = useCallback((payload: { startDate: string; startTime: string }) => {
+    setScheduledAt({ date: payload.startDate, time: payload.startTime });
     dispatch(setWStep(5));
   }, [dispatch]);
 
@@ -244,9 +247,11 @@ export default function Wizard() {
     const resolvedName = campaignName || "Untitled Campaign";
     let resolvedId = `inbox-${Date.now()}`;
     try {
-      const created = await createCampaignFromWizard(resolvedName);
+      const scheduleDate = scheduledAt.date ? `${scheduledAt.date}T${scheduledAt.time}:00` : "";
+      const created = await createCampaignFromWizard(resolvedName, "Wizard", scheduleDate);
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
       resolvedId = created.id;
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
     } catch {
       dispatch(activateCampaign(resolvedName));
     }
@@ -282,7 +287,7 @@ export default function Wizard() {
     dispatch(resetWizard());
     dispatch(resetStudio());
     navigate({ to: "/approval" });
-  }, [campaignName, dispatch, gridData.length, navigate, queryClient, selectedDevices, toApprovalHardwareLabel]);
+  }, [campaignName, dispatch, gridData.length, navigate, queryClient, scheduledAt.date, scheduledAt.time, selectedDevices, toApprovalHardwareLabel]);
 
   // Manual flow confirm
   const handleManualConfirm = useCallback(async () => {
@@ -553,6 +558,8 @@ export default function Wizard() {
                 onSubmit={handleNlSubmit}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={gridData.length || csvRows.length}
+                scheduleDateLabel={scheduledAt.date || "Immediate"}
+                scheduleTimeLabel={scheduledAt.time || "08:00"}
                 displayTags={submitDisplayTags}
               />
             )}

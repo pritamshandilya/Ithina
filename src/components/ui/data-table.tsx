@@ -35,6 +35,8 @@ export interface DataTableProps<T = object> {
   pageSizeSelector?: number[] | true;
   layout?: "fitColumns" | "fitData" | "fitDataFill" | "fitDataStretch" | "fitDataTable";
   movableColumns?: boolean;
+  resizableColumns?: boolean;
+  resizableColumnFit?: boolean;
   onPaginationChange?: (state: { page: number; pageSize: number }) => void;
   rowFormatter?: (row: { getData: () => T; getElement: () => HTMLElement }) => void;
   showRowNumber?: boolean;
@@ -54,6 +56,8 @@ export function DataTable<T extends object>({
   pageSizeSelector = [5, 10, 20, 50],
   layout = "fitColumns",
   movableColumns = false,
+  resizableColumns = true,
+  resizableColumnFit = false,
   onPaginationChange,
   rowFormatter,
   showRowNumber = true,
@@ -103,8 +107,8 @@ export function DataTable<T extends object>({
       columns: finalColumns,
       layout,
       responsiveLayout: false,
-      resizableColumns: true,
-      resizableColumnFit: false,
+      resizableColumns,
+      resizableColumnFit,
       movableColumns,
       placeholder: emptyMessage,
       index: rowIdKey,

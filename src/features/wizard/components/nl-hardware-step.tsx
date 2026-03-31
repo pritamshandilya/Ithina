@@ -3,6 +3,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
+import type { AppliedDesignSelection } from "./campaign-studio-modal";
 
 import {
   ESL_DEVICE,
@@ -24,6 +25,7 @@ export interface NlHardwareStepProps {
   designConfigured: boolean;
   onSetShowStudio: (value: boolean) => void;
   selectedVariant: "A" | "B" | "C";
+  selectedDesign: AppliedDesignSelection | null;
   onNext: () => void;
 }
 
@@ -37,6 +39,7 @@ function NlHardwareStep({
   designConfigured,
   onSetShowStudio,
   selectedVariant,
+  selectedDesign,
   onNext,
 }: NlHardwareStepProps) {
   const [eslDropOpen, setEslDropOpen] = useState(false);
@@ -83,6 +86,18 @@ function NlHardwareStep({
       : `${eslSizeCount || 1} size${eslSizeCount !== 1 ? "s" : ""} · e-ink · 3-colour`;
 
   const designReadyToProgress = designConfigured && canConfigure;
+  const sourceLabel =
+    selectedDesign?.source === "template"
+      ? "Template Library"
+      : selectedDesign?.source === "upload"
+        ? "Manual Upload"
+        : "AI Generated";
+  const selectedName =
+    selectedDesign?.source === "template"
+      ? selectedDesign.templateName ?? "Selected Template"
+      : selectedDesign?.source === "upload"
+        ? selectedDesign.uploadedFileName ?? "Uploaded Design"
+        : `Variant ${selectedVariant} — ${selectedVariant === "A" ? "Price-Dominant" : selectedVariant === "B" ? "Urgency" : "Balanced"}`;
 
   const toggleEslSize = useCallback((size: string) => onToggleSize(ESL_DEVICE, size), [onToggleSize]);
   const toggleLcdSize = useCallback((size: string) => onToggleSize(LCD_DEVICE, size), [onToggleSize]);
@@ -302,27 +317,59 @@ function NlHardwareStep({
             {designConfigured ? (
               <div className="flex items-start gap-5 p-5">
                 <div className="shrink-0">
-                  <div className="w-[120px] overflow-hidden rounded-md border-2 border-slate-400 bg-[#F0F0F0]">
-                    <div className="bg-red-700 py-1 text-center">
-                      <span className="text-[7px] font-black uppercase tracking-wide text-white">CLEARANCE</span>
+                  {designDevice === LCD_DEVICE ? (
+                    <div className="aspect-video w-[160px] overflow-hidden rounded-md border-2 border-slate-600">
+                      <div className="flex h-full flex-col bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]">
+                        <div
+                          className="shrink-0 py-1 text-center"
+                          style={{ background: selectedDesign?.templateHeaderColor ?? "#d97706" }}
+                        >
+                          <span className="text-[7px] font-black uppercase tracking-widest text-black">
+                            {selectedDesign?.templateHeaderText ?? "FLASH SALE"}
+                          </span>
+                        </div>
+                        <div className="flex min-h-0 flex-1 flex-col justify-end p-[5px]">
+                          <span className="text-[6px] text-slate-400">{selectedDesign?.templateProductLine ?? "Premium Salmon Tray"}</span>
+                          <span className="text-[16px] font-black leading-none text-white">
+                            $10<span className="text-[10px]">.39</span>
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="bg-[#F5F5F5] p-2">
-                      <p className="text-[7px] font-semibold text-[#555]">Premium Salmon Tray</p>
-                      <p className="text-[22px] font-black leading-none text-[#111]">
-                        $10<span className="text-[13px]">.39</span>
-                      </p>
+                  ) : (
+                    <div className="w-[120px] overflow-hidden rounded-md border-2 border-slate-400 bg-[#F0F0F0]">
+                      <div
+                        className="py-1 text-center"
+                        style={{ background: selectedDesign?.templateHeaderColor ?? "#cc0000" }}
+                      >
+                        <span className="text-[7px] font-black uppercase tracking-wide text-white">
+                          {selectedDesign?.templateHeaderText ?? "EXPIRING IN 48H"}
+                        </span>
+                      </div>
+                      <div className="bg-[#F5F5F5] p-2">
+                        <p className="text-[7px] font-semibold text-[#555]">
+                          {selectedDesign?.templateProductLine ?? "Premium Salmon Tray"}
+                        </p>
+                        <p className="text-[22px] font-black leading-none text-[#111]">
+                          $10<span className="text-[13px]">.39</span>
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   <p className="mt-1.5 text-center font-mono text-[9px] text-slate-500">Preview</p>
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="text-sm font-semibold text-white">
-                      Variant {selectedVariant} —{" "}
-                      {selectedVariant === "A" ? "Price-Dominant" : selectedVariant === "B" ? "Urgency" : "Balanced"}
-                    </span>
-                    <span className="rounded-full border border-ithina-purple/20 bg-ithina-purple/10 px-2 py-0.5 font-mono text-[9px] text-ithina-purple">
-                      AI Generated
+                    <span className="text-sm font-semibold text-white">{selectedName}</span>
+                    <span
+                      className={cn(
+                        "rounded-full px-2 py-0.5 font-mono text-[9px]",
+                        designDevice === LCD_DEVICE
+                          ? "border border-amber-400/20 bg-amber-400/10 text-amber-400"
+                          : "border border-ithina-purple/20 bg-ithina-purple/10 text-ithina-purple",
+                      )}
+                    >
+                      {sourceLabel}
                     </span>
                   </div>
                   <p className="mb-3 text-xs text-slate-400">
@@ -333,7 +380,12 @@ function NlHardwareStep({
                     {(designDevice === LCD_DEVICE ? lcdSizes : eslSizes).map((s) => (
                       <span
                         key={s}
-                        className="rounded-full border border-ithina-purple/20 bg-ithina-purple/8 px-2 py-0.5 font-mono text-[9px] text-ithina-purple"
+                        className={cn(
+                          "rounded-full px-2 py-0.5 font-mono text-[9px]",
+                          designDevice === LCD_DEVICE
+                            ? "border border-amber-400/20 bg-amber-400/10 text-amber-400"
+                            : "border border-ithina-purple/20 bg-ithina-purple/8 text-ithina-purple",
+                        )}
                       >
                         {s}
                       </span>

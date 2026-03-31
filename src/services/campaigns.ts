@@ -139,14 +139,18 @@ export async function rejectCampaign(id: string): Promise<CampaignListItem> {
   return next;
 }
 
-export async function createCampaignFromWizard(name: string, initiator: string = "Wizard"): Promise<CampaignListItem> {
+export async function createCampaignFromWizard(
+  name: string,
+  initiator: string = "Wizard",
+  scheduledDate: string = "",
+): Promise<CampaignListItem> {
   return createCampaign({
     name,
-    status: "Draft",
+    status: scheduledDate ? "Scheduled" : "Draft",
     skus: 0,
     hardware: "",
     initiator,
-    scheduled_date: "",
+    scheduled_date: scheduledDate,
   });
 }
 

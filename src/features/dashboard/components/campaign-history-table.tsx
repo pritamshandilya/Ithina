@@ -78,11 +78,15 @@ function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
         columns={columns}
         data={campaigns}
         rowIdField="id"
+        className="dashboard-history-table"
         emptyMessage="No campaigns found"
+        headerFilters={false}
         pageSize={5}
         pageSizeSelector={[5, 10, 20]}
         showRowNumber
         layout="fitColumns"
+        resizableColumns
+        resizableColumnFit
       />
     </div>
   );

@@ -400,7 +400,24 @@ export default function ApprovalQueueTabulator() {
         hozAlign: "center",
         width: 36,
         minWidth: 36,
-        formatter: () => `<input type="checkbox" data-proto-row-checkbox="true" class="accent-purple-500 cursor-pointer" aria-label="Select row" />`,
+        formatter: (cell) => {
+          const r = cell.getData() as AllRow;
+          const checked = selectedIdsRef.current.has(r.id);
+          return `<button
+            type="button"
+            data-proto-row-checkbox="true"
+            aria-label="Select ${r.title}"
+            class="inline-flex size-4 items-center justify-center rounded border transition-colors ${
+              checked
+                ? "border-ithina-purple bg-ithina-purple text-white"
+                : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
+            }"
+          >
+            <svg class="size-2.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.415 0L3.296 9.216a1 1 0 111.415-1.415l4.036 4.036 6.543-6.546a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>`;
+        },
       },
       {
         title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Campaign</div>`,
@@ -507,7 +524,20 @@ export default function ApprovalQueueTabulator() {
         formatter: (cell) => {
           const r = cell.getData() as InboxItem;
           const checked = selectedIdsRef.current.has(r.id);
-          return `<input type="checkbox" data-proto-row-checkbox="true" class="accent-purple-500 cursor-pointer" ${checked ? "checked" : ""} aria-label="Select ${r.title}" />`;
+          return `<button
+            type="button"
+            data-proto-row-checkbox="true"
+            aria-label="Select ${r.title}"
+            class="inline-flex size-4 items-center justify-center rounded border transition-colors ${
+              checked
+                ? "border-ithina-purple bg-ithina-purple text-white"
+                : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
+            }"
+          >
+            <svg class="size-2.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.415 0L3.296 9.216a1 1 0 111.415-1.415l4.036 4.036 6.543-6.546a1 1 0 011.414 0z" clip-rule="evenodd"/>
+            </svg>
+          </button>`;
         },
       },
       {

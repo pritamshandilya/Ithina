@@ -1,8 +1,11 @@
 import { Bell, Plus, Shield } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 
+import { PromoAuthService } from "@/lib/auth/promo-auth";
+
 export default function Header() {
   const navigate = useNavigate();
+  const role = PromoAuthService.getCurrentUser()?.role ?? "maker";
 
   return (
     <header className="relative flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-6 shadow-sm z-40">
@@ -49,14 +52,16 @@ export default function Header() {
           </div>
         </button>
 
-        {/* New Campaign — primary CTA */}
-        <button
-          onClick={() => navigate({ to: "/wizard" })}
-          className="flex items-center gap-1.5 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_14px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
-        >
-          <Plus className="size-3.5" />
-          New Campaign
-        </button>
+        {/* New Campaign — makers and admins */}
+        {(role === "maker" || role === "admin") && (
+          <button
+            onClick={() => navigate({ to: "/wizard" })}
+            className="flex items-center gap-1.5 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_14px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
+          >
+            <Plus className="size-3.5" />
+            New Campaign
+          </button>
+        )}
       </div>
     </header>
   );

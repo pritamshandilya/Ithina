@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Check,
   CloudUpload,
   Fish,
@@ -10,6 +9,8 @@ import {
   Zap,
 } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
+
+import AiModifyPanel from "./ai-modify-panel";
 
 import { cn } from "@/lib/utils";
 
@@ -182,14 +183,6 @@ const TEMPLATE_LIBRARY: TemplateItem[] = [
   },
 ];
 
-type StudioChatMessage = { role: "user" | "ai"; text: string };
-const AI_MODIFY_REPLIES = [
-  "Updated! Header is now bolder and the price font has been increased.",
-  "Applied — changed the colour scheme as requested.",
-  "Done. Added the urgency badge to the top-right corner.",
-  "Layout adjusted. The product name now appears above the price.",
-  "Regenerating with your changes applied to the selected variant...",
-];
 
 function EslVariantCard({
   v,
@@ -369,48 +362,21 @@ function CampaignStudioModal({
   const [studioTab, setStudioTab] = useState<StudioTabId>("ai");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATE_LIBRARY[0].id);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
-  const [chatInput, setChatInput] = useState("");
-  const [chatMessages, setChatMessages] = useState<StudioChatMessage[]>([]);
-  const [chatTyping, setChatTyping] = useState(false);
+  const [aiResetKey, setAiResetKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const typingTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (open) {
       setStudioTab("ai");
       setSelectedTemplateId(TEMPLATE_LIBRARY[0].id);
       setUploadedFileName("");
-      setChatInput("");
-      setChatMessages([]);
-      setChatTyping(false);
+      setAiResetKey((k) => k + 1);
     }
   }, [open]);
-
-  useEffect(
-    () => () => {
-      if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
-    },
-    [],
-  );
 
   if (!open) return null;
 
   const isLcd = mode === "lcd";
-  const sendChat = () => {
-    const text = chatInput.trim();
-    if (!text || chatTyping) return;
-
-    setChatMessages((prev) => [...prev, { role: "user", text }]);
-    setChatInput("");
-    setChatTyping(true);
-
-    if (typingTimerRef.current) window.clearTimeout(typingTimerRef.current);
-    typingTimerRef.current = window.setTimeout(() => {
-      const reply = AI_MODIFY_REPLIES[Math.floor(Math.random() * AI_MODIFY_REPLIES.length)];
-      setChatTyping(false);
-      setChatMessages((prev) => [...prev, { role: "ai", text: reply }]);
-    }, 1100);
-  };
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md">
@@ -507,74 +473,7 @@ function CampaignStudioModal({
                       )}
                     </div>
                   </div>
-                  <div className="flex w-60 shrink-0 flex-col border-l border-ithina-border bg-ithina-bg/20">
-                    <div className="flex shrink-0 items-center gap-2 border-b border-ithina-border/60 px-4 py-3">
-                      <div className="flex size-5 items-center justify-center rounded-md bg-ithina-purple/15">
-                        <Zap className="size-3 text-ithina-purple" strokeWidth={2} aria-hidden />
-                      </div>
-                      <p className="text-xs font-semibold text-white">AI Modify</p>
-                    </div>
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
-                      {chatMessages.length === 0 && !chatTyping && (
-                        <p className="py-4 text-center text-[10px] leading-relaxed text-slate-600">
-                          Describe changes to apply.
-                          <br />
-                          <span className="text-slate-700">&quot;Make header green&quot;</span>
-                        </p>
-                      )}
-
-                      {chatMessages.map((m, idx) => (
-                        <div
-                          key={`${m.role}-${idx}`}
-                          className={cn(
-                            "max-w-[92%]",
-                            m.role === "user"
-                              ? "ml-auto rounded-2xl bg-ithina-purple/20 px-3 py-2 text-sm text-slate-100"
-                              : "mr-auto rounded-2xl border border-white/80 bg-ithina-panel px-3.5 py-2.5 text-slate-200",
-                          )}
-                        >
-                          {m.role === "ai" && (
-                            <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-widest text-ithina-purple">
-                              AI
-                            </p>
-                          )}
-                          <p className="text-[12px] leading-relaxed">{m.text}</p>
-                        </div>
-                      ))}
-
-                      {chatTyping && (
-                        <div className="mr-auto inline-flex items-center gap-1.5 rounded-xl border border-ithina-purple/20 bg-ithina-purple/10 px-2.5 py-2">
-                          <span className="size-1.5 animate-pulse rounded-full bg-ithina-purple [animation-delay:0ms]" />
-                          <span className="size-1.5 animate-pulse rounded-full bg-ithina-purple [animation-delay:180ms]" />
-                          <span className="size-1.5 animate-pulse rounded-full bg-ithina-purple [animation-delay:360ms]" />
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex shrink-0 gap-2 border-t border-ithina-border/60 p-2.5">
-                      <input
-                        type="text"
-                        placeholder="Describe changes…"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            sendChat();
-                          }
-                        }}
-                        className="flex-1 rounded-lg border border-ithina-border bg-ithina-panel px-3 py-1.5 text-xs text-white placeholder:text-slate-600 transition-colors focus:border-ithina-purple focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={sendChat}
-                        disabled={chatTyping}
-                        className="shrink-0 rounded-lg bg-ithina-purple p-1.5 text-white transition-colors hover:bg-ithina-purple-hover disabled:opacity-60"
-                        aria-label="Send"
-                      >
-                        <ArrowRight className="size-3.5" strokeWidth={2} />
-                      </button>
-                    </div>
-                  </div>
+                  <AiModifyPanel resetKey={aiResetKey} />
                 </div>
                 <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/40 px-5 py-3">
                   <p className="text-xs text-slate-500">

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { PromoAuthService, getDashboardUrlForRole } from "@/lib/auth/promo-auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -27,8 +27,9 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      await PromoAuthService.login(formData.email, formData.password);
-      navigate({ to: "/dashboard" });
+      const user = await PromoAuthService.login(formData.email, formData.password);
+      const dashboardUrl = getDashboardUrlForRole(user.role);
+      navigate({ to: dashboardUrl });
     } catch {
       setError("Invalid credentials. Please try again.");
     } finally {

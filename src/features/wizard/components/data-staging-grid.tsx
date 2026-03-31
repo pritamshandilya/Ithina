@@ -2,10 +2,13 @@ import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Zap } 
 import { memo, useCallback, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { IthBadge, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { cn } from "@/lib/utils";
 import type { StagedSku } from "@/types/wizard";
 
 export type InputMode = "ai" | "csv";
+
+/* ─── CSV preview table ──────────────────────────────────────────────────── */
 
 interface CsvRow {
   sku: string;
@@ -13,6 +16,68 @@ interface CsvRow {
   current: string;
   proposed: string;
   safe: boolean;
+}
+
+const CSV_PREVIEW_COLS: IthColumnDef<CsvRow>[] = [
+  {
+    key: "sku",
+    label: "SKU",
+    width: "w-[100px]",
+    render: (row) => <span className="font-mono text-xs text-slate-400">{row.sku}</span>,
+  },
+  {
+    key: "name",
+    label: "Name",
+    render: (row) => <span className="text-sm text-slate-200">{row.name}</span>,
+  },
+  {
+    key: "current",
+    label: "Current",
+    align: "right",
+    render: (row) => <span className="font-mono text-xs text-slate-500 line-through">${row.current}</span>,
+  },
+  {
+    key: "proposed",
+    label: "Proposed",
+    align: "right",
+    render: (row) => (
+      <span className={`font-mono text-xs font-bold ${row.safe ? "text-emerald-400" : "text-rose-400"}`}>
+        ${row.proposed}
+      </span>
+    ),
+  },
+  {
+    key: "safe",
+    label: "Check",
+    align: "center",
+    render: (row) => (
+      <IthBadge label={row.safe ? "Pass" : "Low margin"} variant={row.safe ? "emerald" : "amber"} />
+    ),
+  },
+];
+
+function CsvPreviewTable({ rows }: { rows: CsvRow[] }) {
+  const preview = useMemo(
+    () => rows.slice(0, 8).map((r, i) => ({ ...r, __key: `${r.sku}-${i}` })),
+    [rows],
+  );
+
+  return (
+    <div className="overflow-hidden rounded-xl">
+      <IthTable<CsvRow & { __key: string }>
+        data={preview}
+        columns={CSV_PREVIEW_COLS as IthColumnDef<CsvRow & { __key: string }>[]}
+        rowKey={(r) => r.__key}
+        rowClassName={(row) => (!row.safe ? "opacity-60" : "")}
+        className="max-h-64 overflow-y-auto rounded-xl"
+      />
+      {rows.length > 8 && (
+        <div className="border-t border-ithina-border bg-ithina-panel px-5 py-2 font-mono text-[10px] text-slate-600">
+          +{rows.length - 8} more rows
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface DataStagingGridProps {
@@ -373,56 +438,7 @@ function DataStagingGrid({
                     Clear
                   </button>
                 </div>
-                <div className="overflow-hidden rounded-xl border border-ithina-border bg-ithina-panel">
-                  <div className="max-h-64 overflow-y-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead className="sticky top-0 z-[1] border-b border-ithina-border bg-ithina-sidebar font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                        <tr>
-                          <th className="px-5 py-2.5">SKU</th>
-                          <th className="px-4 py-2.5">Name</th>
-                          <th className="px-4 py-2.5 text-right">Current</th>
-                          <th className="px-4 py-2.5 text-right">Proposed</th>
-                          <th className="px-4 py-2.5 text-center">Safe</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-ithina-border/50">
-                        {csvRows.slice(0, 8).map((row, i) => (
-                          <tr
-                            key={`${row.sku}-${i}`}
-                            className={cn("hover:bg-white/[0.02]", !row.safe && "opacity-60")}
-                          >
-                            <td className="px-5 py-2 font-mono text-xs text-slate-400">{row.sku}</td>
-                            <td className="px-4 py-2 text-slate-200">{row.name}</td>
-                            <td className="px-4 py-2 text-right font-mono text-xs text-slate-500 line-through">
-                              ${row.current}
-                            </td>
-                            <td
-                              className={cn(
-                                "px-4 py-2 text-right font-mono text-xs font-bold",
-                                row.safe ? "text-emerald-400" : "text-rose-400",
-                              )}
-                            >
-                              ${row.proposed}
-                            </td>
-                            <td
-                              className={cn(
-                                "px-4 py-2 text-center text-xs",
-                                row.safe ? "text-emerald-400" : "text-rose-400",
-                              )}
-                            >
-                              {row.safe ? "✓" : "!"}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {csvRows.length > 8 && (
-                    <div className="border-t border-ithina-border px-5 py-2 font-mono text-[10px] text-slate-600">
-                      +{csvRows.length - 8} more rows
-                    </div>
-                  )}
-                </div>
+                <CsvPreviewTable rows={csvRows} />
                 <button
                   type="button"
                   onClick={() => (onCsvConfirmAndProceed ?? onCsvConfirm)()}

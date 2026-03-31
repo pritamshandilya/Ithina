@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 
 type TabulatorWithInit = TabulatorFull & { initialized?: boolean };
 
-/** Narrow `.on` for SWC; inline `as never as { on: ... }` breaks the parser. */
 type TabulatorEventHost = {
   on: (name: string, cb: (...args: unknown[]) => void) => void;
 };
@@ -18,14 +17,17 @@ export type PrototypeTabulatorColumn<T extends object> = {
   sorter?: "string" | "number" | "alphanum" | "boolean" | "date" | "time" | "datetime";
   width?: number | string;
   minWidth?: number;
-  /** Applied to header and body cells for this column (Tabulator `cssClass`). */
+  maxWidth?: number;
   cssClass?: string;
   headerSort?: boolean;
   headerFilter?: boolean | "input" | "number" | "list" | "boolean";
   hozAlign?: "left" | "center" | "right";
   vertAlign?: "top" | "middle" | "bottom";
   headerHozAlign?: "left" | "center" | "right";
+  frozen?: boolean;
+  resizable?: boolean;
   formatter?: (cell: any) => string | HTMLElement | false;
+  cellClick?: (e: MouseEvent, cell: any) => void;
 };
 
 export interface PrototypeTabulatorProps<T extends object> {
@@ -33,31 +35,44 @@ export interface PrototypeTabulatorProps<T extends object> {
   data: T[];
   rowIdField?: keyof T | string;
   emptyMessage?: string;
+
+  /** Enable built-in Tabulator pagination */
   pagination?: boolean;
   pageSize?: number;
-  /** When false, hides the page-size dropdown (cleaner prototype footer). */
   pageSizeSelector?: number[] | true | false;
+
+  /** Enable virtual DOM rendering for large datasets (thousands of rows) */
+  virtualDom?: boolean;
+  /** Row height hint for virtual DOM (px). Default 40. */
+  virtualDomRowHeight?: number;
+
   initialSort?: { field: keyof T | string; dir: "asc" | "desc" };
   layout?: "fitColumns" | "fitData" | "fitDataFill" | "fitDataStretch" | "fitDataTable";
+
+  /** Allow columns to be resized by dragging. Default false. */
+  resizableColumns?: boolean;
   movableColumns?: boolean;
+
   className?: string;
-  /** Tabulator height, e.g. `"100%"` so the grid scrolls inside a flex parent. */
   tableHeight?: string | number;
-  /** Bump when row HTML formatters must refresh (e.g. selection state) without data identity change. */
+
+  /** Bump to force row re-render without data identity change */
   formatRevision?: string | number;
-  /** Highlight or style rows; runs again when `formatRevision` changes. */
   rowFormatter?: (row: T, el: HTMLElement) => void;
+
   headerCheckbox?: {
     checked: boolean;
     indeterminate: boolean;
     onChange: (checked: boolean) => void;
     selector?: string;
   };
+
   onCellClick?: (e: MouseEvent, row: T, cell: any) => void;
+  onRowClick?: (e: MouseEvent, row: T) => void;
 }
 
-function toTabulatorColumnDefs<T extends object>(columns: PrototypeTabulatorColumn<T>[]) {
-  return columns.map((col) => ({
+function toTabulatorColumnDefs<T extends object>(cols: PrototypeTabulatorColumn<T>[]) {
+  return cols.map((col) => ({
     title: col.title,
     field: col.field as string,
     headerSort: col.headerSort !== false,
@@ -67,15 +82,30 @@ function toTabulatorColumnDefs<T extends object>(columns: PrototypeTabulatorColu
     headerHozAlign: col.headerHozAlign ?? ("center" as const),
     width: col.width,
     minWidth: col.minWidth,
+    maxWidth: col.maxWidth,
     cssClass: col.cssClass,
     sorter: col.sorter,
+    frozen: col.frozen,
+    resizable: col.resizable,
     formatter: col.formatter ? (cell: any) => col.formatter?.(cell) : undefined,
+    cellClick: col.cellClick
+      ? (_e: MouseEvent, cell: any) => col.cellClick?.(_e, cell)
+      : undefined,
   }));
 }
 
 /**
- * Tabulator wrapper: theme via `index.css` (.data-table-wrapper), optional header checkbox, cell actions.
- * Keeps column definitions in sync via `setColumns` so HTML formatters (e.g. checkboxes) stay current.
+ * PrototypeTabulator — production-grade reusable virtual-scroll table.
+ *
+ * Features:
+ *  • Virtual DOM rendering (virtualDom=true) for thousands of rows with no lag
+ *  • Resizable columns (resizableColumns=true)
+ *  • Frozen (pinned) columns via column.frozen
+ *  • Built-in server-friendly pagination
+ *  • Sticky themed header matching the ithina design system
+ *  • Row-click handler
+ *  • Header checkbox for bulk selection
+ *  • Typed column definitions
  */
 export function PrototypeTabulator<T extends object>({
   columns,
@@ -83,10 +113,13 @@ export function PrototypeTabulator<T extends object>({
   rowIdField = "id",
   emptyMessage = "No data",
   pagination = false,
-  pageSize = 10,
-  pageSizeSelector = [5, 10, 20, 50],
+  pageSize = 25,
+  pageSizeSelector = false,
+  virtualDom = false,
+  virtualDomRowHeight = 40,
   initialSort,
   layout = "fitColumns",
+  resizableColumns = false,
   movableColumns = false,
   className,
   tableHeight,
@@ -94,6 +127,7 @@ export function PrototypeTabulator<T extends object>({
   rowFormatter,
   headerCheckbox,
   onCellClick,
+  onRowClick,
 }: PrototypeTabulatorProps<T>) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -104,45 +138,40 @@ export function PrototypeTabulator<T extends object>({
   const rowFormatterRef = useRef(rowFormatter);
   rowFormatterRef.current = rowFormatter;
 
-  /** Bumps after Tabulator finishes async `_create` so effects can safely call setData/setHeight/… */
   const [tableBuiltGeneration, setTableBuiltGeneration] = useState(0);
 
-  const isTableReady = (table: TabulatorFull | null): table is TabulatorWithInit => {
-    return Boolean(table && (table as TabulatorWithInit).initialized);
-  };
+  const isReady = (t: TabulatorFull | null): t is TabulatorWithInit =>
+    Boolean(t && (t as TabulatorWithInit).initialized);
 
   const safeRedraw = () => {
-    const container = containerRef.current;
-    const table = tableRef.current;
-    if (!container || !isTableReady(table) || !container.isConnected) return;
+    const el = containerRef.current;
+    const t = tableRef.current;
+    if (!el || !isReady(t) || !el.isConnected) return;
     try {
-      // Tabulator typing can be stricter than the runtime API; cast to access redraw.
-      (table as unknown as { redraw?: (force?: boolean) => void }).redraw?.(true);
-    } catch {
-      // Ignore transient redraw failures during mount/unmount cycles.
-    }
+      (t as unknown as { redraw?: (f?: boolean) => void }).redraw?.(true);
+    } catch { /* ignore transient redraw failures */ }
   };
 
+  /* ── mount once ── */
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const rowIdKey = String(rowIdField);
+    const idKey = String(rowIdField);
     const tabulatorRowFormatter = rowFormatterRef.current
       ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
-          const rf = rowFormatterRef.current;
-          if (rf) rf(row.getData(), row.getElement());
+          rowFormatterRef.current?.(row.getData(), row.getElement());
         }
       : undefined;
 
     const options: Record<string, unknown> = {
-      data: data.map((row) => ({ ...row })),
+      data: data.map((r) => ({ ...r })),
       columns: toTabulatorColumnDefs(columns),
       layout,
       responsiveLayout: false,
-      resizableColumns: false,
+      resizableColumns,
       movableColumns,
       placeholder: emptyMessage,
-      index: rowIdKey,
+      index: idKey,
       headerSortTristate: false,
       pagination,
       rowFormatter: tabulatorRowFormatter,
@@ -160,6 +189,11 @@ export function PrototypeTabulator<T extends object>({
       options.paginationCounter = "rows";
     }
 
+    if (virtualDom) {
+      options.virtualDom = true;
+      options.virtualDomRowHeight = virtualDomRowHeight;
+    }
+
     if (initialSort) {
       options.initialSort = [{ column: String(initialSort.field), dir: initialSort.dir }];
     }
@@ -172,17 +206,21 @@ export function PrototypeTabulator<T extends object>({
       if (!cancelled) setTableBuiltGeneration((g) => g + 1);
     });
 
-    const observer = new ResizeObserver(() => {
-      requestAnimationFrame(() => safeRedraw());
-    });
+    const observer = new ResizeObserver(() => requestAnimationFrame(() => safeRedraw()));
     observer.observe(containerRef.current);
     resizeObserverRef.current = observer;
 
     if (onCellClick) {
       (instance as unknown as TabulatorEventHost).on("cellClick", (e, cell) => {
-        const cellAny = cell as { getData?: () => T };
-        const row = cellAny?.getData?.() as T;
-        onCellClick(e as MouseEvent, row, cellAny);
+        const c = cell as { getData?: () => T };
+        onCellClick(e as MouseEvent, c?.getData?.() as T, c);
+      });
+    }
+
+    if (onRowClick) {
+      (instance as unknown as TabulatorEventHost).on("rowClick", (e, row) => {
+        const r = row as { getData?: () => T };
+        onRowClick(e as MouseEvent, r?.getData?.() as T);
       });
     }
 
@@ -195,48 +233,49 @@ export function PrototypeTabulator<T extends object>({
       tableRef.current?.destroy();
       tableRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount once; updates via setData/setColumns/setHeight
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /* ── sync data ── */
   useEffect(() => {
-    const table = tableRef.current;
-    if (!isTableReady(table)) return;
-    table.setData(data.map((row) => ({ ...row })));
+    if (!isReady(tableRef.current)) return;
+    tableRef.current.setData(data.map((r) => ({ ...r })));
     safeRedraw();
-  }, [data, tableBuiltGeneration]);
+  }, [data, tableBuiltGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── sync columns ── */
   useEffect(() => {
-    const table = tableRef.current;
-    if (!isTableReady(table)) return;
-    // Tabulator typings sometimes omit these methods; cast to keep runtime behavior.
-    (table as unknown as { setColumns?: (cols: unknown) => void }).setColumns?.(
+    const t = tableRef.current;
+    if (!isReady(t)) return;
+    (t as unknown as { setColumns?: (c: unknown) => void }).setColumns?.(
       toTabulatorColumnDefs(columns) as never,
     );
-    table.setData(dataRef.current.map((row) => ({ ...row })));
+    t.setData(dataRef.current.map((r) => ({ ...r })));
     safeRedraw();
-  }, [columns, tableBuiltGeneration]);
+  }, [columns, tableBuiltGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── sync height ── */
   useEffect(() => {
-    const table = tableRef.current;
-    if (!isTableReady(table) || tableHeight === undefined) return;
-    (table as unknown as { setHeight?: (height: unknown) => void }).setHeight?.(
-      tableHeight as never,
-    );
+    const t = tableRef.current;
+    if (!isReady(t) || tableHeight === undefined) return;
+    (t as unknown as { setHeight?: (h: unknown) => void }).setHeight?.(tableHeight as never);
     safeRedraw();
-  }, [tableHeight, tableBuiltGeneration]);
+  }, [tableHeight, tableBuiltGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── force redraw on selection/format changes ── */
   useEffect(() => {
-    if (!isTableReady(tableRef.current) || formatRevision === undefined) return;
+    if (!isReady(tableRef.current) || formatRevision === undefined) return;
     safeRedraw();
-  }, [formatRevision, tableBuiltGeneration]);
+  }, [formatRevision, tableBuiltGeneration]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  /* ── header checkbox sync ── */
   useEffect(() => {
     headerCheckboxCleanupRef.current?.();
     headerCheckboxCleanupRef.current = null;
-    if (!isTableReady(tableRef.current) || !containerRef.current || !headerCheckbox) return;
+    if (!isReady(tableRef.current) || !containerRef.current || !headerCheckbox) return;
 
-    const selector = headerCheckbox.selector ?? "[data-proto-header-checkbox='true']";
-    const el = containerRef.current.querySelector(selector) as HTMLInputElement | null;
+    const sel = headerCheckbox.selector ?? "[data-proto-header-checkbox='true']";
+    const el = containerRef.current.querySelector(sel) as HTMLInputElement | null;
     if (!el) return;
 
     el.checked = headerCheckbox.checked;

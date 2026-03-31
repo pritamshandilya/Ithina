@@ -14,6 +14,15 @@ export interface CampaignListItem {
   hardware: string[];
   date: string;
   initiator: string;
+  ownerId?: string;
+  ownerName?: string;
+  submittedForApproval?: boolean;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  reviewedById?: string;
+  reviewedByName?: string;
+  reviewedByRole?: "checker" | "admin";
+  reviewedAt?: string;
+  publishedAt?: string;
 }
 
 export interface CampaignStatCard {

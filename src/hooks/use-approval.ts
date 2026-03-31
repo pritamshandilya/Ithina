@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  approveInboxItem,
   getInboxItems,
   getPayloadManifest,
+  rejectInboxItem,
   getValidationChecks,
   publishToFleet,
 } from "@/services/approval";
@@ -49,6 +51,30 @@ export function usePublishToFleet() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: approvalKeys.inbox });
       qc.invalidateQueries({ queryKey: approvalKeys.checks });
+    },
+  });
+}
+
+export function useApproveInboxItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: approveInboxItem,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: approvalKeys.inbox });
+      qc.invalidateQueries({ queryKey: ["campaigns", "list"] });
+      qc.invalidateQueries({ queryKey: ["fleet"] });
+    },
+  });
+}
+
+export function useRejectInboxItem() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: rejectInboxItem,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: approvalKeys.inbox });
+      qc.invalidateQueries({ queryKey: ["campaigns", "list"] });
+      qc.invalidateQueries({ queryKey: ["fleet"] });
     },
   });
 }

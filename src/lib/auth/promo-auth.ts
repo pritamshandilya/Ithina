@@ -83,6 +83,18 @@ function mapCurrentUser(payload: AuthCurrentUserResponse): PromoUser {
   };
 }
 
+export function getDashboardUrlForRole(role: string): string {
+  switch (role) {
+    case "admin":
+      return "/admin/users";
+    case "checker":
+      return "/checker/dashboard";
+    case "maker":
+    default:
+      return "/maker/dashboard";
+  }
+}
+
 export class PromoAuthService {
   static async loginWithForm(
     username: string,

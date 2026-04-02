@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 
 import { useCampaignList, useUpdateCampaign, useDeleteCampaign } from "@/hooks/use-campaigns";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
 
 import CampaignModal from "./components/campaign-modal";
@@ -19,6 +20,66 @@ type ScheduledItem = {
   skus: number;
   approvalRequired: boolean;
 };
+
+function ScheduledCreativePreview({
+  name,
+  targets,
+  compact = true,
+}: {
+  name: string;
+  targets: string;
+  compact?: boolean;
+}) {
+  const isLcd = targets.toLowerCase().includes("lcd");
+  return (
+    <div
+      className={
+        compact
+          ? "hidden w-[260px] items-center gap-3 rounded-xl border border-ithina-border/70 bg-ithina-bg/50 px-3 py-2 lg:flex"
+          : "flex w-full items-center gap-4 rounded-xl border border-ithina-border/70 bg-ithina-bg/50 p-4"
+      }
+    >
+      <div
+        className={
+          isLcd
+            ? `${compact ? "h-12 w-16" : "h-24 w-32"} shrink-0 overflow-hidden rounded border border-slate-500 bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]`
+            : `${compact ? "h-12 w-16" : "h-24 w-32"} shrink-0 overflow-hidden rounded border border-slate-400 bg-[#F0F0F0]`
+        }
+      >
+        {isLcd ? (
+          <div className="flex h-full flex-col">
+            <div className="bg-amber-500 py-0.5 text-center">
+              <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-black">
+                FLASH
+              </span>
+            </div>
+            <div className="flex flex-1 items-end px-1 pb-1">
+              <span className="text-[10px] font-black text-white">$10.39</span>
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-full flex-col">
+            <div className="bg-[#cc0000] py-0.5 text-center">
+              <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-white">
+                EXPIRING
+              </span>
+            </div>
+            <div className="flex flex-1 items-end px-1 pb-1">
+              <span className="text-[10px] font-black text-[#111]">$10.39</span>
+            </div>
+          </div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <p className={`${compact ? "text-xs" : "text-sm"} truncate font-semibold text-white`}>{name}</p>
+        <p className={`${compact ? "text-[10px]" : "text-xs"} mt-0.5 truncate font-mono text-slate-500`}>{targets}</p>
+        <span className="mt-1 inline-flex rounded border border-ithina-purple/25 bg-ithina-purple/10 px-1.5 py-0.5 font-mono text-[9px] text-ithina-purple">
+          Preview
+        </span>
+      </div>
+    </div>
+  );
+}
 
 const SCHEDULED_ITEMS: ScheduledItem[] = [
   {
@@ -63,21 +124,26 @@ const SCHEDULED_ITEMS: ScheduledItem[] = [
 ];
 
 export default function CampaignsScheduledTab() {
+  const currentRole = PromoAuthService.getCurrentUser()?.role ?? "maker";
+  const canEditCampaign = currentRole === "checker" || currentRole === "admin";
   const { data: campaigns = [] } = useCampaignList();
   const updateMutation = useUpdateCampaign();
   const deleteMutation = useDeleteCampaign();
   const [scheduledItems, setScheduledItems] = useState<ScheduledItem[]>(SCHEDULED_ITEMS);
   const [editing, setEditing] = useState<{ campaign: CampaignListItem; form: CampaignCreateForm } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<ScheduledItem | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<ScheduledItem | null>(null);
   const today = useMemo(() => new Date(), []);
   const [viewDate, setViewDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedCalDay, setSelectedCalDay] = useState<number | null>(today.getDate());
 
   const mergedScheduledItems = useMemo(() => {
     const mapped: ScheduledItem[] = campaigns
-      .filter((c) => c.status === "Scheduled")
+      // Any campaign with a scheduled start should appear in calendar,
+      // even if still pending approval.
+      .filter((c) => Boolean(c.scheduledAt))
       .map((c, idx) => {
-        const raw = (c.date || "").trim();
+        const raw = (c.scheduledAt || "").trim();
         const parsed = new Date(raw);
         const dt = Number.isNaN(parsed.getTime()) ? null : parsed;
         const year = dt ? dt.getFullYear() : today.getFullYear();
@@ -160,7 +226,7 @@ export default function CampaignsScheduledTab() {
         skus: campaign.skus,
         hardware: campaign.hardware.join(", "),
         initiator: campaign.initiator,
-        scheduled_date: campaign.date,
+        scheduled_date: campaign.scheduledAt ?? campaign.date,
       },
     });
   };
@@ -224,6 +290,24 @@ export default function CampaignsScheduledTab() {
           }}
           isSaving={updateMutation.isPending}
         />
+      )}
+
+      {previewTarget && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-xl rounded-2xl border border-ithina-border bg-ithina-panel p-6 shadow-modal">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-white">Campaign Preview</h2>
+              <button
+                type="button"
+                onClick={() => setPreviewTarget(null)}
+                className="rounded-md border border-ithina-border px-2 py-1 text-xs text-slate-400 hover:text-white"
+              >
+                Close
+              </button>
+            </div>
+            <ScheduledCreativePreview name={previewTarget.name} targets={previewTarget.targets} compact={false} />
+          </div>
+        </div>
       )}
 
       <div className="flex min-h-0 flex-1 gap-0 overflow-hidden">
@@ -339,7 +423,7 @@ export default function CampaignsScheduledTab() {
                   key={item.id}
                   className="group flex items-start justify-between gap-4 rounded-2xl border border-ithina-border bg-ithina-panel p-5 transition-all duration-150 hover:border-ithina-purple/40 hover:shadow-[0_0_0_1px_rgba(168,85,247,0.25)]"
                 >
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-3">
                       <div className="flex size-8 items-center justify-center rounded-xl border border-ithina-purple/20 bg-ithina-purple/10">
                         <span className="size-2 rounded-sm bg-ithina-purple" />
@@ -362,12 +446,20 @@ export default function CampaignsScheduledTab() {
                       </div>
                     </div>
                   </div>
+                  <ScheduledCreativePreview name={item.name} targets={item.targets} />
 
                   <div className="min-w-[120px] text-right">
                     <p className="whitespace-nowrap text-xs font-semibold text-white">{item.date}</p>
                     <p className="mt-1 whitespace-nowrap font-mono text-[10px] text-slate-500">{item.time}</p>
-                    <div className="mt-3 flex items-center justify-end gap-2 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100">
-                      {item.campaignId && (
+                    <div className="mt-3 flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewTarget(item)}
+                        className="inline-flex h-5 min-w-[46px] items-center justify-center rounded-md px-1.5 text-[10px] font-medium text-ithina-purple transition-colors hover:bg-ithina-purple/10 hover:text-ithina-purple-hover"
+                      >
+                        Preview
+                      </button>
+                      {canEditCampaign && item.campaignId && (
                         <button
                           type="button"
                           onClick={() => handleEdit(item)}

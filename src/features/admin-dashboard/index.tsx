@@ -5,6 +5,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { useCampaignList } from "@/hooks/use-campaigns";
 import { useInboxItems } from "@/hooks/use-approval";
+import { useOrganizationOverviewStats } from "@/hooks/use-organization-overview";
 import { cn } from "@/lib/utils";
 
 interface AdminReviewRow {
@@ -18,13 +19,6 @@ interface AdminReviewRow {
   guardRails: "All Pass" | "1 warning" | "2 warnings";
   reviewedAt: string;
 }
-
-const DEFAULT_REVIEW_HISTORY: AdminReviewRow[] = [
-  { id: "r-001", campaignName: "Weekend Beverage Promo", campaignId: "CMP-9941-A", maker: "Marcus T.", reviewedBy: "John Checker", reviewerRole: "Checker", decision: "Approved", guardRails: "All Pass", reviewedAt: "Today, 08:45 AM" },
-  { id: "r-002", campaignName: "Electronics Flash Sale", campaignId: "CMP-9939-C", maker: "Sarah J.", reviewedBy: "John Checker", reviewerRole: "Checker", decision: "Approved", guardRails: "1 warning", reviewedAt: "Yesterday, 14:22 PM" },
-  { id: "r-003", campaignName: "Frozen Food Clearance", campaignId: "CMP-9942-H", maker: "Auto-Scheduled", reviewedBy: "Alice Admin", reviewerRole: "Admin", decision: "Approved", guardRails: "All Pass", reviewedAt: "Mar 12, 09:44 AM" },
-  { id: "r-004", campaignName: "Q2 Electronics Flash Sale", campaignId: "CMP-9934-X", maker: "James O.", reviewedBy: "Alice Admin", reviewerRole: "Admin", decision: "Rejected", guardRails: "2 warnings", reviewedAt: "Mar 10, 17:10 PM" },
-];
 
 const HISTORY_COLUMNS: IthColumnDef<AdminReviewRow>[] = [
   {
@@ -84,12 +78,12 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const { data: campaigns = [] } = useCampaignList();
   const { data: inbox = [] } = useInboxItems();
+  const { data: orgStatsData } = useOrganizationOverviewStats();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
   const reviewHistory = useMemo<AdminReviewRow[]>(() => {
     const reviewed = campaigns.filter((c) => c.submittedForApproval && c.approvalStatus !== "pending");
-    if (reviewed.length === 0) return DEFAULT_REVIEW_HISTORY;
     return reviewed.map((c, idx) => ({
       id: `r-${idx}-${c.id}`,
       campaignName: c.name,
@@ -120,8 +114,20 @@ export default function AdminDashboard() {
   }, [reviewHistory, search]);
 
   const orgStats = [
-    { label: "Total Users", value: 5, trend: "Org Active", trendClass: "text-ithina-purple", icon: Users },
-    { label: "Active Stores", value: 3, trend: "All Online", trendClass: "text-emerald-400", icon: Building2 },
+    {
+      label: "Total Users",
+      value: orgStatsData?.totalUsers ?? 0,
+      trend: orgStatsData?.trendUsersText ?? "Org Active",
+      trendClass: "text-ithina-purple",
+      icon: Users,
+    },
+    {
+      label: "Active Stores",
+      value: orgStatsData?.activeStores ?? 0,
+      trend: orgStatsData?.trendStoresText ?? "All Online",
+      trendClass: "text-emerald-400",
+      icon: Building2,
+    },
     { label: "Pending Approvals", value: pendingApprovals, trend: "Needs Action", trendClass: "text-amber-400", icon: Clock3 },
     { label: "Reviewed (A/R)", value: approvedCount + rejectedCount, trend: `${approvedCount}A / ${rejectedCount}R`, trendClass: "text-ithina-rose", icon: ShieldCheck },
   ] as const;

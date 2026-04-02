@@ -23,6 +23,12 @@ export interface CreateStorePayload {
   is_active?: boolean;
 }
 
+export type StoreStaffUserType = "admin" | "checker" | "maker";
+
+export interface StoreUser {
+  id: string;
+}
+
 export async function listStores(): Promise<Store[]> {
   const { data } = await promoApiClient.get<Store[]>(`${API_PREFIX}/stores`);
   return data;
@@ -33,6 +39,40 @@ export async function createStore(payload: CreateStorePayload): Promise<Store> {
     `${API_PREFIX}/stores`,
     payload,
   );
+  return data;
+}
+
+export async function listStoreUsers(
+  storeId: string,
+  userType?: StoreStaffUserType,
+): Promise<StoreUser[]> {
+  const url = userType
+    ? `${API_PREFIX}/store/users?user_type=${encodeURIComponent(userType)}`
+    : `${API_PREFIX}/store/users`;
+
+  const { data } = await promoApiClient.get<StoreUser[]>(url, {
+    headers: {
+      "X-Store-Id": storeId,
+    },
+  });
+
+  return data;
+}
+
+export async function updateStoreActive(
+  storeId: string,
+  is_active: boolean,
+): Promise<Store> {
+  const { data } = await promoApiClient.put<Store>(
+    `${API_PREFIX}/store`,
+    { is_active },
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+
   return data;
 }
 

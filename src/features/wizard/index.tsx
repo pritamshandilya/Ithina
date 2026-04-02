@@ -12,7 +12,6 @@ import {
 } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
-  appendGridRow,
   pushMessage as pushWizardMessage,
   removeAllCsvViolations,
   removeCsvRow,
@@ -22,6 +21,7 @@ import {
   setCsvConfirmed,
   setCsvFileName,
   setCsvRows,
+  setGridData,
   setHasSplit,
   setInputMode as setWizardInputMode,
   setShowGrid,
@@ -29,7 +29,6 @@ import {
   setWStep,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
-import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { approvalKeys } from "@/hooks/use-approval";
 import { campaignKeys } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
@@ -101,7 +100,6 @@ export default function Wizard() {
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const addTimer = useScheduledCallback();
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
 
@@ -112,6 +110,33 @@ export default function Wizard() {
     if (id === "chroma42") return 'ESL 4.2"';
     return 'LCD 14"';
   }, []);
+
+  const buildHardwareTargetsForApi = useCallback((): string[] => {
+    const targets = new Set<string>();
+
+    // ESL selection in UI can include multiple sizes; map each size to backend hardware target ids.
+    if (selectedDevices.includes("chroma42")) {
+      const sizeMap: Record<string, string> = {
+        '1.54"': "chroma15",
+        '2.13"': "chroma21",
+        '2.9"': "chroma29",
+        '4.2"': "chroma42",
+        '5.83"': "chroma58",
+        '7.5"': "chroma75",
+      };
+      const eslSizes = sizeByDevice.chroma42 ?? [];
+      eslSizes.forEach((size) => {
+        const mapped = sizeMap[size];
+        if (mapped) targets.add(mapped);
+      });
+    }
+
+    if (selectedDevices.includes("lcd")) {
+      targets.add("lcd");
+    }
+
+    return Array.from(targets);
+  }, [selectedDevices, sizeByDevice.chroma42]);
 
   const submitDisplayTags = useMemo((): SubmitDisplayTag[] => {
     const out: SubmitDisplayTag[] = [];
@@ -219,16 +244,13 @@ export default function Wizard() {
       const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
       setIsTyping(false);
       pushMessage(aiReply);
-      if (gridData.length === 0) {
-        skus.forEach((item, idx) => {
-          addTimer(() => dispatch(appendGridRow(item)), idx * 150);
-        });
-      }
+      // Always refresh staging grid from the latest draft response.
+      dispatch(setGridData(skus));
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, gridData.length, pushMessage, generateCampaignName, dispatch, addTimer]);
+  }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -244,23 +266,36 @@ export default function Wizard() {
   }, [dispatch]);
 
   const handleNlSubmit = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target before submit.");
+      return;
+    }
     const resolvedName = campaignName || "Untitled Campaign";
     let resolvedId = `inbox-${Date.now()}`;
+    let submitSucceeded = false;
     try {
       const scheduleDate = scheduledAt.date ? `${scheduledAt.date}T${scheduledAt.time}:00` : "";
-      const created = await createCampaignFromWizard(resolvedName, "Wizard", scheduleDate);
+      const created = await createCampaignFromWizard(
+        resolvedName,
+        "Wizard",
+        scheduleDate,
+        hardwareTargetsForApi,
+      );
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
       resolvedId = created.id;
       await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
+      submitSucceeded = true;
     } catch {
-      dispatch(activateCampaign(resolvedName));
+      setError("Failed to submit campaign for approval. Please fix and try again.");
+      return;
     }
+
+    if (!submitSucceeded) return;
 
     const now = new Date();
     const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
-    const hardwareTargets = selectedDevices.length > 0
-      ? selectedDevices.map(toApprovalHardwareLabel)
-      : ['ESL 1.54"'];
+    const hardwareTargets = selectedDevices.map(toApprovalHardwareLabel);
 
     const pendingInboxItem: InboxItem = {
       id: resolvedId,
@@ -286,14 +321,19 @@ export default function Wizard() {
     dispatch(setPendingApproval(true));
     dispatch(resetWizard());
     dispatch(resetStudio());
-    navigate({ to: "/approval" });
-  }, [campaignName, dispatch, gridData.length, navigate, queryClient, scheduledAt.date, scheduledAt.time, selectedDevices, toApprovalHardwareLabel]);
+    navigate({ to: "/campaigns" });
+  }, [buildHardwareTargetsForApi, campaignName, dispatch, gridData.length, navigate, queryClient, scheduledAt.date, scheduledAt.time, selectedDevices, toApprovalHardwareLabel]);
 
   // Manual flow confirm
   const handleManualConfirm = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target before continuing.");
+      return;
+    }
     const name = "Manual Upload – " + new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
     try {
-      const created = await createCampaignFromWizard(name, "Manual Upload");
+      const created = await createCampaignFromWizard(name, "Manual Upload", "", hardwareTargetsForApi);
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
     } catch {
       dispatch(activateCampaign(name));
@@ -301,7 +341,7 @@ export default function Wizard() {
     dispatch(resetWizard());
     dispatch(resetStudio());
     navigate({ to: "/studio" });
-  }, [dispatch, navigate]);
+  }, [buildHardwareTargetsForApi, dispatch, navigate]);
 
   // ── CSV handlers ───────────────────────────────────────────────────
   const handleInputModeChange = useCallback(

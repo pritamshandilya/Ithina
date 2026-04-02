@@ -1,11 +1,18 @@
+/**
+ * Wizard service.
+ *
+ * Phase 1 (NL prompt → staged SKUs) and Phase 2 (save campaign) are now
+ * wired to the real backend. Stores / margins / durations / hardware remain
+ * as static data because those endpoints don't exist in the backend yet.
+ */
+
 import {
   MOCK_DURATIONS,
   MOCK_HARDWARE_DEVICES,
   MOCK_MARGINS,
-  MOCK_STAGED_SKUS,
   MOCK_STORES,
 } from "@/mocks/wizard";
-import { apiDelay } from "@/lib/api-delay";
+import { draftCampaignFromPrompt } from "@/services/campaigns";
 import type {
   ChatMessage,
   HardwareDevice,
@@ -16,50 +23,67 @@ import type {
   WizardStore,
 } from "@/types/wizard";
 
-// TODO (backend): replace with axios.get("/api/wizard/stores")
+// ─── Static reference data (no backend equivalent yet) ───────────────────────
+
 export async function getWizardStores(): Promise<WizardStore[]> {
-  await apiDelay(300);
   return MOCK_STORES;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/margins")
 export async function getWizardMargins(): Promise<WizardMargin[]> {
-  await apiDelay(200);
   return MOCK_MARGINS;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/durations")
 export async function getWizardDurations(): Promise<WizardDuration[]> {
-  await apiDelay(200);
   return MOCK_DURATIONS;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/hardware")
 export async function getHardwareDevices(): Promise<HardwareDevice[]> {
-  await apiDelay(300);
   return MOCK_HARDWARE_DEVICES;
 }
 
-// TODO (backend): replace with axios.post("/api/wizard/intent")
+// ─── Phase 1: NL prompt → real backend draft ────────────────────────────────
+
 export async function submitWizardIntent(
-  _prompt: string,
-  _constraints: WizardConstraints,
+  prompt: string,
+  constraints: WizardConstraints,
 ): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
-  await apiDelay(800);
+  const response = await draftCampaignFromPrompt({
+    prompt,
+    source_type: "nl",
+  });
+
+  const skus: StagedSku[] = response.skus.map((s) => ({
+    sku: s.sku,
+    name: s.product_name,
+    current: s.current_price,
+    proposed: s.proposed_price,
+    safe: s.is_safe,
+    margin: `${s.margin_pct}%`,
+  }));
+
+  const safeCount = skus.filter((s) => s.safe).length;
+  const warnCount = skus.length - safeCount;
+
+  let replyText = response.message;
+  replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
+  if (warnCount > 0) {
+    replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
+  } else {
+    replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
+  }
+  replyText += " Please review the staging grid.";
+
   return {
-    aiReply: {
-      role: "ai",
-      text: `I have queried the live ROOS inventory and applied your requested markdown.\n\nI found 3 SKUs. <span class="text-rose-400 font-medium">Notice: One item drops below your ${_constraints.marginFloor} margin floor.</span> Please review the staging grid.`,
-    },
-    skus: MOCK_STAGED_SKUS,
+    aiReply: { role: "ai", text: replyText },
+    skus,
   };
 }
 
-// TODO (backend): replace with axios.post("/api/wizard/hardware-confirm")
+// ─── Phase 2 helper: hardware confirm message ────────────────────────────────
+
 export async function confirmHardwareSelection(
   _deviceIds: string[],
 ): Promise<ChatMessage> {
-  await apiDelay(600);
   return {
     role: "ai",
     text: "Configuring layout parameters for selected hardware targets. Resolving product assets and generating digital backgrounds...",

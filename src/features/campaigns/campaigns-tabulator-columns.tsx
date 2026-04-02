@@ -13,15 +13,17 @@ export type CampaignProtoStatus =
   | "scheduled"
   | "draft"
   | "completed"
-  | "pending";
+  | "pending"
+  | "rejected";
 
 export function toPrototypeStatus(status: CampaignListStatus): CampaignProtoStatus {
   switch (status) {
     case "Active":    return "active";
     case "Scheduled": return "scheduled";
     case "Completed": return "completed";
+    case "Pending":   return "pending";
     case "Draft":     return "draft";
-    case "Rejected":  return "pending";
+    case "Rejected":  return "rejected";
   }
 }
 
@@ -31,6 +33,7 @@ const STATUS_PILL: Record<CampaignProtoStatus, string> = {
   completed: "text-emerald-400   border-emerald-400/30    bg-emerald-400/10",
   draft:     "text-slate-400     border-slate-600/60      bg-white/5",
   pending:   "text-orange-400    border-orange-400/30     bg-orange-400/10",
+  rejected:  "text-rose-400      border-rose-400/30       bg-rose-400/10",
 };
 
 const STATUS_LABEL: Record<CampaignProtoStatus, string> = {
@@ -39,6 +42,7 @@ const STATUS_LABEL: Record<CampaignProtoStatus, string> = {
   completed: "Completed",
   draft:     "Draft",
   pending:   "Pending",
+  rejected:  "Rejected",
 };
 
 const PIPELINE_STAGE_CLASS: Record<string, string> = {
@@ -57,6 +61,8 @@ export function derivePipeline(status: CampaignListStatus): string[] {
       return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
     case "Scheduled":
       return ["Data", "Design", "Guard Rails", "Scheduled"];
+    case "Pending":
+      return ["Data", "Design", "Guard Rails", "Approval"];
     case "Draft":
       return ["Data", "Design"];
     case "Rejected":

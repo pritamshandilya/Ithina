@@ -778,7 +778,8 @@
 }
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-header .tabulator-col .tabulator-col-content {
-  padding: 0.875rem 1rem;
+  padding: 0.875rem 1rem !important;
+  box-sizing: border-box !important;
   font-family: var(--font-mono);
   font-size: 0.625rem;
   font-weight: 700;
@@ -786,17 +787,21 @@
   text-transform: uppercase;
   color: var(--muted-foreground);
   background: transparent !important;
+  text-align: left !important;
 }
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell {
   border-right: none !important;
   border-bottom: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
   vertical-align: middle;
-  padding: 0.875rem 1rem;
+  padding: 0.875rem 1rem !important;
+  box-sizing: border-box !important;
+  text-align: left !important;
 }
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-cell.gr-col-actions {
-  padding-right: 1.25rem;
+  padding-right: 1.25rem !important;
+  text-align: right !important;
 }
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-row.tabulator-row-even {
@@ -805,5 +810,25 @@
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder {
   scrollbar-gutter: stable;
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-table {
+  width: 100% !important;
+  min-width: 100% !important;
+}
+
+.data-table-wrapper.guard-rails-tabulator-prototype
+  .tabulator-header
+  .tabulator-col.gr-col-actions
+  .tabulator-col-content {
+  text-align: right !important;
+  padding-right: 1.25rem !important;
 }
 

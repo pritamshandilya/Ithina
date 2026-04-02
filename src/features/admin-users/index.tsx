@@ -1,71 +1,11 @@
-import { Pencil, Plus, Search, UserX, Users } from "lucide-react";
+import { AlertCircle, Pencil, Plus, Search, UserX, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { ConfirmDeactivateModal } from "./components/ConfirmDeactivateModal";
-import { UserFormModal } from "./components/UserFormModal";
-import type { OrgUser, UserFormData, UserRole } from "./types";
-
-/* ─── Mock data ── */
-
-const MOCK_USERS: OrgUser[] = [
-  {
-    id: "u-001",
-    firstName: "Sarah",
-    lastName: "Chen",
-    email: "sarah@displaydata.com",
-    role: "maker",
-    status: "active",
-    storeIds: ["store-1", "store-2"],
-    createdAt: "2026-01-10",
-    lastLoginAt: "2026-03-30",
-  },
-  {
-    id: "u-002",
-    firstName: "Marcus",
-    lastName: "Lee",
-    email: "marcus@displaydata.com",
-    role: "checker",
-    status: "active",
-    storeIds: ["store-1"],
-    createdAt: "2026-01-15",
-    lastLoginAt: "2026-03-29",
-  },
-  {
-    id: "u-003",
-    firstName: "David",
-    lastName: "Kimani",
-    email: "david@displaydata.com",
-    role: "admin",
-    status: "active",
-    storeIds: [],
-    createdAt: "2025-12-01",
-    lastLoginAt: "2026-03-31",
-  },
-  {
-    id: "u-004",
-    firstName: "Priya",
-    lastName: "Nair",
-    email: "priya@displaydata.com",
-    role: "maker",
-    status: "active",
-    storeIds: ["store-3"],
-    createdAt: "2026-02-05",
-    lastLoginAt: "2026-03-28",
-  },
-  {
-    id: "u-005",
-    firstName: "James",
-    lastName: "Odhiambo",
-    email: "james@displaydata.com",
-    role: "maker",
-    status: "inactive",
-    storeIds: ["store-2"],
-    createdAt: "2026-01-20",
-    lastLoginAt: null,
-  },
-];
+import type { OrgUser, UserRole } from "./types";
+import { useAdminOrganizationUsers } from "@/hooks/use-admin-users";
 
 /* ─── Lookups ── */
 
@@ -93,18 +33,20 @@ const ROLE_FILTERS: { key: RoleFilter; label: string }[] = [
 /* ─── Main component ── */
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<OrgUser[]>(MOCK_USERS);
+  const {
+    data: users = [],
+    isLoading,
+    isError,
+    error,
+  } = useAdminOrganizationUsers();
+
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUser, setEditingUser] = useState<OrgUser | null>(null);
-  const [deactivateTarget, setDeactivateTarget] = useState<OrgUser | null>(null);
   const [page, setPage] = useState(1);
-
   const filtered = useMemo(() => {
+    const term = search.toLowerCase();
     return users.filter((u) => {
       const matchesRole = roleFilter === "all" || u.role === roleFilter;
-      const term = search.toLowerCase();
       const matchesSearch =
         !term ||
         u.firstName.toLowerCase().includes(term) ||
@@ -114,50 +56,9 @@ export default function AdminUsersPage() {
     });
   }, [users, search, roleFilter]);
 
-  function handleOpenCreate() {
-    setEditingUser(null);
-    setShowUserModal(true);
-  }
-
-  function handleOpenEdit(user: OrgUser) {
-    setEditingUser(user);
-    setShowUserModal(true);
-  }
-
-  function handleSaveUser(data: UserFormData) {
-    if (editingUser) {
-      setUsers((prev) =>
-        prev.map((u) =>
-          u.id === editingUser.id
-            ? { ...u, firstName: data.firstName, lastName: data.lastName, email: data.email, role: data.role }
-            : u,
-        ),
-      );
-    } else {
-      const newUser: OrgUser = {
-        id: `u-${Date.now()}`,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        email: data.email,
-        role: data.role,
-        status: "active",
-        storeIds: [],
-        createdAt: new Date().toISOString().split("T")[0],
-        lastLoginAt: null,
-      };
-      setUsers((prev) => [newUser, ...prev]);
-    }
-    setShowUserModal(false);
-    setEditingUser(null);
-  }
-
-  function handleDeactivate() {
-    if (!deactivateTarget) return;
-    setUsers((prev) =>
-      prev.map((u) => (u.id === deactivateTarget.id ? { ...u, status: "inactive" } : u)),
-    );
-    setDeactivateTarget(null);
-  }
+  // Backend currently only supports listing users (and store-scoped assignment),
+  // not creating/updating roles or toggling user activation status.
+  const userManagementSupported = false;
 
   const activeCount   = users.filter((u) => u.status === "active").length;
   const inactiveCount = users.filter((u) => u.status === "inactive").length;
@@ -205,10 +106,9 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); handleOpenEdit(row); }}
-              className="rounded-lg border border-ithina-border p-2 text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
+              disabled={!userManagementSupported}
+              className="rounded-lg border border-ithina-border p-2 text-slate-400 transition-colors hover:border-slate-600 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={`Edit ${row.firstName}`}
-              title="Edit user"
             >
               <Pencil className="size-3.5" />
             </button>
@@ -216,10 +116,9 @@ export default function AdminUsersPage() {
             {row.status === "active" && (
               <button
                 type="button"
-                onClick={(e) => { e.stopPropagation(); setDeactivateTarget(row); }}
-                className="rounded-lg border border-ithina-rose/20 bg-ithina-rose/5 p-2 text-ithina-rose transition-colors hover:bg-ithina-rose/15"
+                disabled={!userManagementSupported}
+                className="rounded-lg border border-ithina-rose/20 bg-ithina-rose/5 p-2 text-ithina-rose transition-colors hover:bg-ithina-rose/15 disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label={`Deactivate ${row.firstName}`}
-                title="Deactivate user"
               >
                 <UserX className="size-3.5" />
               </button>
@@ -252,8 +151,13 @@ export default function AdminUsersPage() {
               </div>
               <button
                 type="button"
-                onClick={handleOpenCreate}
-                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
+                disabled={!userManagementSupported}
+                title={
+                  userManagementSupported
+                    ? "Invite new user"
+                    : "User create/update/deactivate is not implemented in the backend yet."
+                }
+                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="size-4" />
                 Invite User
@@ -307,44 +211,50 @@ export default function AdminUsersPage() {
             </div>
 
             {/* Users table */}
-            <IthTable<OrgUser>
-              data={filtered}
-              columns={columns}
-              rowKey={(u) => u.id}
-              rowHighlight={(u) => (u.status === "inactive" ? "rose" : null)}
-              pagination={{
-                page,
-                pageSize: 10,
-                total: filtered.length,
-                onPageChange: setPage,
-              }}
-              empty={{
-                icon: <Users className="size-5 text-slate-600" />,
-                message: "No users found matching your criteria.",
-              }}
-            />
+            {isLoading && (
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+                    <Skeleton className="h-4 w-2/3 rounded-md" />
+                    <div className="mt-2 flex items-center gap-2">
+                      <Skeleton className="h-3 w-24 rounded-md" />
+                      <Skeleton className="h-3 w-32 rounded-md" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {!isLoading && isError && (
+              <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+                <AlertCircle className="size-5 shrink-0" />
+                <span className="text-sm">
+                  {(error as Error)?.message ?? "Failed to load users"}
+                </span>
+              </div>
+            )}
+
+            {!isLoading && !isError && (
+              <IthTable<OrgUser>
+                data={filtered}
+                columns={columns}
+                rowKey={(u) => u.id}
+                rowHighlight={(u) => (u.status === "inactive" ? "rose" : null)}
+                pagination={{
+                  page,
+                  pageSize: 10,
+                  total: filtered.length,
+                  onPageChange: setPage,
+                }}
+                empty={{
+                  icon: <Users className="size-5 text-slate-600" />,
+                  message: "No users found matching your criteria.",
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
-
-      {showUserModal && (
-        <UserFormModal
-          editingUser={editingUser}
-          onSave={handleSaveUser}
-          onClose={() => {
-            setShowUserModal(false);
-            setEditingUser(null);
-          }}
-        />
-      )}
-
-      {deactivateTarget && (
-        <ConfirmDeactivateModal
-          user={deactivateTarget}
-          onConfirm={handleDeactivate}
-          onClose={() => setDeactivateTarget(null)}
-        />
-      )}
     </>
   );
 }

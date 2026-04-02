@@ -123,14 +123,16 @@ export default function SidenavFooter() {
               icon={<User className="size-4 text-slate-500" />}
               label="Profile"
             />
-            <MenuItem
-              icon={<Building2 className="size-4 text-slate-500" />}
-              label="Store Settings"
-              onClick={() => {
-                navigate({ to: "/store-settings" });
-                setOpen(false);
-              }}
-            />
+            {user.role === "admin" && (
+              <MenuItem
+                icon={<Building2 className="size-4 text-slate-500" />}
+                label="Store Settings"
+                onClick={() => {
+                  navigate({ to: "/store-settings" });
+                  setOpen(false);
+                }}
+              />
+            )}
             <MenuItem
               icon={
                 isDark ? (

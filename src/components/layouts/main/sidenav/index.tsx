@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import SidenavFooter from "./footer";
 import { getNavSectionsForRole } from "@/constants/navigation";
+import { useInboxItems } from "@/hooks/use-approval";
 import { cn } from "@/lib/utils";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
 
@@ -27,7 +28,20 @@ export default function Sidenav() {
   const [activeStoreId, setActiveStoreId] = useState(stores[0]?.id ?? "");
   const activeStore = stores.find((s) => s.id === activeStoreId) ?? stores[0];
 
-  const navSections = getNavSectionsForRole(role);
+  const { data: inboxItems = [] } = useInboxItems();
+  const pendingApprovalCount = inboxItems.length;
+
+  const navSections = useMemo(() => {
+    const sections = getNavSectionsForRole(role);
+    if (role !== "admin" && role !== "checker") return sections;
+
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) =>
+        item.id === "approval-review" ? { ...item, badge: pendingApprovalCount } : item,
+      ),
+    }));
+  }, [role, pendingApprovalCount]);
 
   useEffect(() => {
     const onClick = (event: MouseEvent) => {

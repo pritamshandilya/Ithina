@@ -79,7 +79,11 @@ function toTabulatorColumnDefs<T extends object>(cols: PrototypeTabulatorColumn<
     headerFilter: col.headerFilter ?? false,
     hozAlign: col.hozAlign ?? ("center" as const),
     vertAlign: col.vertAlign ?? ("middle" as const),
-    headerHozAlign: col.headerHozAlign ?? ("center" as const),
+    // Default to the same alignment as body cells for consistent header/row visuals.
+    headerHozAlign: (col.headerHozAlign ?? col.hozAlign ?? ("center" as const)) as
+      | "left"
+      | "center"
+      | "right",
     width: col.width,
     minWidth: col.minWidth,
     maxWidth: col.maxWidth,

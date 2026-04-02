@@ -141,7 +141,7 @@ export default function MakerDashboard() {
   const { data: campaigns = [] } = useCampaignList();
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 5;
+  const PAGE_SIZE = 10;
 
   const historyRows = useMemo<CampaignRow[]>(() => {
     if (campaigns.length === 0) return DEFAULT_HISTORY_ROWS;
@@ -225,7 +225,7 @@ export default function MakerDashboard() {
       </div>
 
       {/* ── Campaign History ── */}
-      <div className="flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
+      <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel lg:min-h-[520px]">
         <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-4">
           <h3 className="text-sm font-semibold text-white">Campaign History</h3>
           <div className="relative">

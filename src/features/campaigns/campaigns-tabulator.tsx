@@ -86,7 +86,7 @@ export default function CampaignsTabulator() {
   }, [campaigns]);
 
   const scheduledCount = useMemo(
-    () => campaigns.filter((c) => toPrototypeStatus(c.status) === "scheduled").length,
+    () => campaigns.filter((c) => Boolean(c.scheduledAt)).length,
     [campaigns],
   );
 

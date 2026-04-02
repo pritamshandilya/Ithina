@@ -1,4 +1,5 @@
 import { promoApiClient } from "@/lib/promo-api-client";
+import { StoreContext } from "@/lib/store-context";
 
 export interface OrganizationSummary {
   id: string;
@@ -32,6 +33,10 @@ export interface PromoUser {
   lastName: string;
   role: string;
   organization: OrganizationSummary;
+}
+
+interface StoreSummary {
+  id: string;
 }
 
 const USER_KEY = "promo_auth_user";
@@ -96,6 +101,22 @@ export function getDashboardUrlForRole(role: string): string {
 }
 
 export class PromoAuthService {
+  private static async ensureActiveStore(): Promise<void> {
+    const existing = StoreContext.getStoreId();
+    if (existing) return;
+
+    try {
+      const { data } = await promoApiClient.get<StoreSummary[]>(`${API_PREFIX}/stores`);
+      const firstStore = data[0];
+      if (firstStore?.id) {
+        StoreContext.setStoreId(firstStore.id);
+      }
+    } catch {
+      // Do not block login/user hydration if store lookup fails.
+      // Campaign endpoints will surface a clear backend error.
+    }
+  }
+
   static async loginWithForm(
     username: string,
     password: string,
@@ -120,6 +141,7 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
+    await this.ensureActiveStore();
 
     return user;
   }
@@ -136,6 +158,7 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
+    await this.ensureActiveStore();
 
     return user;
   }
@@ -143,10 +166,15 @@ export class PromoAuthService {
   static async logout(): Promise<void> {
     try {
       await promoApiClient.post(`${API_PREFIX}/auth/logout`);
-    } catch {
-      // ignore network errors on logout
+    } catch (error) {
+      // Keep logout resilient, but emit a dev-only debug signal so local
+      // network/proxy issues are easier to trace.
+      if (import.meta.env.DEV) {
+        console.debug("Logout request failed (continuing local logout):", error);
+      }
     } finally {
       clearAuthStorage();
+      StoreContext.clearStoreId();
     }
   }
 
@@ -156,6 +184,7 @@ export class PromoAuthService {
     );
     const user = mapCurrentUser(data);
     saveUser(user);
+    await this.ensureActiveStore();
     return user;
   }
 

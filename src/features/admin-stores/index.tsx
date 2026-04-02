@@ -1,50 +1,9 @@
-import { useState } from "react";
-import { MapPin, Plus, Store, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { AlertCircle, Loader2, MapPin, Plus, Store, Trash2 } from "lucide-react";
 
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCreateAdminStore, useAdminStores, useUpdateAdminStoreActive, type StoreWithStaffCount } from "@/hooks/use-admin-stores";
 import { cn } from "@/lib/utils";
-import type { Store as StoreType } from "@/services/stores";
-
-const MOCK_STORES: (StoreType & { staffCount: number })[] = [
-  {
-    id: "store-1",
-    organization_id: "org-1",
-    created_by_user_id: "u-003",
-    name: "CBD Flagship",
-    address: "123 Main Street, Nairobi CBD",
-    region: "Nairobi",
-    currency: "KES",
-    is_active: true,
-    created_at: "2025-12-01",
-    updated_at: "2026-03-01",
-    staffCount: 3,
-  },
-  {
-    id: "store-2",
-    organization_id: "org-1",
-    created_by_user_id: "u-003",
-    name: "Northgate Store",
-    address: "45 Northgate Mall, Nairobi",
-    region: "Nairobi",
-    currency: "KES",
-    is_active: true,
-    created_at: "2026-01-10",
-    updated_at: "2026-02-15",
-    staffCount: 2,
-  },
-  {
-    id: "store-3",
-    organization_id: "org-1",
-    created_by_user_id: "u-003",
-    name: "Westgate Branch",
-    address: "78 Westgate Complex, Westlands",
-    region: "Nairobi",
-    currency: "KES",
-    is_active: false,
-    created_at: "2026-02-20",
-    updated_at: "2026-03-10",
-    staffCount: 1,
-  },
-];
 
 interface NewStoreForm {
   name: string;
@@ -61,34 +20,49 @@ const EMPTY_FORM: NewStoreForm = {
 };
 
 export default function AdminStoresPage() {
-  const [stores, setStores] = useState(MOCK_STORES);
+  const {
+    data: stores = [],
+    isLoading,
+    isError,
+    error,
+  } = useAdminStores();
+
+  const createStoreMutation = useCreateAdminStore();
+  const updateStoreActiveMutation = useUpdateAdminStoreActive();
+
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<NewStoreForm>(EMPTY_FORM);
 
-  function handleCreate() {
-    if (!form.name.trim() || !form.address.trim()) return;
-    const newStore = {
-      id: `store-${Date.now()}`,
-      organization_id: "org-1",
-      created_by_user_id: "u-003",
+  const canSubmit = useMemo(
+    () =>
+      Boolean(
+        form.name.trim() &&
+          form.address.trim() &&
+          form.region.trim() &&
+          form.currency.trim(),
+      ),
+    [form.address, form.currency, form.name, form.region],
+  );
+
+  async function handleCreate() {
+    if (!canSubmit) return;
+    await createStoreMutation.mutateAsync({
       name: form.name.trim(),
       address: form.address.trim(),
       region: form.region.trim(),
-      currency: form.currency,
+      currency: form.currency.trim(),
       is_active: true,
-      created_at: new Date().toISOString().split("T")[0],
-      updated_at: new Date().toISOString().split("T")[0],
-      staffCount: 0,
-    };
-    setStores((prev) => [newStore, ...prev]);
+    });
     setShowModal(false);
     setForm(EMPTY_FORM);
   }
 
-  function handleToggleActive(id: string) {
-    setStores((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, is_active: !s.is_active } : s)),
-    );
+  function handleToggleActive(store: StoreWithStaffCount) {
+    if (updateStoreActiveMutation.isPending) return;
+    updateStoreActiveMutation.mutate({
+      storeId: store.id,
+      is_active: !store.is_active,
+    });
   }
 
   return (
@@ -122,59 +96,87 @@ export default function AdminStoresPage() {
 
             {/* Store list */}
             <div className="space-y-3">
-              {stores.map((store) => (
-                <div
-                  key={store.id}
-                  className={cn(
-                    "flex items-center gap-4 rounded-2xl border px-6 py-5 transition-all",
-                    store.is_active
-                      ? "border-ithina-border bg-ithina-panel"
-                      : "border-ithina-border/50 bg-ithina-panel/50 opacity-60",
-                  )}
-                >
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ithina-emerald/20 bg-ithina-emerald/10">
-                    <Store className="size-4 text-ithina-emerald" />
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold text-white">{store.name}</p>
-                      <span
-                        className={cn(
-                          "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest",
-                          store.is_active
-                            ? "text-ithina-emerald bg-ithina-emerald/10 border-ithina-emerald/20"
-                            : "text-slate-500 bg-white/5 border-white/10",
-                        )}
-                      >
-                        {store.is_active ? "Active" : "Inactive"}
-                      </span>
+              {isLoading && (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, idx) => (
+                    <div key={idx} className="rounded-2xl border px-6 py-5">
+                      <Skeleton className="h-10 w-10 rounded-xl" />
+                      <div className="mt-3 space-y-2">
+                        <Skeleton className="h-4 w-48 rounded-md" />
+                        <Skeleton className="h-3 w-64 rounded-md" />
+                      </div>
                     </div>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                      <MapPin className="size-3 shrink-0" />
-                      {store.address}
-                    </div>
-                    <p className="mt-0.5 font-mono text-[10px] text-slate-600">
-                      {store.region} · {store.currency} · {store.staffCount} staff
-                    </p>
-                  </div>
+                  ))}
+                </div>
+              )}
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleToggleActive(store.id)}
+              {!isLoading && isError && (
+                <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+                  <AlertCircle className="size-5 shrink-0" />
+                  <span className="text-sm">
+                    {(error as Error)?.message ?? "Failed to load stores"}
+                  </span>
+                </div>
+              )}
+
+              {!isLoading && !isError && (
+                <>
+                  {stores.map((store) => (
+                    <div
+                      key={store.id}
                       className={cn(
-                        "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+                        "flex items-center gap-4 rounded-2xl border px-6 py-5 transition-all",
                         store.is_active
-                          ? "border-ithina-rose/20 bg-ithina-rose/5 text-ithina-rose hover:bg-ithina-rose/15"
-                          : "border-ithina-emerald/20 bg-ithina-emerald/5 text-ithina-emerald hover:bg-ithina-emerald/15",
+                          ? "border-ithina-border bg-ithina-panel"
+                          : "border-ithina-border/50 bg-ithina-panel/50 opacity-60",
                       )}
                     >
-                      {store.is_active ? "Deactivate" : "Reactivate"}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ithina-emerald/20 bg-ithina-emerald/10">
+                        <Store className="size-4 text-ithina-emerald" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-white">{store.name}</p>
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest",
+                              store.is_active
+                                ? "text-ithina-emerald bg-ithina-emerald/10 border-ithina-emerald/20"
+                                : "text-slate-500 bg-white/5 border-white/10",
+                            )}
+                          >
+                            {store.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                          <MapPin className="size-3 shrink-0" />
+                          {store.address}
+                        </div>
+                        <p className="mt-0.5 font-mono text-[10px] text-slate-600">
+                          {store.region} · {store.currency} · {store.staffCount} staff
+                        </p>
+                      </div>
+
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(store)}
+                          disabled={updateStoreActiveMutation.isPending}
+                          className={cn(
+                            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                            store.is_active
+                              ? "border-ithina-rose/20 bg-ithina-rose/5 text-ithina-rose hover:bg-ithina-rose/15"
+                              : "border-ithina-emerald/20 bg-ithina-emerald/5 text-ithina-emerald hover:bg-ithina-emerald/15",
+                          )}
+                        >
+                          {store.is_active ? "Deactivate" : "Reactivate"}
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -237,10 +239,14 @@ export default function AdminStoresPage() {
               <button
                 type="button"
                 onClick={handleCreate}
-                disabled={!form.name.trim() || !form.address.trim()}
+                disabled={!canSubmit || createStoreMutation.isPending}
                 className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Plus className="size-4" />
+                {createStoreMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                ) : (
+                  <Plus className="size-4" />
+                )}
                 Add Store
               </button>
             </footer>

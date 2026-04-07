@@ -50,7 +50,7 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 export async function submitWizardIntent(
   prompt: string,
   constraints: WizardConstraints,
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string }> {
   const response = await draftCampaignFromPrompt({
     prompt,
     source_type: "nl",
@@ -58,11 +58,12 @@ export async function submitWizardIntent(
 
   const skus: StagedSku[] = response.skus.map((s) => ({
     sku: s.sku,
-    name: s.product_name,
+    name: s.product_name ?? s.name ?? "",
     current: s.current_price,
     proposed: s.proposed_price,
     safe: s.is_safe,
     margin: `${s.margin_pct}%`,
+    included: true,
   }));
 
   const safeCount = skus.filter((s) => s.safe).length;
@@ -80,6 +81,7 @@ export async function submitWizardIntent(
   return {
     aiReply: { role: "ai", text: replyText },
     skus,
+    sessionId: response.session_id,
   };
 }
 
@@ -117,11 +119,12 @@ export async function chatWizardMessage(
 
   const skus: StagedSku[] = (res.staged_skus ?? []).map((s) => ({
     sku: s.sku ?? "",
-    name: s.product_name ?? "",
+    name: s.product_name ?? s.name ?? "",
     current: s.current_price ?? 0,
     proposed: s.proposed_price ?? 0,
     safe: s.is_safe ?? true,
     margin: `${s.margin_pct ?? 0}%`,
+    included: true,
   }));
 
   let replyText = res.reply || "AI processed your request.";

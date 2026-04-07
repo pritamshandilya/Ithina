@@ -85,7 +85,8 @@ interface DataStagingGridProps {
   isGenerating: boolean;
   inputMode: InputMode;
   onInputModeChange: (mode: InputMode) => void;
-  onRemoveGridRow: (sku: string) => void;
+  /** AI grid: include/exclude SKU without removing the row from the table. */
+  onToggleGridRowIncluded: (sku: string) => void;
   csvRows: CsvRow[];
   csvFileName: string;
   onCsvParsed: (rows: CsvRow[], fileName: string) => void;
@@ -104,7 +105,7 @@ function DataStagingGrid({
   isGenerating,
   inputMode,
   onInputModeChange,
-  onRemoveGridRow,
+  onToggleGridRowIncluded,
   csvRows,
   csvFileName,
   onCsvParsed,
@@ -118,6 +119,8 @@ function DataStagingGrid({
 }: DataStagingGridProps) {
   const csvInput = useRef<HTMLInputElement>(null);
   const csvWarnings = csvRows.filter((r) => !r.safe).length;
+
+  const aiIncludedCount = useMemo(() => data.filter((r) => r.included !== false).length, [data]);
 
   const parseCsvText = useCallback(
     (text: string, filename: string) => {
@@ -177,6 +180,7 @@ function DataStagingGrid({
       title: "Product Name",
       field: "name",
       minWidth: 180,
+      widthGrow: 1,
       hozAlign: "left",
       headerHozAlign: "left",
       formatter: (cell: unknown) => {
@@ -257,6 +261,7 @@ function DataStagingGrid({
       title: "Product",
       field: "name",
       minWidth: 180,
+      widthGrow: 1,
       hozAlign: "left",
       headerHozAlign: "left",
       formatter: (cell: unknown) => {
@@ -299,36 +304,44 @@ function DataStagingGrid({
       },
     },
     {
-      title: "",
+      title: "Include",
       field: "sku",
-      width: 50,
+      width: 72,
       headerSort: false,
       headerFilter: false,
       hozAlign: "center",
-      formatter: () => `<button data-action="remove" class="rounded p-1 text-slate-500 transition-all hover:bg-rose-400/10 hover:text-rose-400"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button>`,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const checked = row.included !== false;
+        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-8 items-center justify-center rounded-md border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-xs font-bold text-ithina-purple\">✓</span>" : ""}</button>`;
+      },
       cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
-        if (target.closest?.("[data-action='remove']")) {
+        if (target.closest?.("[data-action='toggle-include']")) {
           _e.stopPropagation();
-          onRemoveGridRow(cell.getData().sku);
+          onToggleGridRowIncluded(cell.getData().sku);
         }
       },
     },
-  ], [onRemoveGridRow]);
+  ], [onToggleGridRowIncluded]);
 
   const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
     const d = row.getData();
+    const el = row.getElement();
+    el.classList.toggle("wizard-staging-row-excluded", d.included === false);
     if (!d.safe) {
-      const el = row.getElement();
       el.style.borderLeft = "2px solid rgb(251 113 133)";
       el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    } else {
+      el.style.borderLeft = "";
+      el.style.backgroundColor = "";
     }
   }, []);
 
   return (
     <div
       className={cn(
-        "relative flex h-full min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-y-auto overflow-x-hidden",
+        "relative flex h-full min-h-0 min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-y-auto overflow-x-auto",
         hideModeToggle
           ? "bg-transparent"
           : "rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl",
@@ -365,7 +378,7 @@ function DataStagingGrid({
         <div className="ml-auto flex items-center gap-3">
           {inputMode === "ai" && data.length > 0 && (
             <span className="hidden text-xs text-slate-400 lg:block">
-              {data.length} SKUs staged — Review proposals below
+              {aiIncludedCount} of {data.length} SKUs included — Review proposals below
             </span>
           )}
           {inputMode === "csv" && csvRows.length > 0 && (
@@ -479,6 +492,7 @@ function DataStagingGrid({
                 showRowNumber
                 layout="fitColumns"
                 rowFormatter={csvRowFormatter}
+                className="wizard-staging-table min-h-0"
               />
             </div>
           )}
@@ -486,7 +500,12 @@ function DataStagingGrid({
       )}
 
       {inputMode === "ai" && (
-        <div className={cn("flex flex-1 flex-col overflow-auto", isGenerating && "pointer-events-none opacity-50 transition-opacity")}>
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            isGenerating && "pointer-events-none opacity-50 transition-opacity",
+          )}
+        >
           {data.length === 0 && (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">
               <div className="flex size-12 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10">
@@ -496,17 +515,20 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <DataTable<StagedSku>
-              columns={aiColumns}
-              data={data}
-              rowIdField="sku"
-              emptyMessage="No SKUs staged"
-              pagination={false}
-              headerFilters={false}
-              showRowNumber
-              layout="fitColumns"
-              rowFormatter={aiRowFormatter}
-            />
+            <div className="min-h-0 flex-1 overflow-auto px-4 pb-4 pt-0">
+              <DataTable<StagedSku>
+                columns={aiColumns}
+                data={data}
+                rowIdField="sku"
+                emptyMessage="No SKUs staged"
+                pagination={false}
+                headerFilters={false}
+                showRowNumber
+                layout="fitColumns"
+                rowFormatter={aiRowFormatter}
+                className="wizard-staging-table min-h-0"
+              />
+            </div>
           )}
         </div>
       )}

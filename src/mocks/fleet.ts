@@ -13,6 +13,7 @@ export const MOCK_QUEUE_ROWS: QueueRow[] = [
 ];
 
 export const MOCK_HARDWARE_ALERT: HardwareAlert = {
+  id: "mock-rf-comms",
   title: "RF Comms Failure",
   code: "Code: -1002",
   store: "#4281",

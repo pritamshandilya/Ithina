@@ -62,6 +62,7 @@ export function DataTable<T extends object>({
   rowFormatter,
   showRowNumber = true,
 }: DataTableProps<T>) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
   const currentPageRef = useRef(1);
@@ -145,10 +146,39 @@ export function DataTable<T extends object>({
       options.rowFormatter = effectiveRowFormatter;
     }
 
-    tableRef.current = new TabulatorFull(containerRef.current, options as never);
+    const table = new TabulatorFull(containerRef.current, options as never);
+    tableRef.current = table;
+
+    const scheduleRedraw = () => {
+      requestAnimationFrame(() => {
+        const t = tableRef.current;
+        const c = containerRef.current;
+        if (!t || !c?.isConnected) return;
+        try {
+          t.redraw(true);
+        } catch {
+          /* Tabulator can throw if the grid DOM was torn down mid-redraw */
+        }
+      });
+    };
+
+    const wrapper = wrapperRef.current;
+    let resizeObserver: ResizeObserver | undefined;
+    if (wrapper && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(scheduleRedraw);
+      resizeObserver.observe(wrapper);
+    }
+
+    const onWindowResize = () => scheduleRedraw();
+    window.addEventListener("resize", onWindowResize);
+
+    table.on("columnResized", scheduleRedraw);
+    if (movableColumns) {
+      table.on("columnMoved", scheduleRedraw);
+    }
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+      (table as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
         const ev = e as { target?: EventTarget };
         const target = ev?.target as HTMLElement | null;
         if (target?.closest?.("button, select, [data-action], a[href]")) return;
@@ -157,7 +187,9 @@ export function DataTable<T extends object>({
     }
 
     return () => {
-      tableRef.current?.destroy();
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", onWindowResize);
+      table.destroy();
       tableRef.current = null;
     };
   }, [
@@ -172,27 +204,50 @@ export function DataTable<T extends object>({
     pageSizeSelector,
     layout,
     movableColumns,
+    resizableColumns,
+    resizableColumnFit,
     onPaginationChange,
     rowFormatter,
     showRowNumber,
   ]);
 
   useEffect(() => {
-    if (tableRef.current) {
-      tableRef.current.setData(data.map((row) => ({ ...row })));
-    }
+    const table = tableRef.current;
+    const container = containerRef.current;
+    if (!table || !container?.isConnected) return;
+
+    let cancelled = false;
+
+    void Promise.resolve(table.setData(data.map((row) => ({ ...row })))).then(() => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        if (tableRef.current !== table) return;
+        if (!containerRef.current?.isConnected) return;
+        try {
+          table.redraw(true);
+        } catch {
+          /* Same as scheduleRedraw: avoid offsetWidth / layout reads on detached nodes */
+        }
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [data]);
 
   return (
     <div
+      ref={wrapperRef}
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
+        "data-table-wrapper min-w-0 w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"
       aria-label="Data table"
     >
-      <div ref={containerRef} className="data-table-container h-full w-full" />
+      <div ref={containerRef} className="data-table-container h-full min-h-[200px] w-full min-w-0" />
     </div>
   );
 }

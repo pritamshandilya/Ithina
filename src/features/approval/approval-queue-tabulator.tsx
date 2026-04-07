@@ -4,13 +4,14 @@
  * Design: Ithina Design System §2.4 + screenshots.
  */
 
-import { AlertTriangle, Check, Clock, Search, X } from "lucide-react";
+import { AlertTriangle, Check, Clock, Search, X, Zap } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { useInboxItems } from "@/hooks/use-approval";
 import { useApproveCampaign, useCampaignList, useRejectCampaign } from "@/hooks/use-campaigns";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
 
@@ -200,6 +201,17 @@ export default function ApprovalQueueTabulator() {
       if (action === "approve") {
         approveMutation.mutate(row.id);
       }
+      if (action === "approve-live") {
+        approveMutation.mutate(row.id, {
+          onSuccess: () => {
+            toast({
+              title: "Approved & queued for fleet",
+              description:
+                "Approval is saved. The campaign will appear on Fleet when the backend schedules or starts publishing.",
+            });
+          },
+        });
+      }
       if (action === "reject") {
         rejectMutation.mutate(row.id);
       }
@@ -364,9 +376,9 @@ export default function ApprovalQueueTabulator() {
         key: "actions",
         label: "Actions",
         align: "right",
-        width: "w-[240px]",
+        width: "min-w-[300px] w-[320px]",
         render: (_row) => (
-          <div className="flex items-center justify-end gap-1.5">
+          <div className="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
             <button
               type="button"
               data-action="approve"
@@ -374,6 +386,14 @@ export default function ApprovalQueueTabulator() {
             >
               <Check className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
               Approve
+            </button>
+            <button
+              type="button"
+              data-action="approve-live"
+              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-ithina-purple/35 bg-ithina-purple/15 px-2.5 py-1.5 text-[10px] font-semibold text-ithina-purple transition-all hover:bg-ithina-purple hover:text-white"
+            >
+              <Zap className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+              Approve &amp; Go Live
             </button>
             <button
               type="button"

@@ -67,13 +67,27 @@ const wizardSlice = createSlice({
       state.messages.push(action.payload);
     },
     setGridData(state, action: PayloadAction<StagedSku[]>) {
-      state.gridData = action.payload;
+      state.gridData = action.payload.map((r) => ({
+        ...r,
+        included: r.included !== false,
+      }));
     },
     appendGridRow(state, action: PayloadAction<StagedSku>) {
-      state.gridData.push(action.payload);
+      const row = action.payload;
+      state.gridData.push({
+        ...row,
+        included: row.included !== false,
+      });
     },
     removeGridRow(state, action: PayloadAction<string>) {
       state.gridData = state.gridData.filter((r) => r.sku !== action.payload);
+    },
+    toggleGridRowIncluded(state, action: PayloadAction<string>) {
+      const sku = action.payload;
+      const row = state.gridData.find((r) => r.sku === sku);
+      if (!row) return;
+      const currentlyIncluded = row.included !== false;
+      row.included = !currentlyIncluded;
     },
     setConstraints(state, action: PayloadAction<WizardConstraints>) {
       state.constraints = action.payload;
@@ -118,6 +132,7 @@ export const {
   setGridData,
   appendGridRow,
   removeGridRow,
+  toggleGridRowIncluded,
   setConstraints,
   setInputMode,
   setCsvRows,

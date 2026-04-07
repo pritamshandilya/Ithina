@@ -15,7 +15,6 @@ import {
   pushMessage as pushWizardMessage,
   removeAllCsvViolations,
   removeCsvRow,
-  removeGridRow,
   resetWizard,
   setCampaignNamed,
   setCsvConfirmed,
@@ -27,6 +26,7 @@ import {
   setShowGrid,
   setWMode,
   setWStep,
+  toggleGridRowIncluded,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { approvalKeys } from "@/hooks/use-approval";
@@ -38,6 +38,8 @@ import {
   useSubmitWizardIntent,
 } from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
+import type { CampaignListItem } from "@/types/campaigns";
 import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
 import DataStagingGrid from "./components/data-staging-grid";
@@ -64,6 +66,13 @@ interface CsvRow {
 const NL_STEPS = ["Select Data", "Select Screens & Design", "Guard Rails", "Schedule", "Submit"];
 const MANUAL_STEPS = ["Select Screens", "Upload Banners"];
 
+function formatWizardScheduleDate(ymd: string): string {
+  if (!ymd?.trim()) return "";
+  const d = new Date(`${ymd}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return ymd;
+  return d.toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" });
+}
+
 export default function Wizard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
@@ -76,7 +85,12 @@ export default function Wizard() {
   const [designConfigured, setDesignConfigured] = useState(false);
   const [showStudio, setShowStudio] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
-  const [scheduledAt, setScheduledAt] = useState<{ date: string; time: string }>({ date: "", time: "08:00" });
+  const [schedule, setSchedule] = useState<{
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    autoApprove: boolean;
+  }>({ startDate: "", startTime: "08:00", endDate: "", autoApprove: false });
   const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
     chroma29: [],
     chroma42: ['2.9"'],
@@ -111,6 +125,8 @@ export default function Wizard() {
   const chatMutation = useChatWizardMessage();
 
   const sessionRef = useRef<{ campaignId: string; threadId: string } | null>(null);
+  /** Correlates generate with draft LangGraph session or NL draft `session_id`. */
+  const pipelineSessionIdRef = useRef<string | null>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -166,6 +182,11 @@ export default function Wizard() {
     return out;
   }, [selectedDevices, sizeByDevice, toApprovalHardwareLabel]);
 
+  const includedGridSkuCount = useMemo(
+    () => gridData.filter((r) => r.included !== false).length,
+    [gridData],
+  );
+
   // ── Navigation helpers ─────────────────────────────────────────────
   const handleSelectMode = useCallback((mode: WizardMode, input: WizardEntryInput) => {
     dispatch(setWMode(mode));
@@ -184,6 +205,7 @@ export default function Wizard() {
     });
     setSelectedDevices([]);
     sessionRef.current = null;
+    pipelineSessionIdRef.current = null;
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -271,6 +293,7 @@ export default function Wizard() {
       try {
         const session = await initCampaignMutation.mutateAsync("nl");
         sessionRef.current = session;
+        pipelineSessionIdRef.current = session.threadId;
         dispatch(activateCampaignWithId({ id: session.campaignId, name: "" }));
 
         const { aiReply, skus } = await chatMutation.mutateAsync({
@@ -286,7 +309,8 @@ export default function Wizard() {
       } catch {
         // Fallback: use the stateless draft endpoint (no LangGraph required).
         sessionRef.current = null;
-        const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
+        const { aiReply, skus, sessionId } = await intentMutation.mutateAsync({ text, constraints });
+        pipelineSessionIdRef.current = sessionId;
         setIsTyping(false);
         pushMessage(aiReply);
         dispatch(setGridData(skus));
@@ -305,10 +329,18 @@ export default function Wizard() {
     dispatch(setWStep(4));
   }, [dispatch]);
 
-  const handleNlNextFromSchedule = useCallback((payload: { startDate: string; startTime: string }) => {
-    setScheduledAt({ date: payload.startDate, time: payload.startTime });
-    dispatch(setWStep(5));
-  }, [dispatch]);
+  const handleNlNextFromSchedule = useCallback(
+    (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => {
+      setSchedule({
+        startDate: payload.startDate,
+        startTime: payload.startTime,
+        endDate: payload.endDate,
+        autoApprove: payload.autoApprove,
+      });
+      dispatch(setWStep(5));
+    },
+    [dispatch],
+  );
 
   const handleNlSubmit = useCallback(async () => {
     const hardwareTargetsForApi = buildHardwareTargetsForApi();
@@ -319,14 +351,21 @@ export default function Wizard() {
     const resolvedName = campaignName || "Untitled Campaign";
     let resolvedId = `inbox-${Date.now()}`;
     let submitSucceeded = false;
+    let created: CampaignListItem | null = null;
     try {
-      const scheduleDate = scheduledAt.date ? `${scheduledAt.date}T${scheduledAt.time}:00` : "";
-      const created = await createCampaignFromWizard(
-        resolvedName,
-        "Wizard",
-        scheduleDate,
-        hardwareTargetsForApi,
-      );
+      const sessionId =
+        pipelineSessionIdRef.current ??
+        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `session-${Date.now()}`);
+      created = await createCampaignFromWizard(resolvedName, hardwareTargetsForApi, {
+        sessionId,
+        schedule: {
+          startDate: schedule.startDate,
+          startTime: schedule.startTime,
+          endDate: schedule.endDate,
+        },
+      });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
       resolvedId = created.id;
       await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
@@ -336,18 +375,33 @@ export default function Wizard() {
       return;
     }
 
-    if (!submitSucceeded) return;
+    if (!submitSucceeded || !created) return;
 
     const now = new Date();
     const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
     const hardwareTargets = selectedDevices.map(toApprovalHardwareLabel);
 
+    const currentUser = PromoAuthService.getCurrentUser();
+    const fromProfile = currentUser
+      ? [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ").trim()
+      : "";
+    const initiatorDisplay =
+      created.ownerName?.trim() ||
+      created.initiator?.trim() ||
+      fromProfile ||
+      "You";
+
     const pendingInboxItem: InboxItem = {
       id: resolvedId,
       title: resolvedName,
       subtitle: "Waiting for approver decision",
-      initiator: "Wizard",
-      skus: gridData.length > 0 ? gridData.length : 3,
+      initiator: initiatorDisplay,
+      skus:
+        inputMode === "csv"
+          ? csvRows.length
+          : gridData.length > 0
+            ? includedGridSkuCount
+            : 3,
       meta: "Pending",
       metaVariant: "muted",
       urgent: false,
@@ -367,7 +421,22 @@ export default function Wizard() {
     dispatch(resetWizard());
     dispatch(resetStudio());
     navigate({ to: "/campaigns" });
-  }, [buildHardwareTargetsForApi, campaignName, dispatch, gridData.length, navigate, queryClient, scheduledAt.date, scheduledAt.time, selectedDevices, toApprovalHardwareLabel]);
+  }, [
+    buildHardwareTargetsForApi,
+    campaignName,
+    csvRows.length,
+    dispatch,
+    gridData.length,
+    includedGridSkuCount,
+    inputMode,
+    navigate,
+    queryClient,
+    schedule.startDate,
+    schedule.startTime,
+    schedule.endDate,
+    selectedDevices,
+    toApprovalHardwareLabel,
+  ]);
 
   // Manual flow confirm
   const handleManualConfirm = useCallback(async () => {
@@ -378,7 +447,14 @@ export default function Wizard() {
     }
     const name = "Manual Upload – " + new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
     try {
-      const created = await createCampaignFromWizard(name, "Manual Upload", "", hardwareTargetsForApi);
+      const sessionId =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `session-${Date.now()}`;
+      const created = await createCampaignFromWizard(name, hardwareTargetsForApi, {
+        sessionId,
+        schedule: { startDate: "", startTime: "08:00", endDate: "" },
+      });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
     } catch {
       dispatch(activateCampaign(name));
@@ -393,8 +469,8 @@ export default function Wizard() {
     (mode: InputMode) => dispatch(setWizardInputMode(mode)),
     [dispatch],
   );
-  const handleRemoveGridRow = useCallback(
-    (sku: string) => dispatch(removeGridRow(sku)),
+  const handleToggleGridRowIncluded = useCallback(
+    (sku: string) => dispatch(toggleGridRowIncluded(sku)),
     [dispatch],
   );
   const handleCsvParsed = useCallback(
@@ -434,7 +510,11 @@ export default function Wizard() {
   const marginFloor = parseInt(constraints.marginFloor) / 100;
 
   // ── Proceed button visibility for NL step 1 ────────────────────────
-  const canProceedNl = (inputMode === "ai" && showGrid) || (inputMode === "csv" && csvConfirmed);
+  const canProceedNl =
+    (inputMode === "ai" &&
+      showGrid &&
+      (gridData.length === 0 || includedGridSkuCount > 0)) ||
+    (inputMode === "csv" && csvConfirmed);
 
   return (
     <>
@@ -543,14 +623,14 @@ export default function Wizard() {
 
                   {/* Post-submit: split screen (chat + grid) */}
                   {hasSplit && (
-                    <div className="flex flex-1 min-h-0 gap-6 overflow-y-auto px-8 pb-6 pt-5">
+                    <div className="flex min-h-0 flex-1 gap-6 overflow-x-auto overflow-y-auto px-8 pb-6 pt-5">
                       {inputMode === "csv" ? (
                         <DataStagingGrid
                           data={gridData}
                           isGenerating={hwConfirmMutation.isPending}
                           inputMode={inputMode}
                           onInputModeChange={handleInputModeChange}
-                          onRemoveGridRow={handleRemoveGridRow}
+                          onToggleGridRowIncluded={handleToggleGridRowIncluded}
                           csvRows={csvRows}
                           csvFileName={csvFileName}
                           onCsvParsed={handleCsvParsed}
@@ -580,7 +660,7 @@ export default function Wizard() {
                               isGenerating={hwConfirmMutation.isPending}
                               inputMode={inputMode}
                               onInputModeChange={handleInputModeChange}
-                              onRemoveGridRow={handleRemoveGridRow}
+                              onToggleGridRowIncluded={handleToggleGridRowIncluded}
                               csvRows={csvRows}
                               csvFileName={csvFileName}
                               onCsvParsed={handleCsvParsed}
@@ -642,9 +722,17 @@ export default function Wizard() {
               <SubmitReviewStep
                 onSubmit={handleNlSubmit}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
-                skuCount={gridData.length || csvRows.length}
-                scheduleDateLabel={scheduledAt.date || "Immediate"}
-                scheduleTimeLabel={scheduledAt.time || "08:00"}
+                skuCount={inputMode === "csv" ? csvRows.length : includedGridSkuCount}
+                scheduleDateLabel={formatWizardScheduleDate(schedule.startDate) || "Immediate"}
+                scheduleTimeLabel={schedule.startTime || "08:00"}
+                scheduleEndLabel={
+                  schedule.endDate?.trim() ? formatWizardScheduleDate(schedule.endDate) : undefined
+                }
+                autoApproveNote={
+                  schedule.autoApprove
+                    ? "Auto-approve when schedule triggers (low-risk campaigns only)."
+                    : undefined
+                }
                 displayTags={submitDisplayTags}
               />
             )}

@@ -36,6 +36,8 @@ export interface StagedSku {
   proposed: number;
   safe: boolean;
   margin?: string;
+  /** When false, SKU stays in the grid but is excluded from counts and submission. Default: included. */
+  included?: boolean;
 }
 
 export type ChatRole = "user" | "ai";

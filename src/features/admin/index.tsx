@@ -6,8 +6,11 @@ import { buildGuardRailTabulatorColumns } from "./guard-rails-table-columns";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import {
   useCreateGuardrail,
+  useDeleteGuardrail,
   useGuardrails,
+  useUpdateGuardrail,
 } from "@/hooks/use-guardrails";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
 type GuardRailFilter = "All" | GuardRailCategory;
@@ -34,9 +37,13 @@ export default function Admin() {
   const [activeFilter, setActiveFilter] = useState<GuardRailFilter>("All");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<NewGuardRailForm>(EMPTY_FORM);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
   const { data: rules = [], isLoading, isError, error } = useGuardrails();
   const createMutation = useCreateGuardrail();
+  const updateMutation = useUpdateGuardrail();
+  const deleteMutation = useDeleteGuardrail();
+  const { toast } = useToast();
 
   const filteredRules = useMemo<GuardRailRule[]>(() => {
     if (activeFilter === "All") return rules;
@@ -46,36 +53,97 @@ export default function Admin() {
   const activeCount = useMemo(() => rules.filter((r) => r.active).length, [rules]);
 
   const openCreateModal = () => {
+    setEditingRuleId(null);
     setForm(EMPTY_FORM);
     setShowModal(true);
   };
 
   const closeModal = useCallback(() => {
     setShowModal(false);
+    setEditingRuleId(null);
     setForm(EMPTY_FORM);
   }, []);
 
   const saveRule = async () => {
     if (!form.name.trim() || !form.description.trim()) return;
-    await createMutation.mutateAsync({
-      name: form.name.trim(),
-      category: form.category,
-      severity: form.severity,
-      description: form.description.trim(),
-      active: form.active,
-    });
-    closeModal();
+    try {
+      if (editingRuleId) {
+        await updateMutation.mutateAsync({
+          id: editingRuleId,
+          patch: {
+            name: form.name.trim(),
+            category: form.category,
+            severity: form.severity,
+            description: form.description.trim(),
+            active: form.active,
+          },
+        });
+        toast({ title: "Guard rail updated." });
+      } else {
+        await createMutation.mutateAsync({
+          name: form.name.trim(),
+          category: form.category,
+          severity: form.severity,
+          description: form.description.trim(),
+          active: form.active,
+        });
+        toast({ title: "Guard rail created." });
+      }
+      closeModal();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to save guard rail.";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }
   };
 
   const handleTableAction = useCallback(
-    (e: MouseEvent, _row: GuardRailRule) => {
+    async (e: MouseEvent, row: GuardRailRule) => {
       const target = e.target as HTMLElement | null;
       const actionEl = target?.closest?.("[data-action]") as HTMLElement | null;
       const action = actionEl?.getAttribute("data-action");
       if (!action) return;
-      // TODO: wire edit/delete/toggle once backend PATCH+DELETE endpoints land
+
+      if (action === "edit") {
+        setEditingRuleId(row.id);
+        setForm({
+          name: row.name,
+          category: row.category,
+          severity: row.severity,
+          description: row.description,
+          active: row.active,
+        });
+        setShowModal(true);
+        return;
+      }
+
+      if (action === "toggle") {
+        try {
+          await updateMutation.mutateAsync({
+            id: row.id,
+            patch: { active: !row.active },
+          });
+          toast({ title: `Guard rail ${!row.active ? "enabled" : "disabled"}.` });
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Failed to update guard rail.";
+          toast({ title: "Error", description: message, variant: "destructive" });
+        }
+        return;
+      }
+
+      if (action === "delete") {
+        try {
+          await deleteMutation.mutateAsync(row.id);
+          toast({ title: "Guard rail deleted." });
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "Failed to delete guard rail.";
+          toast({ title: "Error", description: message, variant: "destructive" });
+        }
+      }
     },
-    [],
+    [deleteMutation, updateMutation],
   );
 
   const columns = useMemo(() => buildGuardRailTabulatorColumns(), []);
@@ -170,9 +238,13 @@ export default function Admin() {
             <header className="flex shrink-0 items-start justify-between border-b border-ithina-border px-7 py-5">
               <div>
                 <h3 id="guard-rail-modal-title" className="text-lg font-bold text-white">
-                  New Guard Rail
+                  {editingRuleId ? "Edit Guard Rail" : "New Guard Rail"}
                 </h3>
-                <p className="mt-0.5 text-sm text-slate-400">Define a new compliance rule</p>
+                <p className="mt-0.5 text-sm text-slate-400">
+                  {editingRuleId
+                    ? "Update this compliance rule"
+                    : "Define a new compliance rule"}
+                </p>
               </div>
               <button
                 type="button"
@@ -327,16 +399,21 @@ export default function Admin() {
                 disabled={
                   !form.name.trim() ||
                   !form.description.trim() ||
-                  createMutation.isPending
+                  createMutation.isPending ||
+                  updateMutation.isPending
                 }
                 className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {createMutation.isPending ? (
+                {createMutation.isPending || updateMutation.isPending ? (
                   <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
                 ) : (
                   <Check className="size-4 shrink-0" aria-hidden />
                 )}
-                {createMutation.isPending ? "Saving…" : "Create Rule"}
+                {createMutation.isPending || updateMutation.isPending
+                  ? "Saving…"
+                  : editingRuleId
+                    ? "Save Changes"
+                    : "Create Rule"}
               </button>
             </footer>
           </div>

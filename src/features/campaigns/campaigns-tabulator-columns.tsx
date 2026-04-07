@@ -170,6 +170,10 @@ function DeleteBtn() {
   );
 }
 
+export function canDeleteCampaignByStatus(status: CampaignListStatus): boolean {
+  return status === "Draft" || status === "Rejected";
+}
+
 export interface BuildCampaignColumnsParams {
   selectedIds: Set<string>;
   pausedById: Record<string, boolean>;
@@ -207,10 +211,7 @@ export function buildCampaignColumns({
       label: "Campaign",
       sortable: true,
       render: (row) => (
-        <div>
-          <p className="text-[13px] font-semibold leading-tight text-white">{row.name}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-slate-400">{row.id}</p>
-        </div>
+        <p className="text-[13px] font-semibold leading-tight text-white">{row.name}</p>
       ),
     },
     {
@@ -274,12 +275,25 @@ export function buildCampaignColumns({
       render: (row) => {
         const proto = toPrototypeStatus(row.status);
         const paused = pausedById[row.id] ?? row.paused ?? false;
+        const canDelete = canDeleteCampaignByStatus(row.status);
         return (
           <div className="flex flex-wrap items-center justify-end gap-1.5">
             {proto === "draft" && <EditBtn />}
             {proto === "scheduled" && <PauseBtn paused={paused} />}
             <HistoryBtn />
-            <DeleteBtn />
+            {canDelete ? (
+              <DeleteBtn />
+            ) : (
+              <button
+                type="button"
+                data-action="delete"
+                aria-label="Delete campaign unavailable"
+                title="Only Draft or Rejected campaigns can be deleted."
+                className="inline-flex items-center justify-center rounded-lg border border-slate-600/40 px-2 py-1.5 text-slate-600 opacity-60 transition-all hover:border-slate-500 hover:bg-white/[0.03]"
+              >
+                <Trash2 className="size-3" strokeWidth={2} aria-hidden />
+              </button>
+            )}
           </div>
         );
       },

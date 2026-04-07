@@ -1,8 +1,9 @@
 import { AlertTriangle, Check, Loader2, Shield, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useGuardrails } from "@/hooks/use-guardrails";
 import { cn } from "@/lib/utils";
-import { MOCK_GUARD_RAIL_RULES, type GuardRailRule, type GuardRailSeverity } from "@/mocks/guard-rails";
+import type { GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import { useAppSelector } from "@/store/hooks";
 
 interface GuardRailsStepProps {
@@ -70,19 +71,30 @@ function RuleCheckboxRow({
 }
 
 export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
-  const gridLen = useAppSelector((s) => s.wizard.gridData.length);
-  const skuCount = gridLen > 0 ? gridLen : 1;
-
-  const [selected, setSelected] = useState<Set<string>>(
-    () => new Set(MOCK_GUARD_RAIL_RULES.filter((r) => r.active).map((r) => r.id)),
+  const gridData = useAppSelector((s) => s.wizard.gridData);
+  const includedLen = useMemo(
+    () => gridData.filter((r) => r.included !== false).length,
+    [gridData],
   );
+  const skuCount = includedLen > 0 ? includedLen : gridData.length > 0 ? 0 : 1;
+  const { data: rules = [], isLoading, isError } = useGuardrails();
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [state, setState] = useState<ValidationState>("idle");
   const [activeValidationStep, setActiveValidationStep] = useState(0);
   const validationTimerRef = useRef<number | null>(null);
+  const initializedSelectionRef = useRef(false);
+
+  useEffect(() => {
+    if (initializedSelectionRef.current) return;
+    if (!rules.length) return;
+    setSelected(new Set(rules.filter((r) => r.active).map((r) => r.id)));
+    initializedSelectionRef.current = true;
+  }, [rules]);
 
   const selectedRules = useMemo(
-    () => MOCK_GUARD_RAIL_RULES.filter((r) => selected.has(r.id)),
-    [selected],
+    () => rules.filter((r) => selected.has(r.id)),
+    [rules, selected],
   );
 
   const toggleRule = useCallback((id: string) => {
@@ -279,7 +291,18 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
                   </span>
                 </div>
                 <div className="min-h-0 flex-1 divide-y divide-ithina-border/40 overflow-y-auto">
-                  {MOCK_GUARD_RAIL_RULES.map((rule) => (
+                  {isLoading && (
+                    <div className="flex items-center justify-center py-8 text-slate-500">
+                      <Loader2 className="size-4 animate-spin" />
+                      <span className="ml-2 text-xs">Loading guard rails...</span>
+                    </div>
+                  )}
+                  {isError && (
+                    <div className="px-5 py-6 text-xs text-rose-400">
+                      Failed to load guard rails. Please retry.
+                    </div>
+                  )}
+                  {!isLoading && !isError && rules.map((rule) => (
                     <RuleCheckboxRow
                       key={rule.id}
                       rule={rule}
@@ -291,7 +314,7 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
                 <div className="flex shrink-0 gap-2 border-t border-ithina-border/60 px-5 py-2">
                   <button
                     type="button"
-                    onClick={() => setSelected(new Set(MOCK_GUARD_RAIL_RULES.map((r) => r.id)))}
+                    onClick={() => setSelected(new Set(rules.map((r) => r.id)))}
                     className="text-[10px] text-ithina-purple transition-colors hover:text-white"
                   >
                     Select All

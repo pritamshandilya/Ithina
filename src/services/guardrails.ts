@@ -2,13 +2,10 @@
  * Guardrails service.
  *
  * Talks to the real FastAPI backend:
- *   GET  /api/v1/guardrails          – list (any authenticated user)
- *   POST /api/v1/guardrails          – create (admin only)
- *
- * NOTE: The backend does not yet expose PATCH / DELETE endpoints for
- * guardrails. Those operations are currently no-ops that throw a
- * "not_implemented" error. The Admin UI should disable or hide those
- * actions until the backend is ready.
+ *   GET    /api/v1/guardrails              – list (any authenticated user)
+ *   POST   /api/v1/guardrails              – create (admin only)
+ *   PUT    /api/v1/guardrails/{id}         – update (admin only)
+ *   DELETE /api/v1/guardrails/{id}         – delete (admin only)
  *
  * Severity mapping:
  *   Backend  → Frontend
@@ -20,6 +17,7 @@ import { promoApiClient } from "@/lib/promo-api-client";
 import type {
   ApiGuardrailCreateRequest,
   ApiGuardrailResponse,
+  ApiGuardrailUpdateRequest,
 } from "@/types/api/guardrails";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 
@@ -82,21 +80,25 @@ export async function createGuardrail(
   return adaptApiGuardrail(data);
 }
 
-/**
- * Toggle / update guardrail — no backend endpoint yet.
- * TODO: replace with PATCH /guardrails/{id} once available.
- */
 export async function updateGuardrail(
-  _id: string,
-  _patch: Partial<CreateGuardrailPayload>,
+  id: string,
+  patch: Partial<CreateGuardrailPayload>,
 ): Promise<GuardRailRule> {
-  throw new Error("update_guardrail_not_implemented");
+  const body: ApiGuardrailUpdateRequest = {
+    name: patch.name ?? null,
+    category: patch.category ?? null,
+    severity: patch.severity != null ? mapSeverityToApi(patch.severity) : null,
+    description: patch.description ?? null,
+    is_active: patch.active ?? null,
+    threshold_value: patch.thresholdValue ?? null,
+  };
+  const { data } = await promoApiClient.put<ApiGuardrailResponse>(
+    `${API_PREFIX}/guardrails/${id}`,
+    body,
+  );
+  return adaptApiGuardrail(data);
 }
 
-/**
- * Delete guardrail — no backend endpoint yet.
- * TODO: replace with DELETE /guardrails/{id} once available.
- */
-export async function deleteGuardrail(_id: string): Promise<void> {
-  throw new Error("delete_guardrail_not_implemented");
+export async function deleteGuardrail(id: string): Promise<void> {
+  await promoApiClient.delete(`${API_PREFIX}/guardrails/${id}`);
 }

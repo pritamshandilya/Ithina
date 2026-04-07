@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { useFleetStats, useHardwareAlertQuery, useQueueRows, useResolveAlert } from "@/hooks/use-fleet";
@@ -8,58 +8,48 @@ import FleetStats from "./components/fleet-stats";
 import HardwareTriage from "./components/hardware-triage";
 import PublishingQueue from "./components/publishing-queue";
 
+const FLEET_ALERT_DISMISS_KEY = "fleet-hardware-dismissed";
+
 export default function Fleet() {
   const { data: stats = [], isLoading: statsLoading, isError: statsError } = useFleetStats();
   const { data: queueRows = [], isLoading: queueLoading } = useQueueRows();
   const { data: alert = null } = useHardwareAlertQuery();
   const resolveAlertMutation = useResolveAlert();
 
-  const [hasAlert, setHasAlert] = useState(true);
-  const [isComplete, setIsComplete] = useState(false);
-  const [successRate, setSuccessRate] = useState(99.2);
-
-  const totalCount = queueRows.length > 0 ? queueRows[0].totalTags : 1240;
-  const [progressCount, setProgressCount] = useState(0);
-  const tagsInTransit = totalCount - progressCount;
-  const alertCount = hasAlert ? 1 : 0;
-
-  const batchStartedAt = new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
+  const [localDismissed, setLocalDismissed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return sessionStorage.getItem(FLEET_ALERT_DISMISS_KEY) === "1";
   });
 
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasAlert = Boolean(alert) && !localDismissed;
+  const tagsInTransit = useMemo(
+    () =>
+      queueRows.reduce((sum, r) => {
+        if (r.state === "live") return sum;
+        return sum + Math.max(0, r.totalTags - r.completedTags);
+      }, 0),
+    [queueRows],
+  );
+  const alertCount = hasAlert ? 1 : 0;
+  const successRate = hasAlert ? 99.2 : 99.8;
 
-  useEffect(() => {
-    const target = Math.floor(totalCount * 0.9);
-    const increment = 25;
-
-    intervalRef.current = setInterval(() => {
-      setProgressCount((prev) => {
-        const next = prev + Math.floor(Math.random() * increment) + 8;
-        if (next >= target) {
-          if (intervalRef.current) clearInterval(intervalRef.current);
-          return target;
-        }
-        return next;
-      });
-    }, 600);
-
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, [totalCount]);
+  const batchStartedAt = useMemo(
+    () =>
+      new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+    [],
+  );
 
   const handleResolve = useCallback(async () => {
     await resolveAlertMutation.mutateAsync();
-    setHasAlert(false);
-    setSuccessRate(99.8);
-    setProgressCount(totalCount);
-    timerRef.current = setTimeout(() => setIsComplete(true), 1000);
-  }, [resolveAlertMutation, totalCount]);
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(FLEET_ALERT_DISMISS_KEY, "1");
+    }
+    setLocalDismissed(true);
+  }, [resolveAlertMutation]);
 
   const isLoading = statsLoading || queueLoading;
   const hasError = statsError;
@@ -91,12 +81,7 @@ export default function Fleet() {
             />
 
             <div className="grid min-h-[400px] flex-1 grid-cols-1 gap-6 xl:grid-cols-3">
-              <PublishingQueue
-                rows={queueRows}
-                progressCount={progressCount}
-                totalCount={totalCount}
-                isComplete={isComplete}
-              />
+              <PublishingQueue rows={queueRows} />
 
               <HardwareTriage
                 alert={alert}

@@ -70,9 +70,9 @@ export const MOCK_DURATIONS: WizardDuration[] = [
 ];
 
 export const MOCK_STAGED_SKUS: StagedSku[] = [
-  { sku: "SUSHI-019A", name: "Premium Salmon Tray", current: 12.99, proposed: 10.39, safe: true },
-  { sku: "SUSHI-048B", name: "Spicy Tuna Roll 12pc", current: 14.49, proposed: 11.59, safe: true },
-  { sku: "SUSHI-099C", name: "Dragon Roll Combo", current: 16.99, proposed: 13.59, safe: false, margin: "14%" },
+  { sku: "SUSHI-019A", name: "Premium Salmon Tray", current: 12.99, proposed: 10.39, safe: true, included: true },
+  { sku: "SUSHI-048B", name: "Spicy Tuna Roll 12pc", current: 14.49, proposed: 11.59, safe: true, included: true },
+  { sku: "SUSHI-099C", name: "Dragon Roll Combo", current: 16.99, proposed: 13.59, safe: false, margin: "14%", included: true },
 ];
 
 export const MOCK_HARDWARE_DEVICES: HardwareDevice[] = [

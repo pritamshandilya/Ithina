@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { IthTable } from "@/components/ui/ith-table";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
 import { useCampaignList, useDeleteCampaign, useUpdateCampaign } from "@/hooks/use-campaigns";
@@ -10,7 +11,11 @@ import { useCampaignList, useDeleteCampaign, useUpdateCampaign } from "@/hooks/u
 import CampaignHistoryModal from "./components/campaign-history-modal";
 import CampaignModal from "./components/campaign-modal";
 import CampaignsScheduledTab from "./campaigns-scheduled-tab";
-import { buildCampaignColumns, toPrototypeStatus } from "./campaigns-tabulator-columns";
+import {
+  buildCampaignColumns,
+  canDeleteCampaignByStatus,
+  toPrototypeStatus,
+} from "./campaigns-tabulator-columns";
 
 type ActiveTab = "all" | "scheduled";
 type StatusFilter = "all" | "active" | "scheduled" | "draft" | "completed";
@@ -30,6 +35,7 @@ export default function CampaignsTabulator() {
   const { data: campaigns = [], isLoading, isError } = useCampaignList();
   const updateMutation = useUpdateCampaign();
   const deleteMutation = useDeleteCampaign();
+  const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("all");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
@@ -136,6 +142,15 @@ export default function CampaignsTabulator() {
 
   const confirmDelete = useCallback(
     (id: string) => {
+      const campaign = campaigns.find((c) => c.id === id);
+      if (!campaign || !canDeleteCampaignByStatus(campaign.status)) {
+        toast({
+          title: "Delete not allowed",
+          description: "Only Draft or Rejected campaigns can be deleted.",
+          variant: "destructive",
+        });
+        return;
+      }
       deleteMutation.mutate(id);
       setSelectedIds((prev) => {
         const next = new Set(prev);
@@ -143,7 +158,7 @@ export default function CampaignsTabulator() {
         return next;
       });
     },
-    [deleteMutation],
+    [campaigns, deleteMutation],
   );
 
   const bulkPause  = useCallback(() => {
@@ -154,9 +169,24 @@ export default function CampaignsTabulator() {
   }, [campaigns, selectedIds, togglePause]);
 
   const bulkDelete = useCallback(() => {
-    for (const id of selectedIds) deleteMutation.mutate(id);
+    let skippedCount = 0;
+    for (const id of selectedIds) {
+      const campaign = campaigns.find((x) => x.id === id);
+      if (!campaign || !canDeleteCampaignByStatus(campaign.status)) {
+        skippedCount += 1;
+        continue;
+      }
+      deleteMutation.mutate(id);
+    }
+    if (skippedCount > 0) {
+      toast({
+        title: "Some campaigns skipped",
+        description: `${skippedCount} selected campaign(s) were skipped. Only Draft or Rejected campaigns can be deleted.`,
+        variant: "destructive",
+      });
+    }
     setSelectedIds(new Set());
-  }, [deleteMutation, selectedIds]);
+  }, [campaigns, deleteMutation, selectedIds]);
 
   /* Row click — delegate to data-action / data-proto-row-select attributes */
   const handleRowClick = useCallback(

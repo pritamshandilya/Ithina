@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
+import { toast } from "@/hooks/use-toast";
 import {
   approveCampaign,
   chatCampaign,
@@ -8,18 +10,22 @@ import {
   draftCampaignFromPrompt,
   generateCampaign,
   getCalendarWeekdays,
+  getCampaign,
   getCampaignFilters,
   getCampaignList,
   getCampaignStatDefinitions,
   getCampaignStatusStyles,
   getCampaignTableColumns,
+  getCampaignTimeline,
   getMonthNames,
   initCampaign,
+  postCampaignChat,
   rejectCampaign,
   updateCampaign,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
 import type {
+  ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
@@ -29,6 +35,8 @@ import type {
 export const campaignKeys = {
   all: ["campaigns"] as const,
   list: ["campaigns", "list"] as const,
+  detail: (id: string) => ["campaigns", "detail", id] as const,
+  timeline: (id: string) => ["campaigns", "timeline", id] as const,
   filters: ["campaigns", "filters"] as const,
   statDefinitions: ["campaigns", "statDefinitions"] as const,
   statusStyles: ["campaigns", "statusStyles"] as const,
@@ -132,6 +140,16 @@ export function useDeleteCampaign() {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast({
+          title: "Cannot delete campaign",
+          description:
+            "Only makers and admins can delete campaigns. Your account has the checker role, which can review and approve but not delete.",
+          variant: "destructive",
+        });
+      }
+    },
   });
 }
 
@@ -143,6 +161,7 @@ export function useApproveCampaign() {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
+      qc.invalidateQueries({ queryKey: ["fleet"] });
     },
   });
 }
@@ -198,5 +217,44 @@ export function useChatCampaign() {
       campaignId: string;
       payload: ApiCampaignChatRequest;
     }) => chatCampaign(campaignId, payload),
+  });
+}
+
+/** Fetch a single campaign by id */
+export function useCampaign(id: string) {
+  return useQuery({
+    queryKey: campaignKeys.detail(id),
+    queryFn: () => getCampaign(id),
+    enabled: Boolean(id),
+    staleTime: 15_000,
+    gcTime: 5 * 60_000,
+  });
+}
+
+/** Fetch the chronological event / chat timeline for a campaign */
+export function useCampaignTimeline(campaignId: string) {
+  return useQuery({
+    queryKey: campaignKeys.timeline(campaignId),
+    queryFn: () => getCampaignTimeline(campaignId),
+    enabled: Boolean(campaignId),
+    staleTime: 10_000,
+    gcTime: 5 * 60_000,
+  });
+}
+
+/** Post a chat message to the Campaign Studio AI (returns an event entry) */
+export function usePostCampaignChat() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      campaignId,
+      payload,
+    }: {
+      campaignId: string;
+      payload: ApiCampaignChatMessageRequest;
+    }) => postCampaignChat(campaignId, payload),
+    onSuccess: (_data, { campaignId }) => {
+      qc.invalidateQueries({ queryKey: campaignKeys.timeline(campaignId) });
+    },
   });
 }

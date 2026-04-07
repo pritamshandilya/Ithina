@@ -1,5 +1,4 @@
 import {
-  ArrowRight,
   Check,
   CloudUpload,
   Fish,
@@ -9,7 +8,9 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { memo, useEffect, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
+
+import AiModifyPanel from "./ai-modify-panel";
 
 import { cn } from "@/lib/utils";
 
@@ -21,8 +22,18 @@ export interface CampaignStudioModalProps {
   mode: "esl" | "lcd";
   selectedVariant: "A" | "B" | "C";
   onSelectVariant: (v: "A" | "B" | "C") => void;
-  onApply: () => void;
+  onApply: (selection: AppliedDesignSelection) => void;
 }
+
+export type AppliedDesignSelection = {
+  source: "ai" | "template" | "upload";
+  templateId?: string;
+  templateName?: string;
+  templateHeaderColor?: string;
+  templateHeaderText?: string;
+  templateProductLine?: string;
+  uploadedFileName?: string;
+};
 
 const STUDIO_TABS: { id: StudioTabId; label: string; icon: typeof Zap }[] = [
   { id: "ai", label: "AI Generate", icon: Zap },
@@ -111,6 +122,67 @@ const ESL_VARIANTS: VariantDef[] = [
   { id: "B", label: "B. URGENCY", recommended: true },
   { id: "C", label: "C. BALANCED" },
 ];
+
+type TemplateItem = {
+  id: string;
+  name: string;
+  headerColor: string;
+  headerText: string;
+  productLine: string;
+  category?: string;
+};
+
+const TEMPLATE_LIBRARY: TemplateItem[] = [
+  {
+    id: "tpl_clearance",
+    name: "Clearance Standard",
+    headerColor: "#111111",
+    headerText: "CLEARANCE",
+    productLine: "Perishables",
+    category: "All Category",
+  },
+  {
+    id: "tpl_expiring",
+    name: "Expiring 48H",
+    headerColor: "#cc0000",
+    headerText: "EXPIRING IN 48H",
+    productLine: "Fresh",
+    category: "Fresh",
+  },
+  {
+    id: "tpl_flash",
+    name: "Flash Sale",
+    headerColor: "#b91c1c",
+    headerText: "FLASH SALE",
+    productLine: "All Categories",
+    category: "All Category",
+  },
+  {
+    id: "tpl_newarrival",
+    name: "New Arrival",
+    headerColor: "#065f46",
+    headerText: "NEW ARRIVAL",
+    productLine: "All Categories",
+    category: "All Category",
+  },
+  {
+    id: "tpl_bogo",
+    name: "BOGO Special",
+    headerColor: "#1d4ed8",
+    headerText: "BUY ONE GET ONE",
+    productLine: "Snacks & Drinks",
+    category: "Snacks & Drink",
+  },
+  {
+    id: "tpl_members",
+    name: "Members Only",
+    headerColor: "#7c3aed",
+    headerText: "MEMBERS ONLY",
+    productLine: "Premium",
+    category: "Premium",
+  },
+];
+
 
 function EslVariantCard({
   v,
@@ -288,9 +360,18 @@ function CampaignStudioModal({
   onApply,
 }: CampaignStudioModalProps) {
   const [studioTab, setStudioTab] = useState<StudioTabId>("ai");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATE_LIBRARY[0].id);
+  const [uploadedFileName, setUploadedFileName] = useState<string>("");
+  const [aiResetKey, setAiResetKey] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (open) setStudioTab("ai");
+    if (open) {
+      setStudioTab("ai");
+      setSelectedTemplateId(TEMPLATE_LIBRARY[0].id);
+      setUploadedFileName("");
+      setAiResetKey((k) => k + 1);
+    }
   }, [open]);
 
   if (!open) return null;
@@ -392,35 +473,7 @@ function CampaignStudioModal({
                       )}
                     </div>
                   </div>
-                  <div className="flex w-60 shrink-0 flex-col border-l border-ithina-border bg-ithina-bg/20">
-                    <div className="flex shrink-0 items-center gap-2 border-b border-ithina-border/60 px-4 py-3">
-                      <div className="flex size-5 items-center justify-center rounded-md bg-ithina-purple/15">
-                        <Zap className="size-3 text-ithina-purple" strokeWidth={2} aria-hidden />
-                      </div>
-                      <p className="text-xs font-semibold text-white">AI Modify</p>
-                    </div>
-                    <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
-                      <p className="py-4 text-center text-[10px] leading-relaxed text-slate-600">
-                        Describe changes to apply.
-                        <br />
-                        <span className="text-slate-700">&quot;Make header green&quot;</span>
-                      </p>
-                    </div>
-                    <div className="flex shrink-0 gap-2 border-t border-ithina-border/60 p-2.5">
-                      <input
-                        type="text"
-                        placeholder="Describe changes…"
-                        className="flex-1 rounded-lg border border-ithina-border bg-ithina-panel px-3 py-1.5 text-xs text-white placeholder:text-slate-600 transition-colors focus:border-ithina-purple focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        className="shrink-0 rounded-lg bg-ithina-purple p-1.5 text-white transition-colors hover:bg-ithina-purple-hover"
-                        aria-label="Send"
-                      >
-                        <ArrowRight className="size-3.5" strokeWidth={2} />
-                      </button>
-                    </div>
-                  </div>
+                  <AiModifyPanel resetKey={aiResetKey} />
                 </div>
                 <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/40 px-5 py-3">
                   <p className="text-xs text-slate-500">
@@ -428,7 +481,7 @@ function CampaignStudioModal({
                   </p>
                   <button
                     type="button"
-                    onClick={onApply}
+                    onClick={() => onApply({ source: "ai" })}
                     className="flex items-center gap-2 rounded-xl bg-ithina-purple px-5 py-2 text-sm font-bold text-white transition-all hover:bg-ithina-purple-hover"
                   >
                     Apply to Campaign
@@ -439,24 +492,150 @@ function CampaignStudioModal({
             )}
 
             {studioTab === "library" && (
-              <div className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
-                <LayoutGrid className="mx-auto size-10 text-slate-600" strokeWidth={1.5} />
-                <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">Choose a saved template</p>
-                <p className="text-sm text-slate-600">No templates in this build — use AI Generate.</p>
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                  <p className="mb-2 px-1 font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                    Choose a saved template
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                  {TEMPLATE_LIBRARY.map((tpl) => {
+                    const selected = tpl.id === selectedTemplateId;
+                    return (
+                      <button
+                        key={tpl.id}
+                        type="button"
+                        onClick={() => setSelectedTemplateId(tpl.id)}
+                        className={cn(
+                          "relative overflow-hidden rounded-xl border text-left transition-all",
+                          selected
+                            ? "border-ithina-purple bg-ithina-purple/10 shadow-[0_0_0_1px_rgba(168,85,247,0.5)]"
+                            : "border-ithina-border bg-ithina-panel hover:border-slate-500",
+                        )}
+                      >
+                        {isLcd ? (
+                          <div className="relative h-[170px] overflow-hidden rounded-t-lg border-b border-ithina-border">
+                            <div className="absolute inset-0 bg-[url(https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=900&q=80)] bg-cover bg-center" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-[#04040e]/95 via-[#04040e]/55 to-[#04040e]/20" />
+                            <div
+                              className="absolute left-2 top-2 inline-flex rounded px-1.5 py-0.5 text-[7px] font-black tracking-widest text-white"
+                              style={{ background: tpl.headerColor }}
+                            >
+                              {tpl.headerText}
+                            </div>
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <p className="text-[6px] text-slate-300">{tpl.category ?? "All Category"}</p>
+                              <div className="text-[30px] font-black leading-none tracking-tighter text-white">
+                                $XX<span className="text-[16px]">.xx</span>
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="overflow-hidden rounded-t-lg border-b border-ithina-border bg-[#E5E7EB]">
+                            <div
+                              className="flex h-6 items-center justify-center text-[7px] font-bold tracking-widest text-white"
+                              style={{ background: tpl.headerColor }}
+                            >
+                              {tpl.headerText}
+                            </div>
+                            <div className="h-[170px] bg-[#D1D5DB] p-1.5">
+                              <p className="text-[6px] text-black/35">{tpl.productLine}</p>
+                              <div className="mt-[120px] text-[34px] font-black leading-none tracking-tighter text-black">
+                                $XX<span className="text-[18px]">.xx</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between bg-ithina-bg px-2 py-1.5">
+                          <p className="truncate text-[10px] text-white">{tpl.name}</p>
+                          {selected && (
+                            <span className="inline-flex size-3.5 items-center justify-center rounded-full bg-ithina-purple text-white">
+                              <Check className="size-2.5" strokeWidth={3} />
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+                </div>
+                <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/50 px-4 py-3">
+                  <p className="text-xs text-slate-500">
+                    {TEMPLATE_LIBRARY.find((t) => t.id === selectedTemplateId)?.name ?? "No template selected"}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const selectedTemplate = TEMPLATE_LIBRARY.find((t) => t.id === selectedTemplateId);
+                      onApply({
+                        source: "template",
+                        templateId: selectedTemplate?.id,
+                        templateName: selectedTemplate?.name,
+                        templateHeaderColor: selectedTemplate?.headerColor,
+                        templateHeaderText: selectedTemplate?.headerText,
+                        templateProductLine: selectedTemplate?.productLine,
+                      });
+                    }}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-ithina-purple px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-ithina-purple-hover"
+                  >
+                    Apply Template
+                    <Check className="size-3.5" strokeWidth={2.5} />
+                  </button>
+                </div>
               </div>
             )}
 
             {studioTab === "upload" && (
-              <div className="flex flex-1 flex-col items-center justify-center p-8">
+              <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-5">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    setUploadedFileName(file?.name ?? "");
+                  }}
+                />
                 <button
                   type="button"
-                  className="flex w-full max-w-md flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-ithina-border/60 p-10 transition-all hover:border-ithina-purple/40 hover:bg-ithina-purple/5"
+                  onClick={() => fileInputRef.current?.click()}
+                  className={cn(
+                    "flex w-full flex-col items-center gap-4 rounded-2xl border-2 border-dashed p-10 transition-all hover:border-ithina-purple/40 hover:bg-ithina-purple/5",
+                    uploadedFileName ? "border-emerald-500/40 bg-emerald-500/5" : "border-ithina-border/60",
+                  )}
                 >
-                  <div className="flex size-12 items-center justify-center rounded-full bg-ithina-purple/10">
-                    <CloudUpload className="size-6 text-ithina-purple" strokeWidth={1.5} />
+                  <div
+                    className={cn(
+                      "flex size-12 items-center justify-center rounded-full",
+                      uploadedFileName ? "bg-emerald-400/10" : "bg-ithina-purple/10",
+                    )}
+                  >
+                    <CloudUpload
+                      className={cn("size-6", uploadedFileName ? "text-emerald-400" : "text-ithina-purple")}
+                      strokeWidth={1.5}
+                    />
                   </div>
-                  <p className="text-sm font-semibold text-slate-300">Upload your design file</p>
+                  <div className="text-center">
+                    <p className={cn("text-sm font-semibold", uploadedFileName ? "text-emerald-400" : "text-slate-300")}>
+                      {uploadedFileName || "Upload your design file"}
+                    </p>
+                    <p className="mt-1 font-mono text-xs text-slate-500">
+                      {isLcd ? "PNG / JPG · full colour RGB" : "PNG / BMP · 3-colour e-ink"}
+                    </p>
+                  </div>
                 </button>
+                {uploadedFileName && (
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => onApply({ source: "upload", uploadedFileName })}
+                      className="flex items-center gap-2 rounded-xl bg-ithina-purple px-5 py-2 text-sm font-bold text-white transition-all hover:bg-ithina-purple-hover"
+                    >
+                      Apply Upload
+                      <Check className="size-4" strokeWidth={2} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>

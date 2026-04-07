@@ -2,8 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   approveCampaign,
+  chatCampaign,
   createCampaign,
   deleteCampaign,
+  draftCampaignFromPrompt,
+  generateCampaign,
   getCalendarWeekdays,
   getCampaignFilters,
   getCampaignList,
@@ -11,10 +14,17 @@ import {
   getCampaignStatusStyles,
   getCampaignTableColumns,
   getMonthNames,
+  initCampaign,
   rejectCampaign,
   updateCampaign,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
+import type {
+  ApiCampaignChatRequest,
+  ApiCampaignDraftRequest,
+  ApiCampaignGenerateRequest,
+  ApiCampaignInitRequest,
+} from "@/types/api/campaigns";
 
 export const campaignKeys = {
   all: ["campaigns"] as const,
@@ -94,7 +104,7 @@ export function useMonthNames() {
 export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: createCampaign,
+    mutationFn: (form: CampaignCreateForm) => createCampaign(form),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -117,7 +127,7 @@ export function useUpdateCampaign() {
 export function useDeleteCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: deleteCampaign,
+    mutationFn: (id: string) => deleteCampaign(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -128,10 +138,11 @@ export function useDeleteCampaign() {
 export function useApproveCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: approveCampaign,
+    mutationFn: (id: string) => approveCampaign(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
     },
   });
 }
@@ -139,10 +150,53 @@ export function useApproveCampaign() {
 export function useRejectCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: rejectCampaign,
+    mutationFn: (id: string) => rejectCampaign(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
+    },
+  });
+}
+
+/** Phase 1 – wizard NL draft (returns staged SKUs, does NOT persist yet) */
+export function useDraftCampaign() {
+  return useMutation({
+    mutationFn: (payload: ApiCampaignDraftRequest) =>
+      draftCampaignFromPrompt(payload),
+  });
+}
+
+/** Phase 2 – wizard generate (persists campaign to DB, returns saved record) */
+export function useGenerateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ApiCampaignGenerateRequest) =>
+      generateCampaign(payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
+  });
+}
+
+/** Initialize a campaign session (DB row + LangGraph thread) */
+export function useInitCampaign() {
+  return useMutation({
+    mutationFn: (payload?: ApiCampaignInitRequest) =>
+      initCampaign(payload),
+  });
+}
+
+/** Send a message to the LangGraph AI agent for a campaign */
+export function useChatCampaign() {
+  return useMutation({
+    mutationFn: ({
+      campaignId,
+      payload,
+    }: {
+      campaignId: string;
+      payload: ApiCampaignChatRequest;
+    }) => chatCampaign(campaignId, payload),
   });
 }

@@ -1,21 +1,78 @@
-import { apiDelay } from "@/lib/api-delay";
-import { MOCK_ORG_USERS, MOCK_STORE_PROFILE, MOCK_STORE_STAFF } from "@/mocks/store-settings";
+import { promoApiClient } from "@/lib/promo-api-client";
 import type { StoreDimensionUnit } from "@/constants/dimensions";
-import type { StoreProfile, StoreStaffMember } from "@/types/store-settings";
+import type { StoreProfile, StoreStaffMember, StoreStaffRole } from "@/types/store-settings";
 
-let profileState: StoreProfile = { ...MOCK_STORE_PROFILE };
-let staffState: StoreStaffMember[] = MOCK_STORE_STAFF.map((u) => ({ ...u }));
+const API_PREFIX = "/api/v1";
 
-function cloneAssignable(): StoreStaffMember[] {
-  const assigned = new Set(staffState.map((s) => s.id));
-  return MOCK_ORG_USERS.filter(
-    (u) => !assigned.has(u.id) && (u.role === "maker" || u.role === "checker"),
-  ).map((u) => ({ ...u }));
+interface StoreResponse {
+  id: string;
+  organization_id: string;
+  created_by_user_id: string;
+  name: string;
+  address: string;
+  region: string;
+  currency: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface UserResponse {
+  id: string;
+  organization_id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  role: StoreStaffRole;
+  is_active: boolean;
+  last_login_at: string | null;
+}
+
+function mapStoreToProfile(store: StoreResponse): StoreProfile {
+  return {
+    id: store.id,
+    name: store.name,
+    address: store.address,
+    currency: store.currency,
+    // Backend doesn't yet model defaultDimensions; keep UI default as "mm".
+    defaultDimensions: "mm",
+  };
+}
+
+function mapUserToStaff(user: UserResponse): StoreStaffMember {
+  return {
+    id: user.id,
+    firstName: user.first_name,
+    lastName: user.last_name,
+    email: user.email,
+    role: user.role,
+  };
+}
+
+async function resolveStoreId(): Promise<string> {
+  const { data } = await promoApiClient.get<StoreResponse[]>(
+    `${API_PREFIX}/stores`,
+  );
+
+  if (!data.length) {
+    throw new Error("No stores available for current user");
+  }
+
+  // For now, use the first store in the list as the active store.
+  return data[0].id;
 }
 
 export async function getStoreProfile(): Promise<StoreProfile> {
-  await apiDelay(200);
-  return { ...profileState };
+  const { data } = await promoApiClient.get<StoreResponse[]>(
+    `${API_PREFIX}/stores`,
+  );
+
+  if (!data.length) {
+    throw new Error("No stores available for current user");
+  }
+
+  // Use the first store in the list as the active store profile.
+  return mapStoreToProfile(data[0]);
 }
 
 export async function updateStoreProfile(data: {
@@ -24,48 +81,84 @@ export async function updateStoreProfile(data: {
   currency: string;
   defaultDimensions: StoreDimensionUnit;
 }): Promise<StoreProfile> {
-  await apiDelay(450);
-  profileState = {
-    ...profileState,
-    name: data.name,
-    address: data.address,
-    currency: data.currency,
-    defaultDimensions: data.defaultDimensions,
-  };
-  return { ...profileState };
+  const { name, address, currency } = data;
+
+  const storeId = await resolveStoreId();
+
+  const { data: updated } = await promoApiClient.put<StoreResponse>(
+    `${API_PREFIX}/store`,
+    {
+      name,
+      address,
+      currency,
+    },
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+
+  return mapStoreToProfile(updated);
 }
 
 export async function getStoreStaff(): Promise<StoreStaffMember[]> {
-  await apiDelay(200);
-  return staffState.map((u) => ({ ...u }));
+  const storeId = await resolveStoreId();
+
+  const { data } = await promoApiClient.get<UserResponse[]>(
+    `${API_PREFIX}/store/users`,
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+  return data.map(mapUserToStaff);
 }
 
 export async function getAssignableStoreUsers(): Promise<StoreStaffMember[]> {
-  await apiDelay(150);
-  return cloneAssignable();
+  const [{ data: orgUsers }, currentStaff] = await Promise.all([
+    promoApiClient.get<UserResponse[]>(`${API_PREFIX}/organization/users`),
+    getStoreStaff(),
+  ]);
+
+  const assignedIds = new Set(currentStaff.map((u) => u.id));
+
+  return orgUsers
+    .filter(
+      (u) =>
+        !assignedIds.has(u.id) &&
+        (u.role === "maker" || u.role === "checker" || u.role === "admin"),
+    )
+    .map(mapUserToStaff);
 }
 
 export async function assignStoreUser(userId: string): Promise<StoreStaffMember[]> {
-  await apiDelay(350);
-  const pool = MOCK_ORG_USERS.find((u) => u.id === userId);
-  if (
-    !pool ||
-    staffState.some((s) => s.id === userId) ||
-    (pool.role !== "maker" && pool.role !== "checker")
-  ) {
-    return staffState.map((u) => ({ ...u }));
-  }
-  staffState = [...staffState, { ...pool }];
-  return staffState.map((u) => ({ ...u }));
+  const storeId = await resolveStoreId();
+
+  const { data } = await promoApiClient.put<UserResponse[]>(
+    `${API_PREFIX}/store/users/${userId}`,
+    undefined,
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+  return data.map(mapUserToStaff);
 }
 
 export async function removeStoreUser(userId: string): Promise<StoreStaffMember[]> {
-  await apiDelay(300);
-  const user = staffState.find((s) => s.id === userId);
-  if (!user || user.role === "admin") {
-    return staffState.map((u) => ({ ...u }));
-  }
-  staffState = staffState.filter((s) => s.id !== userId);
-  return staffState.map((u) => ({ ...u }));
+  const storeId = await resolveStoreId();
+
+  const { data } = await promoApiClient.delete<UserResponse[]>(
+    `${API_PREFIX}/store/users/${userId}`,
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+  return data.map(mapUserToStaff);
 }
 

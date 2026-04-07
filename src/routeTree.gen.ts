@@ -10,7 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as MakerRouteImport } from './routes/_maker'
+import { Route as CheckerRouteImport } from './routes/_checker'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
+import { Route as AdminRouteImport } from './routes/_admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWizardRouteImport } from './routes/_authenticated/wizard'
 import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
@@ -21,14 +24,47 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedCampaignsRouteImport } from './routes/_authenticated/campaigns'
 import { Route as AuthenticatedApprovalRouteImport } from './routes/_authenticated/approval'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as MakerMakerWizardRouteImport } from './routes/_maker/maker/wizard'
+import { Route as MakerMakerTemplatesRouteImport } from './routes/_maker/maker/templates'
+import { Route as MakerMakerStudioRouteImport } from './routes/_maker/maker/studio'
+import { Route as MakerMakerStoreSettingsRouteImport } from './routes/_maker/maker/store-settings'
+import { Route as MakerMakerGuardRailsRouteImport } from './routes/_maker/maker/guard-rails'
+import { Route as MakerMakerFleetRouteImport } from './routes/_maker/maker/fleet'
+import { Route as MakerMakerDashboardRouteImport } from './routes/_maker/maker/dashboard'
+import { Route as MakerMakerCampaignsRouteImport } from './routes/_maker/maker/campaigns'
+import { Route as MakerMakerApprovalsRouteImport } from './routes/_maker/maker/approvals'
+import { Route as CheckerCheckerStoreSettingsRouteImport } from './routes/_checker/checker/store-settings'
+import { Route as CheckerCheckerFleetRouteImport } from './routes/_checker/checker/fleet'
+import { Route as CheckerCheckerDashboardRouteImport } from './routes/_checker/checker/dashboard'
+import { Route as CheckerCheckerCampaignsRouteImport } from './routes/_checker/checker/campaigns'
+import { Route as CheckerCheckerApprovalsRouteImport } from './routes/_checker/checker/approvals'
+import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
+import { Route as AdminAdminStoresRouteImport } from './routes/_admin/admin/stores'
+import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
+import { Route as AdminAdminFleetRouteImport } from './routes/_admin/admin/fleet'
+import { Route as AdminAdminDashboardRouteImport } from './routes/_admin/admin/dashboard'
+import { Route as AdminAdminCampaignsRouteImport } from './routes/_admin/admin/campaigns'
+import { Route as AdminAdminApprovalsRouteImport } from './routes/_admin/admin/approvals'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MakerRoute = MakerRouteImport.update({
+  id: '/_maker',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CheckerRoute = CheckerRouteImport.update({
+  id: '/_checker',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/_admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -82,6 +118,112 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const MakerMakerWizardRoute = MakerMakerWizardRouteImport.update({
+  id: '/maker/wizard',
+  path: '/maker/wizard',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerTemplatesRoute = MakerMakerTemplatesRouteImport.update({
+  id: '/maker/templates',
+  path: '/maker/templates',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerStudioRoute = MakerMakerStudioRouteImport.update({
+  id: '/maker/studio',
+  path: '/maker/studio',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerStoreSettingsRoute = MakerMakerStoreSettingsRouteImport.update({
+  id: '/maker/store-settings',
+  path: '/maker/store-settings',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerGuardRailsRoute = MakerMakerGuardRailsRouteImport.update({
+  id: '/maker/guard-rails',
+  path: '/maker/guard-rails',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerFleetRoute = MakerMakerFleetRouteImport.update({
+  id: '/maker/fleet',
+  path: '/maker/fleet',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerDashboardRoute = MakerMakerDashboardRouteImport.update({
+  id: '/maker/dashboard',
+  path: '/maker/dashboard',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerCampaignsRoute = MakerMakerCampaignsRouteImport.update({
+  id: '/maker/campaigns',
+  path: '/maker/campaigns',
+  getParentRoute: () => MakerRoute,
+} as any)
+const MakerMakerApprovalsRoute = MakerMakerApprovalsRouteImport.update({
+  id: '/maker/approvals',
+  path: '/maker/approvals',
+  getParentRoute: () => MakerRoute,
+} as any)
+const CheckerCheckerStoreSettingsRoute =
+  CheckerCheckerStoreSettingsRouteImport.update({
+    id: '/checker/store-settings',
+    path: '/checker/store-settings',
+    getParentRoute: () => CheckerRoute,
+  } as any)
+const CheckerCheckerFleetRoute = CheckerCheckerFleetRouteImport.update({
+  id: '/checker/fleet',
+  path: '/checker/fleet',
+  getParentRoute: () => CheckerRoute,
+} as any)
+const CheckerCheckerDashboardRoute = CheckerCheckerDashboardRouteImport.update({
+  id: '/checker/dashboard',
+  path: '/checker/dashboard',
+  getParentRoute: () => CheckerRoute,
+} as any)
+const CheckerCheckerCampaignsRoute = CheckerCheckerCampaignsRouteImport.update({
+  id: '/checker/campaigns',
+  path: '/checker/campaigns',
+  getParentRoute: () => CheckerRoute,
+} as any)
+const CheckerCheckerApprovalsRoute = CheckerCheckerApprovalsRouteImport.update({
+  id: '/checker/approvals',
+  path: '/checker/approvals',
+  getParentRoute: () => CheckerRoute,
+} as any)
+const AdminAdminUsersRoute = AdminAdminUsersRouteImport.update({
+  id: '/admin/users',
+  path: '/admin/users',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminStoresRoute = AdminAdminStoresRouteImport.update({
+  id: '/admin/stores',
+  path: '/admin/stores',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
+  id: '/admin/settings',
+  path: '/admin/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminFleetRoute = AdminAdminFleetRouteImport.update({
+  id: '/admin/fleet',
+  path: '/admin/fleet',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminDashboardRoute = AdminAdminDashboardRouteImport.update({
+  id: '/admin/dashboard',
+  path: '/admin/dashboard',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminCampaignsRoute = AdminAdminCampaignsRouteImport.update({
+  id: '/admin/campaigns',
+  path: '/admin/campaigns',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminAdminApprovalsRoute = AdminAdminApprovalsRouteImport.update({
+  id: '/admin/approvals',
+  path: '/admin/approvals',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -95,6 +237,27 @@ export interface FileRoutesByFullPath {
   '/studio': typeof AuthenticatedStudioRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/wizard': typeof AuthenticatedWizardRoute
+  '/admin/approvals': typeof AdminAdminApprovalsRoute
+  '/admin/campaigns': typeof AdminAdminCampaignsRoute
+  '/admin/dashboard': typeof AdminAdminDashboardRoute
+  '/admin/fleet': typeof AdminAdminFleetRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/stores': typeof AdminAdminStoresRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/checker/approvals': typeof CheckerCheckerApprovalsRoute
+  '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
+  '/checker/dashboard': typeof CheckerCheckerDashboardRoute
+  '/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
+  '/maker/approvals': typeof MakerMakerApprovalsRoute
+  '/maker/campaigns': typeof MakerMakerCampaignsRoute
+  '/maker/dashboard': typeof MakerMakerDashboardRoute
+  '/maker/fleet': typeof MakerMakerFleetRoute
+  '/maker/guard-rails': typeof MakerMakerGuardRailsRoute
+  '/maker/store-settings': typeof MakerMakerStoreSettingsRoute
+  '/maker/studio': typeof MakerMakerStudioRoute
+  '/maker/templates': typeof MakerMakerTemplatesRoute
+  '/maker/wizard': typeof MakerMakerWizardRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -108,11 +271,35 @@ export interface FileRoutesByTo {
   '/studio': typeof AuthenticatedStudioRoute
   '/templates': typeof AuthenticatedTemplatesRoute
   '/wizard': typeof AuthenticatedWizardRoute
+  '/admin/approvals': typeof AdminAdminApprovalsRoute
+  '/admin/campaigns': typeof AdminAdminCampaignsRoute
+  '/admin/dashboard': typeof AdminAdminDashboardRoute
+  '/admin/fleet': typeof AdminAdminFleetRoute
+  '/admin/settings': typeof AdminAdminSettingsRoute
+  '/admin/stores': typeof AdminAdminStoresRoute
+  '/admin/users': typeof AdminAdminUsersRoute
+  '/checker/approvals': typeof CheckerCheckerApprovalsRoute
+  '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
+  '/checker/dashboard': typeof CheckerCheckerDashboardRoute
+  '/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
+  '/maker/approvals': typeof MakerMakerApprovalsRoute
+  '/maker/campaigns': typeof MakerMakerCampaignsRoute
+  '/maker/dashboard': typeof MakerMakerDashboardRoute
+  '/maker/fleet': typeof MakerMakerFleetRoute
+  '/maker/guard-rails': typeof MakerMakerGuardRailsRoute
+  '/maker/store-settings': typeof MakerMakerStoreSettingsRoute
+  '/maker/studio': typeof MakerMakerStudioRoute
+  '/maker/templates': typeof MakerMakerTemplatesRoute
+  '/maker/wizard': typeof MakerMakerWizardRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_admin': typeof AdminRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
+  '/_checker': typeof CheckerRouteWithChildren
+  '/_maker': typeof MakerRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/approval': typeof AuthenticatedApprovalRoute
@@ -123,6 +310,27 @@ export interface FileRoutesById {
   '/_authenticated/studio': typeof AuthenticatedStudioRoute
   '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/wizard': typeof AuthenticatedWizardRoute
+  '/_admin/admin/approvals': typeof AdminAdminApprovalsRoute
+  '/_admin/admin/campaigns': typeof AdminAdminCampaignsRoute
+  '/_admin/admin/dashboard': typeof AdminAdminDashboardRoute
+  '/_admin/admin/fleet': typeof AdminAdminFleetRoute
+  '/_admin/admin/settings': typeof AdminAdminSettingsRoute
+  '/_admin/admin/stores': typeof AdminAdminStoresRoute
+  '/_admin/admin/users': typeof AdminAdminUsersRoute
+  '/_checker/checker/approvals': typeof CheckerCheckerApprovalsRoute
+  '/_checker/checker/campaigns': typeof CheckerCheckerCampaignsRoute
+  '/_checker/checker/dashboard': typeof CheckerCheckerDashboardRoute
+  '/_checker/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/_checker/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
+  '/_maker/maker/approvals': typeof MakerMakerApprovalsRoute
+  '/_maker/maker/campaigns': typeof MakerMakerCampaignsRoute
+  '/_maker/maker/dashboard': typeof MakerMakerDashboardRoute
+  '/_maker/maker/fleet': typeof MakerMakerFleetRoute
+  '/_maker/maker/guard-rails': typeof MakerMakerGuardRailsRoute
+  '/_maker/maker/store-settings': typeof MakerMakerStoreSettingsRoute
+  '/_maker/maker/studio': typeof MakerMakerStudioRoute
+  '/_maker/maker/templates': typeof MakerMakerTemplatesRoute
+  '/_maker/maker/wizard': typeof MakerMakerWizardRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -138,6 +346,27 @@ export interface FileRouteTypes {
     | '/studio'
     | '/templates'
     | '/wizard'
+    | '/admin/approvals'
+    | '/admin/campaigns'
+    | '/admin/dashboard'
+    | '/admin/fleet'
+    | '/admin/settings'
+    | '/admin/stores'
+    | '/admin/users'
+    | '/checker/approvals'
+    | '/checker/campaigns'
+    | '/checker/dashboard'
+    | '/checker/fleet'
+    | '/checker/store-settings'
+    | '/maker/approvals'
+    | '/maker/campaigns'
+    | '/maker/dashboard'
+    | '/maker/fleet'
+    | '/maker/guard-rails'
+    | '/maker/store-settings'
+    | '/maker/studio'
+    | '/maker/templates'
+    | '/maker/wizard'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,10 +380,34 @@ export interface FileRouteTypes {
     | '/studio'
     | '/templates'
     | '/wizard'
+    | '/admin/approvals'
+    | '/admin/campaigns'
+    | '/admin/dashboard'
+    | '/admin/fleet'
+    | '/admin/settings'
+    | '/admin/stores'
+    | '/admin/users'
+    | '/checker/approvals'
+    | '/checker/campaigns'
+    | '/checker/dashboard'
+    | '/checker/fleet'
+    | '/checker/store-settings'
+    | '/maker/approvals'
+    | '/maker/campaigns'
+    | '/maker/dashboard'
+    | '/maker/fleet'
+    | '/maker/guard-rails'
+    | '/maker/store-settings'
+    | '/maker/studio'
+    | '/maker/templates'
+    | '/maker/wizard'
   id:
     | '__root__'
     | '/'
+    | '/_admin'
     | '/_authenticated'
+    | '/_checker'
+    | '/_maker'
     | '/login'
     | '/_authenticated/admin'
     | '/_authenticated/approval'
@@ -165,11 +418,35 @@ export interface FileRouteTypes {
     | '/_authenticated/studio'
     | '/_authenticated/templates'
     | '/_authenticated/wizard'
+    | '/_admin/admin/approvals'
+    | '/_admin/admin/campaigns'
+    | '/_admin/admin/dashboard'
+    | '/_admin/admin/fleet'
+    | '/_admin/admin/settings'
+    | '/_admin/admin/stores'
+    | '/_admin/admin/users'
+    | '/_checker/checker/approvals'
+    | '/_checker/checker/campaigns'
+    | '/_checker/checker/dashboard'
+    | '/_checker/checker/fleet'
+    | '/_checker/checker/store-settings'
+    | '/_maker/maker/approvals'
+    | '/_maker/maker/campaigns'
+    | '/_maker/maker/dashboard'
+    | '/_maker/maker/fleet'
+    | '/_maker/maker/guard-rails'
+    | '/_maker/maker/store-settings'
+    | '/_maker/maker/studio'
+    | '/_maker/maker/templates'
+    | '/_maker/maker/wizard'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminRoute: typeof AdminRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  CheckerRoute: typeof CheckerRouteWithChildren
+  MakerRoute: typeof MakerRouteWithChildren
   LoginRoute: typeof LoginRoute
 }
 
@@ -182,11 +459,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_maker': {
+      id: '/_maker'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof MakerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_checker': {
+      id: '/_checker'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof CheckerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_admin': {
+      id: '/_admin'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -259,8 +557,177 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_maker/maker/wizard': {
+      id: '/_maker/maker/wizard'
+      path: '/maker/wizard'
+      fullPath: '/maker/wizard'
+      preLoaderRoute: typeof MakerMakerWizardRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/templates': {
+      id: '/_maker/maker/templates'
+      path: '/maker/templates'
+      fullPath: '/maker/templates'
+      preLoaderRoute: typeof MakerMakerTemplatesRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/studio': {
+      id: '/_maker/maker/studio'
+      path: '/maker/studio'
+      fullPath: '/maker/studio'
+      preLoaderRoute: typeof MakerMakerStudioRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/store-settings': {
+      id: '/_maker/maker/store-settings'
+      path: '/maker/store-settings'
+      fullPath: '/maker/store-settings'
+      preLoaderRoute: typeof MakerMakerStoreSettingsRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/guard-rails': {
+      id: '/_maker/maker/guard-rails'
+      path: '/maker/guard-rails'
+      fullPath: '/maker/guard-rails'
+      preLoaderRoute: typeof MakerMakerGuardRailsRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/fleet': {
+      id: '/_maker/maker/fleet'
+      path: '/maker/fleet'
+      fullPath: '/maker/fleet'
+      preLoaderRoute: typeof MakerMakerFleetRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/dashboard': {
+      id: '/_maker/maker/dashboard'
+      path: '/maker/dashboard'
+      fullPath: '/maker/dashboard'
+      preLoaderRoute: typeof MakerMakerDashboardRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/campaigns': {
+      id: '/_maker/maker/campaigns'
+      path: '/maker/campaigns'
+      fullPath: '/maker/campaigns'
+      preLoaderRoute: typeof MakerMakerCampaignsRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_maker/maker/approvals': {
+      id: '/_maker/maker/approvals'
+      path: '/maker/approvals'
+      fullPath: '/maker/approvals'
+      preLoaderRoute: typeof MakerMakerApprovalsRouteImport
+      parentRoute: typeof MakerRoute
+    }
+    '/_checker/checker/store-settings': {
+      id: '/_checker/checker/store-settings'
+      path: '/checker/store-settings'
+      fullPath: '/checker/store-settings'
+      preLoaderRoute: typeof CheckerCheckerStoreSettingsRouteImport
+      parentRoute: typeof CheckerRoute
+    }
+    '/_checker/checker/fleet': {
+      id: '/_checker/checker/fleet'
+      path: '/checker/fleet'
+      fullPath: '/checker/fleet'
+      preLoaderRoute: typeof CheckerCheckerFleetRouteImport
+      parentRoute: typeof CheckerRoute
+    }
+    '/_checker/checker/dashboard': {
+      id: '/_checker/checker/dashboard'
+      path: '/checker/dashboard'
+      fullPath: '/checker/dashboard'
+      preLoaderRoute: typeof CheckerCheckerDashboardRouteImport
+      parentRoute: typeof CheckerRoute
+    }
+    '/_checker/checker/campaigns': {
+      id: '/_checker/checker/campaigns'
+      path: '/checker/campaigns'
+      fullPath: '/checker/campaigns'
+      preLoaderRoute: typeof CheckerCheckerCampaignsRouteImport
+      parentRoute: typeof CheckerRoute
+    }
+    '/_checker/checker/approvals': {
+      id: '/_checker/checker/approvals'
+      path: '/checker/approvals'
+      fullPath: '/checker/approvals'
+      preLoaderRoute: typeof CheckerCheckerApprovalsRouteImport
+      parentRoute: typeof CheckerRoute
+    }
+    '/_admin/admin/users': {
+      id: '/_admin/admin/users'
+      path: '/admin/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminAdminUsersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/stores': {
+      id: '/_admin/admin/stores'
+      path: '/admin/stores'
+      fullPath: '/admin/stores'
+      preLoaderRoute: typeof AdminAdminStoresRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/settings': {
+      id: '/_admin/admin/settings'
+      path: '/admin/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminAdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/fleet': {
+      id: '/_admin/admin/fleet'
+      path: '/admin/fleet'
+      fullPath: '/admin/fleet'
+      preLoaderRoute: typeof AdminAdminFleetRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/dashboard': {
+      id: '/_admin/admin/dashboard'
+      path: '/admin/dashboard'
+      fullPath: '/admin/dashboard'
+      preLoaderRoute: typeof AdminAdminDashboardRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/campaigns': {
+      id: '/_admin/admin/campaigns'
+      path: '/admin/campaigns'
+      fullPath: '/admin/campaigns'
+      preLoaderRoute: typeof AdminAdminCampaignsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/_admin/admin/approvals': {
+      id: '/_admin/admin/approvals'
+      path: '/admin/approvals'
+      fullPath: '/admin/approvals'
+      preLoaderRoute: typeof AdminAdminApprovalsRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
+
+interface AdminRouteChildren {
+  AdminAdminApprovalsRoute: typeof AdminAdminApprovalsRoute
+  AdminAdminCampaignsRoute: typeof AdminAdminCampaignsRoute
+  AdminAdminDashboardRoute: typeof AdminAdminDashboardRoute
+  AdminAdminFleetRoute: typeof AdminAdminFleetRoute
+  AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
+  AdminAdminStoresRoute: typeof AdminAdminStoresRoute
+  AdminAdminUsersRoute: typeof AdminAdminUsersRoute
+}
+
+const AdminRouteChildren: AdminRouteChildren = {
+  AdminAdminApprovalsRoute: AdminAdminApprovalsRoute,
+  AdminAdminCampaignsRoute: AdminAdminCampaignsRoute,
+  AdminAdminDashboardRoute: AdminAdminDashboardRoute,
+  AdminAdminFleetRoute: AdminAdminFleetRoute,
+  AdminAdminSettingsRoute: AdminAdminSettingsRoute,
+  AdminAdminStoresRoute: AdminAdminStoresRoute,
+  AdminAdminUsersRoute: AdminAdminUsersRoute,
+}
+
+const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 interface AuthenticatedRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
@@ -290,9 +757,57 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
   AuthenticatedRouteChildren,
 )
 
+interface CheckerRouteChildren {
+  CheckerCheckerApprovalsRoute: typeof CheckerCheckerApprovalsRoute
+  CheckerCheckerCampaignsRoute: typeof CheckerCheckerCampaignsRoute
+  CheckerCheckerDashboardRoute: typeof CheckerCheckerDashboardRoute
+  CheckerCheckerFleetRoute: typeof CheckerCheckerFleetRoute
+  CheckerCheckerStoreSettingsRoute: typeof CheckerCheckerStoreSettingsRoute
+}
+
+const CheckerRouteChildren: CheckerRouteChildren = {
+  CheckerCheckerApprovalsRoute: CheckerCheckerApprovalsRoute,
+  CheckerCheckerCampaignsRoute: CheckerCheckerCampaignsRoute,
+  CheckerCheckerDashboardRoute: CheckerCheckerDashboardRoute,
+  CheckerCheckerFleetRoute: CheckerCheckerFleetRoute,
+  CheckerCheckerStoreSettingsRoute: CheckerCheckerStoreSettingsRoute,
+}
+
+const CheckerRouteWithChildren =
+  CheckerRoute._addFileChildren(CheckerRouteChildren)
+
+interface MakerRouteChildren {
+  MakerMakerApprovalsRoute: typeof MakerMakerApprovalsRoute
+  MakerMakerCampaignsRoute: typeof MakerMakerCampaignsRoute
+  MakerMakerDashboardRoute: typeof MakerMakerDashboardRoute
+  MakerMakerFleetRoute: typeof MakerMakerFleetRoute
+  MakerMakerGuardRailsRoute: typeof MakerMakerGuardRailsRoute
+  MakerMakerStoreSettingsRoute: typeof MakerMakerStoreSettingsRoute
+  MakerMakerStudioRoute: typeof MakerMakerStudioRoute
+  MakerMakerTemplatesRoute: typeof MakerMakerTemplatesRoute
+  MakerMakerWizardRoute: typeof MakerMakerWizardRoute
+}
+
+const MakerRouteChildren: MakerRouteChildren = {
+  MakerMakerApprovalsRoute: MakerMakerApprovalsRoute,
+  MakerMakerCampaignsRoute: MakerMakerCampaignsRoute,
+  MakerMakerDashboardRoute: MakerMakerDashboardRoute,
+  MakerMakerFleetRoute: MakerMakerFleetRoute,
+  MakerMakerGuardRailsRoute: MakerMakerGuardRailsRoute,
+  MakerMakerStoreSettingsRoute: MakerMakerStoreSettingsRoute,
+  MakerMakerStudioRoute: MakerMakerStudioRoute,
+  MakerMakerTemplatesRoute: MakerMakerTemplatesRoute,
+  MakerMakerWizardRoute: MakerMakerWizardRoute,
+}
+
+const MakerRouteWithChildren = MakerRoute._addFileChildren(MakerRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminRoute: AdminRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  CheckerRoute: CheckerRouteWithChildren,
+  MakerRoute: MakerRouteWithChildren,
   LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport

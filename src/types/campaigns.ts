@@ -1,4 +1,4 @@
-export type CampaignListStatus = "Active" | "Scheduled" | "Completed" | "Draft" | "Rejected";
+export type CampaignListStatus = "Active" | "Scheduled" | "Completed" | "Draft" | "Pending" | "Rejected";
 
 export interface CampaignListItem {
   id: string;
@@ -14,6 +14,16 @@ export interface CampaignListItem {
   hardware: string[];
   date: string;
   initiator: string;
+  ownerId?: string;
+  ownerName?: string;
+  submittedForApproval?: boolean;
+  approvalStatus?: "pending" | "approved" | "rejected";
+  reviewedById?: string;
+  reviewedByName?: string;
+  reviewedByRole?: "checker" | "admin";
+  reviewedAt?: string;
+  publishedAt?: string;
+  scheduledAt?: string;
 }
 
 export interface CampaignStatCard {

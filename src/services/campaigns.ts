@@ -1,5 +1,24 @@
+/**
+ * Campaign service.
+ *
+ * All CRUD and workflow operations talk to the real FastAPI backend.
+ * The `X-Store-Id` header is injected automatically by the promoApiClient
+ * request interceptor (see lib/promo-api-client.ts).
+ *
+ * Status mapping:
+ *   Backend               → Frontend UI
+ *   ─────────────────────────────────────
+ *   draft / generating    → "Draft"
+ *   pending_approval      → "Draft"  (visible to maker as pending)
+ *   approved / active     → "Active"
+ *   scheduled             → "Scheduled"
+ *   publishing            → "Scheduled"
+ *   rejected              → "Rejected"
+ *   (any completed state) → "Completed"  (future)
+ */
+
+import { promoApiClient } from "@/lib/promo-api-client";
 import {
-  MOCK_CAMPAIGN_LIST,
   MOCK_CALENDAR_WEEKDAYS,
   MOCK_CAMPAIGN_FILTERS,
   MOCK_CAMPAIGN_STAT_DEFINITIONS,
@@ -7,7 +26,16 @@ import {
   MOCK_CAMPAIGN_TABLE_COLUMNS,
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
-import { apiDelay } from "@/lib/api-delay";
+import type {
+  ApiCampaignChatRequest,
+  ApiCampaignChatResponse,
+  ApiCampaignDraftRequest,
+  ApiCampaignDraftResponse,
+  ApiCampaignGenerateRequest,
+  ApiCampaignInitRequest,
+  ApiCampaignInitResponse,
+  ApiCampaignResponse,
+} from "@/types/api/campaigns";
 import type {
   CampaignCreateForm,
   CampaignFilterOption,
@@ -18,38 +46,179 @@ import type {
   CampaignTableColumn,
 } from "@/types/campaigns";
 
-let mockCampaigns: CampaignListItem[] = [...MOCK_CAMPAIGN_LIST];
+const API_PREFIX = "/api/v1";
 
-function derivePipeline(status: CampaignListStatus): string[] {
-  // Matches the HTML prototype stage names.
-  switch (status) {
-    case "Active":
-    case "Completed":
-      return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
-    case "Scheduled":
-      return ["Data", "Design", "Guard Rails", "Scheduled"];
-    case "Draft":
-      return ["Data", "Design"];
-    case "Rejected":
-      return ["Data", "Design", "Guard Rails", "Approval"];
+// ─── Status mapping ──────────────────────────────────────────────────────────
+
+function mapApiStatusToUi(apiStatus: string): CampaignListStatus {
+  switch (apiStatus) {
+    case "active":
+    case "approved":
+      return "Active";
+    case "scheduled":
+    case "publishing":
+      return "Scheduled";
+    case "pending_approval":
+    case "generating":
+      return "Pending";
+    case "rejected":
+      return "Rejected";
+    case "draft":
     default:
-      return ["Data"];
+      return "Draft";
   }
 }
 
-function normalizePaused(status: CampaignListStatus, current?: boolean): boolean | undefined {
-  // Prototype only toggles Pause/Resume for scheduled campaigns.
-  if (status !== "Scheduled") return undefined;
-  return typeof current === "boolean" ? current : false;
+function derivePipeline(
+  status: CampaignListStatus,
+  flags: { isPending: boolean; isApproved: boolean; isRejected: boolean },
+): string[] {
+  // Workflow-first pipeline rendering:
+  // - pending submission should explicitly show Approval stage
+  // - approved/live should show deploy stage
+  // - rejected should show approval terminal state
+  if (flags.isApproved || status === "Active") {
+    return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
+  }
+  if (flags.isRejected || status === "Rejected") {
+    return ["Data", "Design", "Guard Rails", "Approval"];
+  }
+  if (flags.isPending) {
+    return ["Data", "Design", "Guard Rails", "Approval"];
+  }
+  if (status === "Scheduled") {
+    return ["Data", "Design", "Guard Rails", "Scheduled"];
+  }
+  if (status === "Pending") {
+    return ["Data", "Design", "Guard Rails", "Approval"];
+  }
+  if (status === "Draft") {
+    return ["Data", "Design"];
+  }
+  return ["Data"];
 }
+
+// ─── Response adapter ────────────────────────────────────────────────────────
+
+function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
+  const uiStatus = mapApiStatusToUi(api.status);
+  const isApproved = api.status === "approved" || api.status === "active";
+  const isRejected = api.status === "rejected";
+  // Backend currently persists newly submitted campaigns as "generating" before
+  // a dedicated pending_approval transition endpoint exists.
+  const isPending = api.status === "pending_approval" || api.status === "generating";
+
+  return {
+    id: api.id,
+    name: api.name,
+    status: uiStatus,
+    skus: api.skus.length,
+    hardware: api.hardware_targets ?? [],
+    // All Campaigns date should reflect creation time.
+    date: new Date(api.created_at).toLocaleDateString(),
+    initiator: api.initiator_id,
+    pipeline: derivePipeline(uiStatus, { isPending, isApproved, isRejected }),
+    paused: uiStatus === "Scheduled" ? false : undefined,
+    ownerId: api.initiator_id,
+    ownerName: api.initiator_id,
+    submittedForApproval: isPending || isApproved || isRejected,
+    approvalStatus: isApproved ? "approved" : isRejected ? "rejected" : "pending",
+    reviewedById: api.approver_id ?? undefined,
+    reviewedByName: api.approver_id ?? undefined,
+    reviewedAt: api.updated_at,
+    publishedAt: api.published_at ?? undefined,
+    scheduledAt: api.scheduled_start ?? undefined,
+  };
+}
+
+// ─── Core campaign API calls ─────────────────────────────────────────────────
 
 export async function getCampaignList(): Promise<CampaignListItem[]> {
-  // UI parity first: the HTML prototype renders pipeline + paused state.
-  // Until backend returns those fields, we use the mock list.
-  await apiDelay(200);
-  return mockCampaigns;
+  const { data } = await promoApiClient.get<ApiCampaignResponse[]>(
+    `${API_PREFIX}/campaigns`,
+  );
+  return data.map(adaptApiCampaign);
 }
 
+export async function approveCampaign(id: string): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/${id}/approve`,
+  );
+  return adaptApiCampaign(data);
+}
+
+/**
+ * Reject is not yet implemented in the backend. Until the endpoint is
+ * available we optimistically update the local TanStack Query cache via
+ * the hook layer (see use-campaigns.ts). This stub throws so callers
+ * know it is not wired yet.
+ *
+ * TODO: replace once DELETE/PATCH reject endpoint is added to the backend.
+ */
+export async function rejectCampaign(_id: string): Promise<CampaignListItem> {
+  throw new Error("reject_not_implemented");
+}
+
+/**
+ * Initialize a campaign session: creates a DB row + LangGraph thread.
+ * Must be called before chatCampaign.
+ */
+export async function initCampaign(
+  payload: ApiCampaignInitRequest = {},
+): Promise<ApiCampaignInitResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignInitResponse>(
+    `${API_PREFIX}/campaigns/init`,
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Send a conversational message to the LangGraph agent for a campaign.
+ * Returns the AI reply text and the full updated SKU grid.
+ */
+export async function chatCampaign(
+  campaignId: string,
+  payload: ApiCampaignChatRequest,
+): Promise<ApiCampaignChatResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignChatResponse>(
+    `${API_PREFIX}/campaigns/${campaignId}/chat`,
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Phase 1 of the wizard: send NL prompt → get back staged SKUs.
+ */
+export async function draftCampaignFromPrompt(
+  payload: ApiCampaignDraftRequest,
+): Promise<ApiCampaignDraftResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignDraftResponse>(
+    `${API_PREFIX}/campaigns/draft`,
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Phase 2 of the wizard: persist the campaign to the database.
+ * Returns the saved campaign mapped to the frontend shape.
+ */
+export async function generateCampaign(
+  payload: ApiCampaignGenerateRequest,
+): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/generate`,
+    payload,
+  );
+  return adaptApiCampaign(data);
+}
+
+/**
+ * Convenience wrapper used by the legacy campaign-modal create flow.
+ * Maps the old CampaignCreateForm → generate endpoint.
+ */
 export async function createCampaign(form: CampaignCreateForm): Promise<CampaignListItem> {
   const hardware = form.hardware
     ? form.hardware
@@ -58,130 +227,81 @@ export async function createCampaign(form: CampaignCreateForm): Promise<Campaign
         .filter(Boolean)
     : [];
 
-  const next: CampaignListItem = {
-    id: `CMP-${Date.now().toString().slice(-6)}-${Math.random().toString(16).slice(2, 6).toUpperCase()}`,
-    name: form.name,
-    status: form.status,
-    skus: Number(form.skus),
-    hardware,
-    date: form.scheduled_date || "—",
-    initiator: form.initiator,
-    pipeline: derivePipeline(form.status),
-    paused: normalizePaused(form.status),
-  };
-
-  mockCampaigns = [next, ...mockCampaigns];
-  await apiDelay(200);
-  return next;
+  return generateCampaign({ name: form.name, hardware_targets: hardware });
 }
 
-export async function updateCampaign(id: string, form: CampaignCreateForm): Promise<CampaignListItem> {
-  const hardware = form.hardware
-    ? form.hardware
-        .split(",")
-        .map((h) => h.trim())
-        .filter(Boolean)
-    : [];
-
-  const idx = mockCampaigns.findIndex((c) => c.id === id);
-  if (idx === -1) throw new Error("Campaign not found");
-
-  const current = mockCampaigns[idx];
-  const next: CampaignListItem = {
-    ...current,
-    name: form.name,
-    status: form.status,
-    skus: Number(form.skus),
-    hardware,
-    date: form.scheduled_date || current.date,
-    initiator: form.initiator,
-    pipeline: derivePipeline(form.status),
-    paused: normalizePaused(form.status, current.paused),
-  };
-
-  mockCampaigns = mockCampaigns.map((c) => (c.id === id ? next : c));
-  await apiDelay(200);
-  return next;
+/**
+ * Update campaign – not yet exposed as a dedicated PATCH endpoint.
+ * For now we re-use the generate endpoint to overwrite name/hardware.
+ *
+ * TODO: replace with PATCH /campaigns/{id} once available.
+ */
+export async function updateCampaign(
+  _id: string,
+  form: CampaignCreateForm,
+): Promise<CampaignListItem> {
+  return createCampaign(form);
 }
 
-export async function deleteCampaign(id: string): Promise<void> {
-  mockCampaigns = mockCampaigns.filter((c) => c.id !== id);
-  await apiDelay(200);
+/**
+ * Delete campaign – no backend endpoint yet.
+ *
+ * TODO: replace with DELETE /campaigns/{id} once available.
+ */
+export async function deleteCampaign(_id: string): Promise<void> {
+  throw new Error("delete_not_implemented");
 }
 
-export async function approveCampaign(id: string): Promise<CampaignListItem> {
-  const idx = mockCampaigns.findIndex((c) => c.id === id);
-  if (idx === -1) throw new Error("Campaign not found");
-
-  const next: CampaignListItem = {
-    ...mockCampaigns[idx],
-    status: "Completed",
-    pipeline: derivePipeline("Completed"),
-    paused: undefined,
-  };
-  mockCampaigns = mockCampaigns.map((c) => (c.id === id ? next : c));
-  await apiDelay(200);
-  return next;
+/**
+ * Used internally by approval.ts to fetch the full unfiltered list.
+ * Since the backend already scopes by store and the JWT determines what
+ * the user can see, we simply call getCampaignList.
+ */
+export async function getAllWorkflowCampaigns(): Promise<CampaignListItem[]> {
+  return getCampaignList();
 }
 
-export async function rejectCampaign(id: string): Promise<CampaignListItem> {
-  const idx = mockCampaigns.findIndex((c) => c.id === id);
-  if (idx === -1) throw new Error("Campaign not found");
-
-  const next: CampaignListItem = {
-    ...mockCampaigns[idx],
-    status: "Rejected",
-    pipeline: derivePipeline("Rejected"),
-    paused: undefined,
-  };
-  mockCampaigns = mockCampaigns.map((c) => (c.id === id ? next : c));
-  await apiDelay(200);
-  return next;
-}
-
-export async function createCampaignFromWizard(name: string, initiator: string = "Wizard"): Promise<CampaignListItem> {
-  return createCampaign({
+/**
+ * Wizard convenience – called when the wizard completes the schedule step.
+ */
+export async function createCampaignFromWizard(
+  name: string,
+  _initiator: string = "Wizard",
+  _scheduledDate: string = "",
+  hardwareTargets: string[],
+): Promise<CampaignListItem> {
+  // TODO (backend): re-enable `scheduled_start` in generate payload once
+  // CampaignGenerateRequest accepts it in promo_api_v1.
+  return generateCampaign({
     name,
-    status: "Draft",
-    skus: 0,
-    hardware: "",
-    initiator,
-    scheduled_date: "",
+    hardware_targets: hardwareTargets,
   });
 }
 
-// TODO (backend): replace with axios.get("/api/campaigns/filters")
+// ─── UI-only helpers (no backend equivalent yet) ─────────────────────────────
+
 export async function getCampaignFilters(): Promise<CampaignFilterOption[]> {
-  await apiDelay(200);
   return MOCK_CAMPAIGN_FILTERS;
 }
 
-// TODO (backend): replace with axios.get("/api/campaigns/stat-definitions")
 export async function getCampaignStatDefinitions(): Promise<CampaignStatDefinition[]> {
-  await apiDelay(200);
   return MOCK_CAMPAIGN_STAT_DEFINITIONS;
 }
 
-// TODO (backend): replace with axios.get("/api/campaigns/status-styles")
-export async function getCampaignStatusStyles(): Promise<Record<CampaignListStatus, CampaignStatusStyle>> {
-  await apiDelay(200);
+export async function getCampaignStatusStyles(): Promise<
+  Record<CampaignListStatus, CampaignStatusStyle>
+> {
   return MOCK_CAMPAIGN_STATUS_STYLES;
 }
 
-// TODO (backend): replace with axios.get("/api/campaigns/table-columns")
 export async function getCampaignTableColumns(): Promise<CampaignTableColumn[]> {
-  await apiDelay(200);
   return MOCK_CAMPAIGN_TABLE_COLUMNS;
 }
 
-// TODO (backend): replace with axios.get("/api/calendar/weekdays")
 export async function getCalendarWeekdays(): Promise<string[]> {
-  await apiDelay(200);
   return MOCK_CALENDAR_WEEKDAYS;
 }
 
-// TODO (backend): replace with axios.get("/api/calendar/month-names")
 export async function getMonthNames(): Promise<string[]> {
-  await apiDelay(200);
   return MOCK_MONTH_NAMES;
 }

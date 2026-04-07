@@ -1,137 +1,128 @@
-import { ChevronDown, Store } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { Building2, Check, ChevronDown, Megaphone } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
 import SidenavFooter from "./footer";
-import { NAV_SECTIONS } from "@/constants/navigation";
+import { getNavSectionsForRole } from "@/constants/navigation";
+import { useInboxItems } from "@/hooks/use-approval";
 import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setConstraints } from "@/store/slices/wizard-slice";
-import { useWizardStores } from "@/hooks/use-wizard";
-import type { WizardStore } from "@/types/wizard";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 
 export default function Sidenav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const { data: stores = [] } = useWizardStores();
-  const constraints = useAppSelector((s) => s.wizard.constraints);
-  const currentStore = stores.find((s) => s.id === constraints.store) ?? stores[0];
-
+  const user = PromoAuthService.getCurrentUser();
+  const role = user?.role ?? "maker";
+  const storeRef = useRef<HTMLDivElement | null>(null);
   const [storeOpen, setStoreOpen] = useState(false);
-  const storeRef = useRef<HTMLDivElement>(null);
+
+  const stores = useMemo(
+    () => [
+      { id: "4281", name: "Chicago North", short: "#4281" },
+      { id: "3092", name: "Chicago Downtown", short: "#3092" },
+      { id: "5410", name: "Milwaukee Central", short: "#5410" },
+      { id: "7720", name: "Austin West", short: "#7720" },
+    ],
+    [],
+  );
+  const [activeStoreId, setActiveStoreId] = useState(stores[0]?.id ?? "");
+  const activeStore = stores.find((s) => s.id === activeStoreId) ?? stores[0];
+
+  const { data: inboxItems = [] } = useInboxItems();
+  const pendingApprovalCount = inboxItems.length;
+
+  const navSections = useMemo(() => {
+    const sections = getNavSectionsForRole(role);
+    if (role !== "admin" && role !== "checker") return sections;
+
+    return sections.map((section) => ({
+      ...section,
+      items: section.items.map((item) =>
+        item.id === "approval-review" ? { ...item, badge: pendingApprovalCount } : item,
+      ),
+    }));
+  }, [role, pendingApprovalCount]);
 
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (storeRef.current && !storeRef.current.contains(e.target as Node)) {
+    const onClick = (event: MouseEvent) => {
+      if (storeRef.current && !storeRef.current.contains(event.target as Node)) {
         setStoreOpen(false);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("mousedown", onClick);
+    return () => document.removeEventListener("mousedown", onClick);
   }, []);
-
-  const selectStore = (s: WizardStore) => {
-    dispatch(setConstraints({ ...constraints, store: s.id }));
-    setStoreOpen(false);
-  };
 
   return (
     <aside className="flex h-full w-[240px] shrink-0 flex-col border-r border-ithina-border bg-ithina-sidebar z-30">
 
-      {/* ── Store selector ── */}
-      <div
-        className="relative shrink-0 border-b border-ithina-border/50 px-3 pb-2 pt-3"
-        ref={storeRef}
-      >
+      {/* ── App brand header ── */}
+      <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border/50 px-4 py-4">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-ithina-purple/30 bg-ithina-purple/10">
+          <Megaphone className="size-4 text-ithina-purple" />
+        </div>
+        <div>
+          <p className="text-xs font-bold tracking-widest text-white uppercase">Promotions</p>
+          <p className="font-mono text-[9px] uppercase tracking-widest text-slate-600">Assistant</p>
+        </div>
+      </div>
+
+      {/* ── Store dropdown (prototype-style) ── */}
+      <div className="shrink-0 px-3 pt-3" ref={storeRef}>
         <button
           onClick={() => setStoreOpen((v) => !v)}
-          disabled={stores.length === 0}
           className={cn(
-            "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-60",
+            "flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition-colors",
             storeOpen
-              ? "border-ithina-purple/50 bg-ithina-purple/10"
-              : "border-ithina-border bg-ithina-bg/60 text-slate-300 hover:bg-ithina-bg",
+              ? "border-ithina-purple/30 bg-ithina-purple/8"
+              : "border-ithina-border bg-ithina-panel hover:border-ithina-purple/30",
           )}
         >
-          <div
-            className={cn(
-              "flex size-7 shrink-0 items-center justify-center rounded-md",
-              storeOpen ? "bg-ithina-purple/20" : "bg-ithina-panel",
-            )}
-          >
-            <Store
-              className={cn(
-                "size-3.5",
-                storeOpen ? "text-ithina-purple" : "text-slate-400",
-              )}
-            />
+          <div className="flex size-6 shrink-0 items-center justify-center rounded-md border border-ithina-border/70 bg-ithina-bg/70">
+            <Building2 className={cn("size-3 text-slate-500", storeOpen && "text-ithina-purple")} />
           </div>
-
           <div className="min-w-0 flex-1">
-            <p
-              className={cn(
-                "truncate text-xs font-semibold",
-                storeOpen ? "text-ithina-purple" : "text-white",
-              )}
-            >
-              {currentStore?.name ?? "Select Store"}
+            <p className={cn("truncate text-xs font-semibold", storeOpen ? "text-ithina-purple" : "text-white")}>
+              {activeStore?.name}
             </p>
-            <p
-              className={cn(
-                "font-mono text-[10px]",
-                storeOpen ? "text-ithina-purple/70" : "text-slate-500",
-              )}
-            >
-              {currentStore?.short ?? "—"}
+            <p className={cn("truncate font-mono text-[10px]", storeOpen ? "text-ithina-purple/70" : "text-slate-500")}>
+              {activeStore?.short}
             </p>
           </div>
-
-          <ChevronDown
-            className={cn(
-              "size-3.5 shrink-0 transition-transform duration-200",
-              storeOpen ? "rotate-180 text-ithina-purple" : "text-slate-600",
-            )}
-          />
+          <ChevronDown className={cn("size-3.5 shrink-0 text-slate-600 transition-transform", storeOpen && "rotate-180 text-ithina-purple")} />
         </button>
 
-        {/* Dropdown — floats above content, does not push nav down */}
         {storeOpen && (
-          <div className="absolute left-3 right-3 top-full z-[200] mt-1 overflow-hidden rounded-xl border border-ithina-border bg-ithina-bg shadow-2xl">
-            <div className="border-b border-ithina-border/60 px-3 pb-1.5 pt-2.5">
-              <p className="font-mono text-[9px] uppercase tracking-widest text-slate-600">
-                Select Store
-              </p>
-            </div>
-            <div className="p-1">
-              {stores.map((s) => {
-                const isActive = currentStore?.id === s.id;
+          <div className="mt-1.5 overflow-hidden rounded-xl border border-ithina-border bg-ithina-panel p-1 shadow-xl">
+            <div className="max-h-56 overflow-y-auto">
+              {stores.map((store) => {
+                const isActive = store.id === activeStoreId;
                 return (
                   <button
-                    key={s.id}
-                    onClick={() => selectStore(s)}
+                    key={store.id}
+                    onClick={() => {
+                      setActiveStoreId(store.id);
+                      setStoreOpen(false);
+                    }}
                     className={cn(
-                      "flex w-full cursor-pointer items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all",
+                      "flex w-full items-center justify-between rounded-lg border px-2.5 py-2 text-left transition-colors",
                       isActive
                         ? "border-ithina-purple/25 bg-ithina-purple/10"
                         : "border-transparent hover:bg-white/[0.04]",
                     )}
                   >
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="truncate text-xs font-semibold text-white">
-                          {s.name}
-                        </span>
-                        {isActive && (
-                          <span className="shrink-0 rounded bg-ithina-purple/10 px-1.5 py-0.5 font-mono text-[8px] text-ithina-purple">
-                            ACTIVE
-                          </span>
-                        )}
-                      </div>
-                      <p className="truncate font-mono text-[10px] text-slate-500">
-                        {s.short} · {s.displays} displays
+                    <div className="min-w-0">
+                      <p className={cn("truncate text-xs font-medium", isActive ? "text-white" : "text-slate-300")}>
+                        {store.name}
                       </p>
+                      <p className="font-mono text-[10px] text-slate-500">{store.short}</p>
                     </div>
+                    {isActive ? (
+                      <span className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-mono text-[8px] text-ithina-purple bg-ithina-purple/10">
+                        <Check className="size-2.5" />
+                        ACTIVE
+                      </span>
+                    ) : null}
                   </button>
                 );
               })}
@@ -142,14 +133,16 @@ export default function Sidenav() {
 
       {/* ── Navigation sections ── */}
       <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4 pt-3">
-        {NAV_SECTIONS.map((section) => (
+        {navSections.map((section) => (
           <div key={section.label}>
             <p className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-[0.13em] text-slate-600">
               {section.label}
             </p>
             <div className="space-y-0.5">
               {section.items.map((item) => {
-                const isActive = location.pathname === item.path;
+                const isActive =
+                  location.pathname === item.path ||
+                  location.pathname.startsWith(item.path + "/");
                 return (
                   <button
                     key={item.id}
@@ -170,7 +163,7 @@ export default function Sidenav() {
                       {item.icon}
                     </div>
                     <span className="flex-1">{item.label}</span>
-                    {item.badge && (
+                    {item.badge != null && item.badge > 0 && (
                       <span
                         className={cn(
                           "rounded-full px-1.5 py-0.5 text-[9px] font-bold tabular-nums",

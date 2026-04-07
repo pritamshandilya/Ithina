@@ -1,11 +1,22 @@
+/**
+ * Wizard service.
+ *
+ * Phase 1 (NL prompt → staged SKUs) and Phase 2 (save campaign) are now
+ * wired to the real backend. Stores / margins / durations / hardware remain
+ * as static data because those endpoints don't exist in the backend yet.
+ *
+ * The init→chat flow uses the LangGraph-backed endpoints:
+ *   POST /campaigns/init   → creates DB row + thread
+ *   POST /campaigns/{id}/chat → conversational AI turn
+ */
+
 import {
   MOCK_DURATIONS,
   MOCK_HARDWARE_DEVICES,
   MOCK_MARGINS,
-  MOCK_STAGED_SKUS,
   MOCK_STORES,
 } from "@/mocks/wizard";
-import { apiDelay } from "@/lib/api-delay";
+import { chatCampaign, draftCampaignFromPrompt, initCampaign } from "@/services/campaigns";
 import type {
   ChatMessage,
   HardwareDevice,
@@ -16,50 +27,128 @@ import type {
   WizardStore,
 } from "@/types/wizard";
 
-// TODO (backend): replace with axios.get("/api/wizard/stores")
+// ─── Static reference data (no backend equivalent yet) ───────────────────────
+
 export async function getWizardStores(): Promise<WizardStore[]> {
-  await apiDelay(300);
   return MOCK_STORES;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/margins")
 export async function getWizardMargins(): Promise<WizardMargin[]> {
-  await apiDelay(200);
   return MOCK_MARGINS;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/durations")
 export async function getWizardDurations(): Promise<WizardDuration[]> {
-  await apiDelay(200);
   return MOCK_DURATIONS;
 }
 
-// TODO (backend): replace with axios.get("/api/wizard/hardware")
 export async function getHardwareDevices(): Promise<HardwareDevice[]> {
-  await apiDelay(300);
   return MOCK_HARDWARE_DEVICES;
 }
 
-// TODO (backend): replace with axios.post("/api/wizard/intent")
+// ─── Phase 1: NL prompt → real backend draft ────────────────────────────────
+
 export async function submitWizardIntent(
-  _prompt: string,
-  _constraints: WizardConstraints,
+  prompt: string,
+  constraints: WizardConstraints,
 ): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
-  await apiDelay(800);
+  const response = await draftCampaignFromPrompt({
+    prompt,
+    source_type: "nl",
+  });
+
+  const skus: StagedSku[] = response.skus.map((s) => ({
+    sku: s.sku,
+    name: s.product_name,
+    current: s.current_price,
+    proposed: s.proposed_price,
+    safe: s.is_safe,
+    margin: `${s.margin_pct}%`,
+  }));
+
+  const safeCount = skus.filter((s) => s.safe).length;
+  const warnCount = skus.length - safeCount;
+
+  let replyText = response.message;
+  replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
+  if (warnCount > 0) {
+    replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
+  } else {
+    replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
+  }
+  replyText += " Please review the staging grid.";
+
   return {
-    aiReply: {
-      role: "ai",
-      text: `I have queried the live ROOS inventory and applied your requested markdown.\n\nI found 3 SKUs. <span class="text-rose-400 font-medium">Notice: One item drops below your ${_constraints.marginFloor} margin floor.</span> Please review the staging grid.`,
-    },
-    skus: MOCK_STAGED_SKUS,
+    aiReply: { role: "ai", text: replyText },
+    skus,
   };
 }
 
-// TODO (backend): replace with axios.post("/api/wizard/hardware-confirm")
+// ─── Init → Chat flow (LangGraph-backed) ─────────────────────────────────────
+
+export interface WizardSession {
+  campaignId: string;
+  threadId: string;
+}
+
+/**
+ * Initialize a new campaign session with LangGraph.
+ * Returns the campaign_id and langgraph_thread_id needed for chat.
+ */
+export async function initWizardCampaign(
+  sourceType: "nl" | "manual" = "nl",
+): Promise<WizardSession> {
+  const res = await initCampaign({ source_type: sourceType });
+  return {
+    campaignId: res.campaign_id,
+    threadId: res.langgraph_thread_id,
+  };
+}
+
+/**
+ * Send a conversational message to the LangGraph agent.
+ * Returns the AI reply and updated staged SKUs for the grid.
+ */
+export async function chatWizardMessage(
+  campaignId: string,
+  message: string,
+  constraints: WizardConstraints,
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
+  const res = await chatCampaign(campaignId, { message });
+
+  const skus: StagedSku[] = (res.staged_skus ?? []).map((s) => ({
+    sku: s.sku ?? "",
+    name: s.product_name ?? "",
+    current: s.current_price ?? 0,
+    proposed: s.proposed_price ?? 0,
+    safe: s.is_safe ?? true,
+    margin: `${s.margin_pct ?? 0}%`,
+  }));
+
+  let replyText = res.reply || "AI processed your request.";
+
+  if (skus.length > 0) {
+    const safeCount = skus.filter((s) => s.safe).length;
+    const warnCount = skus.length - safeCount;
+    replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
+    if (warnCount > 0) {
+      replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
+    } else {
+      replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
+    }
+    replyText += " Please review the staging grid.";
+  }
+
+  return {
+    aiReply: { role: "ai", text: replyText },
+    skus,
+  };
+}
+
+// ─── Phase 2 helper: hardware confirm message ────────────────────────────────
+
 export async function confirmHardwareSelection(
   _deviceIds: string[],
 ): Promise<ChatMessage> {
-  await apiDelay(600);
   return {
     role: "ai",
     text: "Configuring layout parameters for selected hardware targets. Resolving product assets and generating digital backgrounds...",

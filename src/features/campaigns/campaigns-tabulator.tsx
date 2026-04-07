@@ -1,15 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
 import { Calendar, LayoutList, Pause, Search, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
-import { PrototypeTabulator } from "@/components/ui/prototype-tabulator";
+import { IthTable } from "@/components/ui/ith-table";
 import { cn } from "@/lib/utils";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
 import { useCampaignList, useDeleteCampaign, useUpdateCampaign } from "@/hooks/use-campaigns";
 
+import CampaignHistoryModal from "./components/campaign-history-modal";
 import CampaignModal from "./components/campaign-modal";
 import CampaignsScheduledTab from "./campaigns-scheduled-tab";
-import { buildCampaignTabulatorColumns, toPrototypeStatus } from "./campaigns-tabulator-columns";
+import { buildCampaignColumns, toPrototypeStatus } from "./campaigns-tabulator-columns";
 
 type ActiveTab = "all" | "scheduled";
 type StatusFilter = "all" | "active" | "scheduled" | "draft" | "completed";
@@ -23,6 +24,8 @@ const EMPTY_FORM: CampaignCreateForm = {
   scheduled_date: "",
 };
 
+const PAGE_SIZE = 15;
+
 export default function CampaignsTabulator() {
   const { data: campaigns = [], isLoading, isError } = useCampaignList();
   const updateMutation = useUpdateCampaign();
@@ -31,6 +34,7 @@ export default function CampaignsTabulator() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("all");
   const [activeFilter, setActiveFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [pausedById, setPausedById] = useState<Record<string, boolean>>({});
@@ -38,6 +42,7 @@ export default function CampaignsTabulator() {
   const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
   const [modalForm, setModalForm] = useState<CampaignCreateForm>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [historyCampaign, setHistoryCampaign] = useState<CampaignListItem | null>(null);
 
   const filteredCampaigns = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -49,74 +54,59 @@ export default function CampaignsTabulator() {
     });
   }, [campaigns, activeFilter, search]);
 
-  const allSelected = useMemo(() => {
-    if (filteredCampaigns.length === 0) return false;
-    return filteredCampaigns.every((c) => selectedIds.has(c.id));
-  }, [filteredCampaigns, selectedIds]);
-
-  const anySelected = useMemo(() => filteredCampaigns.some((c) => selectedIds.has(c.id)), [filteredCampaigns, selectedIds]);
+  const allSelected = useMemo(
+    () => filteredCampaigns.length > 0 && filteredCampaigns.every((c) => selectedIds.has(c.id)),
+    [filteredCampaigns, selectedIds],
+  );
+  const anySelected = useMemo(
+    () => filteredCampaigns.some((c) => selectedIds.has(c.id)),
+    [filteredCampaigns, selectedIds],
+  );
 
   useEffect(() => {
     const next: Record<string, boolean> = {};
     for (const c of campaigns) {
-      const proto = toPrototypeStatus(c.status);
-      if (proto === "scheduled") next[c.id] = c.paused ?? false;
+      if (toPrototypeStatus(c.status) === "scheduled") next[c.id] = c.paused ?? false;
     }
     setPausedById(next);
   }, [campaigns]);
 
   const statusFilters = useMemo(() => {
-    const count = (proto: StatusFilter) => {
-      if (proto === "all") return campaigns.length;
-      return campaigns.filter((c) => toPrototypeStatus(c.status) === proto).length;
-    };
+    const count = (proto: StatusFilter) =>
+      proto === "all"
+        ? campaigns.length
+        : campaigns.filter((c) => toPrototypeStatus(c.status) === proto).length;
     return [
-      { id: "all" as const, label: "All", count: count("all") },
-      { id: "active" as const, label: "Active", count: count("active") },
+      { id: "all" as const,       label: "All",       count: count("all") },
+      { id: "active" as const,    label: "Active",    count: count("active") },
       { id: "scheduled" as const, label: "Scheduled", count: count("scheduled") },
-      { id: "draft" as const, label: "Draft", count: count("draft") },
+      { id: "draft" as const,     label: "Draft",     count: count("draft") },
       { id: "completed" as const, label: "Completed", count: count("completed") },
     ];
   }, [campaigns]);
 
   const scheduledCount = useMemo(
-    () => campaigns.filter((c) => toPrototypeStatus(c.status) === "scheduled").length,
+    () => campaigns.filter((c) => Boolean(c.scheduledAt)).length,
     [campaigns],
-  );
-
-  const formatRevision = useMemo(
-    () => `${[...selectedIds].sort().join(",")}|${JSON.stringify(pausedById)}`,
-    [selectedIds, pausedById],
-  );
-
-  const columns = useMemo(
-    () => buildCampaignTabulatorColumns({ selectedIds, pausedById }),
-    [selectedIds, pausedById],
   );
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }, []);
 
   const toggleAllCampaigns = useCallback(
     (checked: boolean) => {
-      if (!checked) {
-        setSelectedIds(new Set());
-        return;
-      }
-      setSelectedIds(new Set(filteredCampaigns.map((c) => c.id)));
+      setSelectedIds(checked ? new Set(filteredCampaigns.map((c) => c.id)) : new Set());
     },
     [filteredCampaigns],
   );
 
   const togglePause = useCallback((c: CampaignListItem) => {
-    const proto = toPrototypeStatus(c.status);
-    if (proto !== "scheduled") return;
+    if (toPrototypeStatus(c.status) !== "scheduled") return;
     setPausedById((prev) => ({ ...prev, [c.id]: !(prev[c.id] ?? c.paused ?? false) }));
   }, []);
 
@@ -156,7 +146,7 @@ export default function CampaignsTabulator() {
     [deleteMutation],
   );
 
-  const bulkPause = useCallback(() => {
+  const bulkPause  = useCallback(() => {
     for (const id of selectedIds) {
       const c = campaigns.find((x) => x.id === id);
       if (c) togglePause(c);
@@ -168,39 +158,73 @@ export default function CampaignsTabulator() {
     setSelectedIds(new Set());
   }, [deleteMutation, selectedIds]);
 
-  const onCellClick = useCallback(
-    (e: MouseEvent, row: CampaignListItem) => {
-      const target = e.target as HTMLElement | null;
-      if (!target) return;
+  /* Row click — delegate to data-action / data-proto-row-select attributes */
+  const handleRowClick = useCallback(
+    (row: CampaignListItem, e: React.MouseEvent<HTMLTableRowElement>) => {
+      const target = e.target as HTMLElement;
 
-      const checkbox = target.closest?.("[data-proto-row-select='true']") as HTMLElement | null;
-      if (checkbox) {
-        toggleSelect(row.id);
-        return;
-      }
+      const selectBtn = target.closest?.("[data-proto-row-select='true']");
+      if (selectBtn) { toggleSelect(row.id); return; }
 
       const actionEl = target.closest?.("[data-action]") as HTMLElement | null;
       const action = actionEl?.getAttribute("data-action");
       if (!action) return;
 
-      if (action === "edit") openEdit(row);
-      if (action === "pause") togglePause(row);
-      if (action === "history") {
-        /* prototype */
-      }
-      if (action === "delete") confirmDelete(row.id);
+      if (action === "edit")    openEdit(row);
+      if (action === "pause")   togglePause(row);
+      if (action === "history") setHistoryCampaign(row);
+      if (action === "delete")  confirmDelete(row.id);
     },
     [confirmDelete, openEdit, togglePause, toggleSelect],
   );
 
-  const rowFormatter = useCallback((row: CampaignListItem, el: HTMLElement) => {
-    el.classList.toggle("campaigns-row-selected", selectedIds.has(row.id));
-  }, [selectedIds]);
+  const columns = useMemo(
+    () =>
+      buildCampaignColumns({
+        selectedIds,
+        pausedById,
+        allSelected,
+        anySelected,
+        onToggleAll: toggleAllCampaigns,
+      }),
+    [selectedIds, pausedById, allSelected, anySelected, toggleAllCampaigns],
+  );
+
+  /* Inject custom header checkbox into the select column */
+  const columnsWithHeader = useMemo(
+    () =>
+      columns.map((col) =>
+        col.key === "select"
+          ? {
+              ...col,
+              headerRender: () => (
+                <button
+                  type="button"
+                  aria-label="Select all campaigns"
+                  onClick={(e) => { e.stopPropagation(); toggleAllCampaigns(!allSelected); }}
+                  className={`inline-flex size-4 items-center justify-center rounded border transition-colors ${
+                    allSelected
+                      ? "border-ithina-purple bg-ithina-purple text-white"
+                      : anySelected
+                        ? "border-ithina-purple bg-ithina-purple/40 text-white"
+                        : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
+                  }`}
+                >
+                  <svg className="size-2.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                    <path fillRule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.25 7.25a1 1 0 01-1.415 0L3.296 9.216a1 1 0 111.415-1.415l4.036 4.036 6.543-6.546a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              ),
+            }
+          : col,
+      ),
+    [columns, allSelected, anySelected, toggleAllCampaigns],
+  );
 
   if (isError) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-        <div className="text-rose-400 text-sm font-semibold">Failed to load campaigns</div>
+        <p className="text-sm font-semibold text-rose-400">Failed to load campaigns</p>
       </div>
     );
   }
@@ -222,8 +246,19 @@ export default function CampaignsTabulator() {
         />
       )}
 
+      {historyCampaign && (
+        <CampaignHistoryModal
+          campaign={historyCampaign}
+          onClose={() => setHistoryCampaign(null)}
+        />
+      )}
+
       <div className="flex h-full w-full flex-col overflow-hidden animate-[fadeIn_0.3s_ease-out]">
-        <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border/40 px-7 pb-4 pt-5">
+
+        {/* ── Toolbar ── */}
+        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-ithina-border/40 px-7 pb-4 pt-5">
+
+          {/* View tabs */}
           <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel p-0.5">
             <button
               type="button"
@@ -248,7 +283,7 @@ export default function CampaignsTabulator() {
               Scheduled
               <span
                 className={cn(
-                  "ml-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
                   activeTab === "scheduled" ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400",
                 )}
               >
@@ -257,32 +292,31 @@ export default function CampaignsTabulator() {
             </button>
           </div>
 
+          {/* Status filters */}
           {activeTab === "all" && (
-            <div className="flex gap-1">
-              {statusFilters.map((f) => {
-                const isActive = activeFilter === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setActiveFilter(f.id)}
-                    className={cn(
-                      "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
-                      isActive
-                        ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
-                        : "border-ithina-border text-slate-500 hover:border-slate-500 hover:text-white",
-                    )}
-                  >
-                    {f.label}
-                    <span className="ml-1 text-[9px] opacity-60">{f.count}</span>
-                  </button>
-                );
-              })}
+            <div className="flex flex-wrap gap-1">
+              {statusFilters.map((f) => (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => { setActiveFilter(f.id); setPage(1); }}
+                  className={cn(
+                    "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
+                    activeFilter === f.id
+                      ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
+                      : "border-ithina-border text-slate-500 hover:border-slate-500 hover:text-white",
+                  )}
+                >
+                  {f.label}
+                  <span className="ml-1 text-[9px] opacity-60">{f.count}</span>
+                </button>
+              ))}
             </div>
           )}
 
           <div className="flex-1" />
 
+          {/* Bulk actions + search */}
           {activeTab === "all" && (
             <div className="flex items-center gap-1.5">
               {selectedIds.size > 0 && (
@@ -298,8 +332,8 @@ export default function CampaignsTabulator() {
                 className={cn(
                   "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
                   selectedIds.size > 0
-                    ? "cursor-pointer border-amber-400/25 bg-amber-400/10 text-amber-400 hover:bg-amber-500 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 bg-transparent text-slate-600 opacity-40",
+                    ? "border-amber-400/25 bg-amber-400/10 text-amber-400 hover:bg-amber-500 hover:text-white"
+                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
                 )}
               >
                 <Pause className="size-3" aria-hidden />
@@ -313,89 +347,54 @@ export default function CampaignsTabulator() {
                 className={cn(
                   "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
                   selectedIds.size > 0
-                    ? "cursor-pointer border-rose-400/20 text-rose-400 hover:bg-rose-500 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 bg-transparent text-slate-600 opacity-40",
+                    ? "border-rose-400/20 text-rose-400 hover:bg-rose-500 hover:text-white"
+                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
                 )}
               >
                 <Trash2 className="size-3" aria-hidden />
                 Delete
               </button>
-            </div>
-          )}
 
-          {activeTab === "all" && (
-            <div className="relative w-44 shrink-0">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500"
-                aria-hidden
-              />
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                type="search"
-                placeholder="Search…"
-                aria-label="Search campaigns"
-                className="w-full rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-8 pr-3 text-sm text-white transition-colors focus:border-ithina-purple focus:outline-none"
-              />
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" aria-hidden />
+                <input
+                  value={search}
+                  onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                  type="search"
+                  placeholder="Search…"
+                  aria-label="Search campaigns"
+                  className="w-44 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-8 pr-3 text-sm text-white transition-colors focus:border-ithina-purple focus:outline-none"
+                />
+              </div>
             </div>
           )}
         </div>
 
-        {activeTab === "all" && (
+        {/* ── Content ── */}
+        {activeTab === "all" ? (
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <PrototypeTabulator
-                className="campaigns-tabulator-prototype min-h-0 flex-1 border-0"
-                columns={columns}
-                data={filteredCampaigns}
-                formatRevision={formatRevision}
-                layout="fitDataTable"
-                rowFormatter={rowFormatter}
-                tableHeight="100%"
-                pagination={false}
-                onCellClick={onCellClick}
-                headerCheckbox={{
-                  checked: allSelected,
-                  indeterminate: anySelected && !allSelected,
-                  onChange: toggleAllCampaigns,
-                  selector: "[data-proto-header-checkbox='true']",
-                }}
-              />
-            </div>
-
-            <div className="flex shrink-0 items-center justify-between border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-2.5 text-xs text-slate-600">
-              <span className="font-mono">
-                {filteredCampaigns.length} campaigns
-                {selectedIds.size > 0 ? (
-                  <span className="ml-2 text-ithina-purple">· {selectedIds.size} selected</span>
-                ) : null}
-              </span>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  className="rounded border border-ithina-border px-2.5 py-1 transition-colors hover:border-ithina-purple/50 hover:text-white"
-                  aria-label="Previous page"
-                  disabled
-                >
-                  ←
-                </button>
-                <span className="rounded border border-ithina-purple/20 bg-ithina-purple/10 px-2 py-1 font-mono text-ithina-purple">
-                  1
-                </span>
-                <button
-                  type="button"
-                  className="rounded border border-ithina-border px-2.5 py-1 transition-colors hover:border-ithina-purple/50 hover:text-white"
-                  aria-label="Next page"
-                  disabled
-                >
-                  →
-                </button>
-              </div>
-            </div>
+            <IthTable<CampaignListItem>
+              data={filteredCampaigns}
+              columns={columnsWithHeader}
+              rowKey={(r) => r.id}
+              onRowClick={handleRowClick}
+              rowHighlight={(row) =>
+                selectedIds.has(row.id) ? "purple" : null
+              }
+              pagination={{
+                page,
+                pageSize: PAGE_SIZE,
+                total: filteredCampaigns.length,
+                onPageChange: setPage,
+                rowLabel: "campaigns",
+              }}
+              empty={{ message: "No campaigns match your filter." }}
+              className="rounded-none border-0 flex-1"
+            />
           </div>
+        ) : (
+          <CampaignsScheduledTab />
         )}
-
-        {activeTab === "scheduled" && <CampaignsScheduledTab />}
       </div>
     </>
   );

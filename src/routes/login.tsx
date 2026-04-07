@@ -6,7 +6,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { PromoAuthService, getDashboardUrlForRole } from "@/lib/auth/promo-auth";
 
 export const Route = createFileRoute("/login")({
   component: LoginPage,
@@ -27,8 +27,9 @@ function LoginPage() {
     setIsLoading(true);
 
     try {
-      await SimulatedAuthService.login(formData.email, formData.password);
-      navigate({ to: "/dashboard" });
+      const user = await PromoAuthService.login(formData.email, formData.password);
+      const dashboardUrl = getDashboardUrlForRole(user.role);
+      navigate({ to: dashboardUrl });
     } catch {
       setError("Invalid credentials. Please try again.");
     } finally {
@@ -216,15 +217,6 @@ function LoginPage() {
                 "Sign In"
               )}
             </Button>
-
-            <p className="text-center text-xs text-gray-500">
-              Demo accounts (all use <span className="font-mono">password123</span>):
-              <br />
-              <span className="font-mono">
-                sarah@displaydata.com (Initiator), marcus@displaydata.com
-                (Approver), david@displaydata.com (Store Ops)
-              </span>
-            </p>
           </form>
         </div>
       </motion.div>

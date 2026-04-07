@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -12,7 +12,6 @@ import {
 } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
-  appendGridRow,
   pushMessage as pushWizardMessage,
   removeAllCsvViolations,
   removeCsvRow,
@@ -22,6 +21,7 @@ import {
   setCsvConfirmed,
   setCsvFileName,
   setCsvRows,
+  setGridData,
   setHasSplit,
   setInputMode as setWizardInputMode,
   setShowGrid,
@@ -29,9 +29,14 @@ import {
   setWStep,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
-import { useScheduledCallback } from "@/hooks/use-scheduled-callback";
 import { approvalKeys } from "@/hooks/use-approval";
-import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
+import { campaignKeys } from "@/hooks/use-campaigns";
+import {
+  useChatWizardMessage,
+  useConfirmHardwareSelection,
+  useInitWizardCampaign,
+  useSubmitWizardIntent,
+} from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
@@ -71,6 +76,7 @@ export default function Wizard() {
   const [designConfigured, setDesignConfigured] = useState(false);
   const [showStudio, setShowStudio] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
+  const [scheduledAt, setScheduledAt] = useState<{ date: string; time: string }>({ date: "", time: "08:00" });
   const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
     chroma29: [],
     chroma42: ['2.9"'],
@@ -99,9 +105,12 @@ export default function Wizard() {
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const addTimer = useScheduledCallback();
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
+  const initCampaignMutation = useInitWizardCampaign();
+  const chatMutation = useChatWizardMessage();
+
+  const sessionRef = useRef<{ campaignId: string; threadId: string } | null>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -110,6 +119,33 @@ export default function Wizard() {
     if (id === "chroma42") return 'ESL 4.2"';
     return 'LCD 14"';
   }, []);
+
+  const buildHardwareTargetsForApi = useCallback((): string[] => {
+    const targets = new Set<string>();
+
+    // ESL selection in UI can include multiple sizes; map each size to backend hardware target ids.
+    if (selectedDevices.includes("chroma42")) {
+      const sizeMap: Record<string, string> = {
+        '1.54"': "chroma15",
+        '2.13"': "chroma21",
+        '2.9"': "chroma29",
+        '4.2"': "chroma42",
+        '5.83"': "chroma58",
+        '7.5"': "chroma75",
+      };
+      const eslSizes = sizeByDevice.chroma42 ?? [];
+      eslSizes.forEach((size) => {
+        const mapped = sizeMap[size];
+        if (mapped) targets.add(mapped);
+      });
+    }
+
+    if (selectedDevices.includes("lcd")) {
+      targets.add("lcd");
+    }
+
+    return Array.from(targets);
+  }, [selectedDevices, sizeByDevice.chroma42]);
 
   const submitDisplayTags = useMemo((): SubmitDisplayTag[] => {
     const out: SubmitDisplayTag[] = [];
@@ -147,6 +183,7 @@ export default function Wizard() {
       lcd: [],
     });
     setSelectedDevices([]);
+    sessionRef.current = null;
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -202,7 +239,7 @@ export default function Wizard() {
 
   const handleSubmit = useCallback(async () => {
     const text = inputText.trim();
-    if (!text || intentMutation.isPending) return;
+    if (!text || intentMutation.isPending || chatMutation.isPending) return;
 
     if (!hasSplit) dispatch(setHasSplit(true));
     if (!showGrid) dispatch(setShowGrid(true));
@@ -214,19 +251,51 @@ export default function Wizard() {
     generateCampaignName(text);
 
     try {
-      const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
-      setIsTyping(false);
-      pushMessage(aiReply);
-      if (gridData.length === 0) {
-        skus.forEach((item, idx) => {
-          addTimer(() => dispatch(appendGridRow(item)), idx * 150);
+      // If we have an active LangGraph session, use the chat endpoint for refinement.
+      if (sessionRef.current) {
+        const { aiReply, skus } = await chatMutation.mutateAsync({
+          campaignId: sessionRef.current.campaignId,
+          message: text,
+          constraints,
         });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        if (skus.length > 0) {
+          dispatch(setGridData(skus));
+        }
+        return;
+      }
+
+      // First message: try init → chat flow (LangGraph-backed).
+      // Falls back to the draft endpoint if init/chat fails.
+      try {
+        const session = await initCampaignMutation.mutateAsync("nl");
+        sessionRef.current = session;
+        dispatch(activateCampaignWithId({ id: session.campaignId, name: "" }));
+
+        const { aiReply, skus } = await chatMutation.mutateAsync({
+          campaignId: session.campaignId,
+          message: text,
+          constraints,
+        });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        if (skus.length > 0) {
+          dispatch(setGridData(skus));
+        }
+      } catch {
+        // Fallback: use the stateless draft endpoint (no LangGraph required).
+        sessionRef.current = null;
+        const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        dispatch(setGridData(skus));
       }
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, gridData.length, pushMessage, generateCampaignName, dispatch, addTimer]);
+  }, [inputText, intentMutation, chatMutation, initCampaignMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -236,26 +305,42 @@ export default function Wizard() {
     dispatch(setWStep(4));
   }, [dispatch]);
 
-  const handleNlNextFromSchedule = useCallback(() => {
+  const handleNlNextFromSchedule = useCallback((payload: { startDate: string; startTime: string }) => {
+    setScheduledAt({ date: payload.startDate, time: payload.startTime });
     dispatch(setWStep(5));
   }, [dispatch]);
 
   const handleNlSubmit = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target before submit.");
+      return;
+    }
     const resolvedName = campaignName || "Untitled Campaign";
     let resolvedId = `inbox-${Date.now()}`;
+    let submitSucceeded = false;
     try {
-      const created = await createCampaignFromWizard(resolvedName);
+      const scheduleDate = scheduledAt.date ? `${scheduledAt.date}T${scheduledAt.time}:00` : "";
+      const created = await createCampaignFromWizard(
+        resolvedName,
+        "Wizard",
+        scheduleDate,
+        hardwareTargetsForApi,
+      );
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
       resolvedId = created.id;
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
+      submitSucceeded = true;
     } catch {
-      dispatch(activateCampaign(resolvedName));
+      setError("Failed to submit campaign for approval. Please fix and try again.");
+      return;
     }
+
+    if (!submitSucceeded) return;
 
     const now = new Date();
     const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
-    const hardwareTargets = selectedDevices.length > 0
-      ? selectedDevices.map(toApprovalHardwareLabel)
-      : ['ESL 1.54"'];
+    const hardwareTargets = selectedDevices.map(toApprovalHardwareLabel);
 
     const pendingInboxItem: InboxItem = {
       id: resolvedId,
@@ -281,14 +366,19 @@ export default function Wizard() {
     dispatch(setPendingApproval(true));
     dispatch(resetWizard());
     dispatch(resetStudio());
-    navigate({ to: "/approval" });
-  }, [campaignName, dispatch, gridData.length, navigate, queryClient, selectedDevices, toApprovalHardwareLabel]);
+    navigate({ to: "/campaigns" });
+  }, [buildHardwareTargetsForApi, campaignName, dispatch, gridData.length, navigate, queryClient, scheduledAt.date, scheduledAt.time, selectedDevices, toApprovalHardwareLabel]);
 
   // Manual flow confirm
   const handleManualConfirm = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target before continuing.");
+      return;
+    }
     const name = "Manual Upload – " + new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
     try {
-      const created = await createCampaignFromWizard(name, "Manual Upload");
+      const created = await createCampaignFromWizard(name, "Manual Upload", "", hardwareTargetsForApi);
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
     } catch {
       dispatch(activateCampaign(name));
@@ -296,7 +386,7 @@ export default function Wizard() {
     dispatch(resetWizard());
     dispatch(resetStudio());
     navigate({ to: "/studio" });
-  }, [dispatch, navigate]);
+  }, [buildHardwareTargetsForApi, dispatch, navigate]);
 
   // ── CSV handlers ───────────────────────────────────────────────────
   const handleInputModeChange = useCallback(
@@ -480,7 +570,7 @@ export default function Wizard() {
                             inputText={inputText}
                             onInputChange={setInputText}
                             onSubmit={handleSubmit}
-                            inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
+                            inputDisabled={intentMutation.isPending || chatMutation.isPending || hwConfirmMutation.isPending}
                             hasSplit={true}
                           />
 
@@ -553,6 +643,8 @@ export default function Wizard() {
                 onSubmit={handleNlSubmit}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={gridData.length || csvRows.length}
+                scheduleDateLabel={scheduledAt.date || "Immediate"}
+                scheduleTimeLabel={scheduledAt.time || "08:00"}
                 displayTags={submitDisplayTags}
               />
             )}

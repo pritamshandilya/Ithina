@@ -1,0 +1,7 @@
+import { createFileRoute } from "@tanstack/react-router";
+
+import CampaignsTabulator from "@/features/campaigns/campaigns-tabulator";
+
+export const Route = createFileRoute("/_checker/checker/campaigns")({
+  component: CampaignsTabulator,
+});

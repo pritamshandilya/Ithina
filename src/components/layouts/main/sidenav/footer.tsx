@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
-import { SimulatedAuthService } from "@/lib/auth/simulated-auth";
+import { PromoAuthService } from "@/lib/auth/promo-auth";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { toggleTheme } from "@/store/slices/ui-slice";
 
@@ -42,7 +42,7 @@ export default function SidenavFooter() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const isDark = useAppSelector((s) => s.ui.isDarkMode);
-  const user = SimulatedAuthService.getCurrentUser();
+  const user = PromoAuthService.getCurrentUser();
 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -58,8 +58,9 @@ export default function SidenavFooter() {
   }, []);
 
   const handleLogout = () => {
-    SimulatedAuthService.logout();
-    navigate({ to: "/login" });
+    PromoAuthService.logout().finally(() => {
+      navigate({ to: "/login" });
+    });
   };
 
   if (!user) {
@@ -76,6 +77,21 @@ export default function SidenavFooter() {
   const initials = `${user.firstName.charAt(0)}${user.lastName.charAt(0)}`;
   const fullName = `${user.firstName} ${user.lastName}`;
 
+  const ROLE_LABEL: Record<string, string> = {
+    admin: "Admin",
+    maker: "Maker",
+    checker: "Checker",
+  };
+
+  const ROLE_COLOR: Record<string, string> = {
+    admin: "text-ithina-rose bg-ithina-rose/10 border-ithina-rose/20",
+    maker: "text-ithina-purple bg-ithina-purple/10 border-ithina-purple/20",
+    checker: "text-ithina-emerald bg-ithina-emerald/10 border-ithina-emerald/20",
+  };
+
+  const roleLabel = ROLE_LABEL[user.role] ?? user.role;
+  const roleColor = ROLE_COLOR[user.role] ?? "text-slate-400 bg-white/5 border-white/10";
+
   return (
     <div className="relative shrink-0" ref={ref}>
 
@@ -91,9 +107,13 @@ export default function SidenavFooter() {
               </AvatarFallback>
             </Avatar>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{fullName}</p>
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold text-white">{fullName}</p>
+                <span className={cn("shrink-0 rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest", roleColor)}>
+                  {roleLabel}
+                </span>
+              </div>
               <p className="truncate font-mono text-[10px] text-slate-500">{user.email}</p>
-              <p className="truncate font-mono text-[10px] text-slate-600">Category Manager</p>
             </div>
           </div>
 
@@ -103,14 +123,16 @@ export default function SidenavFooter() {
               icon={<User className="size-4 text-slate-500" />}
               label="Profile"
             />
-            <MenuItem
-              icon={<Building2 className="size-4 text-slate-500" />}
-              label="Store Settings"
-              onClick={() => {
-                navigate({ to: "/store-settings" });
-                setOpen(false);
-              }}
-            />
+            {user.role === "admin" && (
+              <MenuItem
+                icon={<Building2 className="size-4 text-slate-500" />}
+                label="Store Settings"
+                onClick={() => {
+                  navigate({ to: "/store-settings" });
+                  setOpen(false);
+                }}
+              />
+            )}
             <MenuItem
               icon={
                 isDark ? (
@@ -148,7 +170,9 @@ export default function SidenavFooter() {
 
         <div className="min-w-0 flex-1 overflow-hidden">
           <p className="truncate text-sm font-medium leading-tight text-white">{fullName}</p>
-          <p className="truncate font-mono text-[10px] text-slate-500">Category Manager</p>
+          <p className={cn("inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest", roleColor)}>
+            {roleLabel}
+          </p>
         </div>
 
         <ChevronDown

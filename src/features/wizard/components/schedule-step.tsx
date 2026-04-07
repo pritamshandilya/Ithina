@@ -13,7 +13,7 @@ import { useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 interface ScheduleStepProps {
-  onNext: () => void;
+  onNext: (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => void;
 }
 
 type SchedFilter = "All" | "Recurring" | "One-time";
@@ -60,7 +60,14 @@ function buildCalendarCells(): { n?: number; empty: boolean; isToday: boolean; h
 }
 
 export default function ScheduleStep({ onNext }: ScheduleStepProps) {
-  const [startDate, setStartDate] = useState("");
+  const todayIso = useMemo(() => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = `${now.getMonth() + 1}`.padStart(2, "0");
+    const d = `${now.getDate()}`.padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }, []);
+  const [startDate, setStartDate] = useState(todayIso);
   const [startTime, setStartTime] = useState("08:00");
   const [endDate, setEndDate] = useState("");
   const [autoApprove, setAutoApprove] = useState(false);
@@ -185,7 +192,7 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
           </div>
           <button
             type="button"
-            onClick={onNext}
+            onClick={() => onNext({ startDate, startTime, endDate, autoApprove })}
             className="flex items-center gap-2 self-start rounded-xl bg-ithina-purple px-7 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
           >
             Review &amp; Submit

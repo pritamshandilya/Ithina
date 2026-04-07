@@ -1,23 +1,29 @@
-import { Check, Sparkles, X } from "lucide-react";
+import { LayoutGrid, Sparkles, Upload, X, Zap } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { cn } from "@/lib/utils";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setPendingApproval } from "@/store/slices/campaign-slice";
-import { resetStudio } from "@/store/slices/studio-slice";
+type StudioMethod = "ai" | "library" | "manual";
+type TemplateItem = {
+  id: string;
+  name: string;
+  headerColor: string;
+  headerText: string;
+  productLine: string;
+};
+
+const TEMPLATE_LIBRARY: TemplateItem[] = [
+  { id: "tpl_clearance", name: "Clearance Standard", headerColor: "#111111", headerText: "CLEARANCE", productLine: "Perishables" },
+  { id: "tpl_expiring", name: "Expiring 48H", headerColor: "#cc0000", headerText: "EXPIRING IN 48H", productLine: "Fresh" },
+  { id: "tpl_flash", name: "Flash Sale", headerColor: "#b91c1c", headerText: "FLASH SALE", productLine: "All Categories" },
+  { id: "tpl_newarrival", name: "New Arrival", headerColor: "#065f46", headerText: "NEW ARRIVAL", productLine: "All Categories" },
+  { id: "tpl_bogo", name: "BOGO Special", headerColor: "#1d4ed8", headerText: "BUY ONE GET ONE", productLine: "Snacks & Drinks" },
+  { id: "tpl_members", name: "Members Only", headerColor: "#7c3aed", headerText: "MEMBERS ONLY", productLine: "Premium" },
+];
 
 export default function Studio() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const campaign = useAppSelector((s) => s.campaign);
-  const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("A");
-
-  const handleApplyToCampaign = () => {
-    dispatch(setPendingApproval(true));
-    dispatch(resetStudio());
-    navigate({ to: "/approval" });
-  };
+  const [method, setMethod] = useState<StudioMethod>("library");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATE_LIBRARY[0].id);
 
   return (
     <div className="flex h-full w-full items-center justify-center overflow-hidden p-4">
@@ -41,18 +47,45 @@ export default function Studio() {
           </button>
         </header>
 
-        <div className="grid h-[calc(88vh-55px)] min-h-0 grid-cols-[160px_1fr_220px]">
+        <div className="grid h-[calc(88vh-55px)] min-h-0 grid-cols-[190px_1fr]">
           <aside className="flex min-h-0 flex-col border-r border-ithina-border">
             <div className="overflow-y-auto p-3">
               <p className="mb-3 font-mono text-[9px] tracking-widest text-slate-600">DESIGN METHOD</p>
               <div className="space-y-2">
-                <button className="w-full rounded-xl bg-ithina-purple/20 px-3 py-2 text-left text-sm font-semibold text-white">
+                <button
+                  type="button"
+                  onClick={() => setMethod("ai")}
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                    method === "ai"
+                      ? "bg-ithina-purple/20 font-semibold text-white"
+                      : "text-slate-400 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Zap className="size-3.5" />
                   AI Generate
                 </button>
-                <button className="w-full rounded-xl px-3 py-2 text-left text-sm text-slate-400 hover:bg-white/[0.04]">
+                <button
+                  type="button"
+                  onClick={() => setMethod("library")}
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                    method === "library"
+                      ? "bg-ithina-purple/20 font-semibold text-white"
+                      : "text-slate-400 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <LayoutGrid className="size-3.5" />
                   Template Library
                 </button>
-                <button className="w-full rounded-xl px-3 py-2 text-left text-sm text-slate-400 hover:bg-white/[0.04]">
+                <button
+                  type="button"
+                  onClick={() => setMethod("manual")}
+                  className={`flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm transition-colors ${
+                    method === "manual"
+                      ? "bg-ithina-purple/20 font-semibold text-white"
+                      : "text-slate-400 hover:bg-white/[0.04]"
+                  }`}
+                >
+                  <Upload className="size-3.5" />
                   Manual Upload
                 </button>
               </div>
@@ -71,77 +104,76 @@ export default function Studio() {
           </aside>
 
           <main className="flex min-h-0 flex-col">
-            <div className="flex-1 overflow-y-auto p-3">
-              <p className="mb-2 font-mono text-[9px] tracking-widest text-slate-600">
-                SELECT A LAYOUT VARIANT
-              </p>
-              <div className="grid grid-cols-3 gap-3">
-                {[
-                  { id: "A", label: "PRICE-DOMINANT", rec: false },
-                  { id: "B", label: "URGENCY", rec: true },
-                  { id: "C", label: "BALANCED", rec: false },
-                ].map((v) => (
-                  <button
-                    key={v.id}
-                    type="button"
-                    onClick={() => setSelectedVariant(v.id as "A" | "B" | "C")}
-                    className={cn(
-                      "relative rounded-xl border p-1.5 text-left transition-all",
-                      selectedVariant === v.id
-                        ? "border-ithina-purple bg-ithina-purple/10 shadow-[0_0_18px_rgba(168,85,247,0.25)]"
-                        : "border-ithina-border bg-ithina-panel hover:border-slate-500",
-                    )}
-                  >
-                    {v.rec && (
-                      <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-ithina-purple px-2 py-0.5 font-mono text-[8px] font-bold text-white">
-                        AI RECOMMENDED
-                      </span>
-                    )}
-                    <p className="mb-1 font-mono text-[9px] text-slate-500">
-                      {v.id}. {v.label}
-                    </p>
-                    <div className="h-36 rounded bg-[#E5E7EB]">
-                      <div className="h-5 bg-red-700" />
-                      <div className="p-2 text-right text-xl font-black text-black">$10.39</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
+            <div className="flex flex-1 p-6">
+              {method === "library" ? (
+                <div className="flex h-full w-full flex-col">
+                  <div className="mb-4">
+                    <h3 className="text-base font-bold text-white">Template Library</h3>
+                    <p className="mt-0.5 text-xs text-slate-400">Pick a template and then continue with design edits.</p>
+                  </div>
 
-            <div className="flex items-center justify-between border-t border-ithina-border px-4 py-2">
-              <span className="text-xs text-slate-500">Variant {selectedVariant} selected</span>
+                  <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                    Choose a saved template
+                  </p>
+
+                  <div className="grid grid-cols-2 gap-3 xl:grid-cols-3">
+                    {TEMPLATE_LIBRARY.map((tpl) => {
+                      const selected = tpl.id === selectedTemplateId;
+                      return (
+                        <button
+                          key={tpl.id}
+                          type="button"
+                          onClick={() => setSelectedTemplateId(tpl.id)}
+                          className={`rounded-xl border p-2 text-left transition-all ${
+                            selected
+                              ? "border-ithina-purple bg-ithina-purple/10"
+                              : "border-ithina-border bg-ithina-panel hover:border-slate-500"
+                          }`}
+                        >
+                          <p className="mb-1 text-xs font-semibold text-white">{tpl.name}</p>
+                          <div className="overflow-hidden rounded border border-slate-400 bg-[#E5E7EB]">
+                            <div
+                              className="flex h-5 items-center justify-center text-[7px] font-bold tracking-widest text-white"
+                              style={{ background: tpl.headerColor }}
+                            >
+                              {tpl.headerText}
+                            </div>
+                            <div className="bg-[#F5F5F5] p-1">
+                              <p className="text-[6px] text-black">{tpl.productLine}</p>
+                              <p className="text-right text-[18px] font-black leading-none text-black">$10.39</p>
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="mt-4 border-t border-ithina-border pt-3">
+                    <p className="text-xs text-slate-500">
+                      Selected:{" "}
+                      <span className="text-white">
+                        {TEMPLATE_LIBRARY.find((t) => t.id === selectedTemplateId)?.name ?? "No template selected"}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ) : method === "ai" ? (
+                <div className="text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600">
+                    AI GENERATE
+                  </p>
+                  <p className="mt-2 text-slate-500">Use AI to generate a design variant.</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <p className="font-mono text-[10px] uppercase tracking-widest text-slate-600">
+                    MANUAL UPLOAD
+                  </p>
+                  <p className="mt-2 text-slate-500">Upload your own creative assets here.</p>
+                </div>
+              )}
             </div>
           </main>
-
-          <aside className="flex min-h-0 flex-col border-l border-ithina-border p-3">
-            <div className="overflow-y-auto">
-              <p className="mb-3 text-sm font-semibold text-white">AI Modify</p>
-              <textarea
-                placeholder="Describe changes to apply..."
-                className="h-24 w-full rounded-xl border border-ithina-border bg-ithina-bg px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-ithina-purple focus:outline-none"
-              />
-              <div className="mt-3 flex justify-end">
-                <button className="rounded-lg bg-ithina-purple px-3 py-1.5 text-xs font-semibold text-white">
-                  Apply
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-auto border-t border-ithina-border pt-3">
-              <button
-                type="button"
-                onClick={handleApplyToCampaign}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-ithina-purple-hover"
-              >
-                Apply to Campaign
-                <Check className="size-4" />
-              </button>
-              <p className="mt-2 truncate text-center text-[10px] text-slate-600">
-                {campaign.name || "Untitled Campaign"}
-              </p>
-            </div>
-          </aside>
         </div>
       </div>
     </div>

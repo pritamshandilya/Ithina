@@ -1,17 +1,17 @@
-import { Check, Plus, X } from "lucide-react";
+import { AlertCircle, Check, Loader2, Plus, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
 import { PrototypeTabulator } from "@/components/ui/prototype-tabulator";
 import { buildGuardRailTabulatorColumns } from "./guard-rails-table-columns";
+import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import {
-  MOCK_GUARD_RAIL_RULES,
-  type GuardRailCategory,
-  type GuardRailRule,
-  type GuardRailSeverity,
-} from "@/mocks/guard-rails";
+  useCreateGuardrail,
+  useGuardrails,
+} from "@/hooks/use-guardrails";
 import { cn } from "@/lib/utils";
 
 type GuardRailFilter = "All" | GuardRailCategory;
+
 interface NewGuardRailForm {
   name: string;
   category: GuardRailCategory;
@@ -21,6 +21,7 @@ interface NewGuardRailForm {
 }
 
 const FILTERS: GuardRailFilter[] = ["All", "Pricing", "Brand", "Regulatory", "Content"];
+
 const EMPTY_FORM: NewGuardRailForm = {
   name: "",
   category: "Pricing",
@@ -31,113 +32,50 @@ const EMPTY_FORM: NewGuardRailForm = {
 
 export default function Admin() {
   const [activeFilter, setActiveFilter] = useState<GuardRailFilter>("All");
-  const [rules, setRules] = useState<GuardRailRule[]>(MOCK_GUARD_RAIL_RULES);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<NewGuardRailForm>(EMPTY_FORM);
-  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
 
-  const filteredRules = useMemo(() => {
+  const { data: rules = [], isLoading, isError, error } = useGuardrails();
+  const createMutation = useCreateGuardrail();
+
+  const filteredRules = useMemo<GuardRailRule[]>(() => {
     if (activeFilter === "All") return rules;
     return rules.filter((r) => r.category === activeFilter);
   }, [activeFilter, rules]);
 
   const activeCount = useMemo(() => rules.filter((r) => r.active).length, [rules]);
 
-  const toggleRule = useCallback((id: string) => {
-    setRules((prev) => prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)));
+  const openCreateModal = () => {
+    setForm(EMPTY_FORM);
+    setShowModal(true);
+  };
+
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    setForm(EMPTY_FORM);
   }, []);
 
-  const deleteRule = useCallback((id: string) => {
-    setRules((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const createRule = () => {
+  const saveRule = async () => {
     if (!form.name.trim() || !form.description.trim()) return;
-    const nextId = `gr${Date.now().toString().slice(-4)}`;
-    const nextRule: GuardRailRule = {
-      id: nextId,
+    await createMutation.mutateAsync({
       name: form.name.trim(),
       category: form.category,
       severity: form.severity,
       description: form.description.trim(),
       active: form.active,
-    };
-    setRules((prev) => [nextRule, ...prev]);
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-  };
-
-  const openCreateModal = () => {
-    setEditingRuleId(null);
-    setForm(EMPTY_FORM);
-    setShowModal(true);
-  };
-
-  const openEditModal = useCallback((rule: GuardRailRule) => {
-    setEditingRuleId(rule.id);
-    setForm({
-      name: rule.name,
-      category: rule.category,
-      severity: rule.severity,
-      description: rule.description,
-      active: rule.active,
     });
-    setShowModal(true);
-  }, []);
-
-  const closeModal = () => {
-    setShowModal(false);
-    setEditingRuleId(null);
-    setForm(EMPTY_FORM);
-  };
-
-  const saveRule = () => {
-    if (!form.name.trim() || !form.description.trim()) return;
-
-    if (!editingRuleId) {
-      createRule();
-      return;
-    }
-
-    setRules((prev) =>
-      prev.map((rule) =>
-        rule.id === editingRuleId
-          ? {
-              ...rule,
-              name: form.name.trim(),
-              category: form.category,
-              severity: form.severity,
-              description: form.description.trim(),
-              active: form.active,
-            }
-          : rule,
-      ),
-    );
     closeModal();
   };
 
   const handleTableAction = useCallback(
-    (e: MouseEvent, rule: GuardRailRule) => {
+    (e: MouseEvent, _row: GuardRailRule) => {
       const target = e.target as HTMLElement | null;
       const actionEl = target?.closest?.("[data-action]") as HTMLElement | null;
       const action = actionEl?.getAttribute("data-action");
       if (!action) return;
-
-      if (action === "edit") {
-        openEditModal(rule);
-        return;
-      }
-
-      if (action === "delete") {
-        deleteRule(rule.id);
-        return;
-      }
-
-      if (action === "toggle") {
-        toggleRule(rule.id);
-      }
+      // TODO: wire edit/delete/toggle once backend PATCH+DELETE endpoints land
     },
-    [deleteRule, openEditModal, toggleRule],
+    [],
   );
 
   const columns = useMemo(() => buildGuardRailTabulatorColumns(), []);
@@ -177,17 +115,35 @@ export default function Admin() {
         </div>
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <PrototypeTabulator
-              className="guard-rails-tabulator-prototype min-h-0 flex-1 border-0"
-              columns={columns}
-              data={filteredRules}
-              layout="fitDataTable"
-              pagination={false}
-              tableHeight="100%"
-              onCellClick={(e, row) => handleTableAction(e, row)}
-            />
-          </div>
+          {isLoading && (
+            <div className="flex flex-1 items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="size-5 animate-spin" />
+              <span className="text-sm">Loading guard rails…</span>
+            </div>
+          )}
+
+          {isError && (
+            <div className="flex flex-1 items-center justify-center gap-3 text-rose-400">
+              <AlertCircle className="size-5" />
+              <span className="text-sm">
+                {(error as Error)?.message ?? "Failed to load guard rails"}
+              </span>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+              <PrototypeTabulator
+                className="guard-rails-tabulator-prototype min-h-0 flex-1 border-0"
+                columns={columns}
+                data={filteredRules}
+                layout="fitColumns"
+                pagination={false}
+                tableHeight="100%"
+                onCellClick={(e, row) => handleTableAction(e, row)}
+              />
+            </div>
+          )}
 
           <div className="flex shrink-0 items-center justify-between border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-2.5 text-xs text-slate-600">
             <span className="font-mono">
@@ -214,11 +170,9 @@ export default function Admin() {
             <header className="flex shrink-0 items-start justify-between border-b border-ithina-border px-7 py-5">
               <div>
                 <h3 id="guard-rail-modal-title" className="text-lg font-bold text-white">
-                  {editingRuleId ? "Edit Guard Rail" : "New Guard Rail"}
+                  New Guard Rail
                 </h3>
-                <p className="mt-0.5 text-sm text-slate-400">
-                  {editingRuleId ? "Update rule definition" : "Define a new compliance rule"}
-                </p>
+                <p className="mt-0.5 text-sm text-slate-400">Define a new compliance rule</p>
               </div>
               <button
                 type="button"
@@ -370,11 +324,19 @@ export default function Admin() {
               <button
                 type="button"
                 onClick={saveRule}
-                disabled={!form.name.trim() || !form.description.trim()}
+                disabled={
+                  !form.name.trim() ||
+                  !form.description.trim() ||
+                  createMutation.isPending
+                }
                 className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <Check className="size-4 shrink-0" aria-hidden />
-                {editingRuleId ? "Save Changes" : "Create Rule"}
+                {createMutation.isPending ? (
+                  <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+                ) : (
+                  <Check className="size-4 shrink-0" aria-hidden />
+                )}
+                {createMutation.isPending ? "Saving…" : "Create Rule"}
               </button>
             </footer>
           </div>
@@ -383,4 +345,3 @@ export default function Admin() {
     </>
   );
 }
-

@@ -1,12 +1,12 @@
 import { Check } from "lucide-react";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useHardwareDevices } from "@/hooks/use-wizard";
 
 import type { WizardMode } from "./mode-chooser";
-import CampaignStudioModal from "./campaign-studio-modal";
+import CampaignStudioModal, { type AppliedDesignSelection } from "./campaign-studio-modal";
 import NlHardwareStep from "./nl-hardware-step";
 
 interface ScreenSelectorProps {
@@ -55,6 +55,7 @@ function ScreenSelector({
   storeNumber = "4281",
 }: ScreenSelectorProps) {
   const { data: devices = [] } = useHardwareDevices();
+  const [selectedDesign, setSelectedDesign] = useState<AppliedDesignSelection | null>(null);
 
   const isNl = mode === "nl";
   const title = isNl ? "Select Target Screens" : "Select Your Screens";
@@ -116,6 +117,7 @@ function ScreenSelector({
           designConfigured={designConfigured}
           onSetShowStudio={onSetShowStudio}
           selectedVariant={selectedVariant}
+          selectedDesign={selectedDesign}
           onNext={onNext}
         />
       ) : (
@@ -207,7 +209,8 @@ function ScreenSelector({
           mode={designDevice === "lcd" ? "lcd" : "esl"}
           selectedVariant={selectedVariant}
           onSelectVariant={onSetSelectedVariant}
-          onApply={() => {
+          onApply={(selection) => {
+            setSelectedDesign(selection);
             onSetDesignConfigured(true);
             onSetShowStudio(false);
           }}

@@ -1,11 +1,13 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
+  chatWizardMessage,
   confirmHardwareSelection,
   getHardwareDevices,
   getWizardDurations,
   getWizardMargins,
   getWizardStores,
+  initWizardCampaign,
   submitWizardIntent,
 } from "@/services/wizard";
 import type { HardwareDeviceId, WizardConstraints } from "@/types/wizard";
@@ -64,5 +66,27 @@ export function useSubmitWizardIntent() {
 export function useConfirmHardwareSelection() {
   return useMutation({
     mutationFn: (deviceIds: HardwareDeviceId[]) => confirmHardwareSelection(deviceIds),
+  });
+}
+
+/** Initialize a campaign session with LangGraph */
+export function useInitWizardCampaign() {
+  return useMutation({
+    mutationFn: (sourceType?: "nl" | "manual") => initWizardCampaign(sourceType),
+  });
+}
+
+/** Send a chat message to the LangGraph agent for an active wizard session */
+export function useChatWizardMessage() {
+  return useMutation({
+    mutationFn: ({
+      campaignId,
+      message,
+      constraints,
+    }: {
+      campaignId: string;
+      message: string;
+      constraints: WizardConstraints;
+    }) => chatWizardMessage(campaignId, message, constraints),
   });
 }

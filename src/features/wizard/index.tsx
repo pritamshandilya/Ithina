@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -31,7 +31,12 @@ import {
 import type { HardwareDeviceId } from "@/types/wizard";
 import { approvalKeys } from "@/hooks/use-approval";
 import { campaignKeys } from "@/hooks/use-campaigns";
-import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
+import {
+  useChatWizardMessage,
+  useConfirmHardwareSelection,
+  useInitWizardCampaign,
+  useSubmitWizardIntent,
+} from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
@@ -102,6 +107,10 @@ export default function Wizard() {
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
+  const initCampaignMutation = useInitWizardCampaign();
+  const chatMutation = useChatWizardMessage();
+
+  const sessionRef = useRef<{ campaignId: string; threadId: string } | null>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -174,6 +183,7 @@ export default function Wizard() {
       lcd: [],
     });
     setSelectedDevices([]);
+    sessionRef.current = null;
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -229,7 +239,7 @@ export default function Wizard() {
 
   const handleSubmit = useCallback(async () => {
     const text = inputText.trim();
-    if (!text || intentMutation.isPending) return;
+    if (!text || intentMutation.isPending || chatMutation.isPending) return;
 
     if (!hasSplit) dispatch(setHasSplit(true));
     if (!showGrid) dispatch(setShowGrid(true));
@@ -241,16 +251,51 @@ export default function Wizard() {
     generateCampaignName(text);
 
     try {
-      const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
-      setIsTyping(false);
-      pushMessage(aiReply);
-      // Always refresh staging grid from the latest draft response.
-      dispatch(setGridData(skus));
+      // If we have an active LangGraph session, use the chat endpoint for refinement.
+      if (sessionRef.current) {
+        const { aiReply, skus } = await chatMutation.mutateAsync({
+          campaignId: sessionRef.current.campaignId,
+          message: text,
+          constraints,
+        });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        if (skus.length > 0) {
+          dispatch(setGridData(skus));
+        }
+        return;
+      }
+
+      // First message: try init → chat flow (LangGraph-backed).
+      // Falls back to the draft endpoint if init/chat fails.
+      try {
+        const session = await initCampaignMutation.mutateAsync("nl");
+        sessionRef.current = session;
+        dispatch(activateCampaignWithId({ id: session.campaignId, name: "" }));
+
+        const { aiReply, skus } = await chatMutation.mutateAsync({
+          campaignId: session.campaignId,
+          message: text,
+          constraints,
+        });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        if (skus.length > 0) {
+          dispatch(setGridData(skus));
+        }
+      } catch {
+        // Fallback: use the stateless draft endpoint (no LangGraph required).
+        sessionRef.current = null;
+        const { aiReply, skus } = await intentMutation.mutateAsync({ text, constraints });
+        setIsTyping(false);
+        pushMessage(aiReply);
+        dispatch(setGridData(skus));
+      }
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
+  }, [inputText, intentMutation, chatMutation, initCampaignMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -525,7 +570,7 @@ export default function Wizard() {
                             inputText={inputText}
                             onInputChange={setInputText}
                             onSubmit={handleSubmit}
-                            inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
+                            inputDisabled={intentMutation.isPending || chatMutation.isPending || hwConfirmMutation.isPending}
                             hasSplit={true}
                           />
 

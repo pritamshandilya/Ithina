@@ -68,3 +68,36 @@ export interface ApiCampaignGenerateRequest {
   hardware_targets: string[];
   scheduled_start?: string | null;
 }
+
+// ─── Campaign Init (creates DB row + LangGraph thread) ──────────────────────
+export interface ApiCampaignInitRequest {
+  source_type?: "nl" | "manual";
+  hardware_targets?: string[];
+}
+
+export interface ApiCampaignInitResponse {
+  campaign_id: string;
+  langgraph_thread_id: string;
+  status: string;
+}
+
+// ─── Campaign Chat (LangGraph conversational turn) ──────────────────────────
+export interface ApiCampaignChatRequest {
+  message: string;
+}
+
+export interface ApiCampaignChatSKU {
+  sku: string;
+  product_name: string;
+  current_price: number;
+  proposed_price: number;
+  base_cost: number;
+  margin_pct: number;
+  is_safe: boolean;
+  violation_reason?: string | null;
+}
+
+export interface ApiCampaignChatResponse {
+  reply: string;
+  staged_skus: ApiCampaignChatSKU[];
+}

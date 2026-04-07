@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   approveCampaign,
+  chatCampaign,
   createCampaign,
   deleteCampaign,
   draftCampaignFromPrompt,
@@ -13,13 +14,16 @@ import {
   getCampaignStatusStyles,
   getCampaignTableColumns,
   getMonthNames,
+  initCampaign,
   rejectCampaign,
   updateCampaign,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
 import type {
+  ApiCampaignChatRequest,
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
+  ApiCampaignInitRequest,
 } from "@/types/api/campaigns";
 
 export const campaignKeys = {
@@ -173,5 +177,26 @@ export function useGenerateCampaign() {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
+  });
+}
+
+/** Initialize a campaign session (DB row + LangGraph thread) */
+export function useInitCampaign() {
+  return useMutation({
+    mutationFn: (payload?: ApiCampaignInitRequest) =>
+      initCampaign(payload),
+  });
+}
+
+/** Send a message to the LangGraph AI agent for a campaign */
+export function useChatCampaign() {
+  return useMutation({
+    mutationFn: ({
+      campaignId,
+      payload,
+    }: {
+      campaignId: string;
+      payload: ApiCampaignChatRequest;
+    }) => chatCampaign(campaignId, payload),
   });
 }

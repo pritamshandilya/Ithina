@@ -217,15 +217,6 @@ function LoginPage() {
                 "Sign In"
               )}
             </Button>
-
-            <p className="text-center text-xs text-gray-500">
-              Demo accounts (all use <span className="font-mono">password123</span>):
-              <br />
-              <span className="font-mono">
-                sarah@displaydata.com (Initiator), marcus@displaydata.com
-                (Approver), david@displaydata.com (Store Ops)
-              </span>
-            </p>
           </form>
         </div>
       </motion.div>

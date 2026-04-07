@@ -27,9 +27,13 @@ import {
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
 import type {
+  ApiCampaignChatRequest,
+  ApiCampaignChatResponse,
   ApiCampaignDraftRequest,
   ApiCampaignDraftResponse,
   ApiCampaignGenerateRequest,
+  ApiCampaignInitRequest,
+  ApiCampaignInitResponse,
   ApiCampaignResponse,
 } from "@/types/api/campaigns";
 import type {
@@ -153,6 +157,35 @@ export async function approveCampaign(id: string): Promise<CampaignListItem> {
  */
 export async function rejectCampaign(_id: string): Promise<CampaignListItem> {
   throw new Error("reject_not_implemented");
+}
+
+/**
+ * Initialize a campaign session: creates a DB row + LangGraph thread.
+ * Must be called before chatCampaign.
+ */
+export async function initCampaign(
+  payload: ApiCampaignInitRequest = {},
+): Promise<ApiCampaignInitResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignInitResponse>(
+    `${API_PREFIX}/campaigns/init`,
+    payload,
+  );
+  return data;
+}
+
+/**
+ * Send a conversational message to the LangGraph agent for a campaign.
+ * Returns the AI reply text and the full updated SKU grid.
+ */
+export async function chatCampaign(
+  campaignId: string,
+  payload: ApiCampaignChatRequest,
+): Promise<ApiCampaignChatResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignChatResponse>(
+    `${API_PREFIX}/campaigns/${campaignId}/chat`,
+    payload,
+  );
+  return data;
 }
 
 /**

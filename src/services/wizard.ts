@@ -4,6 +4,10 @@
  * Phase 1 (NL prompt → staged SKUs) and Phase 2 (save campaign) are now
  * wired to the real backend. Stores / margins / durations / hardware remain
  * as static data because those endpoints don't exist in the backend yet.
+ *
+ * The init→chat flow uses the LangGraph-backed endpoints:
+ *   POST /campaigns/init   → creates DB row + thread
+ *   POST /campaigns/{id}/chat → conversational AI turn
  */
 
 import {
@@ -12,7 +16,7 @@ import {
   MOCK_MARGINS,
   MOCK_STORES,
 } from "@/mocks/wizard";
-import { draftCampaignFromPrompt } from "@/services/campaigns";
+import { chatCampaign, draftCampaignFromPrompt, initCampaign } from "@/services/campaigns";
 import type {
   ChatMessage,
   HardwareDevice,
@@ -72,6 +76,67 @@ export async function submitWizardIntent(
     replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
   }
   replyText += " Please review the staging grid.";
+
+  return {
+    aiReply: { role: "ai", text: replyText },
+    skus,
+  };
+}
+
+// ─── Init → Chat flow (LangGraph-backed) ─────────────────────────────────────
+
+export interface WizardSession {
+  campaignId: string;
+  threadId: string;
+}
+
+/**
+ * Initialize a new campaign session with LangGraph.
+ * Returns the campaign_id and langgraph_thread_id needed for chat.
+ */
+export async function initWizardCampaign(
+  sourceType: "nl" | "manual" = "nl",
+): Promise<WizardSession> {
+  const res = await initCampaign({ source_type: sourceType });
+  return {
+    campaignId: res.campaign_id,
+    threadId: res.langgraph_thread_id,
+  };
+}
+
+/**
+ * Send a conversational message to the LangGraph agent.
+ * Returns the AI reply and updated staged SKUs for the grid.
+ */
+export async function chatWizardMessage(
+  campaignId: string,
+  message: string,
+  constraints: WizardConstraints,
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
+  const res = await chatCampaign(campaignId, { message });
+
+  const skus: StagedSku[] = (res.staged_skus ?? []).map((s) => ({
+    sku: s.sku ?? "",
+    name: s.product_name ?? "",
+    current: s.current_price ?? 0,
+    proposed: s.proposed_price ?? 0,
+    safe: s.is_safe ?? true,
+    margin: `${s.margin_pct ?? 0}%`,
+  }));
+
+  let replyText = res.reply || "AI processed your request.";
+
+  if (skus.length > 0) {
+    const safeCount = skus.filter((s) => s.safe).length;
+    const warnCount = skus.length - safeCount;
+    replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
+    if (warnCount > 0) {
+      replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
+    } else {
+      replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
+    }
+    replyText += " Please review the staging grid.";
+  }
 
   return {
     aiReply: { role: "ai", text: replyText },

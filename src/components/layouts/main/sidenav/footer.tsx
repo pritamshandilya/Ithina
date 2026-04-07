@@ -20,14 +20,16 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { AuthSessionService, getInitialsFromEmail } from "@/lib/auth/session";
+import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
 
 export default function SidenavFooter() {
-  const { isMobile } = useSidebar();
+  const { isMobile, state } = useSidebar();
   const navigate = useNavigate();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { setSelectedStore } = useStore();
+  const isCollapsed = !isMobile && state === "collapsed";
   const currentUser = useSyncExternalStore(
     (onStoreChange) => AuthSessionService.subscribe(onStoreChange),
     () => AuthSessionService.getSnapshot().user,
@@ -58,38 +60,42 @@ export default function SidenavFooter() {
   const lastName = (user.lastName || "").trim() || fallbackNames.lastName;
 
   return (
-    <SidebarMenu>
+    <SidebarMenu className="group-data-[collapsible=icon]:items-center">
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton
+              tooltip={isCollapsed ? "Account" : undefined}
               size="lg"
-              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+              className={cn(
+                "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
+                isCollapsed && "justify-center rounded-xl p-0"
+              )}
             >
-              <Avatar className="h-8 w-8 rounded-lg">
+              <Avatar className="h-9 w-9 rounded-xl border border-white/6">
                 <AvatarImage
                   src={undefined}
                   alt={firstName}
                 />
 
-                <AvatarFallback className="rounded-lg">
+                <AvatarFallback className="rounded-xl bg-accent/10 text-accent">
                   {firstName.charAt(0)}
                   {lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
 
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate font-medium text-sidebar-foreground">
                   {firstName} {lastName}
                 </span>
 
-                <span className="truncate text-xs">{user.email}</span>
-                <span className="truncate text-xs text-muted-foreground">
+                <span className="truncate font-mono text-[10px] text-muted-foreground">{user.email}</span>
+                <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   {user.organization.name}
                 </span>
               </div>
 
-              <ChevronsUpDown className="ml-auto size-4" />
+              <ChevronsUpDown className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
 
@@ -101,13 +107,13 @@ export default function SidenavFooter() {
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
+                <Avatar className="h-9 w-9 rounded-xl border border-white/6">
                   <AvatarImage
                     src={undefined}
                     alt={firstName}
                   />
 
-                  <AvatarFallback className="rounded-lg">
+                  <AvatarFallback className="rounded-xl bg-accent/10 text-accent">
                     {firstName.charAt(0)}
                     {lastName.charAt(0)}
                   </AvatarFallback>
@@ -118,8 +124,8 @@ export default function SidenavFooter() {
                     {firstName} {lastName}
                   </span>
 
-                  <span className="truncate text-xs">{user.email}</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate font-mono text-[10px] text-muted-foreground">{user.email}</span>
+                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                     {user.organization.name}
                   </span>
                 </div>

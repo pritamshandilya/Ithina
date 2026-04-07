@@ -11,7 +11,7 @@ const Label = React.forwardRef<
     ref={ref}
     data-slot="label"
     className={cn(
-      "text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
+      "font-mono text-[10px] font-medium uppercase leading-none tracking-[0.18em] text-muted-foreground peer-disabled:cursor-not-allowed peer-disabled:opacity-70",
       className
     )}
     {...props}

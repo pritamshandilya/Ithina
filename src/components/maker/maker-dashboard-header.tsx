@@ -49,16 +49,7 @@ export function MakerDashboardHeader({
     <div className={cn("flex items-center", className)}>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button
-            size="lg"
-            className={cn(
-              "h-11 px-5 gap-2 font-semibold shrink-0 shadow-md hover:shadow-lg transition-all"
-            )}
-            style={{
-              backgroundColor: "var(--maker-primary)",
-              color: "var(--accent-foreground)",
-            }}
-          >
+          <Button size="lg" className={cn("shrink-0 gap-2")}>
             <PlusIcon className="size-5" />
             Start New Audit
             <ChevronDownIcon className="size-4" />
@@ -71,13 +62,13 @@ export function MakerDashboardHeader({
               <DropdownMenuItem
                 key={mode.id}
                 onClick={() => navigate({ to: mode.to })}
-                className="flex flex-col items-start gap-0.5 py-3 cursor-pointer"
+                className="flex cursor-pointer flex-col items-start gap-0.5 py-3"
               >
                 <div className="flex items-center gap-2">
                   <Icon className="size-4 shrink-0" />
                   <span className="font-medium">{mode.label}</span>
                 </div>
-                <span className="text-xs text-muted-foreground pl-6">
+                <span className="pl-6 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
                   {mode.description}
                 </span>
               </DropdownMenuItem>

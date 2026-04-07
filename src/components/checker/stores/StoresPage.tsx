@@ -260,7 +260,6 @@ export function StoresPage() {
                 <PageHeader
                     title="Stores"
                     description="Monitor and manage all retail locations in your organization."
-                    // icon={StoreIcon}
                 >
                     <Button
                         variant="accent"

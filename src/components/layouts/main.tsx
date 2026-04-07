@@ -48,9 +48,9 @@ export default function MainLayout({
     <MainLayoutContext.Provider value={true}>
       <Sidenav />
 
-      <SidebarInset className="flex min-h-0 flex-col">
+      <SidebarInset className="flex min-h-0 flex-col bg-background">
         {pageHeader ? (
-          <div className="shrink-0 border-b border-border bg-background/50 px-3 py-3 backdrop-blur-md sm:px-4 lg:px-6">
+          <div className="shrink-0 border-b border-border/80 bg-sidebar/70 px-3 py-4 backdrop-blur-xl sm:px-4 lg:px-6">
             <div className={cn("mx-auto w-full max-w-screen-2xl", pageHeaderClassName)}>
               {pageHeader}
             </div>

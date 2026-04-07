@@ -46,7 +46,7 @@ export function Modal({
             exit={{ opacity: 0 }}
             onClick={onClose}
             className={cn(
-              "fixed inset-0 bg-black/60 backdrop-blur-sm",
+              "fixed inset-0 bg-black/70 backdrop-blur-md",
               overlayClassName
             )}
           />
@@ -56,16 +56,16 @@ export function Modal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             className={cn(
-              "relative w-full max-w-md z-50 pointer-events-auto",
+              "relative z-50 w-full max-w-md pointer-events-auto",
               className
             )}
           >
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 rounded-full p-2 opacity-70 transition-opacity hover:opacity-100 hover:bg-white/10 focus:outline-none z-[60]"
+                className="absolute right-4 top-4 z-[60] rounded-md border border-transparent bg-transparent p-2 text-muted-foreground transition-colors hover:border-white/10 hover:bg-white/6 hover:text-white focus:outline-none"
               >
-                <X className="h-4 w-4 text-white/70" />
+                <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>
               </button>
             )}

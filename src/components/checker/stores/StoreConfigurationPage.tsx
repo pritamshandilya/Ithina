@@ -1,5 +1,4 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { Settings } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
@@ -101,10 +100,7 @@ export function StoreConfigurationPage({
   return (
     <MainLayout
       pageHeader={
-        <PageHeader
-          title="Store Settings"
-          icon={Settings}
-        />
+        <PageHeader title="Store Settings" />
       }
     >
       <div className="space-y-6 mx-auto pb-10 pt-4 px-2 sm:px-4 max-w-6xl">

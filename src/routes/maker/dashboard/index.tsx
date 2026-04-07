@@ -48,8 +48,8 @@ function MakerDashboard() {
         </PageHeader>
       }
     >
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto max-w-screen-2xl space-y-5">
+      <div className="ithina-page">
+        <div className="ithina-page-inner">
 
           {/* Key metrics - My Work at a Glance */}
           <MakerAccomplishedCards />
@@ -79,6 +79,7 @@ function MakerDashboard() {
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
+                <p className="ithina-overline mb-1">History</p>
                 <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
                   Recent Audit History
                 </h2>

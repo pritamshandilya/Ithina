@@ -5,37 +5,38 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
+  "inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-md font-semibold text-sm font-sans transition-[background-color,border-color,color,box-shadow,transform] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background aria-invalid:border-destructive aria-invalid:ring-destructive/20",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default:
+          "border border-accent/20 bg-accent text-accent-foreground shadow-[0_14px_32px_rgba(168,85,247,0.24)] hover:-translate-y-[1px] hover:bg-[#9333ea]",
         accent:
-          "bg-accent text-white hover:bg-accent/90",
+          "border border-accent/20 bg-accent text-accent-foreground shadow-[0_14px_32px_rgba(168,85,247,0.24)] hover:-translate-y-[1px] hover:bg-[#9333ea]",
         success:
-          "bg-chart-2/85 text-white hover:bg-chart-2/75 focus-visible:ring-chart-2/25",
+          "border border-chart-2/20 bg-chart-2 text-[#062515] shadow-[0_14px_32px_rgba(52,211,153,0.18)] hover:-translate-y-[1px] hover:bg-[#2cc48b] focus-visible:ring-chart-2/30",
         destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "border border-destructive/20 bg-destructive text-destructive-foreground shadow-[0_14px_32px_rgba(251,113,133,0.18)] hover:-translate-y-[1px] hover:bg-[#f43f5e] focus-visible:ring-destructive/30",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
+          "border border-border bg-card text-card-foreground shadow-[0_10px_24px_rgba(3,8,20,0.18)] hover:border-muted-foreground/50 hover:bg-secondary hover:text-white",
         "success-outline":
-          "border border-chart-2/60 bg-background text-chart-2 shadow-xs hover:bg-chart-2/10 hover:border-chart-2/70 focus-visible:ring-chart-2/25",
+          "border border-chart-2/35 bg-chart-2/10 text-chart-2 hover:border-chart-2/55 hover:bg-chart-2/14 focus-visible:ring-chart-2/30",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+          "border border-border bg-secondary text-secondary-foreground hover:border-muted-foreground/40 hover:bg-secondary/85 hover:text-white",
         ghost:
-          "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+          "text-muted-foreground hover:bg-white/6 hover:text-white",
         "icon-ghost":
-          "hover:bg-muted hover:text-foreground dark:hover:bg-muted/70",
+          "text-muted-foreground hover:bg-white/6 hover:text-white",
         "success-ghost":
-          "text-chart-2 hover:bg-chart-2/10 hover:text-chart-2 focus-visible:ring-chart-2/25",
+          "text-chart-2 hover:bg-chart-2/12 hover:text-chart-2 focus-visible:ring-chart-2/30",
         "destructive-ghost":
-          "text-destructive hover:bg-destructive/20 hover:text-destructive focus-visible:ring-destructive/25",
-        link: "text-primary underline-offset-4 hover:underline",
+          "text-destructive hover:bg-destructive/12 hover:text-destructive focus-visible:ring-destructive/30",
+        link: "text-accent underline-offset-4 hover:text-[#c084fc] hover:underline",
       },
       size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-md px-6 has-[>svg]:px-4",
+        default: "h-10 px-4 py-2 has-[>svg]:px-3",
+        sm: "h-8 gap-1.5 px-3 text-xs has-[>svg]:px-2.5",
+        lg: "h-11 px-5 text-sm has-[>svg]:px-4",
         icon: "size-9",
         "icon-sm": "size-8",
         "icon-lg": "size-10",

@@ -1,18 +1,18 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit3, LayoutPanelLeft, Search, Trash2 } from "lucide-react";
+import { Edit3, Search, Trash2 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/page-header";
+import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
   DataTable,
   type DataTableCell,
   type DataTableColumn,
 } from "@/components/ui/data-table";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -380,7 +380,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         <PageHeader
           title="Fixtures"
           description="View and manage store fixture configuration."
-          icon={LayoutPanelLeft}
+        
         />
       }
     >

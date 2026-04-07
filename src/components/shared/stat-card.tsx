@@ -92,12 +92,12 @@ export function StatCard({
       role="region"
       aria-label={`${title}: ${value}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-medium text-muted-foreground">{title}</p>
-          <div className="mt-1 flex items-baseline gap-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{title}</p>
+          <div className="mt-3 flex items-baseline gap-2">
             <p
-              className={cn("text-2xl font-bold tracking-tight", config.value)}
+              className={cn("text-3xl font-extrabold tracking-[-0.04em]", config.value)}
               style={config.valueStyle}
             >
               {value}
@@ -118,13 +118,13 @@ export function StatCard({
             )}
           </div>
           {description && (
-            <p className="mt-0.5 text-[11px] text-muted-foreground leading-snug">{description}</p>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
           )}
         </div>
         {Icon && (
           <div
             className={cn(
-              "rounded-md bg-background/50 p-1.5 shrink-0",
+              "shrink-0 rounded-lg border border-white/6 bg-secondary p-2.5",
               config.icon
             )}
             style={config.iconStyle}

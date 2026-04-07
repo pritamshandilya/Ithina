@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 import { LayoutNotificationsAction } from "./layout-notifications-action";
 
 interface PageHeaderProps {
@@ -25,28 +25,23 @@ export function PageHeader({
     title,
     description,
     leading,
-    icon: Icon,
-    iconColor = "text-accent",
+    icon: _icon,
+    iconColor: _iconColor = "text-accent",
     children,
     className,
     showNotifications = true,
 }: PageHeaderProps) {
     return (
-        <div className={cn("flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between", className)}>
-            <div className="min-w-0">
+        <div className={cn("flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between", className)}>
+            <div className="min-w-0 space-y-3">
                 <div className="flex items-center gap-2 sm:gap-3">
                     {leading}
-                    {Icon && (
-                        <div className="flex size-10 items-center justify-center rounded-lg bg-accent/10 shrink-0">
-                            <Icon className={cn("size-5", iconColor)} />
-                        </div>
-                    )}
-                    <div className="space-y-0.5">
-                        <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                    <div className="space-y-1">
+                        <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">
                             {title}
                         </h1>
                         {description && (
-                            <p className="text-sm font-medium text-muted-foreground/70">
+                            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
                                 {description}
                             </p>
                         )}
@@ -54,11 +49,11 @@ export function PageHeader({
                 </div>
             </div>
             <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                     {children}
                 </div>
                 {showNotifications && (
-                    <div className="flex items-center pl-3 border-l border-border/50 h-8">
+                    <div className="flex h-9 items-center border-l border-border/60 pl-3">
                         <LayoutNotificationsAction />
                     </div>
                 )}
@@ -66,4 +61,3 @@ export function PageHeader({
         </div>
     );
 }
-

@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ithina Design System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:             #0A0E17;
+    --sidebar:        #0F1523;
+    --panel:          #131C31;
+    --border:         #1E293B;
+    --purple:         #a855f7;
+    --purple-hover:   #9333ea;
+    --purple-10:      rgba(168,85,247,0.10);
+    --purple-20:      rgba(168,85,247,0.20);
+    --purple-35:      rgba(168,85,247,0.35);
+    --emerald:        #34d399;
+    --amber:          #fbbf24;
+    --rose:           #fb7185;
+    --slate-200:      #e2e8f0;
+    --slate-400:      #94a3b8;
+    --slate-500:      #64748b;
+    --slate-600:      #475569;
+    --slate-800:      #1e293b;
+    --font-sans:      'Plus Jakarta Sans', sans-serif;
+    --font-mono:      'JetBrains Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    font-family: var(--font-sans);
+    color: var(--slate-200);
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ─── NOISE TEXTURE OVERLAY ─── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 0; opacity: .4;
+  }
+
+  /* ─── NAV HEADER ─── */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    height: 82px;
+    background: rgba(15,21,35,0.85);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 32px;
+    animation: slideDown .6s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  .topbar-logo {
+    font-family: var(--font-mono);
+    font-weight: 700; font-size: 18px; letter-spacing: -0.5px;
+    color: #fff;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .topbar-logo .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--purple);
+    animation: pulseDot 2s ease-in-out infinite;
+  }
+  @keyframes pulseDot {
+    0%,100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  .topbar-nav { display: flex; gap: 4px; }
+  .topbar-nav a {
+    font-size: 13px; font-weight: 500; color: var(--slate-400);
+    text-decoration: none; padding: 6px 14px; border-radius: 8px;
+    transition: color .2s, background .2s;
+  }
+  .topbar-nav a:hover { color: #fff; background: rgba(255,255,255,.06); }
+  .topbar-nav a.active { color: var(--purple); background: var(--purple-10); }
+
+  .topbar-actions { display: flex; align-items: center; gap: 8px; }
+  .store-pill {
+    display: flex; align-items: center; gap: 6px;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 6px 12px; border-radius: 10px;
+    font-size: 12px; font-family: var(--font-mono); color: var(--slate-400);
+    cursor: pointer; transition: border-color .2s;
+  }
+  .store-pill:hover { border-color: var(--slate-500); }
+  .store-pill .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--emerald); animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.3; } }
+
+  .avatar {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: var(--purple);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: #fff; cursor: pointer;
+    transition: background .2s;
+  }
+  .avatar:hover {
+    background: var(--purple-hover);
+  }
+
+  /* ─── SIDEBAR ─── */
+  .sidebar {
+    position: fixed; left: 0; top: 82px; bottom: 0; width: 240px; z-index: 90;
+    background: var(--sidebar); border-right: 1px solid var(--border);
+    padding: 20px 12px;
+    display: flex; flex-direction: column; gap: 2px;
+    animation: slideLeft .7s cubic-bezier(.16,1,.3,1) .1s both;
+  }
+  @keyframes slideLeft { from { transform: translateX(-100%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .sidebar-section-label {
+    font-size: 9px; font-family: var(--font-mono); color: var(--slate-500);
+    text-transform: uppercase; letter-spacing: .12em;
+    padding: 12px 12px 6px; margin-top: 8px;
+  }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 10px; cursor: pointer;
+    font-size: 13px; font-weight: 500; color: var(--slate-400);
+    transition: all .2s; text-decoration: none;
+  }
+  .sidebar-item:hover { color: #fff; background: rgba(255,255,255,.05); }
+  .sidebar-item.active { color: var(--purple); background: var(--purple-10); }
+  .sidebar-item .icon { font-size: 15px; width: 20px; text-align: center; }
+  .sidebar-badge {
+    margin-left: auto; font-size: 9px; font-family: var(--font-mono);
+    background: var(--purple-10); color: var(--purple);
+    border: 1px solid rgba(168,85,247,.2);
+    padding: 1px 6px; border-radius: 4px;
+  }
+
+  /* ─── MAIN ─── */
+  .main {
+    margin-left: 240px;
+    padding-top: 82px;
+    min-height: 100vh;
+    position: relative; z-index: 1;
+  }
+
+  .page { padding: 40px 40px; max-width: 1200px; }
+
+  /* ─── SECTION HEADERS ─── */
+  .section-tag {
+    display: inline-block;
+    font-size: 9px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .15em;
+    color: var(--purple); background: var(--purple-10);
+    border: 1px solid rgba(168,85,247,.2);
+    padding: 3px 10px; border-radius: 6px; margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 28px; font-weight: 800; color: #fff;
+    letter-spacing: -.5px; margin-bottom: 6px;
+  }
+  .section-desc {
+    font-size: 14px; color: var(--slate-400); margin-bottom: 32px; max-width: 560px;
+  }
+
+  .divider {
+    height: 1px; background: var(--border); margin: 56px 0;
+    position: relative; overflow: visible;
+  }
+  .divider::after {
+    content: attr(data-label);
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    font-size: 10px; font-family: var(--font-mono); color: var(--slate-400);
+    text-transform: uppercase; letter-spacing: .12em;
+    background: var(--bg); padding: 0 14px 0 0;
+  }
+
+  /* ─── HERO INTRO ─── */
+  .hero {
+    padding: 64px 0 48px;
+    animation: fadeUp .8s cubic-bezier(.16,1,.3,1) .2s both;
+  }
+  @keyframes fadeUp { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .hero-eyebrow {
+    font-size: 10px; font-family: var(--font-mono); color: var(--slate-500);
+    text-transform: uppercase; letter-spacing: .18em; margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .hero-eyebrow::before {
+    content: ''; display: block;
+    width: 32px; height: 1px; background: var(--slate-600);
+  }
+  .hero-title {
+    font-size: 56px; font-weight: 800; letter-spacing: -2px; line-height: 1.05;
+    color: #fff; margin-bottom: 20px;
+  }
+  .hero-title .accent { color: var(--purple); }
+  .hero-subtitle {
+    font-size: 17px; color: var(--slate-400); max-width: 520px; line-height: 1.7;
+    margin-bottom: 36px;
+  }
+  .hero-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .hero-chip {
+    font-size: 11px; font-family: var(--font-mono);
+    background: var(--panel); border: 1px solid var(--border);
+    color: var(--slate-400); padding: 5px 12px; border-radius: 8px;
+  }
+
+  /* ─── COLOR SWATCHES ─── */
+  .swatch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
+  .swatch {
+    border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    animation: fadeUp .6s cubic-bezier(.16,1,.3,1) both;
+  }
+  .swatch-color { height: 72px; }
+  .swatch-info { padding: 10px 12px; }
+  .swatch-name { font-size: 11px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .swatch-hex { font-size: 10px; font-family: var(--font-mono); color: var(--slate-500); }
+
+  /* ─── TYPOGRAPHY SHOWCASE ─── */
+  .type-row {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 24px;
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 10px;
+    transition: border-color .2s;
+  }
+  .type-row:hover { border-color: var(--purple-35); }
+  .type-label {
+    font-size: 10px; font-family: var(--font-mono); color: var(--slate-400);
+    text-transform: uppercase; letter-spacing: .1em; min-width: 140px;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn-grid { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    cursor: pointer; font-family: var(--font-sans);
+    border: none; outline: none; transition: all .2s;
+  }
+  .btn-primary {
+    background: var(--purple);
+    color: #fff; font-weight: 700; font-size: 14px;
+    padding: 10px 20px; border-radius: 12px;
+  }
+  .btn-primary:hover {
+    background: var(--purple-hover);
+    transform: translateY(-1px);
+  }
+  .btn-secondary {
+    background: var(--panel); border: 1px solid var(--border);
+    color: #cbd5e1; font-weight: 500; font-size: 14px;
+    padding: 10px 20px; border-radius: 10px;
+  }
+  .btn-secondary:hover { border-color: var(--slate-500); color: #fff; }
+  .btn-ghost {
+    background: transparent; color: var(--slate-400);
+    font-size: 13px; padding: 8px 12px; border-radius: 8px;
+  }
+  .btn-ghost:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .btn-danger {
+    background: rgba(251,113,133,.12); border: 1px solid rgba(251,113,133,.2);
+    color: #fb7185; font-weight: 600; font-size: 14px;
+    padding: 10px 20px; border-radius: 12px;
+  }
+  .btn-danger:hover { background: rgba(251,113,133,.2); }
+
+  /* ─── BADGES ─── */
+  .badge-grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .badge {
+    font-size: 9px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .12em;
+    padding: 3px 8px; border-radius: 5px; border: 1px solid;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-purple  { color: var(--purple);  background: var(--purple-10);           border-color: rgba(168,85,247,.2); }
+  .badge-emerald { color: var(--emerald); background: rgba(52,211,153,.10);        border-color: rgba(52,211,153,.2); }
+  .badge-amber   { color: var(--amber);   background: rgba(251,191,36,.10);        border-color: rgba(251,191,36,.2); }
+  .badge-rose    { color: var(--rose);    background: rgba(251,113,133,.10);       border-color: rgba(251,113,133,.2); }
+  .badge-slate   { color: var(--slate-400); background: rgba(255,255,255,.05);     border-color: rgba(255,255,255,.10); }
+  .live-dot-small {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--emerald); animation: pulse 2s infinite;
+  }
+
+  /* ─── CARDS ─── */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; padding: 22px;
+    transition: all .25s cubic-bezier(.16,1,.3,1);
+  }
+  .card:hover {
+    border-color: rgba(168,85,247,.5);
+    transform: translateY(-2px);
+  }
+  .card-header {
+    display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px;
+  }
+  .card-icon {
+    width: 40px; height: 40px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .card-subtitle { font-size: 10px; font-family: var(--font-mono); color: var(--slate-400); }
+  .card-value { font-size: 28px; font-weight: 800; color: #fff; letter-spacing: -1px; margin-bottom: 4px; }
+  .card-change { font-size: 11px; font-weight: 500; }
+  .card-change.up   { color: var(--emerald); }
+  .card-change.down { color: var(--rose); }
+  .card-divider { height: 1px; background: rgba(30,41,59,.8); margin: 16px 0; }
+  .card-footer { font-size: 11px; color: var(--slate-500); }
+
+  /* ─── DATA TABLE ─── */
+  .table-wrap {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; overflow: hidden;
+  }
+  .table-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(30,41,59,.6);
+    background: rgba(255,255,255,.01);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .table-title { font-size: 13px; font-weight: 700; color: #fff; }
+  .table-sub   { font-size: 10px; font-family: var(--font-mono); color: var(--slate-400); margin-top: 1px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr {
+    background: rgba(15,21,35,.95);
+    backdrop-filter: blur(4px);
+  }
+  thead th {
+    font-size: 10px; font-family: var(--font-mono);
+    text-transform: uppercase; letter-spacing: .1em; color: var(--slate-500);
+    padding: 12px 20px; text-align: left; font-weight: 400;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid rgba(30,41,59,.4);
+    transition: background .15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,.018); }
+  tbody tr:last-child { border-bottom: none; }
+  td {
+    padding: 14px 20px; vertical-align: middle;
+    font-size: 13px; color: var(--slate-400);
+    font-variant-numeric: tabular-nums;
+  }
+  .td-primary { font-weight: 600; color: #fff; font-size: 13px; }
+  .td-id { font-size: 10px; font-family: var(--font-mono); color: var(--slate-400); margin-top: 2px; }
+  .price { font-family: var(--font-mono); font-weight: 600; color: #fff; }
+
+  /* ─── FORMS ─── */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; }
+  .form-group { display: flex; flex-direction: column; }
+  .form-label {
+    display: block; font-size: 10px; font-family: var(--font-mono);
+    color: var(--slate-400); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 6px;
+  }
+  .form-input {
+    background: var(--bg); border: 1px solid var(--border);
+    color: #fff; font-size: 13px; font-family: var(--font-sans);
+    border-radius: 10px; padding: 10px 14px;
+    outline: none; transition: border-color .2s;
+    width: 100%;
+  }
+  .form-input:focus { border-color: var(--purple); }
+  .form-input::placeholder { color: var(--slate-500); }
+  select.form-input { appearance: none; cursor: pointer; }
+  .form-hint {
+    margin-top: 5px; font-size: 11px; color: var(--slate-500);
+    font-family: var(--font-mono);
+  }
+  .form-input.error { border-color: rgba(251,113,133,.5); }
+  .form-hint.error { color: var(--rose); }
+
+  /* ─── STATUS PANEL (Formerly Glows) ─── */
+  .glows-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+  .glow-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; padding: 28px 24px; text-align: center;
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .glow-orb {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 24px;
+  }
+  .glow-soft   { background: rgba(168,85,247,.12); color: var(--purple); }
+  .glow-heavy  { background: rgba(168,85,247,.20); color: var(--purple); }
+  .glow-alert  { background: rgba(251,113,133,.12); color: var(--rose); }
+  .glow-label  { font-size: 12px; font-weight: 600; color: #fff; }
+  .glow-desc   { font-size: 11px; font-family: var(--font-mono); color: var(--slate-400); text-align: center; }
+
+  /* ─── AI ANIMATIONS ─── */
+  .ai-demo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ai-demo-card {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; overflow: hidden; position: relative;
+  }
+  .ai-demo-title { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .ai-demo-desc  { font-size: 11px; font-family: var(--font-mono); color: var(--slate-400); margin-bottom: 18px; }
+
+  /* Typing indicator */
+  .typing-dots { display: flex; gap: 4px; align-items: center; }
+  .typing-dots span {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--purple);
+    animation: typingBounce 1.2s ease-in-out infinite;
+  }
+  .typing-dots span:nth-child(2) { animation-delay: .2s; }
+  .typing-dots span:nth-child(3) { animation-delay: .4s; }
+  @keyframes typingBounce {
+    0%,80%,100% { transform: scale(.4); opacity: .3; }
+    40%          { transform: scale(1);  opacity: 1; }
+  }
+  .typing-label { font-size: 12px; color: var(--slate-400); margin-left: 10px; }
+
+  /* Scanline */
+  .scanline-demo {
+    position: relative; height: 80px;
+    background: rgba(168,85,247,.04); border: 1px solid rgba(168,85,247,.15);
+    border-radius: 10px; overflow: hidden;
+  }
+  .scanline {
+    position: absolute; left: 0; right: 0; height: 2px;
+    background: rgba(168,85,247,.8);
+    animation: scanDown 2.4s linear infinite;
+  }
+  @keyframes scanDown {
+    0%   { top: 0%; }
+    100% { top: 100%; }
+  }
+  .scanline-text {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-family: var(--font-mono); color: var(--slate-400); letter-spacing: .08em;
+  }
+
+  /* Pulse live */
+  .live-row {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(52,211,153,.05); border: 1px solid rgba(52,211,153,.15);
+    border-radius: 10px; padding: 12px 16px; margin-bottom: 8px;
+  }
+  .live-pulse {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--emerald); animation: pulse 1.5s ease-in-out infinite; flex-shrink: 0;
+  }
+  .live-text { font-size: 12px; font-weight: 600; color: var(--emerald); }
+  .live-id { font-size: 10px; font-family: var(--font-mono); color: var(--slate-400); margin-left: auto; }
+
+  /* ─── AI CHAT BUBBLE ─── */
+  .chat-demo {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-avatar {
+    width: 30px; height: 30px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .chat-avatar.ai {
+    background: var(--purple);
+    color: #fff;
+  }
+  .chat-avatar.user { background: var(--sidebar); color: var(--slate-400); border: 1px solid var(--border); }
+  .chat-bubble {
+    max-width: 78%; font-size: 12.5px; line-height: 1.6;
+    padding: 10px 14px; border-radius: 12px;
+  }
+  .chat-bubble.ai {
+    background: rgba(168,85,247,.1); border: 1px solid rgba(168,85,247,.2);
+    color: var(--slate-200);
+  }
+  .chat-bubble.user {
+    background: var(--sidebar); border: 1px solid var(--border);
+    color: var(--slate-300);
+  }
+  .chat-typing {
+    display: flex; gap: 10px; align-items: center;
+  }
+
+  /* ─── APPROVAL WORKFLOW ─── */
+  .workflow-steps {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 32px;
+  }
+  .wf-circles-row {
+    display: flex; align-items: center; margin-bottom: 14px;
+  }
+  .wf-circle {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+    border: 2px solid; position: relative; z-index: 1;
+  }
+  .wf-circle.done   { background: rgba(52,211,153,.12);  border-color: var(--emerald); color: var(--emerald); }
+  .wf-circle.active { background: var(--purple-10);       border-color: var(--purple);  color: var(--purple); }
+  .wf-circle.wait   { background: var(--sidebar);         border-color: var(--border);  color: var(--slate-500); }
+  .wf-connector {
+    flex: 1; height: 2px; margin: 0 4px;
+  }
+  .wf-connector.done   { background: rgba(52,211,153,.4); }
+  .wf-connector.active { background: var(--purple); opacity: 0.6; }
+  .wf-connector.wait   { background: rgba(30,41,59,.9); }
+  .wf-labels-row {
+    display: flex;
+  }
+  .wf-label-cell {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; gap: 3px; text-align: center;
+  }
+  .wf-label-cell:first-child { align-items: flex-start; text-align: left; }
+  .wf-label-cell:last-child  { align-items: flex-end; text-align: right; }
+  .wf-label { font-size: 11px; font-weight: 600; color: var(--slate-400); white-space: nowrap; }
+  .wf-label-cell.done   .wf-label { color: var(--emerald); }
+  .wf-label-cell.active .wf-label { color: var(--purple); }
+  .wf-sub { font-size: 9px; font-family: var(--font-mono); color: var(--slate-400); white-space: nowrap; }
+
+  /* ─── MODAL DEMO ─── */
+  .modal-backdrop-demo {
+    background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+    border-radius: 18px; padding: 24px; position: relative;
+  }
+  .modal-box {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 18px; padding: 24px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.3);
+    max-width: 380px; margin: auto;
+    animation: modalIn .4s cubic-bezier(.16,1,.3,1) both;
+  }
+  @keyframes modalIn { from { transform: scale(.95) translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .modal-title { font-size: 15px; font-weight: 700; color: #fff; }
+  .modal-close {
+    background: none; border: none; cursor: pointer;
+    color: var(--slate-500); font-size: 18px;
+    width: 28px; height: 28px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color .2s, background .2s;
+  }
+  .modal-close:hover { color: #fff; background: rgba(255,255,255,.08); }
+  .modal-body { font-size: 13px; color: var(--slate-400); line-height: 1.65; margin-bottom: 20px; }
+  .modal-footer { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ─── SCROLL ENTER ─── */
+  .fade-in {
+    opacity: 0; transform: translateY(20px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .fade-in.visible { opacity: 1; transform: none; }
+
+  /* ─── FOOTER ─── */
+  .page-footer {
+    margin-top: 72px; padding: 32px 40px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 11px; font-family: var(--font-mono); color: var(--slate-500);
+  }
+  .page-footer span { color: var(--purple); }
+
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .glows-grid, .ai-demo-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+    .hero-title { font-size: 36px; }
+    .workflow-steps { flex-direction: column; gap: 12px; }
+    .wf-step::before, .wf-step::after { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<header class="topbar">
+  <div class="topbar-logo">
+    <div class="dot"></div>
+    Ithina
+  </div>
+  <nav class="topbar-nav">
+    <a href="#colors" class="active">Design System</a>
+    <a href="#components">Components</a>
+    <a href="#ai-lang">AI Language</a>
+  </nav>
+  <div class="topbar-actions">
+    <div class="store-pill">
+      <div class="live-dot"></div>
+      Nairobi Central — #NC-014
+    </div>
+    <div class="avatar">CM</div>
+  </div>
+</header>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-section-label">Workspace</div>
+  <a class="sidebar-item active" href="#">
+    <span class="icon">⬡</span> Design System
+    <span class="sidebar-badge">v2.1</span>
+  </a>
+  <a class="sidebar-item" href="#">
+    <span class="icon">◫</span> Campaigns
+  </a>
+  <a class="sidebar-item" href="#">
+    <span class="icon">⊞</span> Planograms
+  </a>
+  <a class="sidebar-item" href="#">
+    <span class="icon">⬚</span> Fixture Mapper
+  </a>
+  <div class="sidebar-section-label">Management</div>
+  <a class="sidebar-item" href="#">
+    <span class="icon">◉</span> Approvals
+    <span class="sidebar-badge" style="background:rgba(251,191,36,.1);color:#fbbf24;border-color:rgba(251,191,36,.2);">3</span>
+  </a>
+  <a class="sidebar-item" href="#">
+    <span class="icon">◈</span> Guardrails
+  </a>
+  <a class="sidebar-item" href="#">
+    <span class="icon">◌</span> Analytics
+  </a>
+  <div class="sidebar-section-label">System</div>
+  <a class="sidebar-item" href="#">
+    <span class="icon">◎</span> Settings
+  </a>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+<div class="page">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">Design Tokens · Components · AI Language</div>
+    <h1 class="hero-title">Ithina <span class="accent">Design</span><br>System</h1>
+    <p class="hero-subtitle">Data-dense, flat dark mode, AI-enhanced. Built for category managers, store associates, and system admins operating at the edge of retail intelligence.</p>
+    <div class="hero-chips">
+      <span class="hero-chip">Plus Jakarta Sans</span>
+      <span class="hero-chip">JetBrains Mono</span>
+      <span class="hero-chip">Tailwind CSS</span>
+      <span class="hero-chip">Flat Dark Theme</span>
+      <span class="hero-chip">AI Color System</span>
+    </div>
+  </div>
+
+  <!-- ── COLORS ── -->
+  <div class="divider" data-label="01 — Color System" id="colors"></div>
+  <div class="fade-in">
+    <div class="section-tag">Design Tokens</div>
+    <h2 class="section-title">Color Palette</h2>
+    <p class="section-desc">Deep slate/blue-blacks punctuated by flat semantic colors to signal system actions, AI generation states, and compliance statuses.</p>
+
+    <div class="swatch-grid">
+      <div class="swatch" style="animation-delay:.05s">
+        <div class="swatch-color" style="background:#0A0E17;"></div>
+        <div class="swatch-info"><div class="swatch-name">ithina-bg</div><div class="swatch-hex">#0A0E17</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.1s">
+        <div class="swatch-color" style="background:#0F1523;"></div>
+        <div class="swatch-info"><div class="swatch-name">ithina-sidebar</div><div class="swatch-hex">#0F1523</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.15s">
+        <div class="swatch-color" style="background:#131C31;"></div>
+        <div class="swatch-info"><div class="swatch-name">ithina-panel</div><div class="swatch-hex">#131C31</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.2s">
+        <div class="swatch-color" style="background:#1E293B;"></div>
+        <div class="swatch-info"><div class="swatch-name">ithina-border</div><div class="swatch-hex">#1E293B</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.25s">
+        <div class="swatch-color" style="background:#a855f7;"></div>
+        <div class="swatch-info"><div class="swatch-name">ithina-purple</div><div class="swatch-hex">#a855f7</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.3s">
+        <div class="swatch-color" style="background:#34d399;"></div>
+        <div class="swatch-info"><div class="swatch-name">emerald-400</div><div class="swatch-hex">#34d399</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.35s">
+        <div class="swatch-color" style="background:#fbbf24;"></div>
+        <div class="swatch-info"><div class="swatch-name">amber-400</div><div class="swatch-hex">#fbbf24</div></div>
+      </div>
+      <div class="swatch" style="animation-delay:.4s">
+        <div class="swatch-color" style="background:#fb7185;"></div>
+        <div class="swatch-info"><div class="swatch-name">rose-400</div><div class="swatch-hex">#fb7185</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TYPOGRAPHY ── -->
+  <div class="divider" data-label="02 — Typography"></div>
+  <div class="fade-in">
+    <div class="section-tag">Type Scale</div>
+    <h2 class="section-title">Typography System</h2>
+    <p class="section-desc">Strict dual-font pairing: Plus Jakarta Sans for human prose, JetBrains Mono for all technical retail data.</p>
+
+    <div class="type-row">
+      <span class="type-label">Display / H1</span>
+      <span style="font-size:42px;font-weight:800;color:#fff;letter-spacing:-1.5px;">Category View</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">H2 Section</span>
+      <span style="font-size:28px;font-weight:700;color:#fff;letter-spacing:-.5px;">Fixture Layout Studio</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Body / 14px</span>
+      <span style="font-size:14px;color:var(--slate-400);line-height:1.65;">Configure planogram parameters for this fixture group. Changes will trigger a Maker/Checker approval flow before deployment.</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono — SKU ID</span>
+      <span style="font-family:var(--font-mono);font-size:13px;color:#fff;letter-spacing:.02em;">SKU-00482-BVG-330ML</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Mono — Dimension</span>
+      <span style="font-family:var(--font-mono);font-size:12px;color:var(--slate-500);letter-spacing:.05em;">W 48cm × H 120cm × D 30cm</span>
+    </div>
+    <div class="type-row">
+      <span class="type-label">Overline / Label</span>
+      <span style="font-family:var(--font-mono);font-size:10px;color:var(--slate-500);text-transform:uppercase;letter-spacing:.14em;">Compliance Status</span>
+    </div>
+  </div>
+
+  <!-- ── BUTTONS ── -->
+  <div class="divider" data-label="03 — Buttons" id="components"></div>
+  <div class="fade-in">
+    <div class="section-tag">Interactions</div>
+    <h2 class="section-title">Buttons</h2>
+    <p class="section-desc">Three tiers: Primary for key actions, Secondary outlined for supporting tasks, Ghost for utility actions.</p>
+
+    <div class="btn-grid">
+      <button class="btn btn-primary">⬡ New Campaign</button>
+      <button class="btn btn-primary">＋ Add Fixture</button>
+      <button class="btn btn-primary">✦ Submit for Approval</button>
+      <button class="btn btn-secondary">Cancel</button>
+      <button class="btn btn-secondary">◫ View History</button>
+      <button class="btn btn-secondary">⇄ Switch Store</button>
+      <button class="btn btn-ghost">← Back</button>
+      <button class="btn btn-ghost">⋯ More</button>
+      <button class="btn btn-danger">✕ Remove SKU</button>
+    </div>
+  </div>
+
+  <!-- ── BADGES ── -->
+  <div class="divider" data-label="04 — Badges"></div>
+  <div class="fade-in">
+    <div class="section-tag">Status</div>
+    <h2 class="section-title">Badges & Status Pills</h2>
+    <p class="section-desc">Standardized across all modules with 10–15% opacity backgrounds and matching faint borders. All text in JetBrains Mono.</p>
+
+    <div class="badge-grid">
+      <span class="badge badge-purple">✦ AI Active</span>
+      <span class="badge badge-purple">Generating Layout</span>
+      <span class="badge badge-emerald"><span class="live-dot-small"></span>Live</span>
+      <span class="badge badge-emerald">Compliant</span>
+      <span class="badge badge-emerald">Deployed</span>
+      <span class="badge badge-amber">Pending Review</span>
+      <span class="badge badge-amber">Maker / Checker</span>
+      <span class="badge badge-rose">Violation</span>
+      <span class="badge badge-rose">Out of Stock</span>
+      <span class="badge badge-rose">Failed</span>
+      <span class="badge badge-slate">Draft</span>
+      <span class="badge badge-slate">Inactive</span>
+    </div>
+  </div>
+
+  <!-- ── CARDS ── -->
+  <div class="divider" data-label="05 — Cards"></div>
+  <div class="fade-in">
+    <div class="section-tag">Containers</div>
+    <h2 class="section-title">Cards & Panels</h2>
+    <p class="section-desc">Interactive cards animate on hover with a subtle lift. Used for campaign grids, fixture overviews, and KPI summaries.</p>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Active Campaigns</div>
+            <div class="card-subtitle">FXT-GROUP-004</div>
+          </div>
+          <div class="card-icon" style="background:var(--purple-10); color: var(--purple);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"></path><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"></path></svg>
+          </div>
+        </div>
+        <div class="card-value">24</div>
+        <div class="card-change up">↑ 12% vs last period</div>
+        <div class="card-divider"></div>
+        <div class="card-footer">Last synced 4 minutes ago</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Planogram Compliance</div>
+            <div class="card-subtitle">STORE-NC-014</div>
+          </div>
+          <div class="card-icon" style="background:rgba(52,211,153,.1); color: var(--emerald);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+          </div>
+        </div>
+        <div class="card-value" style="color:var(--emerald)">94.2%</div>
+        <div class="card-change up">↑ 2.1pts this week</div>
+        <div class="card-divider"></div>
+        <div class="card-footer">3 shelves pending re-audit</div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Pending Approvals</div>
+            <div class="card-subtitle">WORKFLOW-MKR-07</div>
+          </div>
+          <div class="card-icon" style="background:rgba(251,191,36,.1); color: var(--amber);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"></path><path d="M5 2h14"></path><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"></path><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"></path></svg>
+          </div>
+        </div>
+        <div class="card-value" style="color:var(--amber)">7</div>
+        <div class="card-change down">↑ 3 new since yesterday</div>
+        <div class="card-divider"></div>
+        <div class="card-footer">Oldest: 2 days ago</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABLE ── -->
+  <div class="divider" data-label="06 — Data Tables"></div>
+  <div class="fade-in">
+    <div class="section-tag">Data Dense</div>
+    <h2 class="section-title">SKU / Shelf Data Table</h2>
+    <p class="section-desc">High-density reading with sticky monospace headers, stacked primary/ID cells, and tabular-nums for aligned numerical columns.</p>
+
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>
+          <div class="table-title">Planogram SKUs — Gondola B3</div>
+          <div class="table-sub">FXT-GONDOLA-B3 · Aisle 4 · Beverages</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span class="badge badge-emerald">94% Compliant</span>
+          <button class="btn btn-primary" style="font-size:12px;padding:7px 14px;border-radius:9px;">Export CSV</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Product / SKU</th>
+            <th>Shelf Position</th>
+            <th>Facings</th>
+            <th>Stock Level</th>
+            <th>Unit Price</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <div class="td-primary">Coca-Cola Classic 330ml</div>
+              <div class="td-id">SKU-00482-BVG-330ML</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-size:12px;">S1-F01 · Shelf 1</td>
+            <td style="font-family:var(--font-mono);">4</td>
+            <td style="font-family:var(--font-mono);color:var(--emerald);">248 units</td>
+            <td class="price">KES 80.00</td>
+            <td><span class="badge badge-emerald">Compliant</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-primary">Sprite Zero 500ml PET</div>
+              <div class="td-id">SKU-00891-BVG-500PET</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-size:12px;">S1-F02 · Shelf 1</td>
+            <td style="font-family:var(--font-mono);">3</td>
+            <td style="font-family:var(--font-mono);color:var(--amber);">12 units</td>
+            <td class="price">KES 95.00</td>
+            <td><span class="badge badge-amber">Low Stock</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-primary">Fanta Orange 1L PET</div>
+              <div class="td-id">SKU-01134-BVG-1000PET</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-size:12px;">S2-F01 · Shelf 2</td>
+            <td style="font-family:var(--font-mono);">2</td>
+            <td style="font-family:var(--font-mono);color:var(--rose);">0 units</td>
+            <td class="price">KES 130.00</td>
+            <td><span class="badge badge-rose">Out of Stock</span></td>
+          </tr>
+          <tr>
+            <td>
+              <div class="td-primary">Minute Maid Mango 300ml</div>
+              <div class="td-id">SKU-02071-BVG-MANGO</div>
+            </td>
+            <td style="font-family:var(--font-mono);font-size:12px;">S2-F03 · Shelf 2</td>
+            <td style="font-family:var(--font-mono);">5</td>
+            <td style="font-family:var(--font-mono);color:var(--emerald);">320 units</td>
+            <td class="price">KES 65.00</td>
+            <td><span class="badge badge-emerald">Compliant</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── FORMS ── -->
+  <div class="divider" data-label="07 — Forms & Inputs"></div>
+  <div class="fade-in">
+    <div class="section-tag">Data Entry</div>
+    <h2 class="section-title">Forms & Inputs</h2>
+    <p class="section-desc">Monospace overline labels, deep background inputs with purple focus ring, subtle error states.</p>
+
+    <div class="form-grid">
+      <div class="form-group">
+        <label class="form-label">Product Name</label>
+        <input class="form-input" type="text" placeholder="e.g. Coca-Cola Classic 330ml" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">SKU ID</label>
+        <input class="form-input" type="text" placeholder="SKU-XXXXX-CAT-SIZE" style="font-family:var(--font-mono);font-size:12px;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Category</label>
+        <select class="form-input">
+          <option>Beverages</option>
+          <option>Dairy</option>
+          <option>Bakery</option>
+          <option>Snacks</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Unit Price (KES)</label>
+        <input class="form-input" type="number" placeholder="0.00" style="font-family:var(--font-mono);" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Shelf Width (cm)</label>
+        <input class="form-input error" type="text" value="240" style="font-family:var(--font-mono);" />
+        <div class="form-hint error">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-top; margin-right: 2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          Exceeds max fixture width of 180cm
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fixture ID</label>
+        <input class="form-input" type="text" placeholder="FXT-GONDOLA-XX" style="font-family:var(--font-mono);font-size:12px;" />
+        <div class="form-hint">Assigned by Fixture Mapper</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── AI STATUS COLORS ── -->
+  <div class="divider" data-label="08 — AI Status Colors" id="ai-lang"></div>
+  <div class="fade-in">
+    <div class="section-tag">Visual Language</div>
+    <h2 class="section-title">AI Status Indicators</h2>
+    <p class="section-desc">Background opacities encode AI state intensity. Soft for suggestions, heavier for active generation, rose for compliance violations.</p>
+
+    <div class="glows-grid">
+      <div class="glow-card">
+        <div class="glow-orb glow-soft">✦</div>
+        <div class="glow-label">Soft Indicator</div>
+        <div class="glow-desc">bg rgba(168,85,247, 0.12)</div>
+        <div class="glow-desc">Suggested variants, AI prompts</div>
+      </div>
+      <div class="glow-card">
+        <div class="glow-orb glow-heavy">⬡</div>
+        <div class="glow-label">Heavy Indicator</div>
+        <div class="glow-desc">bg rgba(168,85,247, 0.20)</div>
+        <div class="glow-desc">Actively generating layout</div>
+      </div>
+      <div class="glow-card">
+        <div class="glow-orb glow-alert">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div class="glow-label">Alert Indicator</div>
+        <div class="glow-desc">bg rgba(251,113,133, 0.12)</div>
+        <div class="glow-desc">Compliance violation detected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ANIMATIONS ── -->
+  <div class="divider" data-label="09 — Animations"></div>
+  <div class="fade-in">
+    <div class="section-tag">Motion</div>
+    <h2 class="section-title">Key Animation Patterns</h2>
+    <p class="section-desc">Three distinct motion primitives for AI state communication: typing indicator, compliance scanline, and live workflow pulse.</p>
+
+    <div class="ai-demo-grid">
+      <!-- Typing indicator -->
+      <div class="ai-demo-card">
+        <div class="ai-demo-title">Chat "Typing" Indicator</div>
+        <div class="ai-demo-desc">ai-agent · processing-intent</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="chat-msg">
+            <div class="chat-avatar user">CM</div>
+            <div class="chat-bubble user">Suggest a planogram for aisle 4 beverages section</div>
+          </div>
+          <div class="chat-msg">
+            <div class="chat-avatar ai">✦</div>
+            <div class="chat-bubble ai" style="display:flex;align-items:center;gap:8px;">
+              <div class="typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span style="font-size:11px;color:var(--slate-400);font-family:var(--font-mono);">Analysing 48 SKUs…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scanline -->
+      <div class="ai-demo-card">
+        <div class="ai-demo-title">Compliance Scanline</div>
+        <div class="ai-demo-desc">compliance-validator · spatial-check</div>
+        <div class="scanline-demo">
+          <div class="scanline"></div>
+          <div class="scanline-text">PLANOGRAM-SHELF-B3 · SCANNING GUARDRAILS</div>
+        </div>
+        <div style="margin-top:12px;font-size:11px;font-family:var(--font-mono);color:var(--slate-400);">
+          OCR + spatial analysis active — do not modify layout
+        </div>
+      </div>
+
+      <!-- Live pulses -->
+      <div class="ai-demo-card">
+        <div class="ai-demo-title">Live Workflow Pulses</div>
+        <div class="ai-demo-desc">sync-status · active-workflows</div>
+        <div class="live-row">
+          <div class="live-pulse"></div>
+          <div class="live-text">Campaign A4 · Beverages Promo</div>
+          <div class="live-id">WF-2024-0891</div>
+        </div>
+        <div class="live-row">
+          <div class="live-pulse"></div>
+          <div class="live-text">Planogram Sync · Store NC-014</div>
+          <div class="live-id">WF-2024-0887</div>
+        </div>
+      </div>
+
+      <!-- AI Chat -->
+      <div class="ai-demo-card">
+        <div class="ai-demo-title">AI Response Bubble</div>
+        <div class="ai-demo-desc">purple-solid-bubble · ai-surface</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <div class="chat-msg">
+            <div class="chat-avatar user">CM</div>
+            <div class="chat-bubble user">How many SKUs are non-compliant on shelf 2?</div>
+          </div>
+          <div class="chat-msg">
+            <div class="chat-avatar ai">✦</div>
+            <div class="chat-bubble ai">Shelf 2 has <strong style="color:#fff">3 non-compliant SKUs</strong>: 2 exceed max facing count, 1 breaches the price-band guardrail.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WORKFLOW ── -->
+  <div class="divider" data-label="10 — Approval Workflow"></div>
+  <div class="fade-in">
+    <div class="section-tag">Process</div>
+    <h2 class="section-title">Maker / Checker Approval</h2>
+    <p class="section-desc">Visual state machine for multi-step approval flows. Done → Active → Waiting stages indicating progress.</p>
+
+    <div class="workflow-steps">
+      <!-- Row 1: circles + connectors only -->
+      <div class="wf-circles-row">
+        <div class="wf-circle done">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div class="wf-connector done"></div>
+        <div class="wf-circle done">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div class="wf-connector active"></div>
+        <div class="wf-circle active">◉</div>
+        <div class="wf-connector wait"></div>
+        <div class="wf-circle wait">4</div>
+        <div class="wf-connector wait"></div>
+        <div class="wf-circle wait">5</div>
+      </div>
+      <!-- Row 2: labels below, aligned to each circle -->
+      <div class="wf-labels-row">
+        <div class="wf-label-cell done">
+          <div class="wf-label">Drafted</div>
+          <div class="wf-sub">by CM-Rahul</div>
+        </div>
+        <div class="wf-label-cell done">
+          <div class="wf-label">Validated</div>
+          <div class="wf-sub">AI Guardrails pass</div>
+        </div>
+        <div class="wf-label-cell active">
+          <div class="wf-label">Maker Review</div>
+          <div class="wf-sub">awaiting sign-off</div>
+        </div>
+        <div class="wf-label-cell">
+          <div class="wf-label">Checker Approval</div>
+          <div class="wf-sub">not started</div>
+        </div>
+        <div class="wf-label-cell">
+          <div class="wf-label">Deployed</div>
+          <div class="wf-sub">pending</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MODAL ── -->
+  <div class="divider" data-label="11 — Modals"></div>
+  <div class="fade-in">
+    <div class="section-tag">Overlays</div>
+    <h2 class="section-title">Modal / Overlay</h2>
+    <p class="section-desc">Glassmorphic backdrop isolates user focus. Used for Campaign Studio, Fixture Mapper, and destructive confirmations.</p>
+
+    <div class="modal-backdrop-demo">
+      <div class="modal-box">
+        <div class="modal-header">
+          <div class="modal-title">Remove SKU from Planogram?</div>
+          <button class="modal-close">✕</button>
+        </div>
+        <div class="modal-body">
+          <strong style="color:#fff;font-family:var(--font-mono);font-size:12px;">SKU-00891-BVG-500PET</strong> will be removed from <strong style="color:#fff">Gondola B3 · Shelf 1</strong>. This action will trigger a compliance re-check and may require Maker/Checker approval.
+        </div>
+        <div style="margin-bottom:16px;">
+          <span class="badge badge-amber" style="font-size:10px;padding:4px 10px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px;"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            Requires Re-Audit
+          </span>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" style="font-size:13px;padding:8px 16px;">Cancel</button>
+          <button class="btn btn-danger" style="font-size:13px;padding:8px 16px;">Remove SKU</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CHARTS & GRAPHS ── -->
+  <div class="divider" data-label="12 — Charts & Graphs"></div>
+  <div class="fade-in">
+    <div class="section-tag">Data Visualisation</div>
+    <h2 class="section-title">Charts & Graphs</h2>
+    <p class="section-desc">All charts use the Ithina palette — purple for primary series, semantic emerald/amber/rose for status, slate tones for axes and gridlines. Built with Chart.js.</p>
+
+    <!-- Row 1: Line + Bar -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+      <!-- Line chart: Sales Trend -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <div>
+            <div class="table-title">Revenue Trend — Q1 2024</div>
+            <div class="table-sub">STORE-NC-014 · Daily KES</div>
+          </div>
+          <span class="badge badge-purple">✦ AI Forecast</span>
+        </div>
+        <div style="padding:20px;">
+          <canvas id="lineChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Bar chart: Category performance -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <div>
+            <div class="table-title">Sales by Category</div>
+            <div class="table-sub">MTD · All Aisles</div>
+          </div>
+          <span class="badge badge-emerald"><span class="live-dot-small"></span>Live</span>
+        </div>
+        <div style="padding:20px;">
+          <canvas id="barChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Doughnut + Radar + Stacked bar -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;">
+
+      <!-- Doughnut: Compliance breakdown -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <div>
+            <div class="table-title">Compliance Split</div>
+            <div class="table-sub">All Fixtures · Today</div>
+          </div>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;align-items:center;">
+          <canvas id="doughnutChart" height="200" style="max-width:200px;"></canvas>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;justify-content:center;">
+            <span class="badge badge-emerald">Compliant 72%</span>
+            <span class="badge badge-amber">Review 18%</span>
+            <span class="badge badge-rose">Failed 10%</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Radar: Store KPIs -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <div>
+            <div class="table-title">Store KPI Radar</div>
+            <div class="table-sub">NC-014 vs Target</div>
+          </div>
+        </div>
+        <div style="padding:20px;">
+          <canvas id="radarChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Horizontal bar: Top SKUs -->
+      <div class="table-wrap">
+        <div class="table-header">
+          <div>
+            <div class="table-title">Top 5 SKUs by Revenue</div>
+            <div class="table-sub">MTD · Beverages</div>
+          </div>
+        </div>
+        <div style="padding:20px;">
+          <canvas id="hbarChart" height="200"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Stacked bar (full width) -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <div>
+          <div class="table-title">Planogram Compliance Over Time — Stacked by Status</div>
+          <div class="table-sub">Last 8 weeks · All Fixtures · STORE-NC-014</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <span class="badge badge-emerald">Compliant</span>
+          <span class="badge badge-amber">Review</span>
+          <span class="badge badge-rose">Failed</span>
+        </div>
+      </div>
+      <div style="padding:20px;">
+        <canvas id="stackedBar" height="120"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+  <div>Ithina Design System · <span>v2.1.0</span></div>
+  <div style="font-family:var(--font-mono);">Plus Jakarta Sans + JetBrains Mono · <span>#0A0E17 → #a855f7</span></div>
+</footer>
+
+</main>
+
+<script>
+  // Scroll-triggered fade-ins
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Staggered swatch entry
+  document.querySelectorAll('.swatch').forEach((s, i) => {
+    s.style.animationDelay = `${i * 0.06}s`;
+    s.style.animationFillMode = 'both';
+  });
+
+  // ── CHART.JS GLOBAL DEFAULTS ──
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.font.family = "'JetBrains Mono', monospace";
+  Chart.defaults.font.size = 10;
+  Chart.defaults.borderColor = 'rgba(30,41,59,0.8)';
+
+  const purple   = '#a855f7';
+  const emerald  = '#34d399';
+  const amber    = '#fbbf24';
+  const rose     = '#fb7185';
+  const slate400 = '#94a3b8';
+
+  // Shared grid style
+  const grid = {
+    color: 'rgba(30,41,59,0.8)',
+    drawBorder: false,
+  };
+  const ticks = { color: '#94a3b8' };
+
+  // ── LINE CHART: Revenue Trend ──
+  new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: ['Jan 1','Jan 5','Jan 10','Jan 15','Jan 20','Jan 25','Jan 30','Feb 5','Feb 10','Feb 15','Feb 20','Feb 25'],
+      datasets: [
+        {
+          label: 'Actual',
+          data: [142000,158000,151000,169000,184000,177000,195000,210000,204000,228000,219000,245000],
+          borderColor: purple,
+          backgroundColor: 'rgba(168,85,247,0.08)',
+          borderWidth: 2,
+          pointBackgroundColor: purple,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          fill: true,
+          tension: 0.4,
+        },
+        {
+          label: 'AI Forecast',
+          data: [null,null,null,null,null,null,null,null,null,null,228000,240000],
+          borderColor: 'rgba(168,85,247,0.4)',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          borderDash: [5,4],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+        },
+        {
+          label: 'Target',
+          data: [150000,155000,160000,165000,170000,175000,180000,195000,200000,210000,215000,225000],
+          borderColor: 'rgba(52,211,153,0.4)',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          borderDash: [3,3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.4,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: {
+          labels: { color: '#64748b', boxWidth: 12, padding: 16 }
+        },
+        tooltip: {
+          backgroundColor: '#131C31',
+          borderColor: '#1E293B',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#94a3b8',
+          padding: 12,
+          callbacks: {
+            label: ctx => ` KES ${(ctx.raw/1000).toFixed(0)}K`
+          }
+        }
+      },
+      scales: {
+        x: { grid, ticks },
+        y: {
+          grid, ticks,
+          callback: v => `${(v/1000).toFixed(0)}K`
+        }
+      }
+    }
+  });
+
+  // ── BAR CHART: Category Sales ──
+  new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Beverages','Dairy','Snacks','Bakery','Frozen','Personal Care'],
+      datasets: [{
+        label: 'Revenue (KES)',
+        data: [487000, 312000, 268000, 194000, 155000, 210000],
+        backgroundColor: [
+          'rgba(168,85,247,0.7)',
+          'rgba(52,211,153,0.6)',
+          'rgba(251,191,36,0.6)',
+          'rgba(168,85,247,0.4)',
+          'rgba(52,211,153,0.35)',
+          'rgba(251,191,36,0.35)',
+        ],
+        borderColor: [
+          purple, emerald, amber, purple, emerald, amber
+        ],
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#131C31',
+          borderColor: '#1E293B',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#94a3b8',
+          padding: 10,
+          callbacks: { label: ctx => ` KES ${(ctx.raw/1000).toFixed(0)}K` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks },
+        y: { grid, ticks, callback: v => `${(v/1000).toFixed(0)}K` }
+      }
+    }
+  });
+
+  // ── DOUGHNUT: Compliance Split ──
+  new Chart(document.getElementById('doughnutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Compliant','Review','Failed'],
+      datasets: [{
+        data: [72, 18, 10],
+        backgroundColor: [
+          'rgba(52,211,153,0.75)',
+          'rgba(251,191,36,0.7)',
+          'rgba(251,113,133,0.7)',
+        ],
+        borderColor: ['#0A0E17','#0A0E17','#0A0E17'],
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#131C31',
+          borderColor: '#1E293B',
+          borderWidth: 1,
+          titleColor: '#fff',
+          bodyColor: '#94a3b8',
+          padding: 10,
+          callbacks: { label: ctx => ` ${ctx.raw}%` }
+        }
+      }
+    }
+  });
+
+  // ── RADAR: Store KPIs ──
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: {
+      labels: ['Compliance','Availability','Planogram\nAdherence','Sales Velocity','On-shelf\nAccuracy','Promo\nExecution'],
+      datasets: [
+        {
+          label: 'Store NC-014',
+          data: [94, 87, 78, 91, 85, 72],
+          borderColor: purple,
+          backgroundColor: 'rgba(168,85,247,0.12)',
+          borderWidth: 2,
+          pointBackgroundColor: purple,
+          pointRadius: 3,
+        },
+        {
+          label: 'Target',
+          data: [95, 95, 90, 90, 90, 85],
+          borderColor: 'rgba(52,211,153,0.5)',
+          backgroundColor: 'rgba(52,211,153,0.05)',
+          borderWidth: 1.5,
+          borderDash: [4,3],
+          pointBackgroundColor: emerald,
+          pointRadius: 2,
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#64748b', boxWidth: 10, padding: 12 } },
+        tooltip: {
+          backgroundColor: '#131C31', borderColor: '#1E293B', borderWidth: 1,
+          titleColor: '#fff', bodyColor: '#94a3b8', padding: 10
+        }
+      },
+      scales: {
+        r: {
+          min: 50, max: 100,
+          grid: { color: 'rgba(30,41,59,0.9)' },
+          angleLines: { color: 'rgba(30,41,59,0.9)' },
+          pointLabels: { color: '#94a3b8', font: { size: 9 } },
+          ticks: { display: false, stepSize: 10 },
+        }
+      }
+    }
+  });
+
+  // ── HORIZONTAL BAR: Top SKUs ──
+  new Chart(document.getElementById('hbarChart'), {
+    type: 'bar',
+    data: {
+      labels: ['Coca-Cola 330ml','Sprite Zero 500ml','Fanta Orange 1L','Minute Maid Mango','Dasani Water 500ml'],
+      datasets: [{
+        label: 'Revenue (KES)',
+        data: [94200, 71500, 58300, 52100, 46800],
+        backgroundColor: [
+          'rgba(168,85,247,0.75)',
+          'rgba(168,85,247,0.60)',
+          'rgba(168,85,247,0.47)',
+          'rgba(168,85,247,0.35)',
+          'rgba(168,85,247,0.25)',
+        ],
+        borderColor: purple,
+        borderWidth: 1,
+        borderRadius: 5,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#131C31', borderColor: '#1E293B', borderWidth: 1,
+          titleColor: '#fff', bodyColor: '#94a3b8', padding: 10,
+          callbacks: { label: ctx => ` KES ${(ctx.raw/1000).toFixed(1)}K` }
+        }
+      },
+      scales: {
+        x: { grid, ticks, callback: v => `${(v/1000).toFixed(0)}K` },
+        y: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 9 } } }
+      }
+    }
+  });
+
+  // ── STACKED BAR: Compliance over 8 weeks ──
+  new Chart(document.getElementById('stackedBar'), {
+    type: 'bar',
+    data: {
+      labels: ['Wk 1','Wk 2','Wk 3','Wk 4','Wk 5','Wk 6','Wk 7','Wk 8'],
+      datasets: [
+        {
+          label: 'Compliant',
+          data: [61,65,68,64,71,74,70,72],
+          backgroundColor: 'rgba(52,211,153,0.7)',
+          borderColor: emerald, borderWidth: 1,
+          borderRadius: { topLeft: 0, topRight: 0, bottomLeft: 6, bottomRight: 6 },
+          borderSkipped: 'bottom',
+          stack: 'compliance',
+        },
+        {
+          label: 'Review',
+          data: [24,21,19,22,18,17,20,18],
+          backgroundColor: 'rgba(251,191,36,0.65)',
+          borderColor: amber, borderWidth: 1,
+          borderRadius: 0,
+          borderSkipped: true,
+          stack: 'compliance',
+        },
+        {
+          label: 'Failed',
+          data: [15,14,13,14,11,9,10,10],
+          backgroundColor: 'rgba(251,113,133,0.65)',
+          borderColor: rose, borderWidth: 1,
+          borderRadius: { topLeft: 6, topRight: 6, bottomLeft: 0, bottomRight: 0 },
+          borderSkipped: 'top',
+          stack: 'compliance',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#64748b', boxWidth: 12, padding: 16 } },
+        tooltip: {
+          backgroundColor: '#131C31', borderColor: '#1E293B', borderWidth: 1,
+          titleColor: '#fff', bodyColor: '#94a3b8', padding: 10,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.raw}%` }
+        }
+      },
+      scales: {
+        x: { stacked: true, grid: { display: false }, ticks },
+        y: {
+          stacked: true, grid, ticks,
+          min: 0, max: 100,
+          callback: v => `${v}%`
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>

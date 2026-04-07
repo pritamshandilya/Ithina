@@ -6,8 +6,8 @@ import {
   FileSignature,
   History,
   LayoutDashboard,
-  LayoutPanelLeft,
   LayoutGrid,
+  LayoutPanelLeft,
   Library,
   ListChecks,
   Rows3,
@@ -225,15 +225,36 @@ export default function Sidenav() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <div className="flex items-center justify-center py-4">
-          <div className="relative h-12 w-full px-1 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-0.5">
-            <div className="relative h-full w-full overflow-hidden bg-black rounded-md flex items-center justify-center p-1">
-              <img src={logo} alt="Logo" className="w-full h-full object-contain" />
-              <div className="absolute inset-0 -translate-x-ful border border-grey-50/30 m-1 from-transparent via-white/30 to-transparent" />
+      <SidebarHeader
+        className={cn(
+          "gap-3",
+          sidebarState === "collapsed" && "items-center px-2"
+        )}
+      >
+        <div
+          className={cn(
+            "flex w-full items-center gap-3",
+            sidebarState === "collapsed"
+              ? "justify-center"
+              : "justify-start"
+          )}
+        >
+          {sidebarState !== "collapsed" && (
+            <div className="relative h-14 min-w-0 flex-1">
+              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-white/6 bg-card p-2 shadow-[0_12px_28px_rgba(3,8,20,0.22)]">
+                <img src={logo} alt="Logo" className="h-full w-full object-contain" />
+                <div className="absolute inset-0 rounded-[inherit] border border-white/6" />
+              </div>
             </div>
-          </div>
-          <SidebarToggle className="static inset-auto right-auto top-auto ml-2 size-8 rounded-md border-sidebar-border bg-sidebar shadow-none group-data-[collapsible=icon]:ml-1" />
+          )}
+          <SidebarToggle
+            className={cn(
+              "static inset-auto right-auto top-auto shrink-0 border-sidebar-border bg-card shadow-none",
+              sidebarState === "collapsed"
+                ? "size-9 rounded-xl"
+                : "size-8 rounded-full"
+            )}
+          />
         </div>
         {currentUser && (
           <TeamSwitcher
@@ -451,7 +472,7 @@ export default function Sidenav() {
       </SidebarContent>
       <SidebarFooter>
         <div className="pb-1 text-center group-data-[collapsible=icon]:hidden">
-          <span className="text-[12px] text-muted-foreground/50 select-none">
+          <span className="font-mono text-[11px] text-muted-foreground/60 select-none">
             v{__APP_VERSION__}
           </span>
         </div>

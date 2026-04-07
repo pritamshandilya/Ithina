@@ -52,6 +52,7 @@ export function CheckerAccomplishedCards({ className }: CheckerAccomplishedCards
   return (
     <div className={cn("space-y-3", className)}>
       <div>
+        <p className="ithina-overline mb-1">Store Governance</p>
         <h2 className="text-lg font-semibold text-foreground">
           Store at a Glance
         </h2>

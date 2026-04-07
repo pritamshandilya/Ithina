@@ -46,10 +46,10 @@ export function MakerAccomplishedCards({ className }: MakerAccomplishedCardsProp
   return (
     <div className={cn("space-y-3", className)}>
       <div>
+        <p className="ithina-overline mb-1">Maker Overview</p>
         <h2 className="text-lg font-semibold text-foreground">
           My Work at a Glance
         </h2>
-        
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

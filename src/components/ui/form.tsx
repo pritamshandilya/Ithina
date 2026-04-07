@@ -19,7 +19,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
       <div
         ref={ref}
         data-slot="form-field"
-        className={cn("space-y-2", className)}
+        className={cn("space-y-2.5", className)}
         {...props}
       >
         {label && (
@@ -33,7 +33,7 @@ const FormField = React.forwardRef<HTMLDivElement, FormFieldProps>(
         )}
         {children}
         {error && (
-          <p className="text-sm font-medium text-destructive">{error}</p>
+          <p className="font-mono text-[11px] text-destructive">{error}</p>
         )}
       </div>
     );

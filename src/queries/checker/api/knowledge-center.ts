@@ -1,4 +1,7 @@
 import { AuthSessionService } from "@/lib/auth/session";
+import { fetchAggregatedComplianceRulesFromRuleSets } from "@/queries/maker/api/compliance-rule-sets";
+import store from "@/store";
+import { selectSelectedStore } from "@/store/selectors";
 import type {
   ComplianceRule,
   CreateRuleInput,
@@ -21,11 +24,59 @@ import {
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+function getSelectedStoreIdFromState(): string | null {
+  try {
+    return selectSelectedStore(store.getState())?.id ?? null;
+  } catch {
+    return null;
+  }
+}
 
-function ensureCheckerAccess() {
+/** Knowledge Center is shared by checker + admin (store context); same data as compliance rule sets API. */
+function ensureKnowledgeCenterAccess() {
   const user = AuthSessionService.getCurrentUser();
-  if (!user || user.role !== "checker") {
-    throw new Error("Unauthorized: Knowledge Center is checker-only");
+  if (!user || (user.role !== "checker" && user.role !== "admin")) {
+    throw new Error("Unauthorized: Knowledge Center access denied");
+  }
+}
+
+function ruleStatusToVersionStatus(status: ComplianceRule["status"]): RuleVersionStatus {
+  if (status === "Retired") return "Retired";
+  if (status === "Active") return "Active";
+  return "Draft";
+}
+
+/** One row per API rule so Rule Versions matches live rule-set data (no separate version history API yet). */
+function withSyntheticVersions(rule: ComplianceRule): ComplianceRule {
+  const vStatus = ruleStatusToVersionStatus(rule.status);
+  const version: RuleVersion = {
+    id: `${rule.ruleId}-v1`,
+    ruleId: rule.ruleId,
+    version: 1,
+    status: vStatus,
+    shelfType: rule.shelfType,
+    expectedValue: rule.expectedValue,
+    tolerance: rule.tolerance,
+    severity: rule.severity,
+    createdDate: rule.lastUpdated,
+    createdBy: rule.createdBy,
+    changeSummary: rule.description || (rule.ruleSetName ? `From set: ${rule.ruleSetName}` : undefined),
+    ...(rule.status === "Active" ? { effectiveDate: rule.lastUpdated } : {}),
+  };
+  return { ...rule, versions: [version], currentVersion: 1 };
+}
+
+async function tryLoadComplianceRulesFromApi(filters?: RuleFilters): Promise<ComplianceRule[] | null> {
+  if (!getSelectedStoreIdFromState()) return null;
+  try {
+    const aggregated = await fetchAggregatedComplianceRulesFromRuleSets();
+    let rules = aggregated.map(withSyntheticVersions);
+    if (filters?.shelfType) rules = rules.filter((rule) => rule.shelfType === filters.shelfType);
+    if (filters?.severity) rules = rules.filter((rule) => rule.severity === filters.severity);
+    if (filters?.status) rules = rules.filter((rule) => rule.status === filters.status);
+    return rules.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
+  } catch {
+    return null;
   }
 }
 
@@ -48,12 +99,16 @@ function validateRuleValues(
     tolerance?: number;
     ruleId?: string;
   },
+  allRules: ComplianceRule[] = mockRules,
 ): RuleValidationResult {
   const errors: string[] = [];
 
   if (!input.ruleName.trim()) errors.push("Rule name is required.");
   if (!input.expectedValue.trim()) errors.push("Expected value is required.");
-  if (!KNOWLEDGE_SHELF_TYPES.includes(input.shelfType as (typeof KNOWLEDGE_SHELF_TYPES)[number])) {
+  const shelfOk =
+    KNOWLEDGE_SHELF_TYPES.includes(input.shelfType as (typeof KNOWLEDGE_SHELF_TYPES)[number]) ||
+    input.shelfType === "General";
+  if (!shelfOk) {
     errors.push("Selected shelf type is invalid.");
   }
   if (input.tolerance !== undefined && Number.isNaN(input.tolerance)) {
@@ -66,7 +121,7 @@ function validateRuleValues(
   const newCategories = ["VISUAL", "SAFETY", "PROFITABILITY", "EFFICIENCY"] as const;
   const isNewCategory = newCategories.includes(input.ruleType as (typeof newCategories)[number]);
   if (!isNewCategory) {
-    const conflictingRule = mockRules.find(
+    const conflictingRule = allRules.find(
       (rule) =>
         rule.status === "Active" &&
         rule.ruleType === input.ruleType &&
@@ -82,9 +137,12 @@ function validateRuleValues(
 }
 
 export async function fetchComplianceRules(filters?: RuleFilters): Promise<ComplianceRule[]> {
-  ensureCheckerAccess();
-  await delay(250);
+  ensureKnowledgeCenterAccess();
 
+  const fromApi = await tryLoadComplianceRulesFromApi(filters);
+  if (fromApi) return fromApi;
+
+  await delay(250);
   let rules = [...mockRules];
 
   if (filters?.shelfType) rules = rules.filter((rule) => rule.shelfType === filters.shelfType);
@@ -94,42 +152,46 @@ export async function fetchComplianceRules(filters?: RuleFilters): Promise<Compl
   return rules.sort((a, b) => b.lastUpdated.getTime() - a.lastUpdated.getTime());
 }
 
+/** @deprecated Prefer deriving versions from `fetchComplianceRules` via hooks (single request). */
 export async function fetchRuleVersions(ruleId?: string): Promise<RuleVersion[]> {
-  ensureCheckerAccess();
-  await delay(200);
-
-  const versions = mockRules.flatMap((rule) => rule.versions);
+  ensureKnowledgeCenterAccess();
+  const rules = await fetchComplianceRules();
+  const versions = rules.flatMap((rule) => rule.versions);
   const filtered = ruleId ? versions.filter((version) => version.ruleId === ruleId) : versions;
   return filtered.sort((a, b) => b.createdDate.getTime() - a.createdDate.getTime());
 }
 
 export async function fetchReferenceDocuments(): Promise<ReferenceDocument[]> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(200);
   return [...mockDocuments].sort((a, b) => b.uploadedDate.getTime() - a.uploadedDate.getTime());
 }
 
 export async function validateRuleForActivation(ruleId: string): Promise<RuleValidationResult> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(120);
 
-  const rule = mockRules.find((item) => item.ruleId === ruleId);
+  const rules = await fetchComplianceRules();
+  const rule = rules.find((item) => item.ruleId === ruleId);
   if (!rule) return { valid: false, errors: ["Rule was not found."] };
   if (rule.status === "Retired") return { valid: false, errors: ["Retired rules cannot be activated."] };
 
-  return validateRuleValues({
-    ruleId: rule.ruleId,
-    ruleName: rule.ruleName,
-    ruleType: rule.ruleType,
-    shelfType: rule.shelfType,
-    expectedValue: rule.expectedValue,
-    tolerance: rule.tolerance,
-    severity: rule.severity,
-  });
+  return validateRuleValues(
+    {
+      ruleId: rule.ruleId,
+      ruleName: rule.ruleName,
+      ruleType: rule.ruleType,
+      shelfType: rule.shelfType,
+      expectedValue: rule.expectedValue,
+      tolerance: rule.tolerance,
+      severity: rule.severity,
+    },
+    rules,
+  );
 }
 
 export async function createComplianceRule(input: CreateRuleInput): Promise<ComplianceRule> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(300);
 
   const baseValidation = validateRuleValues({
@@ -184,7 +246,7 @@ export async function createComplianceRule(input: CreateRuleInput): Promise<Comp
 }
 
 export async function updateComplianceRule(ruleId: string, input: UpdateRuleInput): Promise<ComplianceRule> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(350);
 
   const index = mockRules.findIndex((rule) => rule.ruleId === ruleId);
@@ -246,7 +308,7 @@ export async function updateComplianceRule(ruleId: string, input: UpdateRuleInpu
 }
 
 export async function activateComplianceRule(ruleId: string): Promise<ComplianceRule> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(250);
 
   const index = mockRules.findIndex((rule) => rule.ruleId === ruleId);
@@ -285,7 +347,7 @@ export async function activateComplianceRule(ruleId: string): Promise<Compliance
 }
 
 export async function retireComplianceRule(ruleId: string): Promise<ComplianceRule> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(220);
 
   const index = mockRules.findIndex((rule) => rule.ruleId === ruleId);
@@ -313,7 +375,7 @@ export async function retireComplianceRule(ruleId: string): Promise<ComplianceRu
 }
 
 export async function cloneRetiredRule(ruleId: string, createdBy: string): Promise<ComplianceRule> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(280);
 
   const sourceRule = mockRules.find((rule) => rule.ruleId === ruleId);
@@ -336,7 +398,7 @@ export async function uploadReferenceDocument(input: {
   uploadedBy: string;
   linkedRuleIds: string[];
 }): Promise<ReferenceDocument> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(300);
 
   if (!input.name.toLowerCase().endsWith(".pdf")) {
@@ -369,7 +431,7 @@ export async function updateReferenceDocumentLinks(
   documentId: string,
   linkedRuleIds: string[]
 ): Promise<ReferenceDocument> {
-  ensureCheckerAccess();
+  ensureKnowledgeCenterAccess();
   await delay(250);
 
   const doc = mockDocuments.find((d) => d.id === documentId);

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
@@ -6,7 +7,6 @@ import {
   createComplianceRule,
   fetchComplianceRules,
   fetchReferenceDocuments,
-  fetchRuleVersions,
   retireComplianceRule,
   updateComplianceRule,
   updateReferenceDocumentLinks,
@@ -14,28 +14,37 @@ import {
   validateRuleForActivation,
 } from "../api/knowledge-center";
 import type { CreateRuleInput, RuleFilters, UpdateRuleInput } from "@/types/checker";
+import { useSelectedStoreId } from "@/providers/store";
 
 export const knowledgeCenterKeys = {
   all: ["checker", "knowledge-center"] as const,
   rules: (filters?: RuleFilters) => [...knowledgeCenterKeys.all, "rules", filters] as const,
-  versions: (ruleId?: string) => [...knowledgeCenterKeys.all, "versions", ruleId ?? "all"] as const,
   documents: () => [...knowledgeCenterKeys.all, "documents"] as const,
 };
 
 export function useComplianceRules(filters?: RuleFilters) {
+  const storeId = useSelectedStoreId();
   return useQuery({
-    queryKey: knowledgeCenterKeys.rules(filters),
+    queryKey: [...knowledgeCenterKeys.rules(filters), storeId ?? "none"] as const,
     queryFn: () => fetchComplianceRules(filters),
     staleTime: 60 * 1000,
   });
 }
 
+/** Versions are derived from the same compliance-rules query (one network fetch). */
 export function useRuleVersions(ruleId?: string) {
-  return useQuery({
-    queryKey: knowledgeCenterKeys.versions(ruleId),
-    queryFn: () => fetchRuleVersions(ruleId),
-    staleTime: 60 * 1000,
-  });
+  const rulesQuery = useComplianceRules();
+  const data = useMemo(() => {
+    const rules = rulesQuery.data ?? [];
+    const all = rules.flatMap((r) => r.versions);
+    const filtered = ruleId ? all.filter((v) => v.ruleId === ruleId) : all;
+    return [...filtered].sort((a, b) => b.createdDate.getTime() - a.createdDate.getTime());
+  }, [rulesQuery.data, ruleId]);
+
+  return {
+    ...rulesQuery,
+    data,
+  };
 }
 
 export function useReferenceDocuments() {

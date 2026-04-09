@@ -56,6 +56,7 @@ export function StoreConfigurationPage({
   });
 
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [isProfileEditing, setIsProfileEditing] = useState(false);
 
   useEffect(() => {
     if (selectedStore) {
@@ -68,6 +69,7 @@ export function StoreConfigurationPage({
         default_dimensions:
           (selectedStore.default_dimensions as StoreDimensionUnit | undefined) || "mm",
       });
+      setIsProfileEditing(false);
     }
   }, [selectedStore]);
 
@@ -109,6 +111,7 @@ export function StoreConfigurationPage({
         {activeTab === "profile" && (
           <StoreProfileTab
             canEdit={canEdit}
+            isEditing={isProfileEditing}
             isAdmin={!!isAdmin}
             formData={formData}
             setFormData={setFormData}
@@ -116,6 +119,20 @@ export function StoreConfigurationPage({
             onSave={(e) => {
               e.preventDefault();
               void handleSave();
+              setIsProfileEditing(false);
+            }}
+            onEditStart={() => setIsProfileEditing(true)}
+            onCancelEdit={() => {
+              setFormData({
+                name: selectedStore.name || "",
+                address: selectedStore.address || "",
+                region: selectedStore.region || "",
+                status: selectedStore.status || "Active",
+                currency: selectedStore.currency || "USD",
+                default_dimensions:
+                  (selectedStore.default_dimensions as StoreDimensionUnit | undefined) || "mm",
+              });
+              setIsProfileEditing(false);
             }}
             onDeactivate={handleDeactivateStore}
             onActivate={handleActivateStore}

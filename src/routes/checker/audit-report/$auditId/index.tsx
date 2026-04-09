@@ -8,8 +8,10 @@
  * Access at: /checker/audit-report/:auditId
  */
 
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useState } from "react";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import MainLayout from "@/components/layouts/main";
 import { useToast } from "@/hooks/use-toast";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
@@ -28,12 +30,13 @@ export const Route = createFileRoute("/checker/audit-report/$auditId/")({
   },
 });
 
-function AuditReportPage() {
-  const { auditId } = Route.useParams();
+export function AuditReportPage() {
+  const { auditId } = useParams({ strict: false });
+  const routes = useStoreScopedCheckerRoutes();
   const { toast } = useToast();
   const [isExporting, setIsExporting] = useState(false);
 
-  const backTo = `/checker/review/${auditId}`;
+  const backTo = auditId ? routes.reviewAuditHref(auditId) : "/checker/audit-review";
 
   const handleExportPdf = async () => {
     if (isExporting) return;

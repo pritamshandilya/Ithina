@@ -186,6 +186,22 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
 
   const columns: DataTableColumn<StoreFixtureApiModel>[] = [
     {
+      title:"Code",
+      field: "code",
+      headerFilter: false,
+      minWidth: 120,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
+        const fixture = cell.getData();
+        return `
+          <span class="text-xs text-muted-foreground">
+            ${fixture.code ?? "No code"}
+          </span>
+        `;
+      },
+    },
+    {
       title: "Fixture Type",
       field: "type",
       headerFilter: false,
@@ -197,72 +213,40 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         return `
           <div class="text-left">
             <p class="text-sm font-semibold text-foreground">${fixture.type}</p>
-            <p class="text-[10px] text-muted-foreground">${fixture.code ?? "No code"}</p>
           </div>
         `;
       },
     },
+    // {
+    //   title: "Code",
+    //   field: "code",
+    //   headerFilter: false,
+    //   minWidth: 120,
+    //   hozAlign: "left",
+    //   headerHozAlign: "left",
+    //   formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
+    //     const fixture = cell.getData();
+    //     console.log("fixture code", fixture.code);
+    //     return `
+    //       <span class="text-xs text-muted-foreground">
+    //         ${fixture.code ?? "No code"}
+    //       </span>
+    //     `;
+    //   },
+    // },
     {
-      title: "Code",
-      field: "code",
-      headerFilter: false,
-      minWidth: 120,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        console.log("fixture code", fixture.code);
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.code ?? "No code"}
-          </span>
-        `;
-      },
-    },
-    {
-      title: "Width",
+      title: "Dimensions (W×H×D)",
       field: "dimensions.width",
-      minWidth: 100,
+      minWidth: 160,
       headerFilter: false,
       hozAlign: "left",
       headerHozAlign: "left",
       formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
         const fixture = cell.getData();
+        const { width, height, depth } = fixture.dimensions;
         return `
           <span class="text-xs text-muted-foreground">
-            ${fixture.dimensions.width} ${fixture.dimension_unit}
-          </span>
-        `;
-      },
-    },
-    {
-      title: "Height",
-      field: "dimensions.height",
-      minWidth: 100,
-      headerFilter: false,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.dimensions.height} ${fixture.dimension_unit}
-          </span>
-        `;
-      },
-    },
-    {
-      title: "Depth",
-      field: "dimensions.depth",
-      minWidth: 100,
-      headerFilter: false,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.dimensions.depth} ${fixture.dimension_unit}
+            ${width}×${height}×${depth} ${fixture.dimension_unit}
           </span>
         `;
       },

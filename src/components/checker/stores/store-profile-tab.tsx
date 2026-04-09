@@ -7,7 +7,7 @@ import { CardContent, CardTitle, CardHeader } from "@/components/ui/card";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
-import { Store } from "lucide-react";
+import { Pencil, Store } from "lucide-react";
 import { PREDEFINED_CURRENCIES } from "@/lib/constants/currencies";
 
 type StoreProfileTabFormData = {
@@ -21,22 +21,28 @@ type StoreProfileTabFormData = {
 
 export interface StoreProfileTabProps {
   canEdit: boolean;
+  isEditing: boolean;
   isAdmin: boolean;
   formData: StoreProfileTabFormData;
   setFormData: Dispatch<SetStateAction<StoreProfileTabFormData>>;
   isSaving: boolean;
   onSave: (e: FormEvent) => void | Promise<void>;
+  onEditStart: () => void;
+  onCancelEdit: () => void;
   onDeactivate: () => void | Promise<void>;
   onActivate: () => void | Promise<void>;
 }
 
 export function StoreProfileTab({
   canEdit,
+  isEditing,
   isAdmin,
   formData,
   setFormData,
   isSaving,
   onSave,
+  onEditStart,
+  onCancelEdit,
   onDeactivate,
   onActivate,
 }: StoreProfileTabProps) {
@@ -52,9 +58,17 @@ export function StoreProfileTab({
   return (
     <Card noBorder className="bg-card shadow-xl glassmorphism space-y-4">
       <CardHeader>
-        <div className="flex items-center gap-2">
-          <Store className="size-5 text-accent" />
-          <CardTitle>Store Profile</CardTitle>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Store className="size-5 text-accent" />
+            <CardTitle>Store Profile</CardTitle>
+          </div>
+          {canEdit && !isEditing && (
+            <Button type="button" variant="outline" size="sm" onClick={onEditStart}>
+              <Pencil className="size-4" />
+              Edit
+            </Button>
+          )}
         </div>
       </CardHeader>
     <form onSubmit={onSave} className="space-y-6">
@@ -68,7 +82,7 @@ export function StoreProfileTab({
               id="store-name"
               value={formData.name}
               onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
-              disabled={!canEdit}
+              disabled={!canEdit || !isEditing}
             />
           </div>
 
@@ -80,7 +94,7 @@ export function StoreProfileTab({
               id="store-currency"
               value={formData.currency}
               onChange={(e) => setFormData((prev) => ({ ...prev, currency: e.target.value }))}
-              disabled={!canEdit}
+              disabled={!canEdit || !isEditing}
             >
               {PREDEFINED_CURRENCIES.map((c) => (
                 <option key={c} value={c}>
@@ -98,7 +112,7 @@ export function StoreProfileTab({
               id="store-address"
               value={formData.address}
               onChange={(e) => setFormData((prev) => ({ ...prev, address: e.target.value }))}
-              disabled={!canEdit}
+              disabled={!canEdit || !isEditing}
             />
           </div>
 
@@ -110,7 +124,7 @@ export function StoreProfileTab({
               id="store-region"
               value={formData.region}
               onChange={(e) => setFormData((prev) => ({ ...prev, region: e.target.value }))}
-              disabled={!canEdit}
+              disabled={!canEdit || !isEditing}
             />
           </div>
 
@@ -127,7 +141,7 @@ export function StoreProfileTab({
                   default_dimensions: e.target.value as StoreDimensionUnit,
                 }))
               }
-              disabled={!canEdit}
+              disabled={!canEdit || !isEditing}
             >
               <option value="mm">mm</option>
               <option value="cm">cm</option>
@@ -138,7 +152,7 @@ export function StoreProfileTab({
         </div>
 
         <div className="flex justify-between items-center pt-2 gap-2">
-          {isAdmin && canEdit && formData.status === "Active" && (
+          {isAdmin && canEdit && isEditing && formData.status === "Active" && (
             <Button
               type="button"
               variant="destructive"
@@ -148,7 +162,7 @@ export function StoreProfileTab({
               Deactivate store
             </Button>
           )}
-          {isAdmin && canEdit && formData.status === "Inactive" && (
+          {isAdmin && canEdit && isEditing && formData.status === "Inactive" && (
             <Button
               type="button"
               variant="success"
@@ -159,8 +173,11 @@ export function StoreProfileTab({
             </Button>
           )}
 
-          {canEdit && (
-            <div className="flex justify-end flex-1">
+          {canEdit && isEditing && (
+            <div className="flex flex-1 justify-end gap-2">
+              <Button type="button" variant="outline" disabled={isSaving} onClick={onCancelEdit}>
+                Cancel
+              </Button>
               <Button type="submit" disabled={isSaving} className="min-w-[150px]">
                 {isSaving ? "Saving..." : "Save"}
               </Button>

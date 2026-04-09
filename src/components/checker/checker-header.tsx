@@ -14,6 +14,7 @@
 import { Link } from "@tanstack/react-router";
 import { BookOpen } from "lucide-react";
 
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -104,6 +105,7 @@ export function CheckerHeader({
   onMarkAllAsRead,
   className,
 }: CheckerHeaderProps) {
+  const routes = useStoreScopedCheckerRoutes();
   const initials = getInitials(user.firstName, user.lastName);
   const fullName = `${user.firstName} ${user.lastName}`;
 
@@ -162,7 +164,7 @@ export function CheckerHeader({
           className="shrink-0"
           aria-label="Knowledge Center"
         >
-          <Link to="/checker/knowledge-center">
+          <Link {...routes.toKnowledgeCenter()}>
             <BookOpen className="size-5" aria-hidden="true" />
           </Link>
         </Button>

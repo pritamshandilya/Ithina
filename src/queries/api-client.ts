@@ -23,6 +23,8 @@ import { AuthSessionService } from "@/lib/auth/session";
 
 export { ApiError };
 
+const API_V1_PREFIX = "/api/v1";
+
 function getAuthToken(): string | null {
   try {
     return store.getState().auth?.token ?? null;
@@ -107,7 +109,25 @@ async function request<T>(
     timeoutMs?: number;
   },
 ): Promise<T> {
-  let url = `${getHttpConfig().baseUrl}${path}`;
+  const { baseUrl } = getHttpConfig();
+
+  const normalizedPath = (() => {
+    if (/^https?:\/\//i.test(path)) return path;
+
+    const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
+    if (withLeadingSlash === API_V1_PREFIX || withLeadingSlash.startsWith(`${API_V1_PREFIX}/`)) {
+      return withLeadingSlash;
+    }
+
+    const baseHasV1Prefix = /\/api\/v1\/?$/i.test(baseUrl);
+    if (baseHasV1Prefix) return withLeadingSlash;
+
+    return `${API_V1_PREFIX}${withLeadingSlash}`;
+  })();
+
+  let url = /^https?:\/\//i.test(normalizedPath)
+    ? normalizedPath
+    : `${baseUrl}${normalizedPath}`;
 
   if (options?.params) {
     const qs = new URLSearchParams();

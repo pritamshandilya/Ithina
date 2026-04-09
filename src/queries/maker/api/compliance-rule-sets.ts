@@ -118,6 +118,22 @@ export async function fetchComplianceRuleSetsForAnalysis(): Promise<ComplianceRu
   });
 }
 
+/**
+ * All rules from every compliance rule set for the scoped store (one GET).
+ * Used by Knowledge Center so checkers see the same live rules as admin rule-set management.
+ */
+export async function fetchAggregatedComplianceRulesFromRuleSets(): Promise<ComplianceRule[]> {
+  const sets = await apiClient.get<ComplianceRuleSetRequestResponse[]>("/compliance-rule-sets");
+  const out: ComplianceRule[] = [];
+  for (const ruleSet of sets) {
+    const sorted = ruleSet.rules.slice().sort((a, b) => a.sort_order - b.sort_order);
+    for (const r of sorted) {
+      out.push(mapRuleSetRuleToComplianceRule(ruleSet, r));
+    }
+  }
+  return out;
+}
+
 export async function fetchRulesByRuleSetId(ruleSetId: string): Promise<ComplianceRule[]> {
   const ruleSet = await apiClient.get<ComplianceRuleSetRequestResponse>(
     `/compliance-rule-sets/${ruleSetId}`,

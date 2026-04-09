@@ -29,6 +29,8 @@
  */
 
 import { useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import {
   BookOpenIcon,
   PlusCircleIcon,
@@ -71,9 +73,10 @@ export function KnowledgeCenterSection({
   className = "",
 }: KnowledgeCenterSectionProps) {
   const navigate = useNavigate();
+  const routes = useStoreScopedCheckerRoutes();
   const { data: ruleInfo, isLoading, error } = useRuleInfo(storeId);
 
-  const goToKnowledgeCenter = () => navigate({ to: "/checker/knowledge-center" });
+  const goToKnowledgeCenter = () => navigate({ ...routes.toKnowledgeCenter() });
 
   // Action cards configuration - navigate to Knowledge Center
   const actionCards: ActionCard[] = [

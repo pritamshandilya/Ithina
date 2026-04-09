@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import { Check, Trash2, X } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -92,6 +94,7 @@ export function AuditReviewQueue({
   className,
 }: AuditReviewQueueProps) {
   const navigate = useNavigate();
+  const routes = useStoreScopedCheckerRoutes();
   const [activeFilter, setActiveFilter] = useState<AuditQueueFilter>("all");
   const [sortBy, setSortBy] = useState<AuditQueueSort>("compliance-asc");
   const [searchQuery, setSearchQuery] = useState("");
@@ -119,10 +122,10 @@ export function AuditReviewQueue({
       if (onAuditClick) {
         onAuditClick(auditId, event);
       } else {
-        navigate({ to: "/checker/review/$auditId", params: { auditId } });
+        navigate({ ...routes.toReviewAudit(auditId) });
       }
     },
-    [onAuditClick, navigate]
+    [onAuditClick, navigate, routes]
   );
 
   const tableColumns = useMemo<DataTableColumn<CheckerAudit>[]>(() => {

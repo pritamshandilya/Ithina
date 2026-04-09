@@ -1,6 +1,7 @@
 import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import {
   CheckerAccomplishedCards,
   CheckerAttentionSection,
@@ -21,6 +22,7 @@ export const Route = createFileRoute("/checker/dashboard/")({
 export function CheckerDashboard() {
   const navigate = useNavigate();
   const location = useLocation();
+  const routes = useStoreScopedCheckerRoutes();
   const { selectedStore } = useStore();
   const selectedStoreId = selectedStore?.id || mockCheckerUser.storeId;
 
@@ -28,11 +30,11 @@ export function CheckerDashboard() {
   const { data: audits = [] } = usePendingAudits(selectedStoreId);
 
   const handleAuditClick = (auditId: string) => {
-    navigate({ to: "/checker/review/$auditId", params: { auditId } });
+    navigate({ ...routes.toReviewAudit(auditId) });
   };
 
   const handleViewAllAudits = () => {
-    navigate({ to: "/checker/audit-review" });
+    navigate({ ...routes.toAuditReview() });
   };
 
   // Scroll to hash target when navigating with hash (e.g. sidebar links)

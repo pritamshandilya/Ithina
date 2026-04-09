@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Edit3, Plus, Trash2 } from "lucide-react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { knowledgeCenterKeys } from "@/queries/checker/hooks/useKnowledgeCenter";
 import {
   CreateComplianceRuleSetModal,
   type CreateComplianceRuleSetModalProps,
@@ -72,7 +73,7 @@ function actionCellHtml(isDefault: boolean): string {
   `;
 }
 
-export function AdminComplianceRuleSetsTabContent() {
+export function ComplianceRuleSetsManagementSection() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -145,6 +146,27 @@ export function AdminComplianceRuleSetsTabContent() {
     });
   }, [filteredSets, ruleSetDetailMap]);
 
+  const openEdit = useCallback(
+    async (id: string) => {
+      try {
+        const ruleSet = await fetchComplianceRuleSetById(id);
+        const targetSummary = complianceRuleSets.find((item) => item.id === id);
+        setMode("edit");
+        setEditingId(id);
+        setIsEditingDefaultRuleSet(!!targetSummary?.isDefault);
+        setInitialValues(mapRuleSetToModalInitialValues(ruleSet));
+        setModalOpen(true);
+      } catch (err) {
+        toast({
+          title: "Could not load rule set",
+          description: err instanceof Error ? err.message : "Please try again.",
+          variant: "destructive",
+        });
+      }
+    },
+    [complianceRuleSets, toast],
+  );
+
   const tableColumns = useMemo<DataTableColumn<ComplianceRuleTreeRow>[]>(
     () => [
       {
@@ -215,11 +237,12 @@ export function AdminComplianceRuleSetsTabContent() {
         },
       },
     ],
-    [openEdit]
+    [openEdit, toast]
   );
 
   const invalidateSets = () => {
     void queryClient.invalidateQueries({ queryKey: ["compliance-rule-sets"] });
+    void queryClient.invalidateQueries({ queryKey: knowledgeCenterKeys.all });
   };
 
   const createMutation = useMutation({
@@ -251,24 +274,6 @@ export function AdminComplianceRuleSetsTabContent() {
     setInitialValues(undefined);
     setModalOpen(true);
   };
-
-  async function openEdit(id: string) {
-    try {
-      const ruleSet = await fetchComplianceRuleSetById(id);
-      const targetSummary = complianceRuleSets.find((item) => item.id === id);
-      setMode("edit");
-      setEditingId(id);
-      setIsEditingDefaultRuleSet(!!targetSummary?.isDefault);
-      setInitialValues(mapRuleSetToModalInitialValues(ruleSet));
-      setModalOpen(true);
-    } catch (err) {
-      toast({
-        title: "Could not load rule set",
-        description: err instanceof Error ? err.message : "Please try again.",
-        variant: "destructive",
-      });
-    }
-  }
 
   const handleSubmit = async (payload: Parameters<typeof createComplianceRuleSet>[0]) => {
 
@@ -308,14 +313,16 @@ export function AdminComplianceRuleSetsTabContent() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="shrink-0">
+      <div className="shrink-0 pb-3">
+        <h2 className="text-lg font-semibold text-foreground">Compliance rule sets</h2>
+        <p className="text-sm text-muted-foreground">
+          Create, edit, and remove rule sets for this store.
+        </p>
+      </div>
+      <div className="flex min-h-0 flex-1 flex-col">
         <Card noBorder className="bg-card shadow-xl glassmorphism">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-              {/* <div>
-                <CardTitle className="text-lg">Compliance Rule Sets</CardTitle>
-              </div> */}
-
               <div className="flex flex-wrap items-center gap-2">
                 <Button type="button" className="h-9 gap-2" onClick={openCreate}>
                   <Plus className="size-4" />

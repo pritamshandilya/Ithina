@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import MainLayout from "@/components/layouts/main";
 import { ReportPage } from "@/components/shared/report-page";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/checker/reports/shelf-level/")({
 
 export function ShelfLevelReport() {
     const navigate = useNavigate();
+    const routes = useStoreScopedCheckerRoutes();
 
     const stats = [
         { title: "TOTAL ANALYSES", value: 1, icon: FileBarChart },
@@ -38,7 +41,7 @@ export function ShelfLevelReport() {
         // Only navigate if it's a child row (analysis row)
         if (row.id.includes("-")) {
             const reportId = row.id.split("-")[1] || "1";
-            navigate({ to: `/checker/reports/view/${reportId}` });
+            navigate({ ...routes.toReportsView(reportId) });
         }
     };
 

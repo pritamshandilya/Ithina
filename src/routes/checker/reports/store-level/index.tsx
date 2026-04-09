@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import MainLayout from "@/components/layouts/main";
 import { ReportPage } from "@/components/shared/report-page";
 import { PageHeader } from "@/components/shared/page-header";
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/checker/reports/store-level/")({
 
 export function StoreLevelReport() {
     const navigate = useNavigate();
+    const routes = useStoreScopedCheckerRoutes();
 
     const stats = [
         { title: "TOTAL SHELVES", value: 1, icon: Layers },
@@ -37,7 +40,7 @@ export function StoreLevelReport() {
     ];
 
     const handleRowClick = (_row: ShelfSummary) => {
-        navigate({ to: "/checker/reports/view/$reportId", params: { reportId: "1" } });
+        navigate({ ...routes.toReportsView("1") });
     };
 
     return (

@@ -1,4 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import { formatDistanceToNow } from "date-fns";
 import { Rows3, Store, ChevronRight } from "lucide-react";
 
@@ -34,6 +36,7 @@ export function CheckerStoreShelfPreview({
   className,
 }: CheckerStoreShelfPreviewProps) {
   const navigate = useNavigate();
+  const routes = useStoreScopedCheckerRoutes();
   const { selectedStore } = useStore();
   const storeId = selectedStore?.id ?? mockCheckerUser.storeId;
   const { data: shelves, isLoading: shelvesLoading } = useShelves();
@@ -68,7 +71,7 @@ export function CheckerStoreShelfPreview({
     if (onShelfClick) {
       onShelfClick(shelfId);
     } else {
-      navigate({ to: "/checker/shelves" });
+      navigate({ ...routes.toShelfIndex() });
     }
   };
 
@@ -98,7 +101,7 @@ export function CheckerStoreShelfPreview({
         </div>
 
         <Link
-          to="/checker/shelves"
+          {...routes.toShelfIndex()}
           className="inline-flex items-center gap-1 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
         >
           View all
@@ -226,7 +229,7 @@ export function CheckerStoreShelfPreview({
             {hasMore && (
               <div className="border-t border-border px-4 py-3 bg-muted/20 shrink-0">
                 <Link
-                  to="/checker/shelves"
+                  {...routes.toShelfIndex()}
                   className="flex w-full items-center justify-center gap-2 text-sm font-medium text-accent hover:text-accent/90 transition-colors py-1"
                 >
                   View all {(shelves ?? []).length} shelves

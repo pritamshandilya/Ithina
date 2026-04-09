@@ -46,7 +46,7 @@ export function Modal({
             exit={{ opacity: 0 }}
             onClick={onClose}
             className={cn(
-              "fixed inset-0 bg-black/70 backdrop-blur-md",
+              "fixed inset-0 bg-black/20 backdrop-blur-[1px]",
               overlayClassName
             )}
           />
@@ -63,7 +63,7 @@ export function Modal({
             {showCloseButton && (
               <button
                 onClick={onClose}
-                className="absolute right-4 top-4 z-[60] rounded-md border border-transparent bg-transparent p-2 text-muted-foreground transition-colors hover:border-white/10 hover:bg-white/6 hover:text-white focus:outline-none"
+                className="absolute right-4 top-4 z-60 rounded-md border border-transparent bg-transparent p-2 text-muted-foreground transition-colors hover:border-white/10 hover:bg-white/6 hover:text-white focus:outline-none"
               >
                 <X className="h-4 w-4" />
                 <span className="sr-only">Close</span>

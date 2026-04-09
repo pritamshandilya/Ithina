@@ -273,15 +273,15 @@ function SelectStoreShell({ children, panelWidth }: { children: ReactNode; panel
             transition={{ delay: 0.5, duration: 0.5 }}
             className="flex justify-center gap-8 text-center"
           >
-            <div className="ithina-panel min-w-28 p-4">
+            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
               <div className="text-2xl font-extrabold tracking-[-0.04em] text-accent">AI</div>
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Shelf Analysis</div>
             </div>
-            <div className="ithina-panel min-w-28 p-4">
+            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
               <div className="text-2xl font-extrabold tracking-[-0.04em] text-accent">3D</div>
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Visualization</div>
             </div>
-            <div className="ithina-panel min-w-28 p-4">
+            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
               <div className="text-2xl font-extrabold tracking-[-0.04em] text-white">100%</div>
               <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Compliance</div>
             </div>

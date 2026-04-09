@@ -1,4 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import MainLayout from "@/components/layouts/main";
 import { ReportPage } from "@/components/shared/report-page";
 import { PageHeader } from "@/components/shared/page-header";
@@ -14,6 +16,7 @@ export const Route = createFileRoute("/checker/reports/adhoc/")({
 
 export function AdhocReport() {
     const navigate = useNavigate();
+    const routes = useStoreScopedCheckerRoutes();
 
     const stats = [
         { title: "TOTAL ANALYSES", value: 1, icon: FileBarChart },
@@ -86,7 +89,7 @@ export function AdhocReport() {
     ];
 
     const handleRowClick = (row: AdhocAnalysis) => {
-        navigate({ to: `/checker/reports/view/${row.id}` });
+        navigate({ ...routes.toReportsView(row.id) });
     };
 
     return (

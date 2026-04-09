@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useState } from "react";
 
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import {
   AuditReviewQueue,
 } from "@/components/checker";
@@ -28,6 +29,7 @@ export const Route = createFileRoute("/checker/audit-review/")({
 
 export function CheckerAuditReviewPage() {
   const navigate = useNavigate();
+  const routes = useStoreScopedCheckerRoutes();
   const { selectedStore } = useStore();
   // const { data: stores } = useStores();
   const selectedStoreId = selectedStore?.id ?? mockCheckerUser.storeId;
@@ -67,9 +69,9 @@ export function CheckerAuditReviewPage() {
         event && typeof event === "object" && "target" in event ? event.target : null;
       if (target instanceof Element && target.closest("button")) return;
 
-      navigate({ to: "/checker/review/$auditId", params: { auditId } });
+      navigate({ ...routes.toReviewAudit(auditId) });
     },
-    [navigate, auditToApprove, auditToReject, auditToDelete]
+    [navigate, routes, auditToApprove, auditToReject, auditToDelete]
   );
 
   const approveAuditMutation = useApproveAudit(selectedStoreId);

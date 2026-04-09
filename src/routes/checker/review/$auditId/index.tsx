@@ -7,7 +7,7 @@
  * Access at: /checker/review/:auditId
  */
 
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 import {
   useAuditDetail,
@@ -17,6 +17,9 @@ import {
   useOverrideAndApprove,
 } from "@/queries/checker";
 import { useToast } from "@/hooks/use-toast";
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
+import { mockCheckerUser } from "@/lib/api/mock-data";
+import { useStore } from "@/providers/store";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -116,16 +119,19 @@ const VIOLATION_COLUMNS: DataTableColumn<Violation>[] = [
   },
 ];
 
-function AuditReviewWorkspace() {
-  const { auditId } = Route.useParams();
+export function AuditReviewWorkspace() {
+  const { auditId } = useParams({ strict: false });
   const navigate = useNavigate();
+  const routes = useStoreScopedCheckerRoutes();
+  const { selectedStore } = useStore();
+  const selectedStoreId = selectedStore?.id ?? mockCheckerUser.storeId;
 
-  const { data: audit, isLoading: auditLoading, error: auditError } = useAuditDetail(auditId);
-  const { data: violations, isLoading: violationsLoading } = useAuditViolations(auditId);
+  const { data: audit, isLoading: auditLoading, error: auditError } = useAuditDetail(auditId ?? "");
+  const { data: violations, isLoading: violationsLoading } = useAuditViolations(auditId ?? "");
 
-  const approveAudit = useApproveAudit("store-1234");
-  const returnAudit = useReturnAudit("store-1234");
-  const overrideAndApprove = useOverrideAndApprove("store-1234");
+  const approveAudit = useApproveAudit(selectedStoreId);
+  const returnAudit = useReturnAudit(selectedStoreId);
+  const overrideAndApprove = useOverrideAndApprove(selectedStoreId);
 
   const { toast } = useToast();
   const [showApproveDialog, setShowApproveDialog] = useState(false);
@@ -144,7 +150,7 @@ function AuditReviewWorkspace() {
           title: "Audit approved",
           description: "The audit has been approved successfully.",
         });
-        navigate({ to: "/checker/audit-review" });
+        navigate({ ...routes.toAuditReview() });
       },
     });
   };
@@ -170,7 +176,7 @@ function AuditReviewWorkspace() {
             title: "Audit returned",
             description: "The audit has been returned to the maker.",
           });
-          navigate({ to: "/checker/audit-review" });
+          navigate({ ...routes.toAuditReview() });
         },
       }
     );
@@ -197,11 +203,23 @@ function AuditReviewWorkspace() {
             title: "Audit approved",
             description: "The audit has been approved with override.",
           });
-          navigate({ to: "/checker/audit-review" });
+          navigate({ ...routes.toAuditReview() });
         },
       }
     );
   };
+
+  if (!auditId) {
+    return (
+      <MainLayout>
+        <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+          <div className="mx-auto max-w-screen-2xl space-y-4">
+            <p className="text-sm text-muted-foreground">Missing audit id.</p>
+          </div>
+        </div>
+      </MainLayout>
+    );
+  }
 
   if (auditLoading || violationsLoading) {
     return (
@@ -223,7 +241,10 @@ function AuditReviewWorkspace() {
         <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
           <div className="mx-auto max-w-screen-2xl space-y-4">
             <Button variant="ghost" asChild>
-              <Link to="/checker/audit-review" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                {...routes.toAuditReview()}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              >
                 <ArrowLeft className="h-4 w-4" />
                 Back to Audit Review
               </Link>
@@ -257,7 +278,7 @@ function AuditReviewWorkspace() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <Button variant="ghost" asChild size="sm">
               <Link
-                to="/checker/audit-review"
+                {...routes.toAuditReview()}
                 className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
               >
                 <ArrowLeft className="h-4 w-4" />
@@ -265,7 +286,7 @@ function AuditReviewWorkspace() {
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild className="gap-2 border-accent/50 text-foreground hover:bg-accent/10 shrink-0">
-              <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
+              <Link {...routes.toAuditReport(auditId)}>
                 <FileBarChart className="h-4 w-4" />
                 View Full Report
               </Link>
@@ -414,7 +435,7 @@ function AuditReviewWorkspace() {
                 </p>
               </div>
               <Button variant="outline" size="sm" asChild className="gap-2 shrink-0">
-                <Link to="/checker/audit-report/$auditId" params={{ auditId }}>
+                <Link {...routes.toAuditReport(auditId)}>
                   <FileBarChart className="h-4 w-4" />
                   View Full Report
                 </Link>
@@ -442,7 +463,7 @@ function AuditReviewWorkspace() {
                   This audit passed all compliance checks
                 </p>
                 <Button variant="outline" size="sm" asChild className="mt-4">
-                  <Link to="/checker/audit-report/$auditId" params={{ auditId }} className="gap-2">
+                  <Link {...routes.toAuditReport(auditId)} className="gap-2">
                     <FileBarChart className="h-4 w-4" />
                     View Full Report
                   </Link>

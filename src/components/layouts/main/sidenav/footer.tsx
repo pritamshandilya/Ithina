@@ -1,4 +1,4 @@
-import { BadgeCheck, ChevronsUpDown, LogOut, User } from "lucide-react";
+import { ChevronsUpDown, LogOut, User } from "lucide-react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
@@ -35,10 +35,6 @@ export default function SidenavFooter() {
     () => AuthSessionService.getSnapshot().user,
     () => null,
   );
-
-  const handleManageAccount = () => {
-    navigate({ to: "/profile" });
-  };
 
   const handleLogout = () => {
     AuthSessionService.logout();
@@ -138,10 +134,6 @@ export default function SidenavFooter() {
               <DropdownMenuItem onClick={() => navigate({ to: "/profile" })}>
                 <User />
                 Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleManageAccount}>
-                <BadgeCheck />
-                Account
               </DropdownMenuItem>
             </DropdownMenuGroup>
 

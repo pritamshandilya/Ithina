@@ -1,0 +1,663 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-sans: var(--font-sans-base);
+  --font-mono: var(--font-mono-base);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-action-success: var(--action-success);
+  --color-action-warning: var(--action-warning);
+  --color-action-critical: var(--action-critical);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --font-sans-base: "Plus Jakarta Sans", sans-serif;
+  --font-mono-base: "JetBrains Mono", monospace;
+  --radius: 0.875rem;
+
+  --background: #0a0e17;
+  --foreground: #e2e8f0;
+  --card: #131c31;
+  --card-foreground: #f8fafc;
+  --popover: #131c31;
+  --popover-foreground: #e2e8f0;
+  --primary: #0a0e17;
+  --primary-foreground: #f8fafc;
+  --secondary: #0f1523;
+  --secondary-foreground: #e2e8f0;
+  --muted: #10192b;
+  --muted-foreground: #94a3b8;
+  --accent: #a855f7;
+  --accent-foreground: #ffffff;
+  --destructive: #fb7185;
+  --destructive-foreground: #ffffff;
+  --border: #1e293b;
+  --input: #22314b;
+  --ring: #a855f7;
+  --chart-1: #a855f7;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #fb7185;
+  --chart-5: #64748b;
+  --sidebar: #0f1523;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-primary: #a855f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(168, 85, 247, 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #a855f7;
+
+  --action-primary: var(--accent);
+  --action-warning: #fbbf24;
+  --action-critical: var(--destructive);
+  --action-success: var(--chart-2);
+
+  --status-pending: var(--chart-1);
+  --status-approved: var(--chart-2);
+  --status-rejected: var(--destructive);
+  --status-neutral: var(--muted-foreground);
+
+  --maker-primary: var(--action-primary);
+  --maker-pending: var(--status-pending);
+  --maker-approved: var(--status-approved);
+  --maker-returned: var(--status-rejected);
+  --maker-never-audited: var(--status-neutral);
+
+  --checker-primary: var(--action-primary);
+  --checker-critical: var(--action-critical);
+  --checker-warning: var(--action-warning);
+  --checker-success: var(--action-success);
+  --checker-neutral: var(--status-neutral);
+  --checker-override: var(--action-warning);
+}
+
+.dark {
+  --background: #0a0e17;
+  --foreground: #e2e8f0;
+  --card: #131c31;
+  --card-foreground: #f8fafc;
+  --popover: #131c31;
+  --popover-foreground: #e2e8f0;
+  --primary: #0a0e17;
+  --primary-foreground: #f8fafc;
+  --secondary: #0f1523;
+  --secondary-foreground: #e2e8f0;
+  --muted: #10192b;
+  --muted-foreground: #94a3b8;
+  --accent: #a855f7;
+  --accent-foreground: #ffffff;
+  --destructive: #fb7185;
+  --destructive-foreground: #ffffff;
+  --border: #1e293b;
+  --input: #22314b;
+  --ring: #a855f7;
+  --chart-1: #a855f7;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #fb7185;
+  --chart-5: #64748b;
+  --sidebar: #0f1523;
+  --sidebar-foreground: #cbd5e1;
+  --sidebar-primary: #a855f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(168, 85, 247, 0.1);
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #a855f7;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    @apply bg-background;
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased selection:bg-accent/30 selection:text-white;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.4;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  }
+
+  #root {
+    isolation: isolate;
+    min-height: 100vh;
+  }
+
+  a {
+    color: inherit;
+  }
+
+  td,
+  [data-technical="true"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) color-mix(in srgb, var(--card) 84%, black);
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: color-mix(in srgb, var(--card) 84%, black);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
+}
+
+@layer components {
+  .dashboard-grid {
+    @apply grid grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-3;
+  }
+
+  .stat-card {
+    @apply rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+  }
+
+  .stat-card-success {
+    border-color: color-mix(in srgb, var(--status-approved) 28%, var(--border));
+    background-color: color-mix(in srgb, var(--status-approved) 6%, var(--card));
+  }
+
+  .stat-card-warning {
+    border-color: color-mix(in srgb, var(--action-warning) 28%, var(--border));
+    background-color: color-mix(in srgb, var(--action-warning) 6%, var(--card));
+  }
+
+  .stat-card-critical {
+    border-color: color-mix(in srgb, var(--action-critical) 28%, var(--border));
+    background-color: color-mix(in srgb, var(--action-critical) 6%, var(--card));
+  }
+
+  .stat-card-accent {
+    border-color: color-mix(in srgb, var(--action-primary) 30%, var(--border));
+    background-color: color-mix(in srgb, var(--action-primary) 6%, var(--card));
+  }
+
+  .card-interactive {
+    @apply cursor-pointer border border-border bg-card transition-all duration-200;
+  }
+
+  .card-interactive:hover {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+    transform: translateY(-2px);
+    box-shadow: 0 20px 45px rgba(3, 8, 20, 0.32);
+  }
+
+  .shelf-card-interactive {
+    @apply cursor-pointer border border-border bg-card transition-all duration-200;
+  }
+
+  .shelf-card-interactive:hover {
+    border-color: color-mix(in srgb, var(--accent) 38%, var(--border));
+    transform: translateY(-2px);
+    box-shadow: 0 20px 45px rgba(3, 8, 20, 0.32);
+  }
+
+  .status-pending {
+    background-color: color-mix(in srgb, var(--status-pending) 12%, var(--card));
+    color: var(--status-pending);
+    border: 1px solid color-mix(in srgb, var(--status-pending) 22%, transparent);
+  }
+
+  .status-approved {
+    background-color: color-mix(in srgb, var(--status-approved) 12%, var(--card));
+    color: var(--status-approved);
+    border: 1px solid color-mix(in srgb, var(--status-approved) 22%, transparent);
+  }
+
+  .status-returned,
+  .status-rejected,
+  .status-critical {
+    background-color: color-mix(in srgb, var(--status-rejected) 12%, var(--card));
+    color: var(--status-rejected);
+    border: 1px solid color-mix(in srgb, var(--status-rejected) 22%, transparent);
+  }
+
+  .status-never-audited,
+  .status-neutral,
+  .status-inactive {
+    background-color: color-mix(in srgb, var(--status-neutral) 10%, var(--card));
+    color: var(--muted-foreground);
+    border: 1px solid color-mix(in srgb, var(--status-neutral) 16%, transparent);
+  }
+
+  .status-warning {
+    background-color: color-mix(in srgb, var(--action-warning) 12%, var(--card));
+    color: var(--action-warning);
+    border: 1px solid color-mix(in srgb, var(--action-warning) 22%, transparent);
+  }
+
+  .status-draft {
+    background-color: color-mix(in srgb, var(--accent) 12%, var(--card));
+    color: var(--accent);
+    border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+
+  .ithina-page {
+    @apply min-h-screen bg-background px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4;
+  }
+
+  .ithina-page-inner {
+    @apply mx-auto w-full max-w-screen-2xl space-y-5;
+  }
+
+  .ithina-panel {
+    @apply rounded-xl border border-border bg-card/95 shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+  }
+
+  .ithina-panel-soft {
+    @apply rounded-xl border border-border/80 bg-secondary/80 shadow-[0_12px_30px_rgba(3,8,20,0.24)];
+  }
+
+  .ithina-panel-header {
+    @apply flex items-center justify-between border-b border-border/80 px-5 py-4;
+  }
+
+  .ithina-overline {
+    @apply font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground;
+  }
+
+  .ithina-section-title {
+    @apply text-xl font-bold tracking-tight text-foreground sm:text-2xl;
+  }
+
+  .ithina-section-copy {
+    @apply max-w-2xl text-sm leading-6 text-muted-foreground;
+  }
+
+  .ithina-chip {
+    @apply inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5 font-mono text-[11px] text-muted-foreground;
+  }
+
+  .ithina-divider {
+    @apply relative my-6 h-px bg-border;
+  }
+
+  .ithina-empty-state {
+    @apply rounded-xl border border-dashed border-border bg-secondary/70 px-6 py-10 text-center text-sm text-muted-foreground;
+  }
+
+  .ithina-auth-shell {
+    @apply relative min-h-screen overflow-hidden bg-background;
+  }
+
+  .ithina-auth-grid {
+    @apply relative z-10 grid min-h-screen lg:grid-cols-[1.15fr_minmax(0,0.85fr)];
+  }
+
+  .ithina-auth-hero {
+    @apply hidden flex-col justify-between border-r border-border bg-sidebar px-10 py-10 lg:flex xl:px-14;
+  }
+
+  .ithina-auth-panel {
+    @apply mx-auto w-full max-w-md rounded-2xl border border-border bg-card/90 p-8 shadow-[0_24px_60px_rgba(3,8,20,0.42)] backdrop-blur-xl sm:p-10;
+  }
+
+  .ithina-table-shell {
+    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+  }
+
+  .technical-text {
+    @apply font-mono tabular-nums;
+  }
+}
+
+.data-table-wrapper {
+  --tabulator-bg: var(--card);
+  --tabulator-fg: var(--card-foreground);
+  --tabulator-border: var(--border);
+  --tabulator-header-bg: color-mix(in srgb, var(--sidebar) 95%, transparent);
+  --tabulator-row-even: color-mix(in srgb, var(--card) 96%, white 4%);
+  --tabulator-row-hover: color-mix(in srgb, var(--accent) 8%, var(--card));
+  --tabulator-footer-bg: color-mix(in srgb, var(--sidebar) 82%, var(--card));
+  --tabulator-footer-pill: color-mix(in srgb, var(--secondary) 92%, black 8%);
+  --tabulator-footer-pill-hover: color-mix(in srgb, var(--accent) 10%, var(--secondary));
+  --tabulator-sort-icon: var(--muted-foreground);
+  --tabulator-sort-active: var(--accent);
+}
+
+.data-table-container {
+  min-height: 240px;
+}
+
+.data-table-wrapper .tabulator {
+  background-color: var(--tabulator-bg) !important;
+  border: none;
+  color: var(--tabulator-fg);
+  min-width: 100% !important;
+  width: max-content !important;
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  background-color: var(--tabulator-bg) !important;
+  min-width: 100% !important;
+}
+
+.data-table-wrapper .tabulator-tableholder .tabulator-table {
+  background-color: var(--tabulator-bg) !important;
+  min-width: 100% !important;
+  width: max-content !important;
+}
+
+.data-table-wrapper .tabulator-header {
+  background-color: var(--tabulator-header-bg) !important;
+  border-bottom: 1px solid var(--tabulator-border);
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col {
+  background-color: var(--tabulator-header-bg) !important;
+  border-right: 1px solid color-mix(in srgb, var(--tabulator-border) 65%, transparent) !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.65rem 0.85rem;
+  font-family: var(--font-mono-base);
+  font-weight: 500;
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+  width: 6px;
+  margin-right: -3px;
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+  cursor: col-resize;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  width: 100%;
+  border-radius: 0.625rem;
+  border: 1px solid var(--input);
+  background-color: color-mix(in srgb, var(--secondary) 92%, black 8%);
+  color: var(--card-foreground);
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+  color-scheme: dark !important;
+  background-color: color-mix(in srgb, var(--secondary) 92%, black 8%) !important;
+  color: var(--card-foreground) !important;
+  border-color: var(--input) !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select option {
+  background-color: var(--card) !important;
+  color: var(--card-foreground) !important;
+}
+
+.data-table-wrapper,
+.data-table-wrapper .tabulator,
+.data-table-wrapper .tabulator-header {
+  color-scheme: dark !important;
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.data-table-wrapper .tabulator-col .tabulator-col-content .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-icon);
+  border-top-color: var(--tabulator-sort-icon);
+}
+
+.data-table-wrapper .tabulator-col.tabulator-col-sortable:hover .tabulator-arrow,
+.data-table-wrapper .tabulator-col.tabulator-sortable .tabulator-arrow {
+  border-bottom-color: var(--tabulator-sort-active);
+  border-top-color: var(--tabulator-sort-active);
+}
+
+.data-table-wrapper .tabulator-row {
+  min-height: 2.2rem;
+  background-color: var(--tabulator-bg) !important;
+  color: var(--tabulator-fg);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-row-even {
+  background-color: var(--tabulator-row-even) !important;
+}
+
+.data-table-wrapper .tabulator-row:hover {
+  background-color: var(--tabulator-row-hover) !important;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected {
+  background-color: color-mix(in srgb, var(--accent) 16%, var(--card)) !important;
+}
+
+.data-table-wrapper .tabulator-cell {
+  background-color: inherit !important;
+  border-right: 1px solid color-mix(in srgb, var(--tabulator-border) 50%, transparent) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--tabulator-border) 70%, transparent);
+  padding: 0.7rem 0.85rem;
+  font-size: 0.8125rem;
+  color: var(--tabulator-fg);
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen {
+  border-right: 1px solid var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-cell.tabulator-frozen.tabulator-frozen-right {
+  border-right: none !important;
+  border-left: 1px solid var(--tabulator-border) !important;
+}
+
+.data-table-wrapper .tabulator-placeholder {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+  background-color: var(--tabulator-bg) !important;
+}
+
+.data-table-wrapper .tabulator-footer {
+  background: var(--tabulator-footer-bg) !important;
+  border-top: 1px solid color-mix(in srgb, var(--tabulator-border) 82%, transparent) !important;
+  color: var(--muted-foreground);
+  padding: 0.75rem 0.9rem;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-footer-contents {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page-counter,
+.data-table-wrapper .tabulator-footer .tabulator-paginator label {
+  font-family: var(--font-mono-base);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page-size {
+  min-height: 2rem;
+  border-radius: 0.625rem;
+  border: 1px solid var(--input);
+  background: var(--tabulator-footer-pill) !important;
+  color: var(--tabulator-fg) !important;
+  padding: 0.35rem 2rem 0.35rem 0.7rem;
+  font-size: 0.75rem;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page-size:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-paginator {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page {
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 0.625rem;
+  border: 1px solid color-mix(in srgb, var(--tabulator-border) 85%, transparent);
+  background: var(--tabulator-footer-pill) !important;
+  color: var(--tabulator-fg) !important;
+  font-family: var(--font-mono-base);
+  font-size: 0.75rem;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page:hover {
+  background: var(--tabulator-footer-pill-hover) !important;
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--tabulator-border));
+  color: white !important;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page.active {
+  background: color-mix(in srgb, var(--accent) 18%, var(--secondary)) !important;
+  border-color: color-mix(in srgb, var(--accent) 42%, var(--tabulator-border));
+  color: white !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page:disabled,
+.data-table-wrapper .tabulator-footer .tabulator-page[disabled],
+.data-table-wrapper .tabulator-footer .tabulator-page.tabulator-page-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page:not(:disabled):not([disabled]):not(.tabulator-page-disabled):active {
+  transform: translateY(1px);
+}
+
+.data-table-wrapper .tabulator-tableholder {
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {
+  height: 12px;
+  width: 12px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--card) 84%, black);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb {
+  background: var(--tabulator-border);
+  border-radius: 4px;
+}
+
+.data-table-wrapper .tabulator-tableholder::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
+.data-table-wrapper {
+  overflow-x: auto !important;
+}
+
+.data-table-wrapper .tabulator-row:focus-visible,
+.data-table-wrapper .tabulator-cell:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selectable:hover {
+  cursor: pointer;
+}

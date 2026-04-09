@@ -1,5 +1,5 @@
 import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Zap } from "lucide-react";
-import { memo, useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { IthBadge, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
@@ -87,6 +87,8 @@ interface DataStagingGridProps {
   onInputModeChange: (mode: InputMode) => void;
   /** AI grid: include/exclude SKU without removing the row from the table. */
   onToggleGridRowIncluded: (sku: string) => void;
+  /** AI grid: update the discount % for a specific SKU. */
+  onDiscountChange: (sku: string, discount: number) => void;
   csvRows: CsvRow[];
   csvFileName: string;
   onCsvParsed: (rows: CsvRow[], fileName: string) => void;
@@ -106,6 +108,7 @@ function DataStagingGrid({
   inputMode,
   onInputModeChange,
   onToggleGridRowIncluded,
+  onDiscountChange,
   csvRows,
   csvFileName,
   onCsvParsed,
@@ -282,6 +285,25 @@ function DataStagingGrid({
       },
     },
     {
+      title: "Discount",
+      field: "discount",
+      width: 110,
+      sorter: "number",
+      hozAlign: "center",
+      headerHozAlign: "center",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const val = row.discount ?? 0;
+        return `<div class="flex items-center justify-center gap-1"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" class="w-14 rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-center font-mono text-xs text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-xs text-slate-400">%</span></div>`;
+      },
+      cellClick: (_e: MouseEvent) => {
+        const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
+        if (target.tagName === "INPUT") {
+          _e.stopPropagation();
+        }
+      },
+    },
+    {
       title: "Proposed",
       field: "proposed",
       width: 110,
@@ -323,7 +345,7 @@ function DataStagingGrid({
         }
       },
     },
-  ], [onToggleGridRowIncluded]);
+  ], [onToggleGridRowIncluded, onDiscountChange]);
 
   const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
     const d = row.getData();
@@ -336,6 +358,51 @@ function DataStagingGrid({
       el.style.borderLeft = "";
       el.style.backgroundColor = "";
     }
+  }, []);
+
+  const aiTableRef = useRef<HTMLDivElement>(null);
+  const discountChangeRef = useRef(onDiscountChange);
+  discountChangeRef.current = onDiscountChange;
+
+  useEffect(() => {
+    const container = aiTableRef.current;
+    if (!container) return;
+
+    const commitDiscount = (input: HTMLInputElement) => {
+      const row = input.closest(".tabulator-row");
+      if (!row) return;
+      const skuCell = row.querySelector(".tabulator-cell[tabulator-field='sku']");
+      const sku = skuCell?.textContent?.trim() ?? "";
+      if (!sku) return;
+      const val = Math.max(0, Math.min(100, Math.round(Number(input.value) || 0)));
+      input.value = String(val);
+      discountChangeRef.current(sku, val);
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" && (target as HTMLInputElement).dataset.action === "discount-input") {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitDiscount(target as HTMLInputElement);
+          (target as HTMLInputElement).blur();
+        }
+      }
+    };
+
+    const handleBlur = (e: FocusEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" && (target as HTMLInputElement).dataset.action === "discount-input") {
+        commitDiscount(target as HTMLInputElement);
+      }
+    };
+
+    container.addEventListener("keydown", handleKeyDown, true);
+    container.addEventListener("focusout", handleBlur, true);
+    return () => {
+      container.removeEventListener("keydown", handleKeyDown, true);
+      container.removeEventListener("focusout", handleBlur, true);
+    };
   }, []);
 
   return (
@@ -515,7 +582,7 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <div className="min-h-0 flex-1 overflow-auto px-4 pb-4 pt-0">
+            <div ref={aiTableRef} className="min-h-0 flex-1 overflow-auto px-4 pb-4 pt-0">
               <DataTable<StagedSku>
                 columns={aiColumns}
                 data={data}

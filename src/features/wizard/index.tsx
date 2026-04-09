@@ -27,16 +27,12 @@ import {
   setWMode,
   setWStep,
   toggleGridRowIncluded,
+  updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { approvalKeys } from "@/hooks/use-approval";
 import { campaignKeys } from "@/hooks/use-campaigns";
-import {
-  useChatWizardMessage,
-  useConfirmHardwareSelection,
-  useInitWizardCampaign,
-  useSubmitWizardIntent,
-} from "@/hooks/use-wizard";
+import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
 import type { CampaignListItem } from "@/types/campaigns";
@@ -121,11 +117,8 @@ export default function Wizard() {
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
-  const initCampaignMutation = useInitWizardCampaign();
-  const chatMutation = useChatWizardMessage();
 
-  const sessionRef = useRef<{ campaignId: string; threadId: string } | null>(null);
-  /** Correlates generate with draft LangGraph session or NL draft `session_id`. */
+  /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
@@ -204,7 +197,6 @@ export default function Wizard() {
       lcd: [],
     });
     setSelectedDevices([]);
-    sessionRef.current = null;
     pipelineSessionIdRef.current = null;
   }, [dispatch]);
 
@@ -261,7 +253,7 @@ export default function Wizard() {
 
   const handleSubmit = useCallback(async () => {
     const text = inputText.trim();
-    if (!text || intentMutation.isPending || chatMutation.isPending) return;
+    if (!text || intentMutation.isPending) return;
 
     if (!hasSplit) dispatch(setHasSplit(true));
     if (!showGrid) dispatch(setShowGrid(true));
@@ -273,53 +265,21 @@ export default function Wizard() {
     generateCampaignName(text);
 
     try {
-      // If we have an active LangGraph session, use the chat endpoint for refinement.
-      if (sessionRef.current) {
-        const { aiReply, skus } = await chatMutation.mutateAsync({
-          campaignId: sessionRef.current.campaignId,
-          message: text,
-          constraints,
-        });
-        setIsTyping(false);
-        pushMessage(aiReply);
-        if (skus.length > 0) {
-          dispatch(setGridData(skus));
-        }
-        return;
-      }
-
-      // First message: try init → chat flow (LangGraph-backed).
-      // Falls back to the draft endpoint if init/chat fails.
-      try {
-        const session = await initCampaignMutation.mutateAsync("nl");
-        sessionRef.current = session;
-        pipelineSessionIdRef.current = session.threadId;
-        dispatch(activateCampaignWithId({ id: session.campaignId, name: "" }));
-
-        const { aiReply, skus } = await chatMutation.mutateAsync({
-          campaignId: session.campaignId,
-          message: text,
-          constraints,
-        });
-        setIsTyping(false);
-        pushMessage(aiReply);
-        if (skus.length > 0) {
-          dispatch(setGridData(skus));
-        }
-      } catch {
-        // Fallback: use the stateless draft endpoint (no LangGraph required).
-        sessionRef.current = null;
-        const { aiReply, skus, sessionId } = await intentMutation.mutateAsync({ text, constraints });
-        pipelineSessionIdRef.current = sessionId;
-        setIsTyping(false);
-        pushMessage(aiReply);
-        dispatch(setGridData(skus));
-      }
+      const existingSessionId = pipelineSessionIdRef.current;
+      const { aiReply, skus, sessionId } = await intentMutation.mutateAsync({
+        text,
+        constraints,
+        ...(existingSessionId ? { sessionId: existingSessionId } : {}),
+      });
+      pipelineSessionIdRef.current = sessionId;
+      setIsTyping(false);
+      pushMessage(aiReply);
+      dispatch(setGridData(skus));
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, chatMutation, initCampaignMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
+  }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -471,6 +431,10 @@ export default function Wizard() {
   );
   const handleToggleGridRowIncluded = useCallback(
     (sku: string) => dispatch(toggleGridRowIncluded(sku)),
+    [dispatch],
+  );
+  const handleDiscountChange = useCallback(
+    (sku: string, discount: number) => dispatch(updateGridRowDiscount({ sku, discount })),
     [dispatch],
   );
   const handleCsvParsed = useCallback(
@@ -631,6 +595,7 @@ export default function Wizard() {
                           inputMode={inputMode}
                           onInputModeChange={handleInputModeChange}
                           onToggleGridRowIncluded={handleToggleGridRowIncluded}
+                          onDiscountChange={handleDiscountChange}
                           csvRows={csvRows}
                           csvFileName={csvFileName}
                           onCsvParsed={handleCsvParsed}
@@ -650,7 +615,7 @@ export default function Wizard() {
                             inputText={inputText}
                             onInputChange={setInputText}
                             onSubmit={handleSubmit}
-                            inputDisabled={intentMutation.isPending || chatMutation.isPending || hwConfirmMutation.isPending}
+                            inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                             hasSplit={true}
                           />
 
@@ -661,6 +626,7 @@ export default function Wizard() {
                               inputMode={inputMode}
                               onInputModeChange={handleInputModeChange}
                               onToggleGridRowIncluded={handleToggleGridRowIncluded}
+                              onDiscountChange={handleDiscountChange}
                               csvRows={csvRows}
                               csvFileName={csvFileName}
                               onCsvParsed={handleCsvParsed}

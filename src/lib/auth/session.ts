@@ -1,7 +1,15 @@
+const AUTH_TOKEN_KEY = "promo_auth_token";
+
 export function getAuthToken(): string | undefined {
-  // Core API currently uses cookie-based auth; we don't persist a bearer token.
-  // This helper exists so callers can attach an Authorization header if a token
-  // is ever added in the future.
-  return undefined;
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  return token ?? undefined;
+}
+
+export function setAuthToken(token: string): void {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+
+export function clearAuthToken(): void {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
 }
 

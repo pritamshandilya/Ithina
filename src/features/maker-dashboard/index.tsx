@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { useCampaignList } from "@/hooks/use-campaigns";
+import { formatCampaignDateTime } from "@/lib/format-datetime";
 import { cn } from "@/lib/utils";
 
 /* ─── Static data matching the HTML prototype ─── */
@@ -130,9 +131,13 @@ const HISTORY_COLUMNS: IthColumnDef<CampaignRow>[] = [
   {
     key: "lastUpdated",
     label: "Last Updated",
-    field: "lastUpdated",
     align: "right",
     sortable: true,
+    render: (row) => (
+      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
+        {formatCampaignDateTime(row.lastUpdated)}
+      </span>
+    ),
   },
 ];
 

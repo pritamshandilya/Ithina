@@ -89,6 +89,24 @@ const wizardSlice = createSlice({
       const currentlyIncluded = row.included !== false;
       row.included = !currentlyIncluded;
     },
+    updateGridRowDiscount(state, action: PayloadAction<{ sku: string; discount: number }>) {
+      const { sku, discount } = action.payload;
+      const row = state.gridData.find((r) => r.sku === sku);
+      if (!row) return;
+
+      const clamped = Math.max(0, Math.min(100, discount));
+      row.discount = clamped;
+      row.proposed = +(row.current * (1 - clamped / 100)).toFixed(2);
+
+      const baseCost = row.baseCost ?? 0;
+      const marginPct = row.proposed > 0 && baseCost > 0
+        ? ((row.proposed - baseCost) / row.proposed) * 100
+        : 0;
+      row.margin = `${Math.round(marginPct)}%`;
+
+      const marginFloor = parseFloat(state.constraints.marginFloor) || 15;
+      row.safe = marginPct >= marginFloor;
+    },
     setConstraints(state, action: PayloadAction<WizardConstraints>) {
       state.constraints = action.payload;
     },
@@ -133,6 +151,7 @@ export const {
   appendGridRow,
   removeGridRow,
   toggleGridRowIncluded,
+  updateGridRowDiscount,
   setConstraints,
   setInputMode,
   setCsvRows,

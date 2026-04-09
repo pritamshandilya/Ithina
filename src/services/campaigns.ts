@@ -34,8 +34,6 @@ import type {
   ApiCampaignDraftResponse,
   ApiCampaignEventResponse,
   ApiCampaignGenerateRequest,
-  ApiCampaignInitRequest,
-  ApiCampaignInitResponse,
   ApiCampaignResponse,
 } from "@/types/api/campaigns";
 import type {
@@ -190,20 +188,6 @@ export async function rejectCampaign(id: string): Promise<CampaignListItem> {
 }
 
 /**
- * Initialize a campaign session: creates a DB row + LangGraph thread.
- * Must be called before chatCampaign.
- */
-export async function initCampaign(
-  payload: ApiCampaignInitRequest = {},
-): Promise<ApiCampaignInitResponse> {
-  const { data } = await promoApiClient.post<ApiCampaignInitResponse>(
-    `${API_PREFIX}/campaigns/init`,
-    payload,
-  );
-  return data;
-}
-
-/**
  * Send a conversational message to the LangGraph agent for a campaign.
  * Returns the AI reply text and the full updated SKU grid.
  */
@@ -331,7 +315,7 @@ export async function getAllWorkflowCampaigns(): Promise<CampaignListItem[]> {
 }
 
 export interface WizardGenerateOptions {
-  /** LangGraph thread id (init) or draft `session_id`; falls back to a new UUID. */
+  /** Draft LangGraph `session_id` from /campaigns/draft; falls back to a new UUID. */
   sessionId: string;
   schedule: {
     startDate: string;

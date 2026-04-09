@@ -8,9 +8,10 @@
  * for every request when an active store has been selected via StoreContext.
  */
 import axios from "axios";
+import { getAuthToken } from "@/lib/auth/session";
 import { StoreContext } from "@/lib/store-context";
 
-const BASE_URL = import.meta.env.VITE_PROMO_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_PROMO_API_URL ?? "https://backend.promo.creativebits.tech";
 
 export const promoApiClient = axios.create({
   baseURL: BASE_URL,
@@ -21,6 +22,11 @@ export const promoApiClient = axios.create({
 });
 
 promoApiClient.interceptors.request.use((config) => {
+  const token = getAuthToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+
   const requestUrl = config.url ?? "";
   const isAuthRequest =
     requestUrl.startsWith("/api/v1/auth") ||

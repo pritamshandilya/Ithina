@@ -1,4 +1,5 @@
 import { promoApiClient } from "@/lib/promo-api-client";
+import { clearAuthToken, setAuthToken } from "@/lib/auth/session";
 import { StoreContext } from "@/lib/store-context";
 
 export interface OrganizationSummary {
@@ -56,6 +57,7 @@ function saveUser(user: PromoUser, expiresInSeconds?: number) {
 function clearAuthStorage() {
   localStorage.removeItem(USER_KEY);
   localStorage.removeItem(EXPIRY_KEY);
+  clearAuthToken();
 }
 
 function readUser(): PromoUser | null {
@@ -121,6 +123,7 @@ export class PromoAuthService {
     username: string,
     password: string,
   ): Promise<PromoUser> {
+    clearAuthToken();
     const form = new URLSearchParams();
     form.set("username", username);
     form.set("password", password);
@@ -135,6 +138,7 @@ export class PromoAuthService {
       },
     );
 
+    setAuthToken(loginData.access_token);
     const { data: me } = await promoApiClient.get<AuthCurrentUserResponse>(
       `${API_PREFIX}/auth/me`,
     );
@@ -147,11 +151,13 @@ export class PromoAuthService {
   }
 
   static async login(email: string, password: string): Promise<PromoUser> {
+    clearAuthToken();
     const { data: loginData } = await promoApiClient.post<AuthLoginResponse>(
       `${API_PREFIX}/auth/login`,
       { email, password },
     );
 
+    setAuthToken(loginData.access_token);
     const { data: me } = await promoApiClient.get<AuthCurrentUserResponse>(
       `${API_PREFIX}/auth/me`,
     );

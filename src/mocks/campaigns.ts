@@ -124,6 +124,10 @@ export const MOCK_CAMPAIGN_STATUS_STYLES: Record<CampaignListStatus, CampaignSta
     table: "text-slate-400 border-slate-600 bg-white/5",
     calendar: "bg-slate-600/40 text-slate-400",
   },
+  Pending: {
+    table: "text-sky-400 border-sky-400/30 bg-sky-400/10",
+    calendar: "bg-sky-400/15 text-sky-400",
+  },
   Rejected: {
     table: "text-rose-400 border-rose-400/40 bg-rose-400/10",
     calendar: "bg-rose-400/15 text-rose-400",

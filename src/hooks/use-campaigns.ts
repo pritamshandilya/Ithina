@@ -18,7 +18,6 @@ import {
   getCampaignTableColumns,
   getCampaignTimeline,
   getMonthNames,
-  initCampaign,
   postCampaignChat,
   rejectCampaign,
   updateCampaign,
@@ -29,7 +28,6 @@ import type {
   ApiCampaignChatRequest,
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
-  ApiCampaignInitRequest,
 } from "@/types/api/campaigns";
 
 export const campaignKeys = {
@@ -196,14 +194,6 @@ export function useGenerateCampaign() {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
-  });
-}
-
-/** Initialize a campaign session (DB row + LangGraph thread) */
-export function useInitCampaign() {
-  return useMutation({
-    mutationFn: (payload?: ApiCampaignInitRequest) =>
-      initCampaign(payload),
   });
 }
 

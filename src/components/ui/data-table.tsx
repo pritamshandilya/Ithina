@@ -5,6 +5,12 @@ import "tabulator-tables/dist/css/tabulator.css";
 
 import { cn } from "@/lib/utils";
 
+/** Tabulator's bundled types omit some runtime instance APIs */
+type TabulatorGrid = TabulatorFull & {
+  redraw: (full?: boolean) => void;
+  on: (event: string, callback: (...args: unknown[]) => void) => void;
+};
+
 export interface DataTableColumn<T = object> {
   title: string;
   field: keyof T | string;
@@ -64,7 +70,9 @@ export function DataTable<T extends object>({
 }: DataTableProps<T>) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<TabulatorFull | null>(null);
+  const tableRef = useRef<TabulatorGrid | null>(null);
+  /** Bumps whenever a new Tabulator instance is created; avoids setData on a destroyed grid. */
+  const tableGenerationRef = useRef(0);
   const currentPageRef = useRef(1);
   const currentPageSizeRef = useRef(pageSize);
 
@@ -146,8 +154,12 @@ export function DataTable<T extends object>({
       options.rowFormatter = effectiveRowFormatter;
     }
 
-    const table = new TabulatorFull(containerRef.current, options as never);
+    const table = new TabulatorFull(
+      containerRef.current,
+      options as never,
+    ) as TabulatorGrid;
     tableRef.current = table;
+    tableGenerationRef.current += 1;
 
     const scheduleRedraw = () => {
       requestAnimationFrame(() => {
@@ -212,25 +224,43 @@ export function DataTable<T extends object>({
   ]);
 
   useEffect(() => {
-    const table = tableRef.current;
-    const container = containerRef.current;
-    if (!table || !container?.isConnected) return;
-
+    const rows = data.map((row) => ({ ...row }));
     let cancelled = false;
+    const generationAtSchedule = tableGenerationRef.current;
 
-    void Promise.resolve(table.setData(data.map((row) => ({ ...row })))).then(() => {
+    const applyData = () => {
       if (cancelled) return;
-      requestAnimationFrame(() => {
-        if (cancelled) return;
-        if (tableRef.current !== table) return;
-        if (!containerRef.current?.isConnected) return;
-        try {
-          table.redraw(true);
-        } catch {
-          /* Same as scheduleRedraw: avoid offsetWidth / layout reads on detached nodes */
-        }
-      });
-    });
+      if (tableGenerationRef.current !== generationAtSchedule) return;
+
+      const table = tableRef.current;
+      const container = containerRef.current;
+      if (!table || !container?.isConnected) return;
+
+      try {
+        void Promise.resolve(table.setData(rows)).then(() => {
+          if (cancelled) return;
+          if (tableGenerationRef.current !== generationAtSchedule) return;
+          const t = tableRef.current;
+          if (t !== table) return;
+          if (!containerRef.current?.isConnected) return;
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            if (tableGenerationRef.current !== generationAtSchedule) return;
+            const t2 = tableRef.current;
+            if (t2 !== table) return;
+            try {
+              t2.redraw(true);
+            } catch {
+              /* Tabulator can throw if the grid DOM was torn down mid-redraw */
+            }
+          });
+        });
+      } catch {
+        /* setData can throw if internal layout refs are null after destroy / race */
+      }
+    };
+
+    queueMicrotask(applyData);
 
     return () => {
       cancelled = true;

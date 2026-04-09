@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, LogOut, Moon, Sun, User } from "lucide-react";
+import { Building2, ChevronDown, LogOut, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -6,8 +6,6 @@ import type { ReactNode } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { toggleTheme } from "@/store/slices/ui-slice";
 
 // ─── Small helper — avoids repeating button layout ──────────────────────────
 function MenuItem({
@@ -40,8 +38,6 @@ function MenuItem({
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SidenavFooter() {
   const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const isDark = useAppSelector((s) => s.ui.isDarkMode);
   const user = PromoAuthService.getCurrentUser();
 
   const [open, setOpen] = useState(false);
@@ -133,17 +129,6 @@ export default function SidenavFooter() {
                 }}
               />
             )}
-            <MenuItem
-              icon={
-                isDark ? (
-                  <Sun className="size-4 text-slate-500" />
-                ) : (
-                  <Moon className="size-4 text-slate-500" />
-                )
-              }
-              label={isDark ? "Light Mode" : "Dark Mode"}
-              onClick={() => dispatch(toggleTheme())}
-            />
           </div>
 
           <div className="border-t border-ithina-border/60 p-1">

@@ -41,10 +41,13 @@ import { Route as CheckerCheckerApprovalsRouteImport } from './routes/_checker/c
 import { Route as AdminAdminUsersRouteImport } from './routes/_admin/admin/users'
 import { Route as AdminAdminStoresRouteImport } from './routes/_admin/admin/stores'
 import { Route as AdminAdminSettingsRouteImport } from './routes/_admin/admin/settings'
+import { Route as AdminAdminOrganizationSettingsRouteImport } from './routes/_admin/admin/organization-settings'
 import { Route as AdminAdminFleetRouteImport } from './routes/_admin/admin/fleet'
 import { Route as AdminAdminDashboardRouteImport } from './routes/_admin/admin/dashboard'
 import { Route as AdminAdminCampaignsRouteImport } from './routes/_admin/admin/campaigns'
 import { Route as AdminAdminApprovalsRouteImport } from './routes/_admin/admin/approvals'
+import { Route as AdminAdminStoresIndexRouteImport } from './routes/_admin/admin/stores/index'
+import { Route as AdminAdminStoresNewRouteImport } from './routes/_admin/admin/stores/new'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -204,6 +207,12 @@ const AdminAdminSettingsRoute = AdminAdminSettingsRouteImport.update({
   path: '/admin/settings',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminOrganizationSettingsRoute =
+  AdminAdminOrganizationSettingsRouteImport.update({
+    id: '/admin/organization-settings',
+    path: '/admin/organization-settings',
+    getParentRoute: () => AdminRoute,
+  } as any)
 const AdminAdminFleetRoute = AdminAdminFleetRouteImport.update({
   id: '/admin/fleet',
   path: '/admin/fleet',
@@ -224,6 +233,16 @@ const AdminAdminApprovalsRoute = AdminAdminApprovalsRouteImport.update({
   path: '/admin/approvals',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAdminStoresIndexRoute = AdminAdminStoresIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminAdminStoresRoute,
+} as any)
+const AdminAdminStoresNewRoute = AdminAdminStoresNewRouteImport.update({
+  id: '/new',
+  path: '/new',
+  getParentRoute: () => AdminAdminStoresRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -241,8 +260,9 @@ export interface FileRoutesByFullPath {
   '/admin/campaigns': typeof AdminAdminCampaignsRoute
   '/admin/dashboard': typeof AdminAdminDashboardRoute
   '/admin/fleet': typeof AdminAdminFleetRoute
+  '/admin/organization-settings': typeof AdminAdminOrganizationSettingsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
-  '/admin/stores': typeof AdminAdminStoresRoute
+  '/admin/stores': typeof AdminAdminStoresRouteWithChildren
   '/admin/users': typeof AdminAdminUsersRoute
   '/checker/approvals': typeof CheckerCheckerApprovalsRoute
   '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
@@ -258,6 +278,8 @@ export interface FileRoutesByFullPath {
   '/maker/studio': typeof MakerMakerStudioRoute
   '/maker/templates': typeof MakerMakerTemplatesRoute
   '/maker/wizard': typeof MakerMakerWizardRoute
+  '/admin/stores/new': typeof AdminAdminStoresNewRoute
+  '/admin/stores/': typeof AdminAdminStoresIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -275,8 +297,8 @@ export interface FileRoutesByTo {
   '/admin/campaigns': typeof AdminAdminCampaignsRoute
   '/admin/dashboard': typeof AdminAdminDashboardRoute
   '/admin/fleet': typeof AdminAdminFleetRoute
+  '/admin/organization-settings': typeof AdminAdminOrganizationSettingsRoute
   '/admin/settings': typeof AdminAdminSettingsRoute
-  '/admin/stores': typeof AdminAdminStoresRoute
   '/admin/users': typeof AdminAdminUsersRoute
   '/checker/approvals': typeof CheckerCheckerApprovalsRoute
   '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
@@ -292,6 +314,8 @@ export interface FileRoutesByTo {
   '/maker/studio': typeof MakerMakerStudioRoute
   '/maker/templates': typeof MakerMakerTemplatesRoute
   '/maker/wizard': typeof MakerMakerWizardRoute
+  '/admin/stores/new': typeof AdminAdminStoresNewRoute
+  '/admin/stores': typeof AdminAdminStoresIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -314,8 +338,9 @@ export interface FileRoutesById {
   '/_admin/admin/campaigns': typeof AdminAdminCampaignsRoute
   '/_admin/admin/dashboard': typeof AdminAdminDashboardRoute
   '/_admin/admin/fleet': typeof AdminAdminFleetRoute
+  '/_admin/admin/organization-settings': typeof AdminAdminOrganizationSettingsRoute
   '/_admin/admin/settings': typeof AdminAdminSettingsRoute
-  '/_admin/admin/stores': typeof AdminAdminStoresRoute
+  '/_admin/admin/stores': typeof AdminAdminStoresRouteWithChildren
   '/_admin/admin/users': typeof AdminAdminUsersRoute
   '/_checker/checker/approvals': typeof CheckerCheckerApprovalsRoute
   '/_checker/checker/campaigns': typeof CheckerCheckerCampaignsRoute
@@ -331,6 +356,8 @@ export interface FileRoutesById {
   '/_maker/maker/studio': typeof MakerMakerStudioRoute
   '/_maker/maker/templates': typeof MakerMakerTemplatesRoute
   '/_maker/maker/wizard': typeof MakerMakerWizardRoute
+  '/_admin/admin/stores/new': typeof AdminAdminStoresNewRoute
+  '/_admin/admin/stores/': typeof AdminAdminStoresIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -350,6 +377,7 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/dashboard'
     | '/admin/fleet'
+    | '/admin/organization-settings'
     | '/admin/settings'
     | '/admin/stores'
     | '/admin/users'
@@ -367,6 +395,8 @@ export interface FileRouteTypes {
     | '/maker/studio'
     | '/maker/templates'
     | '/maker/wizard'
+    | '/admin/stores/new'
+    | '/admin/stores/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -384,8 +414,8 @@ export interface FileRouteTypes {
     | '/admin/campaigns'
     | '/admin/dashboard'
     | '/admin/fleet'
+    | '/admin/organization-settings'
     | '/admin/settings'
-    | '/admin/stores'
     | '/admin/users'
     | '/checker/approvals'
     | '/checker/campaigns'
@@ -401,6 +431,8 @@ export interface FileRouteTypes {
     | '/maker/studio'
     | '/maker/templates'
     | '/maker/wizard'
+    | '/admin/stores/new'
+    | '/admin/stores'
   id:
     | '__root__'
     | '/'
@@ -422,6 +454,7 @@ export interface FileRouteTypes {
     | '/_admin/admin/campaigns'
     | '/_admin/admin/dashboard'
     | '/_admin/admin/fleet'
+    | '/_admin/admin/organization-settings'
     | '/_admin/admin/settings'
     | '/_admin/admin/stores'
     | '/_admin/admin/users'
@@ -439,6 +472,8 @@ export interface FileRouteTypes {
     | '/_maker/maker/studio'
     | '/_maker/maker/templates'
     | '/_maker/maker/wizard'
+    | '/_admin/admin/stores/new'
+    | '/_admin/admin/stores/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -676,6 +711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/organization-settings': {
+      id: '/_admin/admin/organization-settings'
+      path: '/admin/organization-settings'
+      fullPath: '/admin/organization-settings'
+      preLoaderRoute: typeof AdminAdminOrganizationSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/_admin/admin/fleet': {
       id: '/_admin/admin/fleet'
       path: '/admin/fleet'
@@ -704,16 +746,44 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminApprovalsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/_admin/admin/stores/': {
+      id: '/_admin/admin/stores/'
+      path: '/'
+      fullPath: '/admin/stores/'
+      preLoaderRoute: typeof AdminAdminStoresIndexRouteImport
+      parentRoute: typeof AdminAdminStoresRoute
+    }
+    '/_admin/admin/stores/new': {
+      id: '/_admin/admin/stores/new'
+      path: '/new'
+      fullPath: '/admin/stores/new'
+      preLoaderRoute: typeof AdminAdminStoresNewRouteImport
+      parentRoute: typeof AdminAdminStoresRoute
+    }
   }
 }
+
+interface AdminAdminStoresRouteChildren {
+  AdminAdminStoresNewRoute: typeof AdminAdminStoresNewRoute
+  AdminAdminStoresIndexRoute: typeof AdminAdminStoresIndexRoute
+}
+
+const AdminAdminStoresRouteChildren: AdminAdminStoresRouteChildren = {
+  AdminAdminStoresNewRoute: AdminAdminStoresNewRoute,
+  AdminAdminStoresIndexRoute: AdminAdminStoresIndexRoute,
+}
+
+const AdminAdminStoresRouteWithChildren =
+  AdminAdminStoresRoute._addFileChildren(AdminAdminStoresRouteChildren)
 
 interface AdminRouteChildren {
   AdminAdminApprovalsRoute: typeof AdminAdminApprovalsRoute
   AdminAdminCampaignsRoute: typeof AdminAdminCampaignsRoute
   AdminAdminDashboardRoute: typeof AdminAdminDashboardRoute
   AdminAdminFleetRoute: typeof AdminAdminFleetRoute
+  AdminAdminOrganizationSettingsRoute: typeof AdminAdminOrganizationSettingsRoute
   AdminAdminSettingsRoute: typeof AdminAdminSettingsRoute
-  AdminAdminStoresRoute: typeof AdminAdminStoresRoute
+  AdminAdminStoresRoute: typeof AdminAdminStoresRouteWithChildren
   AdminAdminUsersRoute: typeof AdminAdminUsersRoute
 }
 
@@ -722,8 +792,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminAdminCampaignsRoute: AdminAdminCampaignsRoute,
   AdminAdminDashboardRoute: AdminAdminDashboardRoute,
   AdminAdminFleetRoute: AdminAdminFleetRoute,
+  AdminAdminOrganizationSettingsRoute: AdminAdminOrganizationSettingsRoute,
   AdminAdminSettingsRoute: AdminAdminSettingsRoute,
-  AdminAdminStoresRoute: AdminAdminStoresRoute,
+  AdminAdminStoresRoute: AdminAdminStoresRouteWithChildren,
   AdminAdminUsersRoute: AdminAdminUsersRoute,
 }
 

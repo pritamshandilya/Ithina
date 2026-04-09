@@ -14,13 +14,13 @@ import { resetStudio } from "@/store/slices/studio-slice";
 import {
   pushMessage as pushWizardMessage,
   removeAllCsvViolations,
+  mergeGridData,
   removeCsvRow,
   resetWizard,
   setCampaignNamed,
   setCsvConfirmed,
   setCsvFileName,
   setCsvRows,
-  setGridData,
   setHasSplit,
   setInputMode as setWizardInputMode,
   setShowGrid,
@@ -274,7 +274,9 @@ export default function Wizard() {
       pipelineSessionIdRef.current = sessionId;
       setIsTyping(false);
       pushMessage(aiReply);
-      dispatch(setGridData(skus));
+      if (skus.length > 0) {
+        dispatch(mergeGridData(skus));
+      }
     } catch {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");

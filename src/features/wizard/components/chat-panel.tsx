@@ -31,6 +31,14 @@ function ChatPanel({
     onSubmit();
   };
 
+  const handleIntentKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key !== "Enter" || e.shiftKey) return;
+    e.preventDefault();
+    if (isTyping || inputDisabled) return;
+    if (!inputText.trim()) return;
+    onSubmit();
+  };
+
   return (
     <div
       className={cn(
@@ -53,21 +61,22 @@ function ChatPanel({
 
       <div className={cn("shrink-0 bg-ithina-bg/40", hasSplit ? "mt-auto border-t border-ithina-border/50 p-5" : "p-5")}>
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
-          <div className="group relative flex items-center rounded-xl border border-ithina-border/60 bg-ithina-bg shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
-            <input
+          <div className="group relative flex min-w-0 items-end rounded-xl border border-ithina-border/60 bg-ithina-bg shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
+            <textarea
               value={inputText}
               onChange={(e) => onInputChange(e.target.value)}
-              type="text"
+              onKeyDown={handleIntentKeyDown}
               placeholder="Describe your promotion intent..."
               aria-label="Promotion intent input"
-              className="w-full bg-transparent py-4 pl-5 pr-14 text-sm text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+              rows={2}
+              className="chat-panel-intent-textarea min-w-0 w-full bg-transparent py-3 pl-5 pr-14 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
               disabled={inputDisabled}
               autoComplete="off"
             />
             <button
               type="submit"
               aria-label="Send message"
-              className="absolute right-3 flex size-8 items-center justify-center rounded-lg bg-white/[0.04] text-slate-400 transition-all duration-200 hover:bg-ithina-purple hover:text-white hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] disabled:opacity-50"
+              className="absolute bottom-3 right-3 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-slate-400 transition-all duration-200 hover:bg-ithina-purple hover:text-white hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] disabled:opacity-50"
               disabled={isTyping || inputDisabled}
             >
               <ArrowRight className="size-4" />

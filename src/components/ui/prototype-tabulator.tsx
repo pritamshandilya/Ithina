@@ -18,6 +18,8 @@ export type PrototypeTabulatorColumn<T extends object> = {
   width?: number | string;
   minWidth?: number;
   maxWidth?: number;
+  /** Tabulator: column receives extra width when using layout fitColumns */
+  widthGrow?: number;
   cssClass?: string;
   headerSort?: boolean;
   headerFilter?: boolean | "input" | "number" | "list" | "boolean";
@@ -87,6 +89,7 @@ function toTabulatorColumnDefs<T extends object>(cols: PrototypeTabulatorColumn<
     width: col.width,
     minWidth: col.minWidth,
     maxWidth: col.maxWidth,
+    widthGrow: col.widthGrow,
     cssClass: col.cssClass,
     sorter: col.sorter,
     frozen: col.frozen,

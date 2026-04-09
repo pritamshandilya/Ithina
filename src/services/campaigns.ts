@@ -27,13 +27,13 @@ import {
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
 import type {
+  ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignChatResponse,
   ApiCampaignDraftRequest,
   ApiCampaignDraftResponse,
+  ApiCampaignEventResponse,
   ApiCampaignGenerateRequest,
-  ApiCampaignInitRequest,
-  ApiCampaignInitResponse,
   ApiCampaignResponse,
 } from "@/types/api/campaigns";
 import type {
@@ -47,6 +47,33 @@ import type {
 } from "@/types/campaigns";
 
 const API_PREFIX = "/api/v1";
+
+function newPipelineSessionId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/** Maps wizard schedule fields to API generate payload (nullable when unscheduled). */
+function scheduleFieldsFromWizardStep(schedule: {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+}): Pick<ApiCampaignGenerateRequest, "scheduled_start" | "scheduled_end" | "scheduled_time"> {
+  if (!schedule.startDate?.trim()) {
+    return { scheduled_start: null, scheduled_end: null, scheduled_time: null };
+  }
+  const scheduled_time = schedule.startTime ? schedule.startTime.slice(0, 10) : null;
+  const start = new Date(`${schedule.startDate}T${schedule.startTime || "00:00"}:00`);
+  const scheduled_start = Number.isNaN(start.getTime()) ? null : start.toISOString();
+  let scheduled_end: string | null = null;
+  if (schedule.endDate?.trim()) {
+    const end = new Date(`${schedule.endDate}T${schedule.startTime || "00:00"}:00`);
+    if (!Number.isNaN(end.getTime())) scheduled_end = end.toISOString();
+  }
+  return { scheduled_start, scheduled_end, scheduled_time };
+}
 
 // ─── Status mapping ──────────────────────────────────────────────────────────
 
@@ -108,26 +135,32 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
   // a dedicated pending_approval transition endpoint exists.
   const isPending = api.status === "pending_approval" || api.status === "generating";
 
+  const displayInitiator = api.initiator_name?.trim() || api.initiator_id;
+  const displayApprover = api.approver_name?.trim() || api.approver_id || undefined;
+
   return {
     id: api.id,
     name: api.name,
     status: uiStatus,
+    apiStatus: api.status,
     skus: api.skus.length,
     hardware: api.hardware_targets ?? [],
     // All Campaigns date should reflect creation time.
     date: new Date(api.created_at).toLocaleDateString(),
-    initiator: api.initiator_id,
+    initiator: displayInitiator,
     pipeline: derivePipeline(uiStatus, { isPending, isApproved, isRejected }),
     paused: uiStatus === "Scheduled" ? false : undefined,
     ownerId: api.initiator_id,
-    ownerName: api.initiator_id,
+    ownerName: displayInitiator,
     submittedForApproval: isPending || isApproved || isRejected,
     approvalStatus: isApproved ? "approved" : isRejected ? "rejected" : "pending",
     reviewedById: api.approver_id ?? undefined,
-    reviewedByName: api.approver_id ?? undefined,
+    reviewedByName: displayApprover,
     reviewedAt: api.updated_at,
     publishedAt: api.published_at ?? undefined,
     scheduledAt: api.scheduled_start ?? undefined,
+    scheduledEndAt: api.scheduled_end ?? undefined,
+    scheduledTime: api.scheduled_time ?? undefined,
   };
 }
 
@@ -147,30 +180,11 @@ export async function approveCampaign(id: string): Promise<CampaignListItem> {
   return adaptApiCampaign(data);
 }
 
-/**
- * Reject is not yet implemented in the backend. Until the endpoint is
- * available we optimistically update the local TanStack Query cache via
- * the hook layer (see use-campaigns.ts). This stub throws so callers
- * know it is not wired yet.
- *
- * TODO: replace once DELETE/PATCH reject endpoint is added to the backend.
- */
-export async function rejectCampaign(_id: string): Promise<CampaignListItem> {
-  throw new Error("reject_not_implemented");
-}
-
-/**
- * Initialize a campaign session: creates a DB row + LangGraph thread.
- * Must be called before chatCampaign.
- */
-export async function initCampaign(
-  payload: ApiCampaignInitRequest = {},
-): Promise<ApiCampaignInitResponse> {
-  const { data } = await promoApiClient.post<ApiCampaignInitResponse>(
-    `${API_PREFIX}/campaigns/init`,
-    payload,
+export async function rejectCampaign(id: string): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/${id}/reject`,
   );
-  return data;
+  return adaptApiCampaign(data);
 }
 
 /**
@@ -227,7 +241,24 @@ export async function createCampaign(form: CampaignCreateForm): Promise<Campaign
         .filter(Boolean)
     : [];
 
-  return generateCampaign({ name: form.name, hardware_targets: hardware });
+  let scheduled_start: string | null = null;
+  let scheduled_end: string | null = null;
+  let scheduled_time: string | null = null;
+  if (form.scheduled_date?.trim()) {
+    const start = new Date(`${form.scheduled_date}T00:00:00`);
+    if (!Number.isNaN(start.getTime())) {
+      scheduled_start = start.toISOString();
+    }
+  }
+
+  return generateCampaign({
+    session_id: newPipelineSessionId(),
+    name: form.name,
+    hardware_targets: hardware,
+    scheduled_start,
+    scheduled_end,
+    scheduled_time,
+  });
 }
 
 /**
@@ -243,13 +274,35 @@ export async function updateCampaign(
   return createCampaign(form);
 }
 
-/**
- * Delete campaign – no backend endpoint yet.
- *
- * TODO: replace with DELETE /campaigns/{id} once available.
- */
-export async function deleteCampaign(_id: string): Promise<void> {
-  throw new Error("delete_not_implemented");
+export async function deleteCampaign(id: string): Promise<void> {
+  await promoApiClient.delete(`${API_PREFIX}/campaigns/${id}`);
+}
+
+export async function getCampaign(id: string): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.get<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/${id}`,
+  );
+  return adaptApiCampaign(data);
+}
+
+export async function getCampaignTimeline(
+  campaignId: string,
+): Promise<ApiCampaignEventResponse[]> {
+  const { data } = await promoApiClient.get<ApiCampaignEventResponse[]>(
+    `${API_PREFIX}/campaigns/${campaignId}/events`,
+  );
+  return data;
+}
+
+export async function postCampaignChat(
+  campaignId: string,
+  payload: ApiCampaignChatMessageRequest,
+): Promise<ApiCampaignEventResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignEventResponse>(
+    `${API_PREFIX}/campaigns/${campaignId}/chat`,
+    payload,
+  );
+  return data;
 }
 
 /**
@@ -261,20 +314,31 @@ export async function getAllWorkflowCampaigns(): Promise<CampaignListItem[]> {
   return getCampaignList();
 }
 
+export interface WizardGenerateOptions {
+  /** Draft LangGraph `session_id` from /campaigns/draft; falls back to a new UUID. */
+  sessionId: string;
+  schedule: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+  };
+}
+
 /**
- * Wizard convenience – called when the wizard completes the schedule step.
+ * Wizard convenience – called on final submit after the schedule step.
  */
 export async function createCampaignFromWizard(
   name: string,
-  _initiator: string = "Wizard",
-  _scheduledDate: string = "",
   hardwareTargets: string[],
+  options: WizardGenerateOptions,
 ): Promise<CampaignListItem> {
-  // TODO (backend): re-enable `scheduled_start` in generate payload once
-  // CampaignGenerateRequest accepts it in promo_api_v1.
+  const { sessionId, schedule } = options;
+  const schedulePayload = scheduleFieldsFromWizardStep(schedule);
   return generateCampaign({
+    session_id: sessionId,
     name,
     hardware_targets: hardwareTargets,
+    ...schedulePayload,
   });
 }
 

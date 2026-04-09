@@ -36,6 +36,12 @@ export interface StagedSku {
   proposed: number;
   safe: boolean;
   margin?: string;
+  /** Base cost used for margin safety re-calculation when discount changes. */
+  baseCost?: number;
+  /** Discount percentage (0–100). Derived from current/proposed or set manually by user. */
+  discount: number;
+  /** When false, SKU stays in the grid but is excluded from counts and submission. Default: included. */
+  included?: boolean;
 }
 
 export type ChatRole = "user" | "ai";

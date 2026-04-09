@@ -1,6 +1,7 @@
 import { memo } from "react";
 
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
+import { formatCampaignDateTime } from "@/lib/format-datetime";
 import type { CampaignRow, CampaignStatus } from "@/types/dashboard";
 
 const STATUS_VARIANT: Record<CampaignStatus, "emerald" | "amber" | "slate"> = {
@@ -49,9 +50,13 @@ const COLUMNS: IthColumnDef<CampaignRow>[] = [
   {
     key: "lastUpdated",
     label: "Last Updated",
-    field: "lastUpdated",
     align: "right",
     sortable: true,
+    render: (row) => (
+      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
+        {formatCampaignDateTime(row.lastUpdated)}
+      </span>
+    ),
   },
 ];
 

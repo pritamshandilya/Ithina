@@ -6,6 +6,7 @@ import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/compone
 import { useCampaignList } from "@/hooks/use-campaigns";
 import { useInboxItems } from "@/hooks/use-approval";
 import { useOrganizationOverviewStats } from "@/hooks/use-organization-overview";
+import { formatCampaignDateTime } from "@/lib/format-datetime";
 import { cn } from "@/lib/utils";
 
 interface AdminReviewRow {
@@ -70,7 +71,11 @@ const HISTORY_COLUMNS: IthColumnDef<AdminReviewRow>[] = [
     label: "Reviewed At",
     align: "right",
     sortable: true,
-    field: "reviewedAt",
+    render: (row) => (
+      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
+        {formatCampaignDateTime(row.reviewedAt)}
+      </span>
+    ),
   },
 ];
 

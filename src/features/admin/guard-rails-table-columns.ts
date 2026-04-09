@@ -103,12 +103,12 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       field: "description",
       headerSort: false,
       hozAlign: "left",
-      width: 400,
-      minWidth: 280,
+      minWidth: 200,
+      widthGrow: 1,
       cssClass: "gr-col-desc",
       formatter: (cell) => {
         const row = cell.getData() as GuardRailRule;
-        return `<p class="max-w-xl py-0.5 text-sm leading-relaxed text-slate-200">${row.description}</p>`;
+        return `<p class="min-w-0 py-0.5 text-sm leading-relaxed text-slate-200">${row.description}</p>`;
       },
     },
     {

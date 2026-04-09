@@ -4,7 +4,7 @@ import { getAuthToken } from "./auth/session";
 
 const BASE_URL =
   (import.meta as ImportMeta & { env?: { VITE_CORE_API_URL?: string } }).env
-    ?.VITE_CORE_API_URL ?? "http://localhost:8000/api/v1";
+    ?.VITE_CORE_API_URL ?? "https://backend.promo.creativebits.tech";
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,

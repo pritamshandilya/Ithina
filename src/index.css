@@ -335,6 +335,20 @@
   min-width: 100% !important;
 }
 
+/* Wizard SKU staging: default Tabulator uses width:max-content which breaks fitColumns
+   in flex layouts and can collapse or “lose” the table when the panel resizes. */
+.data-table-wrapper.wizard-staging-table .tabulator,
+.data-table-wrapper.wizard-staging-table .tabulator-tableholder,
+.data-table-wrapper.wizard-staging-table .tabulator-tableholder .tabulator-table {
+  width: 100% !important;
+  min-width: 100% !important;
+  max-width: 100% !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-excluded {
+  opacity: 0.5;
+}
+
 .data-table-wrapper .tabulator-header {
   background-color: var(--tabulator-header-bg) !important;
   border-bottom: 2px solid var(--tabulator-border);
@@ -810,18 +824,15 @@
 
 .data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder {
   scrollbar-gutter: stable;
-  width: 100% !important;
-  min-width: 100% !important;
 }
 
-.data-table-wrapper.guard-rails-tabulator-prototype .tabulator {
+/* Match wizard/dashboard: global rules use width:max-content; force full-width layout so fitColumns can fill the panel. */
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator,
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder,
+.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-tableholder .tabulator-table {
   width: 100% !important;
   min-width: 100% !important;
-}
-
-.data-table-wrapper.guard-rails-tabulator-prototype .tabulator-table {
-  width: 100% !important;
-  min-width: 100% !important;
+  max-width: 100% !important;
 }
 
 .data-table-wrapper.guard-rails-tabulator-prototype
@@ -830,5 +841,20 @@
   .tabulator-col-content {
   text-align: right !important;
   padding-right: 1.25rem !important;
+}
+
+/* Promo Assistant — intent field: visible wrapping / growth for long prompts */
+.chat-panel-intent-textarea {
+  min-height: 2.75rem;
+  max-height: 7.5rem;
+  resize: none;
+  overflow-y: auto;
+  overflow-wrap: break-word;
+  line-height: 1.45;
+}
+@supports (field-sizing: content) {
+  .chat-panel-intent-textarea {
+    field-sizing: content;
+  }
 }
 

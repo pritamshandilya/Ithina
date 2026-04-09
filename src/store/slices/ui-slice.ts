@@ -11,13 +11,7 @@ const initialState: UiState = {
 const uiSlice = createSlice({
   name: "ui",
   initialState,
-  reducers: {
-    toggleTheme(state) {
-      state.isDarkMode = !state.isDarkMode;
-    },
-  },
+  reducers: {},
 });
-
-export const { toggleTheme } = uiSlice.actions;
 
 export default uiSlice.reducer;

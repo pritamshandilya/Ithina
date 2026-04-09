@@ -5,6 +5,12 @@ import "tabulator-tables/dist/css/tabulator.css";
 
 import { cn } from "@/lib/utils";
 
+/** Tabulator's bundled types omit some runtime instance APIs */
+type TabulatorGrid = TabulatorFull & {
+  redraw: (full?: boolean) => void;
+  on: (event: string, callback: (...args: unknown[]) => void) => void;
+};
+
 export interface DataTableColumn<T = object> {
   title: string;
   field: keyof T | string;
@@ -62,8 +68,11 @@ export function DataTable<T extends object>({
   rowFormatter,
   showRowNumber = true,
 }: DataTableProps<T>) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tableRef = useRef<TabulatorFull | null>(null);
+  const tableRef = useRef<TabulatorGrid | null>(null);
+  /** Bumps whenever a new Tabulator instance is created; avoids setData on a destroyed grid. */
+  const tableGenerationRef = useRef(0);
   const currentPageRef = useRef(1);
   const currentPageSizeRef = useRef(pageSize);
 
@@ -145,10 +154,43 @@ export function DataTable<T extends object>({
       options.rowFormatter = effectiveRowFormatter;
     }
 
-    tableRef.current = new TabulatorFull(containerRef.current, options as never);
+    const table = new TabulatorFull(
+      containerRef.current,
+      options as never,
+    ) as TabulatorGrid;
+    tableRef.current = table;
+    tableGenerationRef.current += 1;
+
+    const scheduleRedraw = () => {
+      requestAnimationFrame(() => {
+        const t = tableRef.current;
+        const c = containerRef.current;
+        if (!t || !c?.isConnected) return;
+        try {
+          t.redraw(true);
+        } catch {
+          /* Tabulator can throw if the grid DOM was torn down mid-redraw */
+        }
+      });
+    };
+
+    const wrapper = wrapperRef.current;
+    let resizeObserver: ResizeObserver | undefined;
+    if (wrapper && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(scheduleRedraw);
+      resizeObserver.observe(wrapper);
+    }
+
+    const onWindowResize = () => scheduleRedraw();
+    window.addEventListener("resize", onWindowResize);
+
+    table.on("columnResized", scheduleRedraw);
+    if (movableColumns) {
+      table.on("columnMoved", scheduleRedraw);
+    }
 
     if (onRowClick) {
-      (tableRef.current as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+      (table as never as { on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
         const ev = e as { target?: EventTarget };
         const target = ev?.target as HTMLElement | null;
         if (target?.closest?.("button, select, [data-action], a[href]")) return;
@@ -157,7 +199,9 @@ export function DataTable<T extends object>({
     }
 
     return () => {
-      tableRef.current?.destroy();
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", onWindowResize);
+      table.destroy();
       tableRef.current = null;
     };
   }, [
@@ -172,27 +216,68 @@ export function DataTable<T extends object>({
     pageSizeSelector,
     layout,
     movableColumns,
+    resizableColumns,
+    resizableColumnFit,
     onPaginationChange,
     rowFormatter,
     showRowNumber,
   ]);
 
   useEffect(() => {
-    if (tableRef.current) {
-      tableRef.current.setData(data.map((row) => ({ ...row })));
-    }
+    const rows = data.map((row) => ({ ...row }));
+    let cancelled = false;
+    const generationAtSchedule = tableGenerationRef.current;
+
+    const applyData = () => {
+      if (cancelled) return;
+      if (tableGenerationRef.current !== generationAtSchedule) return;
+
+      const table = tableRef.current;
+      const container = containerRef.current;
+      if (!table || !container?.isConnected) return;
+
+      try {
+        void Promise.resolve(table.setData(rows)).then(() => {
+          if (cancelled) return;
+          if (tableGenerationRef.current !== generationAtSchedule) return;
+          const t = tableRef.current;
+          if (t !== table) return;
+          if (!containerRef.current?.isConnected) return;
+          requestAnimationFrame(() => {
+            if (cancelled) return;
+            if (tableGenerationRef.current !== generationAtSchedule) return;
+            const t2 = tableRef.current;
+            if (t2 !== table) return;
+            try {
+              t2.redraw(true);
+            } catch {
+              /* Tabulator can throw if the grid DOM was torn down mid-redraw */
+            }
+          });
+        });
+      } catch {
+        /* setData can throw if internal layout refs are null after destroy / race */
+      }
+    };
+
+    queueMicrotask(applyData);
+
+    return () => {
+      cancelled = true;
+    };
   }, [data]);
 
   return (
     <div
+      ref={wrapperRef}
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
+        "data-table-wrapper min-w-0 w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"
       aria-label="Data table"
     >
-      <div ref={containerRef} className="data-table-container h-full w-full" />
+      <div ref={containerRef} className="data-table-container h-full min-h-[200px] w-full min-w-0" />
     </div>
   );
 }

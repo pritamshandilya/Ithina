@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useAppDispatch } from "@/store/hooks";
 import { activateCampaign, activateCampaignWithId } from "@/store/slices/campaign-slice";
@@ -31,9 +32,14 @@ const EMPTY_FORM: CampaignCreateForm = {
   scheduled_date: "",
 };
 
+function canDeleteCampaign(status: CampaignListStatus): boolean {
+  return status === "Draft" || status === "Rejected";
+}
+
 export default function Campaigns() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { toast } = useToast();
 
   const { data: campaigns = [], isLoading: listLoading, isError: listError } = useCampaignList();
   const { data: filters = [], isLoading: filtersLoading } = useCampaignFilters();
@@ -93,8 +99,17 @@ export default function Campaigns() {
   }, [modalMode, modalForm, editingId, createMutation, updateMutation, closeModal]);
 
   const handleDelete = useCallback((id: string) => {
+    const campaign = campaigns.find((c) => c.id === id);
+    if (!campaign || !canDeleteCampaign(campaign.status)) {
+      toast({
+        title: "Delete not allowed",
+        description: "Only Draft or Rejected campaigns can be deleted.",
+        variant: "destructive",
+      });
+      return;
+    }
     setDeleteConfirmId(id);
-  }, []);
+  }, [campaigns]);
 
   const confirmDelete = useCallback(() => {
     if (deleteConfirmId) {
@@ -193,7 +208,7 @@ export default function Campaigns() {
         headerHozAlign: "left",
         formatter: (cell: unknown) => {
           const row = (cell as { getData: () => CampaignListItem }).getData();
-          return `<div><span class="block font-medium text-white">${row.name}</span><span class="block font-mono text-[10px] text-slate-500">${row.id}</span></div>`;
+          return `<div><span class="block font-medium text-white">${row.name}</span></div>`;
         },
       },
       {

@@ -4,6 +4,8 @@ export interface CampaignListItem {
   id: string;
   name: string;
   status: CampaignListStatus;
+  /** Raw API status string (e.g. pending_approval, publishing) for fleet and tooling. */
+  apiStatus?: string;
   /**
    * Prototype-only UI fields (used for the campaign pipeline breadcrumb in /campaigns).
    * Backend integration may provide this later; keeping optional avoids breaking API payloads.
@@ -24,6 +26,10 @@ export interface CampaignListItem {
   reviewedAt?: string;
   publishedAt?: string;
   scheduledAt?: string;
+  /** ISO string when the campaign run should end (from API `scheduled_end`). */
+  scheduledEndAt?: string;
+  /** Time-of-day label from API (`scheduled_time`), e.g. `08:00`. */
+  scheduledTime?: string;
 }
 
 export interface CampaignStatCard {

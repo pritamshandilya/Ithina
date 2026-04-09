@@ -1,9 +1,14 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
+  createAdminUser,
+  deleteAdminUser,
   listOrganizationUsers,
+  updateAdminUser,
   type ApiOrganizationUserResponse,
+  type ApiUserCreateRequest,
   type ApiUserRole,
+  type ApiUserUpdateRequest,
 } from "@/services/admin-users";
 
 import type { OrgUser, UserRole } from "@/features/admin-users/types";
@@ -38,6 +43,37 @@ export function useAdminOrganizationUsers() {
     queryFn: async () => listOrganizationUsers().then((arr) => arr.map(mapOrganizationUser)),
     staleTime: 15_000,
     gcTime: 5 * 60_000,
+  });
+}
+
+export function useCreateAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: ApiUserCreateRequest) => createAdminUser(payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminUsersKeys.list });
+    },
+  });
+}
+
+export function useUpdateAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ userId, payload }: { userId: string; payload: ApiUserUpdateRequest }) =>
+      updateAdminUser(userId, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminUsersKeys.list });
+    },
+  });
+}
+
+export function useDeleteAdminUser() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) => deleteAdminUser(userId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: adminUsersKeys.list });
+    },
   });
 }
 

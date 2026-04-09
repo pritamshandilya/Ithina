@@ -5,9 +5,8 @@
  * wired to the real backend. Stores / margins / durations / hardware remain
  * as static data because those endpoints don't exist in the backend yet.
  *
- * The init→chat flow uses the LangGraph-backed endpoints:
- *   POST /campaigns/init   → creates DB row + thread
- *   POST /campaigns/{id}/chat → conversational AI turn
+ * NL wizard turns use POST /campaigns/draft (LangGraph). Omit session_id on the
+ * first message; the response includes session_id — send it on every follow-up.
  */
 
 import {
@@ -16,7 +15,7 @@ import {
   MOCK_MARGINS,
   MOCK_STORES,
 } from "@/mocks/wizard";
-import { chatCampaign, draftCampaignFromPrompt, initCampaign } from "@/services/campaigns";
+import { draftCampaignFromPrompt } from "@/services/campaigns";
 import type {
   ChatMessage,
   HardwareDevice,
@@ -50,20 +49,30 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 export async function submitWizardIntent(
   prompt: string,
   constraints: WizardConstraints,
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
+  options?: { sessionId?: string | null },
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string }> {
   const response = await draftCampaignFromPrompt({
     prompt,
     source_type: "nl",
+    ...(options?.sessionId ? { session_id: options.sessionId } : {}),
   });
 
-  const skus: StagedSku[] = response.skus.map((s) => ({
-    sku: s.sku,
-    name: s.product_name,
-    current: s.current_price,
-    proposed: s.proposed_price,
-    safe: s.is_safe,
-    margin: `${s.margin_pct}%`,
-  }));
+  const skus: StagedSku[] = response.skus.map((s) => {
+    const current = s.current_price;
+    const proposed = s.proposed_price;
+    const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
+    return {
+      sku: s.sku,
+      name: s.product_name ?? s.name ?? "",
+      current,
+      proposed,
+      safe: s.is_safe,
+      margin: `${s.margin_pct}%`,
+      baseCost: s.base_cost,
+      discount,
+      included: true,
+    };
+  });
 
   const safeCount = skus.filter((s) => s.safe).length;
   const warnCount = skus.length - safeCount;
@@ -80,67 +89,7 @@ export async function submitWizardIntent(
   return {
     aiReply: { role: "ai", text: replyText },
     skus,
-  };
-}
-
-// ─── Init → Chat flow (LangGraph-backed) ─────────────────────────────────────
-
-export interface WizardSession {
-  campaignId: string;
-  threadId: string;
-}
-
-/**
- * Initialize a new campaign session with LangGraph.
- * Returns the campaign_id and langgraph_thread_id needed for chat.
- */
-export async function initWizardCampaign(
-  sourceType: "nl" | "manual" = "nl",
-): Promise<WizardSession> {
-  const res = await initCampaign({ source_type: sourceType });
-  return {
-    campaignId: res.campaign_id,
-    threadId: res.langgraph_thread_id,
-  };
-}
-
-/**
- * Send a conversational message to the LangGraph agent.
- * Returns the AI reply and updated staged SKUs for the grid.
- */
-export async function chatWizardMessage(
-  campaignId: string,
-  message: string,
-  constraints: WizardConstraints,
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[] }> {
-  const res = await chatCampaign(campaignId, { message });
-
-  const skus: StagedSku[] = (res.staged_skus ?? []).map((s) => ({
-    sku: s.sku ?? "",
-    name: s.product_name ?? "",
-    current: s.current_price ?? 0,
-    proposed: s.proposed_price ?? 0,
-    safe: s.is_safe ?? true,
-    margin: `${s.margin_pct ?? 0}%`,
-  }));
-
-  let replyText = res.reply || "AI processed your request.";
-
-  if (skus.length > 0) {
-    const safeCount = skus.filter((s) => s.safe).length;
-    const warnCount = skus.length - safeCount;
-    replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
-    if (warnCount > 0) {
-      replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
-    } else {
-      replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
-    }
-    replyText += " Please review the staging grid.";
-  }
-
-  return {
-    aiReply: { role: "ai", text: replyText },
-    skus,
+    sessionId: response.session_id,
   };
 }
 

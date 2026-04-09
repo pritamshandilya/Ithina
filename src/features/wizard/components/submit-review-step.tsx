@@ -14,6 +14,10 @@ interface SubmitReviewStepProps {
   skuCount: number;
   scheduleDateLabel?: string;
   scheduleTimeLabel?: string;
+  /** Shown when an optional end date was set on the schedule step. */
+  scheduleEndLabel?: string;
+  /** Note when "auto-approve on schedule" was enabled in the wizard. */
+  autoApproveNote?: string;
   displayTags: SubmitDisplayTag[];
 }
 
@@ -23,6 +27,8 @@ export default function SubmitReviewStep({
   skuCount,
   scheduleDateLabel = "Immediate",
   scheduleTimeLabel = "08:00",
+  scheduleEndLabel,
+  autoApproveNote,
   displayTags,
 }: SubmitReviewStepProps) {
   const dispatch = useAppDispatch();
@@ -68,6 +74,14 @@ export default function SubmitReviewStep({
             <p className="mb-1.5 font-mono text-[9px] uppercase tracking-widest text-slate-500">Schedule</p>
             <p className="text-sm font-semibold text-white">{scheduleDateLabel}</p>
             <p className="mt-0.5 text-xs text-slate-500">{scheduleTimeLabel}</p>
+            {scheduleEndLabel ? (
+              <p className="mt-1 text-xs text-slate-500">Ends {scheduleEndLabel}</p>
+            ) : null}
+            {autoApproveNote ? (
+              <p className="mt-2 rounded-lg border border-emerald-400/20 bg-emerald-400/5 px-2 py-1.5 text-[10px] text-emerald-400/90">
+                {autoApproveNote}
+              </p>
+            ) : null}
           </div>
           <div className="col-span-2 rounded-xl border border-ithina-border bg-ithina-panel p-4">
             <p className="mb-2 font-mono text-[9px] uppercase tracking-widest text-slate-500">Target Displays</p>

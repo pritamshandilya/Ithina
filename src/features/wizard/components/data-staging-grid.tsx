@@ -252,6 +252,26 @@ function DataStagingGrid({
 
   const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => [
     {
+      title: "",
+      field: "included",
+      width: 52,
+      headerSort: false,
+      headerFilter: false,
+      hozAlign: "center",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const checked = row.included !== false;
+        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-7 items-center justify-center rounded-md border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-xs font-bold text-ithina-purple\">✓</span>" : ""}</button>`;
+      },
+      cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
+        const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
+        if (target.closest?.("[data-action='toggle-include']")) {
+          _e.stopPropagation();
+          onToggleGridRowIncluded(cell.getData().sku);
+        }
+      },
+    },
+    {
       title: "SKU",
       field: "sku",
       width: 110,
@@ -323,26 +343,6 @@ function DataStagingGrid({
         const row = (cell as { getData: () => StagedSku }).getData();
         if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-2.5 py-1 font-mono text-[10px] text-emerald-400">PASS</span>`;
         return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 font-mono text-[10px] text-rose-400">ALERT (${row.margin})</span>`;
-      },
-    },
-    {
-      title: "Include",
-      field: "sku",
-      width: 72,
-      headerSort: false,
-      headerFilter: false,
-      hozAlign: "center",
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => StagedSku }).getData();
-        const checked = row.included !== false;
-        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-8 items-center justify-center rounded-md border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-xs font-bold text-ithina-purple\">✓</span>" : ""}</button>`;
-      },
-      cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
-        const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
-        if (target.closest?.("[data-action='toggle-include']")) {
-          _e.stopPropagation();
-          onToggleGridRowIncluded(cell.getData().sku);
-        }
       },
     },
   ], [onToggleGridRowIncluded, onDiscountChange]);

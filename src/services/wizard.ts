@@ -48,7 +48,7 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 
 export async function submitWizardIntent(
   prompt: string,
-  constraints: WizardConstraints,
+  _constraints: WizardConstraints,
   options?: { sessionId?: string | null },
 ): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string }> {
   const response = await draftCampaignFromPrompt({
@@ -74,20 +74,8 @@ export async function submitWizardIntent(
     };
   });
 
-  const safeCount = skus.filter((s) => s.safe).length;
-  const warnCount = skus.length - safeCount;
-
-  let replyText = response.message;
-  replyText += `\n\nFound <strong>${skus.length}</strong> SKUs`;
-  if (warnCount > 0) {
-    replyText += `. <span class="text-rose-400 font-medium">${warnCount} item${warnCount > 1 ? "s" : ""} below the ${constraints.marginFloor} margin floor.</span>`;
-  } else {
-    replyText += `. All items clear the ${constraints.marginFloor} margin floor.`;
-  }
-  replyText += " Please review the staging grid.";
-
   return {
-    aiReply: { role: "ai", text: replyText },
+    aiReply: { role: "ai", text: response.message },
     skus,
     sessionId: response.session_id,
   };

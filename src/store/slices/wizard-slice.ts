@@ -72,6 +72,24 @@ const wizardSlice = createSlice({
         included: r.included !== false,
       }));
     },
+    mergeGridData(state, action: PayloadAction<StagedSku[]>) {
+      const incoming = action.payload;
+      if (incoming.length === 0) return;
+
+      const existingByKey = new Map(
+        state.gridData.map((r) => [r.sku, r]),
+      );
+
+      state.gridData = incoming.map((r) => {
+        const prev = existingByKey.get(r.sku);
+        return {
+          ...r,
+          included: prev ? prev.included : r.included !== false,
+          discount: prev ? prev.discount : r.discount,
+          proposed: prev ? prev.proposed : r.proposed,
+        };
+      });
+    },
     appendGridRow(state, action: PayloadAction<StagedSku>) {
       const row = action.payload;
       state.gridData.push({
@@ -148,6 +166,7 @@ export const {
   setShowGrid,
   pushMessage,
   setGridData,
+  mergeGridData,
   appendGridRow,
   removeGridRow,
   toggleGridRowIncluded,

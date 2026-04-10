@@ -1,5 +1,5 @@
 import { ArrowRight, MessageCircle } from "lucide-react";
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ function ChatPanel({
   hasSplit,
   children,
 }: ChatPanelProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit();
@@ -38,6 +40,12 @@ function ChatPanel({
     if (!inputText.trim()) return;
     onSubmit();
   };
+
+  useEffect(() => {
+    if (!isTyping && !inputDisabled) {
+      textareaRef.current?.focus();
+    }
+  }, [isTyping, inputDisabled]);
 
   return (
     <div
@@ -61,22 +69,23 @@ function ChatPanel({
 
       <div className={cn("shrink-0 bg-ithina-bg/40", hasSplit ? "mt-auto border-t border-ithina-border/50 p-5" : "p-5")}>
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
-          <div className="group relative flex min-w-0 items-end rounded-xl border border-ithina-border/60 bg-ithina-bg shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
+          <div className="group flex min-w-0 items-center gap-2 rounded-xl border border-ithina-border/60 bg-ithina-bg px-2 py-2 shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
             <textarea
+              ref={textareaRef}
               value={inputText}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleIntentKeyDown}
               placeholder="Describe your promotion intent..."
               aria-label="Promotion intent input"
               rows={2}
-              className="chat-panel-intent-textarea min-w-0 w-full bg-transparent py-3 pl-5 pr-14 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
+              className="chat-panel-intent-textarea min-h-[2.75rem] min-w-0 flex-1 resize-none bg-transparent py-2 pl-3 pr-2 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-50"
               disabled={inputDisabled}
               autoComplete="off"
             />
             <button
               type="submit"
               aria-label="Send message"
-              className="absolute bottom-3 right-3 flex size-8 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] text-slate-400 transition-all duration-200 hover:bg-ithina-purple hover:text-white hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] disabled:opacity-50"
+              className="flex size-8 shrink-0 items-center justify-center self-center rounded-lg bg-white/[0.04] text-slate-400 transition-all duration-200 hover:bg-ithina-purple hover:text-white hover:shadow-[0_0_12px_rgba(168,85,247,0.3)] disabled:opacity-50"
               disabled={isTyping || inputDisabled}
             >
               <ArrowRight className="size-4" />

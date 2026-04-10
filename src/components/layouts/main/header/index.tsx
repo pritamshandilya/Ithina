@@ -8,15 +8,15 @@ export default function Header() {
   const role = PromoAuthService.getCurrentUser()?.role ?? "maker";
 
   return (
-    <header className="relative flex h-[82px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-6 shadow-sm z-40">
+    <header className="relative flex h-[64px] w-full shrink-0 items-center justify-between border-b border-ithina-border bg-ithina-sidebar px-4 shadow-sm z-40">
 
       {/* Logo pill — matches prototype .logo-pill style */}
-      <div className="flex h-full items-center py-3">
+      <div className="flex h-full items-center py-2">
         <div
           className="inline-flex items-center"
-          style={{ backgroundColor: "#0F172A", borderRadius: 10, padding: "6px 14px" }}
+          style={{ backgroundColor: "#0F172A", borderRadius: 10, padding: "4px 12px" }}
         >
-          <div className="flex h-[50px] items-center">
+          <div className="flex h-10 items-center">
             <span
               className="select-none text-xl font-bold tracking-tight text-white"
               style={{ fontFamily: "'Plus Jakarta Sans', sans-serif", letterSpacing: "-0.5px" }}

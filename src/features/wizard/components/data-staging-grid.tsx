@@ -87,6 +87,8 @@ interface DataStagingGridProps {
   onInputModeChange: (mode: InputMode) => void;
   /** AI grid: include/exclude SKU without removing the row from the table. */
   onToggleGridRowIncluded: (sku: string) => void;
+  /** AI grid: set include on all rows (header “select all”). */
+  onSetAllGridRowsIncluded?: (included: boolean) => void;
   /** AI grid: update the discount % for a specific SKU. */
   onDiscountChange: (sku: string, discount: number) => void;
   csvRows: CsvRow[];
@@ -108,6 +110,7 @@ function DataStagingGrid({
   inputMode,
   onInputModeChange,
   onToggleGridRowIncluded,
+  onSetAllGridRowsIncluded,
   onDiscountChange,
   csvRows,
   csvFileName,
@@ -250,18 +253,20 @@ function DataStagingGrid({
     }
   }, []);
 
-  const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => [
-    {
+  const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => {
+    const includeColumn: DataTableColumn<StagedSku> = {
       title: "",
       field: "included",
-      width: 52,
+      width: 44,
+      cssClass: "wizard-staging-col-include",
       headerSort: false,
       headerFilter: false,
       hozAlign: "center",
+      headerHozAlign: "center",
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const checked = row.included !== false;
-        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-7 items-center justify-center rounded-md border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-xs font-bold text-ithina-purple\">✓</span>" : ""}</button>`;
+        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-6 items-center justify-center rounded border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>" : ""}</button>`;
       },
       cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
@@ -270,7 +275,16 @@ function DataStagingGrid({
           onToggleGridRowIncluded(cell.getData().sku);
         }
       },
-    },
+    };
+
+    if (onSetAllGridRowsIncluded) {
+      includeColumn.titleFormatter = function formatIncludeColumnHeader() {
+        return `<button type="button" data-action="toggle-all-include" aria-label="Include all SKUs in campaign" class="wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 border-slate-600 transition-colors hover:border-slate-500"></button>`;
+      };
+    }
+
+    return [
+      includeColumn,
     {
       title: "SKU",
       field: "sku",
@@ -289,7 +303,7 @@ function DataStagingGrid({
       headerHozAlign: "left",
       formatter: (cell: unknown) => {
         const val = (cell as { getValue: () => string }).getValue();
-        return `<span class="text-sm font-medium text-slate-200">${val}</span>`;
+        return `<span class="text-xs font-medium leading-tight text-slate-200">${val}</span>`;
       },
     },
     {
@@ -301,7 +315,7 @@ function DataStagingGrid({
       headerHozAlign: "right",
       formatter: (cell: unknown) => {
         const val = (cell as { getValue: () => number }).getValue();
-        return `<span class="font-mono text-sm text-slate-500 line-through">$${val.toFixed(2)}</span>`;
+        return `<span class="font-mono text-xs text-slate-500 line-through">$${val.toFixed(2)}</span>`;
       },
     },
     {
@@ -314,7 +328,7 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const val = row.discount ?? 0;
-        return `<div class="flex items-center justify-center gap-1"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" class="w-14 rounded border border-slate-600 bg-slate-800 px-1.5 py-1 text-center font-mono text-xs text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-xs text-slate-400">%</span></div>`;
+        return `<div class="flex items-center justify-center gap-1"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" class="w-12 rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-mono text-[11px] leading-tight text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-[10px] text-slate-400">%</span></div>`;
       },
       cellClick: (_e: MouseEvent) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
@@ -332,7 +346,7 @@ function DataStagingGrid({
       headerHozAlign: "right",
       formatter: (cell: unknown) => {
         const val = (cell as { getValue: () => number }).getValue();
-        return `<span class="font-mono text-base font-bold text-white">$${val.toFixed(2)}</span>`;
+        return `<span class="font-mono text-sm font-bold leading-tight text-white">$${val.toFixed(2)}</span>`;
       },
     },
     {
@@ -341,11 +355,12 @@ function DataStagingGrid({
       width: 130,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
-        if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-2.5 py-1 font-mono text-[10px] text-emerald-400">PASS</span>`;
-        return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-2.5 py-1 font-mono text-[10px] text-rose-400">ALERT (${row.margin})</span>`;
+        if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-1.5 py-0.5 font-mono text-[9px] leading-none text-emerald-400">PASS</span>`;
+        return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[9px] leading-none text-rose-400">ALERT (${row.margin})</span>`;
       },
     },
-  ], [onToggleGridRowIncluded, onDiscountChange]);
+    ];
+  }, [onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
 
   const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
     const d = row.getData();
@@ -361,6 +376,11 @@ function DataStagingGrid({
   }, []);
 
   const aiTableRef = useRef<HTMLDivElement>(null);
+  const gridDataRef = useRef(data);
+  gridDataRef.current = data;
+  const setAllIncludedRef = useRef(onSetAllGridRowsIncluded);
+  setAllIncludedRef.current = onSetAllGridRowsIncluded;
+
   const discountChangeRef = useRef(onDiscountChange);
   discountChangeRef.current = onDiscountChange;
 
@@ -405,6 +425,59 @@ function DataStagingGrid({
     };
   }, []);
 
+  useEffect(() => {
+    const root = aiTableRef.current;
+    if (!root || !onSetAllGridRowsIncluded) return;
+
+    const syncHeaderIncludeAll = () => {
+      const btn = root.querySelector<HTMLButtonElement>('[data-action="toggle-all-include"]');
+      if (!btn) return;
+      const rows = gridDataRef.current;
+      const all = rows.length > 0 && rows.every((r) => r.included !== false);
+      const some = rows.some((r) => r.included !== false);
+      const checked = all;
+      const partial = some && !all;
+      btn.setAttribute("aria-pressed", String(checked));
+      btn.setAttribute(
+        "aria-label",
+        checked ? "Clear all SKUs from campaign" : "Include all SKUs in campaign",
+      );
+      btn.className = cn(
+        "wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 transition-colors",
+        checked && "border-ithina-purple bg-ithina-purple/20",
+        partial && !checked && "border-ithina-purple/50 bg-ithina-purple/5",
+        !checked && !partial && "border-slate-600 hover:border-slate-500",
+      );
+      btn.innerHTML = checked
+        ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>"
+        : partial
+          ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple/70\">−</span>"
+          : "";
+    };
+
+    syncHeaderIncludeAll();
+    const outer = requestAnimationFrame(() => {
+      syncHeaderIncludeAll();
+      requestAnimationFrame(syncHeaderIncludeAll);
+    });
+
+    const handler = (e: MouseEvent) => {
+      const t = e.target as HTMLElement;
+      if (!t.closest?.('[data-action="toggle-all-include"]')) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const rows = gridDataRef.current;
+      const all = rows.length > 0 && rows.every((r) => r.included !== false);
+      setAllIncludedRef.current?.(!all);
+    };
+    root.addEventListener("click", handler, true);
+
+    return () => {
+      cancelAnimationFrame(outer);
+      root.removeEventListener("click", handler, true);
+    };
+  }, [data, onSetAllGridRowsIncluded]);
+
   return (
     <div
       className={cn(
@@ -415,13 +488,13 @@ function DataStagingGrid({
       )}
     >
       {!hideModeToggle && (
-      <header className="flex shrink-0 items-center justify-between gap-4 border-b border-ithina-border bg-white/[0.01] px-6 py-4">
+      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
         {!hideModeToggle ? (
-          <div className="flex items-center gap-1 rounded-xl border border-ithina-border bg-ithina-bg p-1">
+          <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
             <button
               onClick={() => onInputModeChange("ai")}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                 inputMode === "ai" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
               )}
             >
@@ -431,7 +504,7 @@ function DataStagingGrid({
             <button
               onClick={() => onInputModeChange("csv")}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-medium transition-all",
+                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
                 inputMode === "csv" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
               )}
             >
@@ -582,7 +655,7 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <div ref={aiTableRef} className="min-h-0 flex-1 overflow-auto px-4 pb-4 pt-0">
+            <div ref={aiTableRef} className="min-h-0 flex-1 overflow-auto px-2 pb-2 pt-0 sm:px-3">
               <DataTable<StagedSku>
                 columns={aiColumns}
                 data={data}

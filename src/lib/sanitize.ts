@@ -8,7 +8,7 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 
 export function sanitizeHtml(dirty: string): string {
   return DOMPurify.sanitize(dirty, {
-    ALLOWED_TAGS: ["b", "i", "em", "strong", "br", "span", "code", "a"],
+    ALLOWED_TAGS: ["b", "i", "em", "strong", "br", "p", "span", "code", "a"],
     ALLOWED_ATTR: ["class", "href", "target", "rel"],
   });
 }

@@ -24,6 +24,8 @@ export interface DataTableColumn<T = object> {
   vertAlign?: "top" | "middle" | "bottom";
   headerHozAlign?: "left" | "center" | "right";
   cellClick?: (e: MouseEvent, cell: { getData: () => T }) => void;
+  /** Tabulator header cell formatter (e.g. select-all checkbox). */
+  titleFormatter?: unknown;
   [key: string]: unknown;
 }
 

@@ -54,10 +54,10 @@ export default function Sidenav() {
   }, []);
 
   return (
-    <aside className="flex h-full w-[240px] shrink-0 flex-col border-r border-ithina-border bg-ithina-sidebar z-30">
+    <aside className="flex h-full w-[200px] shrink-0 flex-col border-r border-ithina-border bg-ithina-sidebar z-30">
 
       {/* ── App brand header ── */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border/50 px-4 py-4">
+      <div className="flex shrink-0 items-center gap-2 border-b border-ithina-border/50 px-3 py-2.5">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-ithina-purple/30 bg-ithina-purple/10">
           <Megaphone className="size-4 text-ithina-purple" />
         </div>

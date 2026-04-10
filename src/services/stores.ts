@@ -84,3 +84,16 @@ export async function deleteCurrentStore(storeId: string): Promise<void> {
   });
 }
 
+/** Admin: assign an org user to a store (PUT /store/users/{user_id} with X-Store-Id). */
+export async function assignUserToStore(storeId: string, userId: string): Promise<void> {
+  await promoApiClient.put(
+    `${API_PREFIX}/store/users/${encodeURIComponent(userId)}`,
+    {},
+    {
+      headers: {
+        "X-Store-Id": storeId,
+      },
+    },
+  );
+}
+

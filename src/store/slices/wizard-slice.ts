@@ -84,9 +84,8 @@ const wizardSlice = createSlice({
         const prev = existingByKey.get(r.sku);
         return {
           ...r,
+          /** New draft turn always wins for pricing; only preserve user include/exclude toggles. */
           included: prev ? prev.included : r.included !== false,
-          discount: prev ? prev.discount : r.discount,
-          proposed: prev ? prev.proposed : r.proposed,
         };
       });
     },
@@ -106,6 +105,12 @@ const wizardSlice = createSlice({
       if (!row) return;
       const currentlyIncluded = row.included !== false;
       row.included = !currentlyIncluded;
+    },
+    setAllGridRowsIncluded(state, action: PayloadAction<boolean>) {
+      const next = action.payload;
+      for (const row of state.gridData) {
+        row.included = next;
+      }
     },
     updateGridRowDiscount(state, action: PayloadAction<{ sku: string; discount: number }>) {
       const { sku, discount } = action.payload;
@@ -153,6 +158,12 @@ const wizardSlice = createSlice({
     removeAllCsvViolations(state) {
       state.csvRows = state.csvRows.filter((r) => r.safe);
     },
+    /** Clears NL promo chat + staged SKUs while staying on the same wizard step. */
+    resetPromoAssistantChat(state) {
+      state.messages = [];
+      state.gridData = [];
+      state.campaignNamed = false;
+    },
     resetWizard() {
       return initialState;
     },
@@ -170,6 +181,7 @@ export const {
   appendGridRow,
   removeGridRow,
   toggleGridRowIncluded,
+  setAllGridRowsIncluded,
   updateGridRowDiscount,
   setConstraints,
   setInputMode,
@@ -179,6 +191,7 @@ export const {
   setCampaignNamed,
   removeCsvRow,
   removeAllCsvViolations,
+  resetPromoAssistantChat,
   resetWizard,
 } = wizardSlice.actions;
 

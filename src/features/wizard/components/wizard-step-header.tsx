@@ -1,5 +1,5 @@
 import { ChevronLeft, CloudUpload, Zap } from "lucide-react";
-import { memo } from "react";
+import { memo, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -11,14 +11,16 @@ interface WizardStepHeaderProps {
   currentStep: number; // 1-indexed
   steps: string[];
   onBack: () => void;
+  /** Primary action after the step pills (e.g. NL step 1 Next). */
+  trailingSlot?: ReactNode;
 }
 
-function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack }: WizardStepHeaderProps) {
+function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack, trailingSlot }: WizardStepHeaderProps) {
   const isNl = mode === "nl";
   const isCsvNl = isNl && inputMode === "csv";
 
   return (
-    <div className="flex shrink-0 items-center gap-5 border-b border-ithina-border px-8 pb-4 pt-5">
+    <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border px-4 pb-2.5 pt-3 sm:px-5">
       {/* Back button */}
       <button
         onClick={onBack}
@@ -67,7 +69,7 @@ function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack }
             <div key={i} className="flex shrink-0 items-center">
               <div
                 className={cn(
-                  "flex items-center gap-2 rounded-full px-3 py-1.5 transition-all",
+                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-all",
                   isActive ? "border border-ithina-purple/30 bg-ithina-purple/15" : "border border-transparent",
                 )}
               >
@@ -111,18 +113,14 @@ function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack }
         })}
       </div>
 
+      {trailingSlot ? <div className="flex shrink-0 items-center">{trailingSlot}</div> : null}
+
       {isNl ? (
         <div className="flex shrink-0 items-center gap-2 text-[10px] font-mono text-slate-500">
           <span className="inline-block size-1.5 rounded-full bg-amber-400" />
           Draft, auto-saved
         </div>
-      ) : (
-        <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-ithina-border bg-ithina-bg px-3 py-1">
-          <span className="text-[10px] font-bold text-ithina-purple">{currentStep}</span>
-          <span className="text-[10px] text-slate-600">/</span>
-          <span className="text-[10px] font-medium text-slate-400">{steps.length}</span>
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

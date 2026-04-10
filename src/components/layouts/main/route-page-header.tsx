@@ -34,8 +34,8 @@ export default function RoutePageHeader() {
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
   return (
-    <header className="shrink-0 border-b border-border/80 bg-sidebar/70 py-4 backdrop-blur-xl">
-      <div className="flex w-full flex-col gap-5 px-4 sm:px-6 lg:flex-row lg:items-end lg:justify-between lg:px-8">
+    <header className="shrink-0 border-b border-border/80 bg-sidebar/70 py-2.5 backdrop-blur-xl">
+      <div className="flex w-full flex-col gap-3 px-4 sm:px-5 lg:flex-row lg:items-end lg:justify-between lg:px-6">
         <div className="min-w-0 space-y-1">
           <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">{nav.title}</h1>
           <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{nav.subtitle}</p>

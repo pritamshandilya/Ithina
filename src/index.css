@@ -349,6 +349,44 @@
   opacity: 0.5;
 }
 
+/* Include column: align header “select all” with row checkboxes (same vertical axis). */
+.data-table-wrapper.wizard-staging-table .tabulator-header .tabulator-col.wizard-staging-col-include .tabulator-col-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-header .tabulator-col.wizard-staging-col-include .tabulator-col-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-tableholder .tabulator-cell[tabulator-field="included"] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wizard staging: denser rows and header to match split-view layout proportions */
+.data-table-wrapper.wizard-staging-table .tabulator-row {
+  min-height: 1.625rem;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-cell {
+  padding: 0.1875rem 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+}
+
 .data-table-wrapper .tabulator-header {
   background-color: var(--tabulator-header-bg) !important;
   border-bottom: 2px solid var(--tabulator-border);

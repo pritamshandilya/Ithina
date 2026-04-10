@@ -1,4 +1,4 @@
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ArrowRight } from "lucide-react";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
@@ -7,6 +7,7 @@ import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   activateCampaign,
   activateCampaignWithId,
+  setCampaignName,
   setPendingApproval,
   setStagedSkus,
 } from "@/store/slices/campaign-slice";
@@ -16,6 +17,8 @@ import {
   removeAllCsvViolations,
   mergeGridData,
   removeCsvRow,
+  resetPromoAssistantChat,
+  setAllGridRowsIncluded,
   resetWizard,
   setCampaignNamed,
   setCsvConfirmed,
@@ -59,7 +62,7 @@ interface CsvRow {
 
 // Step 0 = mode chooser, steps 1..N = actual steps
 // NL runtime currently implements first 2 steps, but header follows the new 5-step flow shell.
-const NL_STEPS = ["Select Data", "Select Screens & Design", "Guard Rails", "Schedule", "Submit"];
+const NL_STEPS = ["Select Products", "Select Screens & Design", "Guard Rails", "Schedule", "Submit"];
 const MANUAL_STEPS = ["Select Screens", "Upload Banners"];
 
 function formatWizardScheduleDate(ymd: string): string {
@@ -283,6 +286,16 @@ export default function Wizard() {
     }
   }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
 
+  const handleResetPromoChat = useCallback(() => {
+    if (intentMutation.isPending || hwConfirmMutation.isPending) return;
+    pipelineSessionIdRef.current = null;
+    dispatch(resetPromoAssistantChat());
+    dispatch(setCampaignName(""));
+    setInputText("");
+    setIsTyping(false);
+    setError(null);
+  }, [dispatch, intentMutation.isPending, hwConfirmMutation.isPending]);
+
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
   }, [dispatch]);
@@ -435,6 +448,10 @@ export default function Wizard() {
     (sku: string) => dispatch(toggleGridRowIncluded(sku)),
     [dispatch],
   );
+  const handleSetAllGridRowsIncluded = useCallback(
+    (included: boolean) => dispatch(setAllGridRowsIncluded(included)),
+    [dispatch],
+  );
   const handleDiscountChange = useCallback(
     (sku: string, discount: number) => dispatch(updateGridRowDiscount({ sku, discount })),
     [dispatch],
@@ -508,44 +525,28 @@ export default function Wizard() {
               currentStep={wStep}
               steps={wSteps}
               onBack={handleBack}
+              trailingSlot={
+                wStep === 1 && wMode === "nl" && canProceedNl ? (
+                  <button
+                    type="button"
+                    onClick={() => dispatch(setWStep(2))}
+                    disabled={hwConfirmMutation.isPending}
+                    className="flex shrink-0 items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next: Select Screens & Design
+                    <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+                  </button>
+                ) : null
+              }
             />
 
             {/* ── NL Step 1: Intent & Data Staging ── */}
             {wStep === 1 && wMode === "nl" && (
               <div className="flex flex-1 min-h-0 animate-[fadeIn_0.4s_ease-out]">
-                {/* Step context bar */}
-                <div className="absolute top-[var(--header-height,60px)] hidden" />
                 <div className="flex flex-1 flex-col overflow-y-auto">
-                  {/* Sub-context bar */}
-                  <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border bg-ithina-purple/5 px-8 py-3">
-                    <div className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ithina-purple">
-                      <span className="text-[9px] font-bold text-white">1</span>
-                    </div>
-                    <div className="flex-1">
-                      <span className="text-xs font-semibold text-white">Select Data</span>
-                      <span className="ml-2 text-[10px] text-slate-500">Describe your promotion and review the AI-staged SKUs</span>
-                    </div>
-                    <span className="rounded-full border border-ithina-border px-2 py-0.5 font-mono text-[9px] text-slate-600">
-                      Step 1 of {wSteps.length}
-                    </span>
-                    {/* Next button in context bar */}
-                    {canProceedNl && (
-                      <button
-                        onClick={() => dispatch(setWStep(2))}
-                        disabled={hwConfirmMutation.isPending}
-                        className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Next: Select Screens & Design
-                        <svg className="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-
                   {/* Pre-submit: centred zero state */}
                   {!hasSplit && (
-                    <div className="flex flex-1 flex-col items-center justify-center gap-6 p-8 animate-[fadeIn_0.4s_ease-out]">
+                    <div className="flex flex-1 flex-col items-center justify-center gap-4 p-5 sm:p-6 animate-[fadeIn_0.4s_ease-out]">
                       <div className="text-center">
                         <div className="mx-auto mb-5 flex size-16 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10 shadow-[0_0_20px_rgba(168,85,247,0.1)]">
                           <svg className="size-8 text-ithina-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -589,7 +590,13 @@ export default function Wizard() {
 
                   {/* Post-submit: split screen (chat + grid) */}
                   {hasSplit && (
-                    <div className="flex min-h-0 flex-1 gap-6 overflow-x-auto overflow-y-auto px-8 pb-6 pt-5">
+                    <div
+                      className={
+                        inputMode === "csv"
+                          ? "flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto px-4 pb-4 pt-3 sm:px-5"
+                          : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-3 pt-2 sm:px-4"
+                      }
+                    >
                       {inputMode === "csv" ? (
                         <DataStagingGrid
                           data={gridData}
@@ -597,6 +604,7 @@ export default function Wizard() {
                           inputMode={inputMode}
                           onInputModeChange={handleInputModeChange}
                           onToggleGridRowIncluded={handleToggleGridRowIncluded}
+                          onSetAllGridRowsIncluded={handleSetAllGridRowsIncluded}
                           onDiscountChange={handleDiscountChange}
                           csvRows={csvRows}
                           csvFileName={csvFileName}
@@ -611,43 +619,47 @@ export default function Wizard() {
                         />
                       ) : (
                         <>
-                          <ChatPanel
-                            messages={messages}
-                            isTyping={isTyping}
-                            inputText={inputText}
-                            onInputChange={setInputText}
-                            onSubmit={handleSubmit}
-                            inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
-                            hasSplit={true}
-                          />
-
-                          {showGrid && (
-                            <DataStagingGrid
-                              data={gridData}
-                              isGenerating={hwConfirmMutation.isPending}
-                              inputMode={inputMode}
-                              onInputModeChange={handleInputModeChange}
-                              onToggleGridRowIncluded={handleToggleGridRowIncluded}
-                              onDiscountChange={handleDiscountChange}
-                              csvRows={csvRows}
-                              csvFileName={csvFileName}
-                              onCsvParsed={handleCsvParsed}
-                              onCsvClear={handleCsvClear}
-                              onCsvConfirm={handleCsvConfirm}
-                              onRemoveCsvRow={handleRemoveCsvRow}
-                              onRemoveAllViolations={handleRemoveAllViolations}
-                              marginFloor={marginFloor}
+                          <div className="flex min-h-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col">
+                            <ChatPanel
+                              messages={messages}
+                              isTyping={isTyping}
+                              inputText={inputText}
+                              onInputChange={setInputText}
+                              onSubmit={handleSubmit}
+                              onResetChat={handleResetPromoChat}
+                              inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
+                              hasSplit={true}
                             />
+                          </div>
+                          {showGrid ? (
+                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                              <DataStagingGrid
+                                data={gridData}
+                                isGenerating={hwConfirmMutation.isPending}
+                                inputMode={inputMode}
+                                onInputModeChange={handleInputModeChange}
+                                onToggleGridRowIncluded={handleToggleGridRowIncluded}
+                                onSetAllGridRowsIncluded={handleSetAllGridRowsIncluded}
+                                onDiscountChange={handleDiscountChange}
+                                csvRows={csvRows}
+                                csvFileName={csvFileName}
+                                onCsvParsed={handleCsvParsed}
+                                onCsvClear={handleCsvClear}
+                                onCsvConfirm={handleCsvConfirm}
+                                onRemoveCsvRow={handleRemoveCsvRow}
+                                onRemoveAllViolations={handleRemoveAllViolations}
+                                marginFloor={marginFloor}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-ithina-border bg-ithina-panel">
+                              <svg className="size-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 10h18M3 14h18M10 3v18M14 3v18" />
+                              </svg>
+                              <p className="text-xs text-slate-600">SKU staging grid will appear here after AI response</p>
+                            </div>
                           )}
                         </>
-                      )}
-                      {!showGrid && inputMode !== "csv" && (
-                        <div className="flex flex-1 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-ithina-border bg-ithina-panel">
-                          <svg className="size-10 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M3 10h18M3 14h18M10 3v18M14 3v18" />
-                          </svg>
-                          <p className="text-xs text-slate-600">SKU staging grid will appear here after AI response</p>
-                        </div>
                       )}
                     </div>
                   )}

@@ -198,7 +198,7 @@ export function RuleBuilderModal({
     }
 
     uploadDocument.mutate(
-      { name: file.name, uploadedBy: createdBy, linkedRuleIds: [] },
+      { file, documentType: "COMPLIANCE_REFERENCE" },
       {
         onSuccess: (doc) => {
           setSelectedDocumentIds((prev) => [...new Set([...prev, doc.id])]);

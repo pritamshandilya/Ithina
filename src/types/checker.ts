@@ -443,6 +443,7 @@ export interface ReferenceDocument {
   uploadedDate: Date;
   uploadedBy: string;
   linkedRuleIds: string[];
+  processingStatus?: "PENDING" | "EXTRACTING" | "COMPLETED" | "FAILED";
 }
 
 export interface RuleValidationResult {

@@ -1,4 +1,12 @@
 import { AuthSessionService } from "@/lib/auth/session";
+import { apiClient } from "@/queries/shared";
+import type {
+  UploadDocumentPayload,
+  DocumentTypePayload,
+} from "@/models/request/knowledge-center";
+import type {
+  DocumentApiResponse,
+} from "@/models/response/knowledge-center";
 import { fetchAggregatedComplianceRulesFromRuleSets } from "@/queries/maker/api/compliance-rule-sets";
 import store from "@/store";
 import { selectSelectedStore } from "@/store/selectors";
@@ -17,12 +25,33 @@ import {
   KNOWLEDGE_SHELF_TYPES,
   mockDocuments,
   mockRules,
-  nextDocumentId,
   nextRuleId,
   nextVersionId,
 } from "./knowledge-center.mock";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function mapDocumentResponseToReferenceDocument(
+  document: DocumentApiResponse,
+): ReferenceDocument {
+  return {
+    id: document.id,
+    name: document.name || "Untitled document",
+    uploadedDate: new Date(document.uploaded_at ?? document.created_at),
+    uploadedBy: document.uploaded_by ?? "Unknown",
+    linkedRuleIds: [],
+    processingStatus: document.processing_status,
+  };
+}
+
+async function uploadReferenceDocumentMultipart(
+  payload: UploadDocumentPayload,
+): Promise<DocumentApiResponse> {
+  const formData = new FormData();
+  formData.append("file", payload.file);
+  formData.append("document_type", payload.document_type);
+  return apiClient.post<DocumentApiResponse>("/documents", formData);
+}
 
 function getSelectedStoreIdFromState(): string | null {
   try {
@@ -38,6 +67,10 @@ function ensureKnowledgeCenterAccess() {
   if (!user || (user.role !== "checker" && user.role !== "admin")) {
     throw new Error("Unauthorized: Knowledge Center access denied");
   }
+}
+
+function ensureCheckerAccess() {
+  ensureKnowledgeCenterAccess();
 }
 
 function ruleStatusToVersionStatus(status: ComplianceRule["status"]): RuleVersionStatus {
@@ -161,10 +194,25 @@ export async function fetchRuleVersions(ruleId?: string): Promise<RuleVersion[]>
   return filtered.sort((a, b) => b.createdDate.getTime() - a.createdDate.getTime());
 }
 
-export async function fetchReferenceDocuments(): Promise<ReferenceDocument[]> {
-  ensureKnowledgeCenterAccess();
-  await delay(200);
-  return [...mockDocuments].sort((a, b) => b.uploadedDate.getTime() - a.uploadedDate.getTime());
+export async function fetchReferenceDocuments(
+  documentType: DocumentTypePayload = "COMPLIANCE_REFERENCE",
+): Promise<ReferenceDocument[]> {
+  ensureCheckerAccess();
+  const documents = await apiClient.get<DocumentApiResponse[]>(
+    "/documents",
+    { document_type: documentType },
+  );
+  return documents
+    .map(mapDocumentResponseToReferenceDocument)
+    .sort((a, b) => b.uploadedDate.getTime() - a.uploadedDate.getTime());
+}
+
+export async function fetchReferenceDocumentById(
+  documentId: string,
+): Promise<ReferenceDocument> {
+  ensureCheckerAccess();
+  const document = await apiClient.get<DocumentApiResponse>(`/documents/${documentId}`);
+  return mapDocumentResponseToReferenceDocument(document);
 }
 
 export async function validateRuleForActivation(ruleId: string): Promise<RuleValidationResult> {
@@ -394,37 +442,31 @@ export async function cloneRetiredRule(ruleId: string, createdBy: string): Promi
 }
 
 export async function uploadReferenceDocument(input: {
-  name: string;
-  uploadedBy: string;
-  linkedRuleIds: string[];
+  file: File;
+  documentType?: DocumentTypePayload;
 }): Promise<ReferenceDocument> {
-  ensureKnowledgeCenterAccess();
-  await delay(300);
-
-  if (!input.name.toLowerCase().endsWith(".pdf")) {
+  ensureCheckerAccess();
+  const loweredName = input.file.name.toLowerCase();
+  if (!loweredName.endsWith(".pdf")) {
     throw new Error("Only PDF documents are supported in Phase 1.");
   }
-
-  const document: ReferenceDocument = {
-    id: nextDocumentId(),
-    name: input.name,
-    uploadedDate: new Date(),
-    uploadedBy: input.uploadedBy,
-    linkedRuleIds: input.linkedRuleIds,
-  };
-
-  mockDocuments.unshift(document);
-
-  input.linkedRuleIds.forEach((ruleId) => {
-    const rule = mockRules.find((item) => item.ruleId === ruleId);
-    if (!rule) return;
-    if (!rule.linkedDocumentIds.includes(document.id)) {
-      rule.linkedDocumentIds.push(document.id);
-      rule.lastUpdated = new Date();
-    }
+  const document = await uploadReferenceDocumentMultipart({
+    file: input.file,
+    document_type: input.documentType ?? "COMPLIANCE_REFERENCE",
   });
+  return mapDocumentResponseToReferenceDocument(document);
+}
 
-  return document;
+export async function generateRulesFromReferenceDocument(
+  documentId: string,
+): Promise<void> {
+  ensureCheckerAccess();
+  await apiClient.post(`/documents/${documentId}/generate-rules`);
+}
+
+export async function deleteReferenceDocument(documentId: string): Promise<void> {
+  ensureCheckerAccess();
+  await apiClient.delete(`/documents/${documentId}`);
 }
 
 export async function updateReferenceDocumentLinks(

@@ -99,6 +99,14 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
   return headers;
 }
 
+function mergeHeadersWithoutContentTypeForFormData(extra?: HeadersInit): HeadersInit {
+  const headers = buildHeaders(extra) as Record<string, string>;
+  const normalizedEntries = Object.entries(headers).filter(
+    ([key]) => key.toLowerCase() !== "content-type",
+  );
+  return Object.fromEntries(normalizedEntries);
+}
+
 async function request<T>(
   method: string,
   path: string,
@@ -150,10 +158,15 @@ async function request<T>(
 
   const res = await fetch(url, {
     method,
-    headers: buildHeaders(options?.headers),
+    headers:
+      options?.body instanceof FormData
+        ? mergeHeadersWithoutContentTypeForFormData(options?.headers)
+        : buildHeaders(options?.headers),
     body:
       options?.body instanceof URLSearchParams
         ? options.body
+        : options?.body instanceof FormData
+          ? options.body
         : options?.body !== undefined
           ? JSON.stringify(options.body)
           : undefined,

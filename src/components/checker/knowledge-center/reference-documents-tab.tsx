@@ -5,7 +5,7 @@
  * Phase 1.5 UX: show the document-to-rules workflow clearly.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FileText,
   Search,
@@ -13,16 +13,18 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import {
+  useDeleteReferenceDocument,
   useComplianceRules,
+  useGenerateDocumentRules,
   useReferenceDocuments,
   useUpdateReferenceDocumentLinks,
   useUploadReferenceDocument,
 } from "@/queries/checker";
 import { useToast } from "@/hooks/use-toast";
-import { mockCheckerUser } from "@/lib/api/mock-data";
 import type { ReferenceDocument } from "@/types/checker";
 import { ReferenceDocumentRow } from "./reference-document-row";
 import { ReferenceDocumentsFileUpload } from "./reference-documents-file-upload";
@@ -36,27 +38,32 @@ export function ReferenceDocumentsTab() {
   const [searchQuery, setSearchQuery] = useState("");
   const [editingDocId, setEditingDocId] = useState<string | null>(null);
   const [editLinkedRuleIds, setEditLinkedRuleIds] = useState<string[]>([]);
-  const [extractionStatus, setExtractionStatus] = useState<Record<string, ExtractionStatus>>({});
+  const [manualExtractionStatus, setManualExtractionStatus] = useState<
+    Record<string, ExtractionStatus>
+  >({});
   const [queuedFiles, setQueuedFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState("");
-  const [isSimulatingUpload, setIsSimulatingUpload] = useState(false);
   const [showUploadPanel, setShowUploadPanel] = useState(false);
+  const [confirmDeleteDocument, setConfirmDeleteDocument] = useState<ReferenceDocument | null>(null);
 
   const { data: documents, isLoading, error } = useReferenceDocuments();
   const { data: rules } = useComplianceRules();
   const uploadDoc = useUploadReferenceDocument();
+  const generateRules = useGenerateDocumentRules();
+  const deleteDocument = useDeleteReferenceDocument();
   const updateLinks = useUpdateReferenceDocumentLinks();
 
-  useEffect(() => {
-    if (!documents) return;
-    setExtractionStatus((prev) => {
-      const next = { ...prev };
-      for (const doc of documents) {
-        if (!next[doc.id]) next[doc.id] = doc.linkedRuleIds.length > 0 ? "ready" : "uploaded";
-      }
-      return next;
-    });
-  }, [documents]);
+  const getDocumentExtractionStatus = useCallback(
+    (doc: ReferenceDocument): ExtractionStatus => {
+      const manualStatus = manualExtractionStatus[doc.id];
+      if (manualStatus) return manualStatus;
+      if (doc.processingStatus === "EXTRACTING") return "processing";
+      if (doc.processingStatus === "FAILED") return "failed";
+      if (doc.processingStatus === "COMPLETED" || doc.linkedRuleIds.length > 0) return "ready";
+      return "uploaded";
+    },
+    [manualExtractionStatus]
+  );
 
   const filteredDocuments = useMemo(() => {
     if (!documents) return [];
@@ -67,43 +74,26 @@ export function ReferenceDocumentsTab() {
     return documents.filter((doc) => {
       if (doc.name.toLowerCase().includes(q)) return true;
       const linkedNames = doc.linkedRuleIds.map((id) => ruleNames.get(id) ?? id.toLowerCase()).join(" ");
-      const statusText = (getStatusUi(extractionStatus[doc.id] ?? "uploaded").label || "").toLowerCase();
+      const statusText = (getStatusUi(getDocumentExtractionStatus(doc)).label || "").toLowerCase();
       return linkedNames.includes(q) || statusText.includes(q);
     });
-  }, [documents, searchQuery, rules, extractionStatus]);
-
-  const simulateUploadApiCall = useCallback(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 900));
-  }, []);
+  }, [documents, searchQuery, rules, getDocumentExtractionStatus]);
 
   const handleUploadFiles = useCallback(
     async (files: File[]) => {
       if (!files.length) return;
       setUploadError("");
-      setIsSimulatingUpload(true);
 
       try {
-        // Simulated API call wrapper. Replace this function with the real API call later.
-        await simulateUploadApiCall();
-
         for (const file of files) {
-          await new Promise<void>((resolve, reject) => {
-            uploadDoc.mutate(
-              {
-                name: file.name,
-                uploadedBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`,
-                linkedRuleIds: selectedRuleIds,
-              },
-              {
-                onSuccess: () => resolve(),
-                onError: (err) => reject(err),
-              }
-            );
+          await uploadDoc.mutateAsync({
+            file,
+            documentType: "COMPLIANCE_REFERENCE",
           });
         }
 
         toast({
-          title: "Document uploaded",
+          title: "Upload successful",
           description:
             files.length === 1
               ? selectedRuleIds.length
@@ -121,19 +111,29 @@ export function ReferenceDocumentsTab() {
           description: message,
           variant: "destructive",
         });
-      } finally {
-        setIsSimulatingUpload(false);
       }
     },
-    [selectedRuleIds, simulateUploadApiCall, toast, uploadDoc]
+    [selectedRuleIds, toast, uploadDoc]
   );
 
-  const runExtraction = useCallback((documentId: string) => {
-    setExtractionStatus((prev) => ({ ...prev, [documentId]: "processing" }));
-    setTimeout(() => {
-      setExtractionStatus((prev) => ({ ...prev, [documentId]: "ready" }));
-    }, 900);
-  }, []);
+  const runExtraction = useCallback(async (documentId: string) => {
+    setManualExtractionStatus((prev) => ({ ...prev, [documentId]: "processing" }));
+    try {
+      await generateRules.mutateAsync(documentId);
+      setManualExtractionStatus((prev) => ({ ...prev, [documentId]: "ready" }));
+      toast({
+        title: "Extraction complete",
+        description: "Candidate rules have been generated for this document.",
+      });
+    } catch (err) {
+      setManualExtractionStatus((prev) => ({ ...prev, [documentId]: "failed" }));
+      toast({
+        title: "Extraction failed",
+        description: err instanceof Error ? err.message : "Could not generate rules.",
+        variant: "destructive",
+      });
+    }
+  }, [generateRules, toast]);
 
   const reviewCandidates = useCallback((docName: string) => {
     toast({
@@ -143,7 +143,8 @@ export function ReferenceDocumentsTab() {
   }, [toast]);
 
   const createDraftRules = useCallback((documentId: string, docName: string) => {
-    const status = extractionStatus[documentId] ?? "uploaded";
+    const document = documents?.find((doc) => doc.id === documentId);
+    const status = document ? getDocumentExtractionStatus(document) : "uploaded";
     if (status !== "ready" && status !== "imported") {
       toast({
         title: "Run extraction first",
@@ -152,12 +153,12 @@ export function ReferenceDocumentsTab() {
       });
       return;
     }
-    setExtractionStatus((prev) => ({ ...prev, [documentId]: "imported" }));
+    setManualExtractionStatus((prev) => ({ ...prev, [documentId]: "imported" }));
     toast({
       title: "Draft rules created",
       description: `${docName} candidates are now ready in Compliance Rules as drafts.`,
     });
-  }, [extractionStatus, toast]);
+  }, [documents, getDocumentExtractionStatus, toast]);
 
   const startEditLinks = (doc: ReferenceDocument) => {
     setEditingDocId(doc.id);
@@ -202,7 +203,7 @@ export function ReferenceDocumentsTab() {
             setUploadError("");
             setShowUploadPanel(true);
           }}
-          disabled={isSimulatingUpload || uploadDoc.isPending}
+          disabled={uploadDoc.isPending}
         >
           <Upload className="size-4" />
           Add New Doc
@@ -235,7 +236,7 @@ export function ReferenceDocumentsTab() {
       <Modal
         isOpen={showUploadPanel}
         onClose={() => {
-          if (isSimulatingUpload || uploadDoc.isPending) return;
+          if (uploadDoc.isPending) return;
           setShowUploadPanel(false);
           setQueuedFiles([]);
           setUploadError("");
@@ -254,7 +255,7 @@ export function ReferenceDocumentsTab() {
                 setQueuedFiles([]);
                 setUploadError("");
               }}
-              disabled={isSimulatingUpload || uploadDoc.isPending}
+              disabled={uploadDoc.isPending}
             >
               Cancel
             </Button>
@@ -263,7 +264,7 @@ export function ReferenceDocumentsTab() {
             onFileSelect={(files) => setQueuedFiles(files ?? [])}
             onUpload={handleUploadFiles}
             uploadedFiles={queuedFiles}
-            isProcessing={isSimulatingUpload || uploadDoc.isPending}
+            isProcessing={uploadDoc.isPending}
             error={uploadError}
             acceptedFileTypes=".pdf"
             maxFileSizeMB={5}
@@ -308,7 +309,7 @@ export function ReferenceDocumentsTab() {
                   setUploadError("");
                   setShowUploadPanel(true);
                 }}
-                disabled={isSimulatingUpload || uploadDoc.isPending}
+                disabled={uploadDoc.isPending}
               >
                 <Upload className="size-4" />
                 Add New Doc
@@ -340,16 +341,50 @@ export function ReferenceDocumentsTab() {
                   onSaveEdit={saveEditLinks}
                   onCancelEdit={() => setEditingDocId(null)}
                   isSaving={updateLinks.isPending}
-                  extractionStatus={extractionStatus[doc.id] ?? "uploaded"}
+                  extractionStatus={getDocumentExtractionStatus(doc)}
                   onRunExtraction={() => runExtraction(doc.id)}
                   onReviewCandidates={() => reviewCandidates(doc.name)}
                   onCreateDraftRules={() => createDraftRules(doc.id, doc.name)}
+                  onDelete={() => setConfirmDeleteDocument(doc)}
+                  isDeleting={deleteDocument.isPending}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
+      <ConfirmModal
+        isOpen={!!confirmDeleteDocument}
+        onClose={() => setConfirmDeleteDocument(null)}
+        onConfirm={() => {
+          if (!confirmDeleteDocument) return;
+          deleteDocument.mutate(confirmDeleteDocument.id, {
+            onSuccess: () => {
+              toast({
+                title: "Document deleted",
+                description: `${confirmDeleteDocument.name} has been removed.`,
+              });
+              setConfirmDeleteDocument(null);
+            },
+            onError: (err) => {
+              toast({
+                title: "Delete failed",
+                description: err instanceof Error ? err.message : "Could not delete document.",
+                variant: "destructive",
+              });
+            },
+          });
+        }}
+        title="Delete document?"
+        description={
+          confirmDeleteDocument
+            ? `This will permanently remove ${confirmDeleteDocument.name}.`
+            : "This will permanently remove the selected document."
+        }
+        confirmLabel="Delete"
+        variant="destructive"
+        isLoading={deleteDocument.isPending}
+      />
     </div>
   );
 }

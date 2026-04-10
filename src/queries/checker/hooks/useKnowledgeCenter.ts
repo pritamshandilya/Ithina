@@ -5,8 +5,11 @@ import {
   activateComplianceRule,
   cloneRetiredRule,
   createComplianceRule,
+  deleteReferenceDocument,
   fetchComplianceRules,
+  fetchReferenceDocumentById,
   fetchReferenceDocuments,
+  generateRulesFromReferenceDocument,
   retireComplianceRule,
   updateComplianceRule,
   updateReferenceDocumentLinks,
@@ -20,6 +23,7 @@ export const knowledgeCenterKeys = {
   all: ["checker", "knowledge-center"] as const,
   rules: (filters?: RuleFilters) => [...knowledgeCenterKeys.all, "rules", filters] as const,
   documents: () => [...knowledgeCenterKeys.all, "documents"] as const,
+  document: (documentId: string) => [...knowledgeCenterKeys.all, "documents", documentId] as const,
 };
 
 export function useComplianceRules(filters?: RuleFilters) {
@@ -50,7 +54,16 @@ export function useRuleVersions(ruleId?: string) {
 export function useReferenceDocuments() {
   return useQuery({
     queryKey: knowledgeCenterKeys.documents(),
-    queryFn: fetchReferenceDocuments,
+    queryFn: () => fetchReferenceDocuments(),
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useReferenceDocument(documentId?: string) {
+  return useQuery({
+    queryKey: knowledgeCenterKeys.document(documentId ?? "missing"),
+    queryFn: () => fetchReferenceDocumentById(documentId as string),
+    enabled: Boolean(documentId),
     staleTime: 60 * 1000,
   });
 }
@@ -111,14 +124,28 @@ export function useUploadReferenceDocument() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
-      name,
-      uploadedBy,
-      linkedRuleIds,
+      file,
+      documentType,
     }: {
-      name: string;
-      uploadedBy: string;
-      linkedRuleIds: string[];
-    }) => uploadReferenceDocument({ name, uploadedBy, linkedRuleIds }),
+      file: File;
+      documentType?: "COMPLIANCE_REFERENCE" | "SHELF_IMAGE";
+    }) => uploadReferenceDocument({ file, documentType }),
+    onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
+  });
+}
+
+export function useGenerateDocumentRules() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => generateRulesFromReferenceDocument(documentId),
+    onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
+  });
+}
+
+export function useDeleteReferenceDocument() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (documentId: string) => deleteReferenceDocument(documentId),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }

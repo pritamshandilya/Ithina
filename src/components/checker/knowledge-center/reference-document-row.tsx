@@ -7,6 +7,7 @@ import {
   FileText,
   Link2,
   Pencil,
+  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ export function ReferenceDocumentRow({
   onRunExtraction,
   onReviewCandidates,
   onCreateDraftRules,
+  onDelete,
+  isDeleting,
 }: DocumentRowProps) {
   const linkedLabels = document.linkedRuleIds.map((id) => ruleNames.get(id) || id);
   const statusUi = getStatusUi(extractionStatus);
@@ -119,6 +122,16 @@ export function ReferenceDocumentRow({
                 disabled={extractionStatus !== "ready" && extractionStatus !== "imported"}
               >
                 Create Drafts
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onDelete}
+                disabled={isDeleting}
+                className="text-destructive hover:text-destructive"
+                aria-label="Delete document"
+              >
+                <Trash2 className="size-4" />
               </Button>
             </div>
           </>

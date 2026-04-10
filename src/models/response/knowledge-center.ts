@@ -79,6 +79,32 @@ export interface ReferenceDocumentListResponse {
   total: number;
 }
 
+export type DocumentTypeResponse = "COMPLIANCE_REFERENCE" | "SHELF_IMAGE";
+export type DocumentProcessingStatusResponse =
+  | "PENDING"
+  | "EXTRACTING"
+  | "COMPLETED"
+  | "FAILED";
+
+export interface DocumentApiResponse {
+  id: string;
+  store_id: string;
+  uploaded_by: string | null;
+  document_type: DocumentTypeResponse;
+  name: string | null;
+  mime_type: string | null;
+  extension: string | null;
+  size: number | null;
+  path: string;
+  hash: string | null;
+  data: Record<string, unknown>;
+  uploaded_at: string | null;
+  processing_status: DocumentProcessingStatusResponse;
+  processing_error: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RuleValidationResponse {
   valid: boolean;
   errors: string[];

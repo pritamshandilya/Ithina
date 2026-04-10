@@ -43,3 +43,10 @@ export interface UpdateRulePayload {
 export interface UpdateDocumentLinksPayload {
   linkedDocumentIds: string[];
 }
+
+export type DocumentTypePayload = "COMPLIANCE_REFERENCE" | "SHELF_IMAGE";
+
+export interface UploadDocumentPayload {
+  file: File;
+  document_type: DocumentTypePayload;
+}

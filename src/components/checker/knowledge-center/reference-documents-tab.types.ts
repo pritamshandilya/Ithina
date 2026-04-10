@@ -27,4 +27,6 @@ export interface DocumentRowProps {
   onRunExtraction: () => void;
   onReviewCandidates: () => void;
   onCreateDraftRules: () => void;
+  onDelete: () => void;
+  isDeleting: boolean;
 }

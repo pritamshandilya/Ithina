@@ -226,72 +226,69 @@ function SelectStorePage() {
 
 function SelectStoreShell({ children, panelWidth }: { children: ReactNode; panelWidth: string }) {
   return (
-    <div className="relative flex min-h-screen w-full overflow-hidden bg-background">
-      <div
-        className="absolute inset-0 opacity-[0.05]"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(148, 163, 184, 0.14) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.14) 1px, transparent 1px)",
-          backgroundSize: "40px 40px",
-        }}
-      />
+    <div className="flex min-h-screen w-full overflow-hidden bg-background">
+    <div className="relative hidden items-center justify-center overflow-hidden bg-linear-to-br from-[#0f172a] via-[#1a1040] to-[#0f172a] lg:flex lg:w-1/2">
+      <div className="absolute inset-0 bg-size-[40px_40px] opacity-[0.04] bg-[linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)]" />
+      <div className="absolute left-1/3 top-1/4 h-96 w-96 rounded-full bg-accent/20 blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-accent/10 blur-[100px]" />
 
-      <div className="relative hidden items-center justify-center overflow-hidden border-r border-border bg-sidebar lg:flex lg:w-1/2">
-        <div className="relative z-10 max-w-lg px-12 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="mx-auto mb-8 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl border border-accent/15 bg-card shadow-[0_24px_60px_rgba(3,8,20,0.42)]"
-          >
-            <img alt="CBAI Logo" className="h-full w-full object-contain p-3" src={logo} />
-          </motion.div>
+      <div className="relative z-10 max-w-lg px-12 text-center">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.2, duration: 0.5 }}
+          className="mx-auto mb-8 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-2xl shadow-accent/45"
+        >
+          <img alt="Ithina Logo" className="h-full w-full object-contain" src={logo} />
+        </motion.div>
 
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="mb-4 text-5xl font-extrabold leading-tight tracking-[-0.06em] text-white"
-          >
-            Planogram
-            <br />
-            Assistant
-          </motion.h1>
+        <motion.h1
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.3, duration: 0.5 }}
+          className="mb-4 text-4xl font-bold leading-tight text-white"
+        >
+          Promotions
+          <br />
+          Assistant
+        </motion.h1>
 
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="mb-8 text-lg leading-8 text-muted-foreground"
-          >
-            AI-powered retail shelf analysis & optimization platform
-          </motion.p>
+        <motion.p
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.4, duration: 0.5 }}
+          className="mb-8 text-lg text-muted-foreground"
+        >
+          AI-powered promotions and campaign orchestration for modern retail.
+        </motion.p>
 
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.5, duration: 0.5 }}
-            className="flex justify-center gap-8 text-center"
-          >
-            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
-              <div className="text-2xl font-extrabold tracking-[-0.04em] text-accent">AI</div>
-              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Shelf Analysis</div>
-            </div>
-            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
-              <div className="text-2xl font-extrabold tracking-[-0.04em] text-accent">3D</div>
-              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Visualization</div>
-            </div>
-            <div className="ithina-panel min-w-28 p-4 flex flex-col items-center justify-center">
-              <div className="text-2xl font-extrabold tracking-[-0.04em] text-white">100%</div>
-              <div className="mt-2 font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Compliance</div>
-            </div>
-          </motion.div>
-        </div>
-
-        <div className="absolute bottom-6 left-0 right-0 text-center font-mono text-[11px] text-muted-foreground/60">
-          Powered by Gemini AI
-        </div>
+        <motion.div
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.5 }}
+          className="flex justify-center gap-8 text-center"
+        >
+          <div>
+            <div className="text-2xl font-bold text-accent">AI</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">Campaign Insights</div>
+          </div>
+          <div className="h-10 w-px bg-border" />
+          <div>
+            <div className="text-2xl font-bold text-accent">ROOS</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">Store Signals</div>
+          </div>
+          <div className="h-10 w-px bg-border" />
+          <div>
+            <div className="text-2xl font-bold text-accent">100%</div>
+            <div className="mt-1 text-[11px] text-muted-foreground">Guardrails</div>
+          </div>
+        </motion.div>
       </div>
+
+      <div className="absolute bottom-6 left-0 right-0 text-center text-[11px] text-muted-foreground/60">
+        Powered by Gemini AI
+      </div>
+    </div>
 
       <motion.div
         initial={{ opacity: 0, x: 50 }}

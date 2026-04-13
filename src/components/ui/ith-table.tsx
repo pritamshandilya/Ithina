@@ -10,7 +10,7 @@
  */
 
 import { ChevronDown, ChevronUp, ChevronsUpDown } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -34,8 +34,12 @@ export interface IthTablePaginationProps {
   pageSize: number;
   total: number;
   onPageChange: (page: number) => void;
-  /** Label shown in bottom-left, e.g. "campaigns". Default: "rows" */
+  /** Label shown in bottom-left for compact layout. Default: "rows" */
   rowLabel?: string;
+  /** `compact` = prev/next + page chips. `full` = "Showing X–Y of Z", optional page size, First/Prev/Next/Last. */
+  layout?: "compact" | "full";
+  onPageSizeChange?: (size: number) => void;
+  pageSizeOptions?: number[];
 }
 
 export interface IthTableEmptyProps {
@@ -50,6 +54,8 @@ export interface IthTableProps<TRow> {
   onRowClick?: (row: TRow, e: React.MouseEvent<HTMLTableRowElement>) => void;
   rowClassName?: (row: TRow) => string;
   pagination?: IthTablePaginationProps;
+  /** Optional second header row (e.g. column filters). Length must match columns when provided. */
+  filterRow?: ReactNode[];
   empty?: IthTableEmptyProps;
   className?: string;
   rowHighlight?: (row: TRow) => "purple" | "emerald" | "amber" | "rose" | null;
@@ -86,18 +92,102 @@ function SortIcon({ dir }: { dir: SortDir }) {
 
 /* ─── Pagination ─────────────────────────────────────────────────────────── */
 
-function PaginationBar({ page, pageSize, total, onPageChange, rowLabel = "rows" }: IthTablePaginationProps) {
+function PaginationBar({
+  page,
+  pageSize,
+  total,
+  onPageChange,
+  rowLabel = "rows",
+  layout = "compact",
+  onPageSizeChange,
+  pageSizeOptions = [10, 25, 50],
+}: IthTablePaginationProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
-  /* Window of up to 5 page buttons centred around current page */
   const pageButtons = useMemo(() => {
-    const window = 5;
-    const half = Math.floor(window / 2);
+    const windowSize = 5;
+    const half = Math.floor(windowSize / 2);
     let start = Math.max(1, page - half);
-    const end = Math.min(totalPages, start + window - 1);
-    start = Math.max(1, end - window + 1);
+    const end = Math.min(totalPages, start + windowSize - 1);
+    start = Math.max(1, end - windowSize + 1);
     return Array.from({ length: end - start + 1 }, (_, i) => start + i);
   }, [page, totalPages]);
+
+  if (layout === "full") {
+    const start = total === 0 ? 0 : (page - 1) * pageSize + 1;
+    const end = Math.min(page * pageSize, total);
+
+    const btnClass =
+      "rounded-md border border-ithina-border px-2.5 py-1 font-mono text-[10px] uppercase tracking-widest text-slate-400 transition-colors hover:border-ithina-purple/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-30";
+
+    return (
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-ithina-border/40 bg-ithina-bg/40 px-4 py-3 sm:px-6">
+        <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-slate-500">
+          Showing {start}–{end} of {total} rows
+        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          {onPageSizeChange ? (
+            <label className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-slate-500">
+              Page size
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  onPageSizeChange(Number(e.target.value));
+                  onPageChange(1);
+                }}
+                className="rounded-md border border-ithina-border bg-ithina-panel px-2 py-1 text-xs text-white"
+              >
+                {pageSizeOptions.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-1">
+            <button type="button" disabled={page <= 1} onClick={() => onPageChange(1)} className={btnClass}>
+              First
+            </button>
+            <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)} className={btnClass}>
+              Prev
+            </button>
+            {pageButtons.map((p) => (
+              <button
+                key={p}
+                type="button"
+                onClick={() => onPageChange(p)}
+                className={cn(
+                  "flex min-w-8 items-center justify-center rounded-md border px-2 py-1 font-mono text-[11px] transition-colors",
+                  p === page
+                    ? "border-ithina-purple/30 bg-ithina-purple/10 text-ithina-purple"
+                    : "border-ithina-border text-slate-500 hover:border-ithina-purple/30 hover:text-white",
+                )}
+              >
+                {p}
+              </button>
+            ))}
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(page + 1)}
+              className={btnClass}
+            >
+              Next
+            </button>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => onPageChange(totalPages)}
+              className={btnClass}
+            >
+              Last
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex shrink-0 items-center justify-between border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-2.5">
@@ -152,6 +242,7 @@ export function IthTable<TRow extends object>({
   onRowClick,
   rowClassName,
   pagination,
+  filterRow,
   empty,
   className,
   rowHighlight,
@@ -221,6 +312,15 @@ export function IthTable<TRow extends object>({
                 </th>
               ))}
             </tr>
+            {filterRow && filterRow.length === columns.length ? (
+              <tr className="border-b border-ithina-border bg-[rgba(15,21,35,0.88)] backdrop-blur-sm">
+                {filterRow.map((cell, i) => (
+                  <td key={i} className="px-3 py-2 align-middle">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ) : null}
           </thead>
 
           {/* ── Body ── */}

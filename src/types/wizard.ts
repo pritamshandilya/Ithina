@@ -42,6 +42,10 @@ export interface StagedSku {
   discount: number;
   /** When false, SKU stays in the grid but is excluded from counts and submission. Default: included. */
   included?: boolean;
+  eslId?: string;
+  rankingScore?: number;
+  /** Per-SKU label from the promo assistant, e.g. "Oct 15 – Oct 20 (Soon)". */
+  agentSuggestSchedule?: string;
 }
 
 export type ChatRole = "user" | "ai";

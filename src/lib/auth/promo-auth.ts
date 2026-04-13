@@ -1,5 +1,6 @@
 import { promoApiClient } from "@/lib/promo-api-client";
 import { clearAuthToken, setAuthToken } from "@/lib/auth/session";
+import { resetClientSessionState } from "@/lib/reset-client-session-state";
 import { StoreContext } from "@/lib/store-context";
 
 export interface OrganizationSummary {
@@ -93,7 +94,7 @@ function mapCurrentUser(payload: AuthCurrentUserResponse): PromoUser {
 export function getDashboardUrlForRole(role: string): string {
   switch (role) {
     case "admin":
-      return "/admin/users";
+      return "/admin/dashboard";
     case "checker":
       return "/checker/dashboard";
     case "maker":
@@ -103,7 +104,15 @@ export function getDashboardUrlForRole(role: string): string {
 }
 
 export class PromoAuthService {
-  private static async ensureActiveStore(): Promise<void> {
+  /**
+   * Makers/checkers need a default store for X-Store-Id. Admins start in organization
+   * scope and pick a store manually via the switcher.
+   */
+  private static async ensureActiveStore(role: string): Promise<void> {
+    if (role === "admin") {
+      return;
+    }
+
     const existing = StoreContext.getStoreId();
     if (existing) return;
 
@@ -145,7 +154,11 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
-    await this.ensureActiveStore();
+    resetClientSessionState();
+    if (user.role === "admin") {
+      StoreContext.clearStoreId();
+    }
+    await this.ensureActiveStore(user.role);
 
     return user;
   }
@@ -164,7 +177,11 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
-    await this.ensureActiveStore();
+    resetClientSessionState();
+    if (user.role === "admin") {
+      StoreContext.clearStoreId();
+    }
+    await this.ensureActiveStore(user.role);
 
     return user;
   }
@@ -181,6 +198,7 @@ export class PromoAuthService {
     } finally {
       clearAuthStorage();
       StoreContext.clearStoreId();
+      resetClientSessionState();
     }
   }
 
@@ -190,7 +208,7 @@ export class PromoAuthService {
     );
     const user = mapCurrentUser(data);
     saveUser(user);
-    await this.ensureActiveStore();
+    await this.ensureActiveStore(user.role);
     return user;
   }
 

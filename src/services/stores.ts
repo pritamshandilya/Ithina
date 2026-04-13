@@ -1,4 +1,5 @@
 import { promoApiClient } from "@/lib/promo-api-client";
+import type { ApiUserResponse } from "@/types/api/users";
 
 const API_PREFIX = "/api/v1";
 
@@ -25,9 +26,8 @@ export interface CreateStorePayload {
 
 export type StoreStaffUserType = "admin" | "checker" | "maker";
 
-export interface StoreUser {
-  id: string;
-}
+/** Store staff row from GET /store/users (matches API UserResponse). */
+export type StoreUser = ApiUserResponse;
 
 export async function listStores(): Promise<Store[]> {
   const { data } = await promoApiClient.get<Store[]>(`${API_PREFIX}/stores`);

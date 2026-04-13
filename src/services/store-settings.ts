@@ -1,5 +1,6 @@
-import { promoApiClient } from "@/lib/promo-api-client";
 import type { StoreDimensionUnit } from "@/constants/dimensions";
+import { promoApiClient } from "@/lib/promo-api-client";
+import { StoreContext } from "@/lib/store-context";
 import type { StoreProfile, StoreStaffMember, StoreStaffRole } from "@/types/store-settings";
 
 const API_PREFIX = "/api/v1";
@@ -28,14 +29,23 @@ interface UserResponse {
   last_login_at: string | null;
 }
 
+function requireActiveStoreId(): string {
+  const id = StoreContext.getStoreId();
+  if (!id?.trim()) {
+    throw new Error("Select a store to manage settings.");
+  }
+  return id;
+}
+
 function mapStoreToProfile(store: StoreResponse): StoreProfile {
   return {
     id: store.id,
     name: store.name,
     address: store.address,
+    region: store.region,
     currency: store.currency,
-    // Backend doesn't yet model defaultDimensions; keep UI default as "mm".
     defaultDimensions: "mm",
+    isActive: store.is_active,
   };
 }
 
@@ -49,47 +59,34 @@ function mapUserToStaff(user: UserResponse): StoreStaffMember {
   };
 }
 
-async function resolveStoreId(): Promise<string> {
-  const { data } = await promoApiClient.get<StoreResponse[]>(
-    `${API_PREFIX}/stores`,
-  );
-
-  if (!data.length) {
-    throw new Error("No stores available for current user");
-  }
-
-  // For now, use the first store in the list as the active store.
-  return data[0].id;
-}
-
 export async function getStoreProfile(): Promise<StoreProfile> {
-  const { data } = await promoApiClient.get<StoreResponse[]>(
-    `${API_PREFIX}/stores`,
-  );
+  const storeId = requireActiveStoreId();
 
-  if (!data.length) {
-    throw new Error("No stores available for current user");
+  const { data } = await promoApiClient.get<StoreResponse[]>(`${API_PREFIX}/stores`);
+  const store = data.find((s) => s.id === storeId);
+  if (!store) {
+    throw new Error("Store not found");
   }
 
-  // Use the first store in the list as the active store profile.
-  return mapStoreToProfile(data[0]);
+  return mapStoreToProfile(store);
 }
 
 export async function updateStoreProfile(data: {
   name: string;
   address: string;
+  region: string;
   currency: string;
   defaultDimensions: StoreDimensionUnit;
 }): Promise<StoreProfile> {
-  const { name, address, currency } = data;
-
-  const storeId = await resolveStoreId();
+  const { name, address, region, currency } = data;
+  const storeId = requireActiveStoreId();
 
   const { data: updated } = await promoApiClient.put<StoreResponse>(
     `${API_PREFIX}/store`,
     {
       name,
       address,
+      region,
       currency,
     },
     {
@@ -103,7 +100,7 @@ export async function updateStoreProfile(data: {
 }
 
 export async function getStoreStaff(): Promise<StoreStaffMember[]> {
-  const storeId = await resolveStoreId();
+  const storeId = requireActiveStoreId();
 
   const { data } = await promoApiClient.get<UserResponse[]>(
     `${API_PREFIX}/store/users`,
@@ -134,7 +131,7 @@ export async function getAssignableStoreUsers(): Promise<StoreStaffMember[]> {
 }
 
 export async function assignStoreUser(userId: string): Promise<StoreStaffMember[]> {
-  const storeId = await resolveStoreId();
+  const storeId = requireActiveStoreId();
 
   const { data } = await promoApiClient.put<UserResponse[]>(
     `${API_PREFIX}/store/users/${userId}`,
@@ -149,7 +146,7 @@ export async function assignStoreUser(userId: string): Promise<StoreStaffMember[
 }
 
 export async function removeStoreUser(userId: string): Promise<StoreStaffMember[]> {
-  const storeId = await resolveStoreId();
+  const storeId = requireActiveStoreId();
 
   const { data } = await promoApiClient.delete<UserResponse[]>(
     `${API_PREFIX}/store/users/${userId}`,
@@ -161,4 +158,3 @@ export async function removeStoreUser(userId: string): Promise<StoreStaffMember[
   );
   return data.map(mapUserToStaff);
 }
-

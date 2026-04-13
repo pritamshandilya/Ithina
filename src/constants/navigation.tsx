@@ -1,4 +1,5 @@
 import {
+  Cog,
   LayoutDashboard,
   Megaphone,
   Settings,
@@ -122,44 +123,70 @@ export const CHECKER_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-export const ADMIN_NAV_SECTIONS: NavSection[] = [
+/** Admin at organization scope (no store selected): matches POG sidebar — only these four. */
+export const ADMIN_ORG_NAV_SECTIONS: NavSection[] = [
   {
     label: "Organization",
     items: [
       {
         id: "admin-dashboard",
-        label: "Org Dashboard",
+        label: "Dashboard",
         icon: <LayoutDashboard className="size-4" />,
         path: "/admin/dashboard",
         title: "Organization Overview",
-        subtitle: "Org Dashboard",
+        subtitle: "Monitor stores, users, and organization-wide activity.",
         requiredPermission: "dashboard:view",
-      },
-      {
-        id: "users",
-        label: "User Management",
-        icon: <Users className="size-4" />,
-        path: "/admin/users",
-        title: "Invite, Edit & Remove Users",
-        subtitle: "User Management",
-        requiredPermission: "users:manage",
       },
       {
         id: "stores",
         label: "Stores",
         icon: <Store className="size-4" />,
         path: "/admin/stores",
-        title: "Manage Stores",
-        subtitle: "Stores",
+        title: "Stores",
+        subtitle: "Monitor and manage all retail locations in your organization.",
         requiredPermission: "stores:manage",
+      },
+      {
+        id: "users",
+        label: "Users",
+        icon: <Users className="size-4" />,
+        path: "/admin/users",
+        title: "Users",
+        subtitle: "Manage organization users and role assignments.",
+        requiredPermission: "users:manage",
+      },
+      {
+        id: "admin-organization-settings",
+        label: "Organization Settings",
+        icon: <Settings className="size-4" />,
+        path: "/admin/organization-settings",
+        title: "Organization Settings",
+        subtitle: "View and manage organization-wide information.",
+        requiredPermission: "dashboard:view",
       },
     ],
   },
+];
+
+/**
+ * Admin with a store selected (Team Switcher): campaigns, approvals, fleet, guardrails —
+ * scoped to the active store via X-Store-Id / StoreContext.
+ */
+export const ADMIN_STORE_NAV_SECTIONS: NavSection[] = [
   {
     label: "Operations",
     items: [
       {
-        id: "admin-campaigns",
+        id: "admin-store-ops-dashboard",
+        label: "Dashboard",
+        icon: <LayoutDashboard className="size-4" />,
+        path: "/admin/store-dashboard",
+        title: "Overview & Insights",
+        subtitle: "Dashboard",
+        requiredPermission: "dashboard:view",
+      },
+      {
+        id: "admin-all-campaigns",
         label: "All Campaigns",
         icon: <Megaphone className="size-4" />,
         path: "/admin/campaigns",
@@ -191,6 +218,15 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
     label: "Configuration",
     items: [
       {
+        id: "admin-store-settings",
+        label: "Store Settings",
+        icon: <Cog className="size-4" />,
+        path: "/admin/store-settings",
+        title: "Store Settings",
+        subtitle: "Store profile, regional defaults, and staff for the selected store.",
+        requiredPermission: "store-settings:view",
+      },
+      {
         id: "admin-settings",
         label: "Guard Rails",
         icon: <Settings className="size-4" />,
@@ -203,23 +239,21 @@ export const ADMIN_NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+export function getAdminNavSections(adminHasStoreContext: boolean): NavSection[] {
+  return adminHasStoreContext ? ADMIN_STORE_NAV_SECTIONS : ADMIN_ORG_NAV_SECTIONS;
+}
+
 export function getNavSectionsForRole(role: string): NavSection[] {
   switch (role) {
     case "admin":
-      return ADMIN_NAV_SECTIONS;
-    case "checker":
+      return getAdminNavSections(false);
+   case "checker":
       return CHECKER_NAV_SECTIONS;
     case "maker":
     default:
       return MAKER_NAV_SECTIONS;
   }
 }
-
-export const SIDEBAR_HEADER = {
-  icon: <Megaphone className="size-[18px] text-ithina-purple" />,
-  title: "PROMOTIONS",
-  subtitle: "ASSISTANT",
-};
 
 // Legacy export for any existing usages
 export const NAV_SECTIONS = MAKER_NAV_SECTIONS;
@@ -251,5 +285,6 @@ function flattenSections(sections: NavSection[], sectionLabel: string): NavItemF
 export const NAV_ITEMS_FLAT: NavItemFlat[] = [
   ...flattenSections(MAKER_NAV_SECTIONS, "Maker"),
   ...flattenSections(CHECKER_NAV_SECTIONS, "Checker"),
-  ...flattenSections(ADMIN_NAV_SECTIONS, "Admin"),
+  ...flattenSections(ADMIN_ORG_NAV_SECTIONS, "Admin"),
+  ...flattenSections(ADMIN_STORE_NAV_SECTIONS, "Admin"),
 ];

@@ -60,6 +60,7 @@ function scheduleFieldsFromWizardStep(schedule: {
   startDate: string;
   startTime: string;
   endDate: string;
+  endTime?: string;
 }): Pick<ApiCampaignGenerateRequest, "scheduled_start" | "scheduled_end" | "scheduled_time"> {
   if (!schedule.startDate?.trim()) {
     return { scheduled_start: null, scheduled_end: null, scheduled_time: null };
@@ -69,7 +70,8 @@ function scheduleFieldsFromWizardStep(schedule: {
   const scheduled_start = Number.isNaN(start.getTime()) ? null : start.toISOString();
   let scheduled_end: string | null = null;
   if (schedule.endDate?.trim()) {
-    const end = new Date(`${schedule.endDate}T${schedule.startTime || "00:00"}:00`);
+    const endT = (schedule.endTime ?? schedule.startTime) || "00:00";
+    const end = new Date(`${schedule.endDate}T${endT}:00`);
     if (!Number.isNaN(end.getTime())) scheduled_end = end.toISOString();
   }
   return { scheduled_start, scheduled_end, scheduled_time };
@@ -145,6 +147,7 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
     apiStatus: api.status,
     skus: api.skus.length,
     hardware: api.hardware_targets ?? [],
+    createdAt: api.created_at,
     // All Campaigns date should reflect creation time.
     date: new Date(api.created_at).toLocaleDateString(),
     initiator: displayInitiator,
@@ -321,6 +324,7 @@ export interface WizardGenerateOptions {
     startDate: string;
     startTime: string;
     endDate: string;
+    endTime?: string;
   };
 }
 

@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { organizationOverviewKeys } from "@/hooks/use-organization-overview";
+import { storeSettingsKeys } from "@/hooks/use-store-settings";
+import { storesKeys } from "@/hooks/use-stores";
 import {
   createStore,
   listStoreUsers,
@@ -53,8 +56,12 @@ export function useUpdateAdminStoreActive() {
   return useMutation({
     mutationFn: (args: { storeId: string; is_active: boolean }) =>
       updateStoreActive(args.storeId, args.is_active),
-    onSuccess: () => {
+    onSuccess: (_data, { storeId }) => {
       qc.invalidateQueries({ queryKey: adminStoresKeys.list });
+      qc.invalidateQueries({ queryKey: storeSettingsKeys.profile(storeId) });
+      qc.invalidateQueries({ queryKey: storeSettingsKeys.staff(storeId) });
+      qc.invalidateQueries({ queryKey: storesKeys.all });
+      qc.invalidateQueries({ queryKey: organizationOverviewKeys.stats });
     },
   });
 }

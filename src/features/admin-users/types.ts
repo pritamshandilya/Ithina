@@ -20,4 +20,6 @@ export interface UserFormData {
   email: string;
   role: UserRole;
   password: string;
+  /** Account status; shown when editing, always active for new invites. */
+  status: UserStatus;
 }

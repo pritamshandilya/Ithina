@@ -197,6 +197,16 @@
     @apply hover:border-ithina-purple/20 hover:-translate-y-[2px];
   }
 
+  .ithina-page {
+    @apply w-full;
+  }
+  .ithina-page-inner {
+    @apply mx-auto w-full max-w-[1600px] px-4 sm:px-6;
+  }
+  .ithina-overline {
+    @apply font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground;
+  }
+
   /* ─── Ithina Forms ─── */
   .form-group {
     @apply flex flex-col gap-1.5;

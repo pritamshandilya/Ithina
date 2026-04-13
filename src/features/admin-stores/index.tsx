@@ -1,258 +1,315 @@
+import { AlertCircle, Globe, MapPin, Pencil, Ruler, Search, Store, Trash2, Users } from "lucide-react";
 import { useMemo, useState } from "react";
-import { AlertCircle, Loader2, MapPin, Plus, Store, Trash2 } from "lucide-react";
 
+import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCreateAdminStore, useAdminStores, useUpdateAdminStoreActive, type StoreWithStaffCount } from "@/hooks/use-admin-stores";
+import { useAdminStores, useUpdateAdminStoreActive, type StoreWithStaffCount } from "@/hooks/use-admin-stores";
 import { cn } from "@/lib/utils";
 
-interface NewStoreForm {
-  name: string;
-  address: string;
-  region: string;
-  currency: string;
-}
-
-const EMPTY_FORM: NewStoreForm = {
-  name: "",
-  address: "",
-  region: "",
-  currency: "KES",
-};
+const filterInputClass =
+  "w-full min-w-0 rounded-md border border-ithina-border bg-ithina-bg px-2 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-ithina-purple focus:outline-none";
 
 export default function AdminStoresPage() {
-  const {
-    data: stores = [],
-    isLoading,
-    isError,
-    error,
-  } = useAdminStores();
-
-  const createStoreMutation = useCreateAdminStore();
+  const { data: stores = [], isLoading, isError, error } = useAdminStores();
   const updateStoreActiveMutation = useUpdateAdminStoreActive();
 
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<NewStoreForm>(EMPTY_FORM);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [colName, setColName] = useState("");
+  const [colAddress, setColAddress] = useState("");
+  const [colRegion, setColRegion] = useState("");
+  const [colStatus, setColStatus] = useState<"all" | "active" | "inactive">("all");
+  const [colCurrency, setColCurrency] = useState("");
 
-  const canSubmit = useMemo(
-    () =>
-      Boolean(
-        form.name.trim() &&
-          form.address.trim() &&
-          form.region.trim() &&
-          form.currency.trim(),
-      ),
-    [form.address, form.currency, form.name, form.region],
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return stores.filter((s) => {
+      const matchGlobal =
+        !q ||
+        s.name.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        s.region.toLowerCase().includes(q) ||
+        s.currency.toLowerCase().includes(q) ||
+        s.id.toLowerCase().includes(q);
+      const matchName = !colName.trim() || s.name.toLowerCase().includes(colName.trim().toLowerCase());
+      const matchAddr =
+        !colAddress.trim() || s.address.toLowerCase().includes(colAddress.trim().toLowerCase());
+      const matchRegion =
+        !colRegion.trim() || s.region.toLowerCase().includes(colRegion.trim().toLowerCase());
+      const matchStatus =
+        colStatus === "all" ||
+        (colStatus === "active" && s.is_active) ||
+        (colStatus === "inactive" && !s.is_active);
+      const matchCur =
+        !colCurrency.trim() || s.currency.toLowerCase().includes(colCurrency.trim().toLowerCase());
+      return matchGlobal && matchName && matchAddr && matchRegion && matchStatus && matchCur;
+    });
+  }, [stores, search, colName, colAddress, colRegion, colStatus, colCurrency]);
+
+  const columns = useMemo<IthColumnDef<StoreWithStaffCount>[]>(
+    () => [
+      {
+        key: "no",
+        label: "No.",
+        width: "w-[52px]",
+        render: (_row, index) => (
+          <span className="font-mono text-xs text-slate-500">{(page - 1) * pageSize + index + 1}</span>
+        ),
+      },
+      {
+        key: "store",
+        label: "Store details",
+        sortable: true,
+        field: "name",
+        render: (row) => (
+          <div className="flex items-start gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-ithina-purple/25 bg-ithina-purple/10">
+              <Store className="size-4 text-ithina-purple" aria-hidden />
+            </div>
+            <IthPrimaryCell primary={row.name} secondary={`ID: ${row.id}`} />
+          </div>
+        ),
+      },
+      {
+        key: "address",
+        label: "Address",
+        sortable: true,
+        field: "address",
+        render: (row) => (
+          <span className="inline-flex items-center gap-1.5 text-[13px] text-slate-300">
+            <MapPin className="size-3.5 shrink-0 text-slate-500" aria-hidden />
+            {row.address}
+          </span>
+        ),
+      },
+      {
+        key: "region",
+        label: "Region",
+        sortable: true,
+        field: "region",
+      },
+      {
+        key: "status",
+        label: "Status",
+        sortable: true,
+        field: "is_active",
+        render: (row) => (
+          <IthBadge
+            label={row.is_active ? "Active" : "Inactive"}
+            variant={row.is_active ? "emerald" : "slate"}
+            dot={row.is_active}
+          />
+        ),
+      },
+      {
+        key: "currency",
+        label: "Currency",
+        sortable: true,
+        field: "currency",
+        render: (row) => (
+          <span className="inline-flex items-center gap-1.5 text-[13px] text-slate-300">
+            <Globe className="size-3.5 shrink-0 text-slate-500" aria-hidden />
+            {row.currency}
+          </span>
+        ),
+      },
+      {
+        key: "dimensions",
+        label: "Dimensions",
+        render: () => (
+          <span className="inline-flex items-center gap-1.5 text-[13px] text-slate-500">
+            <Ruler className="size-3.5 shrink-0" aria-hidden />
+            —
+          </span>
+        ),
+      },
+      {
+        key: "actions",
+        label: "Actions",
+        align: "right",
+        width: "min-w-[120px]",
+        render: (row) => (
+          <div className="flex items-center justify-end gap-1">
+            <button
+              type="button"
+              title="Edit store"
+              disabled
+              className="rounded-lg border border-ithina-border p-2 text-slate-500 opacity-50"
+              aria-label="Edit"
+            >
+              <Pencil className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              title="Store team"
+              disabled
+              className="rounded-lg border border-ithina-border p-2 text-slate-500 opacity-50"
+              aria-label="Store team"
+            >
+              <Users className="size-3.5" />
+            </button>
+            <button
+              type="button"
+              title={row.is_active ? "Deactivate store" : "Store inactive"}
+              disabled={!row.is_active || updateStoreActiveMutation.isPending}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!row.is_active) return;
+                if (
+                  !window.confirm(
+                    `Deactivate "${row.name}"? You can reactivate it later from this list.`,
+                  )
+                )
+                  return;
+                updateStoreActiveMutation.mutate({ storeId: row.id, is_active: false });
+              }}
+              className="rounded-lg border border-rose-400/25 bg-rose-400/5 p-2 text-rose-400 transition-colors hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+              aria-label="Deactivate store"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [page, pageSize, updateStoreActiveMutation.isPending],
   );
 
-  async function handleCreate() {
-    if (!canSubmit) return;
-    await createStoreMutation.mutateAsync({
-      name: form.name.trim(),
-      address: form.address.trim(),
-      region: form.region.trim(),
-      currency: form.currency.trim(),
-      is_active: true,
-    });
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-  }
-
-  function handleToggleActive(store: StoreWithStaffCount) {
-    if (updateStoreActiveMutation.isPending) return;
-    updateStoreActiveMutation.mutate({
-      storeId: store.id,
-      is_active: !store.is_active,
-    });
-  }
+  const filterRow = useMemo(
+    () => [
+      <span key="f-no" className="block h-8" aria-hidden />,
+      <input
+        key="f-name"
+        type="text"
+        value={colName}
+        onChange={(e) => {
+          setColName(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Filter…"
+        className={filterInputClass}
+        aria-label="Filter by store name"
+      />,
+      <input
+        key="f-addr"
+        type="text"
+        value={colAddress}
+        onChange={(e) => {
+          setColAddress(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Filter…"
+        className={filterInputClass}
+        aria-label="Filter by address"
+      />,
+      <input
+        key="f-region"
+        type="text"
+        value={colRegion}
+        onChange={(e) => {
+          setColRegion(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Filter…"
+        className={filterInputClass}
+        aria-label="Filter by region"
+      />,
+      <select
+        key="f-status"
+        value={colStatus}
+        onChange={(e) => {
+          setColStatus(e.target.value as "all" | "active" | "inactive");
+          setPage(1);
+        }}
+        className={cn(filterInputClass, "cursor-pointer")}
+        aria-label="Filter by status"
+      >
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="inactive">Inactive</option>
+      </select>,
+      <input
+        key="f-cur"
+        type="text"
+        value={colCurrency}
+        onChange={(e) => {
+          setColCurrency(e.target.value);
+          setPage(1);
+        }}
+        placeholder="Filter…"
+        className={filterInputClass}
+        aria-label="Filter by currency"
+      />,
+      <span key="f-dim" className="block h-8" aria-hidden />,
+      <span key="f-act" className="block h-8" aria-hidden />,
+    ],
+    [colName, colAddress, colRegion, colStatus, colCurrency],
+  );
 
   return (
-    <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="mx-auto max-w-5xl space-y-6 pb-10">
-
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-xl border border-ithina-emerald/25 bg-ithina-emerald/10">
-                  <Store className="size-4 text-ithina-emerald" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-white">Stores</h1>
-                  <p className="text-xs text-slate-500">
-                    Manage stores across your organization.
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
-              >
-                <Plus className="size-4" />
-                Add Store
-              </button>
-            </div>
-
-            {/* Store list */}
-            <div className="space-y-3">
-              {isLoading && (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <div key={idx} className="rounded-2xl border px-6 py-5">
-                      <Skeleton className="h-10 w-10 rounded-xl" />
-                      <div className="mt-3 space-y-2">
-                        <Skeleton className="h-4 w-48 rounded-md" />
-                        <Skeleton className="h-3 w-64 rounded-md" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!isLoading && isError && (
-                <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
-                  <AlertCircle className="size-5 shrink-0" />
-                  <span className="text-sm">
-                    {(error as Error)?.message ?? "Failed to load stores"}
-                  </span>
-                </div>
-              )}
-
-              {!isLoading && !isError && (
-                <>
-                  {stores.map((store) => (
-                    <div
-                      key={store.id}
-                      className={cn(
-                        "flex items-center gap-4 rounded-2xl border px-6 py-5 transition-all",
-                        store.is_active
-                          ? "border-ithina-border bg-ithina-panel"
-                          : "border-ithina-border/50 bg-ithina-panel/50 opacity-60",
-                      )}
-                    >
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ithina-emerald/20 bg-ithina-emerald/10">
-                        <Store className="size-4 text-ithina-emerald" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-white">{store.name}</p>
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest",
-                              store.is_active
-                                ? "text-ithina-emerald bg-ithina-emerald/10 border-ithina-emerald/20"
-                                : "text-slate-500 bg-white/5 border-white/10",
-                            )}
-                          >
-                            {store.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                          <MapPin className="size-3 shrink-0" />
-                          {store.address}
-                        </div>
-                        <p className="mt-0.5 font-mono text-[10px] text-slate-600">
-                          {store.region} · {store.currency} · {store.staffCount} staff
-                        </p>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(store)}
-                          disabled={updateStoreActiveMutation.isPending}
-                          className={cn(
-                            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                            store.is_active
-                              ? "border-ithina-rose/20 bg-ithina-rose/5 text-ithina-rose hover:bg-ithina-rose/15"
-                              : "border-ithina-emerald/20 bg-ithina-emerald/5 text-ithina-emerald hover:bg-ithina-emerald/15",
-                          )}
-                        >
-                          {store.is_active ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="ithina-page flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="ithina-page-inner flex min-h-0 flex-1 flex-col gap-4 pb-10 pt-4">
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
+              aria-hidden
+            />
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by name or address…"
+              className="w-full rounded-xl border border-ithina-border bg-ithina-panel py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-ithina-purple focus:outline-none"
+              aria-label="Search stores"
+            />
           </div>
-        </div>
-      </div>
 
-      {showModal && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(8,8,20,0.93)] p-6 backdrop-blur-[6px]"
-          onClick={() => setShowModal(false)}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-md overflow-hidden rounded-[20px] border border-ithina-border bg-ithina-sidebar shadow-[0_30px_80px_rgba(0,0,0,0.8)]"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <header className="flex items-center justify-between border-b border-ithina-border px-7 py-5">
-              <h3 className="text-base font-bold text-white">Add New Store</h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Close"
-              >
-                <Trash2 className="size-5" />
-              </button>
-            </header>
-
-            <div className="space-y-5 px-7 py-6">
-              {[
-                { key: "name" as const, label: "Store Name", placeholder: "e.g. CBD Flagship" },
-                { key: "address" as const, label: "Address", placeholder: "Full address" },
-                { key: "region" as const, label: "Region", placeholder: "e.g. Nairobi" },
-                { key: "currency" as const, label: "Currency", placeholder: "e.g. KES" },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="mb-2 block text-sm font-semibold text-slate-300">
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    value={form[key]}
-                    onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full rounded-lg border border-ithina-border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-ithina-purple focus:outline-none"
-                  />
-                </div>
+          {isLoading && (
+            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-full rounded-md" />
               ))}
             </div>
+          )}
 
-            <footer className="flex justify-end gap-3 border-t border-ithina-border px-7 py-4">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={!canSubmit || createStoreMutation.isPending}
-                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {createStoreMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : (
-                  <Plus className="size-4" />
-                )}
-                Add Store
-              </button>
-            </footer>
-          </div>
+          {!isLoading && isError && (
+            <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+              <AlertCircle className="size-5 shrink-0" />
+              <span className="text-sm">{(error as Error)?.message ?? "Failed to load stores"}</span>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <IthTable<StoreWithStaffCount>
+              data={filtered}
+              columns={columns}
+              rowKey={(s) => s.id}
+              filterRow={filterRow}
+              pagination={{
+                page,
+                pageSize,
+                total: filtered.length,
+                onPageChange: setPage,
+                layout: "full",
+                onPageSizeChange: (n) => {
+                  setPageSize(n);
+                  setPage(1);
+                },
+                pageSizeOptions: [10, 25, 50],
+              }}
+              empty={{
+                icon: <Store className="size-5 text-slate-600" />,
+                message: "No stores match your filters.",
+              }}
+            />
+          )}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }

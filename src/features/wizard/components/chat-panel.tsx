@@ -45,10 +45,12 @@ function ChatPanel({
   };
 
   useEffect(() => {
-    if (!isTyping && !inputDisabled) {
+    if (isTyping || inputDisabled) return;
+    const id = window.requestAnimationFrame(() => {
       textareaRef.current?.focus();
-    }
-  }, [isTyping, inputDisabled]);
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isTyping, inputDisabled, messages.length]);
 
   return (
     <div

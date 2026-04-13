@@ -102,6 +102,15 @@ interface DataStagingGridProps {
   onRemoveAllViolations: () => void;
   marginFloor: number;
   hideModeToggle?: boolean;
+  /** Step 1 AI grid: campaign name + schedule on the left; toggles on the right. */
+  aiCampaignToolbar?: {
+    campaignName: string;
+    onCampaignNameChange: (value: string) => void;
+    scheduleStartLocal: string;
+    scheduleEndLocal: string;
+    onScheduleStartLocalChange: (value: string) => void;
+    onScheduleEndLocalChange: (value: string) => void;
+  };
 }
 
 function DataStagingGrid({
@@ -122,6 +131,7 @@ function DataStagingGrid({
   onRemoveAllViolations,
   marginFloor,
   hideModeToggle = false,
+  aiCampaignToolbar,
 }: DataStagingGridProps) {
   const csvInput = useRef<HTMLInputElement>(null);
   const csvWarnings = csvRows.filter((r) => !r.safe).length;
@@ -359,6 +369,25 @@ function DataStagingGrid({
         return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[9px] leading-none text-rose-400">ALERT (${row.margin})</span>`;
       },
     },
+    {
+      title: "Agent Suggest Schedule",
+      field: "agentSuggestSchedule",
+      minWidth: 168,
+      widthGrow: 0.65,
+      sorter: "string",
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const raw = (row.agentSuggestSchedule ?? "").trim() || "—";
+        const esc = raw
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+        return `<span class="text-[11px] leading-snug text-slate-300">${esc}</span>`;
+      },
+    },
     ];
   }, [onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
 
@@ -481,17 +510,57 @@ function DataStagingGrid({
   return (
     <div
       className={cn(
-        "relative flex h-full min-h-0 min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-y-auto overflow-x-auto",
+        "relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-auto",
         hideModeToggle
           ? "bg-transparent"
           : "rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl",
       )}
     >
       {!hideModeToggle && (
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
-        {!hideModeToggle ? (
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
+        <div className="min-w-0 flex-1 space-y-2 pr-2">
+          {inputMode === "ai" && data.length > 0 && aiCampaignToolbar ? (
+            <>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-slate-400">Campaign Name:</span>
+                <input
+                  id="wizard-ai-campaign-name"
+                  type="text"
+                  value={aiCampaignToolbar.campaignName}
+                  onChange={(e) => aiCampaignToolbar.onCampaignNameChange(e.target.value)}
+                  placeholder="e.g. Q3 Sushi Promo"
+                  autoComplete="off"
+                  className="min-h-8 min-w-[12rem] max-w-xl flex-1 rounded-lg border border-ithina-border bg-ithina-bg px-3 py-1.5 text-xs font-semibold text-white shadow-inner transition-colors focus:border-ithina-purple focus:outline-none"
+                />
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-slate-400">Campaign schedule:</span>
+                <input
+                  id="wizard-ai-schedule-start"
+                  type="datetime-local"
+                  value={aiCampaignToolbar.scheduleStartLocal}
+                  onChange={(e) => aiCampaignToolbar.onScheduleStartLocalChange(e.target.value)}
+                  aria-label="Campaign start"
+                  className="min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg px-2 py-1.5 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                />
+                <span className="shrink-0 text-xs font-medium text-slate-500">to</span>
+                <input
+                  id="wizard-ai-schedule-end"
+                  type="datetime-local"
+                  value={aiCampaignToolbar.scheduleEndLocal}
+                  onChange={(e) => aiCampaignToolbar.onScheduleEndLocalChange(e.target.value)}
+                  aria-label="Campaign end"
+                  className="min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg px-2 py-1.5 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                />
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
             <button
+              type="button"
               onClick={() => onInputModeChange("ai")}
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
@@ -502,6 +571,7 @@ function DataStagingGrid({
               AI Assisted
             </button>
             <button
+              type="button"
               onClick={() => onInputModeChange("csv")}
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
@@ -512,17 +582,13 @@ function DataStagingGrid({
               CSV Upload
             </button>
           </div>
-        ) : (
-          <div />
-        )}
-        <div className="ml-auto flex items-center gap-3">
           {inputMode === "ai" && data.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">
+            <span className="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:max-w-none sm:text-xs">
               {aiIncludedCount} of {data.length} SKUs included — Review proposals below
             </span>
           )}
           {inputMode === "csv" && csvRows.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">
+            <span className="text-right text-xs text-slate-400">
               {csvRows.length} rows loaded
             </span>
           )}
@@ -655,7 +721,7 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <div ref={aiTableRef} className="min-h-0 flex-1 overflow-auto px-2 pb-2 pt-0 sm:px-3">
+            <div ref={aiTableRef} className="flex min-h-0 flex-1 flex-col overflow-auto px-2 pb-2 pt-0 sm:px-3">
               <DataTable<StagedSku>
                 columns={aiColumns}
                 data={data}
@@ -666,7 +732,7 @@ function DataStagingGrid({
                 showRowNumber
                 layout="fitColumns"
                 rowFormatter={aiRowFormatter}
-                className="wizard-staging-table min-h-0"
+                className="wizard-staging-table min-h-0 flex-1"
               />
             </div>
           )}

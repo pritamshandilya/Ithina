@@ -1,11 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import CampaignsTabulator from "@/features/campaigns/campaigns-tabulator";
+import StoreSettings from "@/features/store-settings";
 import { assertAdminStoreRoute } from "@/lib/admin-route-guards";
 
-export const Route = createFileRoute("/_admin/admin/campaigns")({
+export const Route = createFileRoute("/_admin/admin/store-settings")({
   beforeLoad: () => {
     assertAdminStoreRoute();
   },
-  component: CampaignsTabulator,
+  component: StoreSettings,
 });

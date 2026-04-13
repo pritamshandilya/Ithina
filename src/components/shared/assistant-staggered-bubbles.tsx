@@ -1,6 +1,7 @@
 import { Zap } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import ChatMarkdown from "@/components/shared/chat-markdown";
 import {
   assistantBubbleClassName,
   getAssistantMessageChunks,
@@ -101,12 +102,12 @@ const AssistantStaggeredBubbles = memo(function AssistantStaggeredBubbles({
 
   return (
     <div className="flex max-w-[95%] flex-col items-start gap-1.5">
-      {chunks.slice(0, visibleCount).map((html, chunkIdx) => (
+      {chunks.slice(0, visibleCount).map((chunk, chunkIdx) => (
         <div
           key={`${messageKey}-${chunkIdx}`}
           className={cn(
             assistantBubbleClassName,
-            "[&_a]:text-ithina-purple [&_a]:underline",
+            chunk.kind === "html" && "[&_a]:text-ithina-purple [&_a]:underline",
           )}
         >
           <span
@@ -116,7 +117,11 @@ const AssistantStaggeredBubbles = memo(function AssistantStaggeredBubbles({
             <Zap className="size-3" aria-hidden />
             Ithina
           </span>
-          <div dangerouslySetInnerHTML={{ __html: html }} />
+          {chunk.kind === "html" ? (
+            <div dangerouslySetInnerHTML={{ __html: chunk.html }} />
+          ) : (
+            <ChatMarkdown content={chunk.source} />
+          )}
         </div>
       ))}
       {showThinking && <TypingDots />}

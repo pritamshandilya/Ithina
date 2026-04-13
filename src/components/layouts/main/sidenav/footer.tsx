@@ -4,8 +4,9 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { profilePathForRole } from "@/lib/profile-routes";
+import { cn } from "@/lib/utils";
 
 // ─── Small helper — avoids repeating button layout ──────────────────────────
 function MenuItem({
@@ -118,13 +119,17 @@ export default function SidenavFooter() {
             <MenuItem
               icon={<User className="size-4 text-slate-500" />}
               label="Profile"
+              onClick={() => {
+                navigate({ to: profilePathForRole(user.role) });
+                setOpen(false);
+              }}
             />
             {user.role === "admin" && (
               <MenuItem
                 icon={<Building2 className="size-4 text-slate-500" />}
                 label="Store Settings"
                 onClick={() => {
-                  navigate({ to: "/store-settings" });
+                  navigate({ to: "/admin/store-settings" });
                   setOpen(false);
                 }}
               />
@@ -141,6 +146,8 @@ export default function SidenavFooter() {
           </div>
         </div>
       )}
+
+      <p className="px-4 pb-2 font-mono text-[10px] text-slate-600">v0.0.3</p>
 
       {/* ── Profile trigger button ── */}
       <button

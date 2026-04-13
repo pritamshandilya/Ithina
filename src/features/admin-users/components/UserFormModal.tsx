@@ -1,38 +1,22 @@
+import { Check, Mail, Pencil, UserPlus, X } from "lucide-react";
 import { useState } from "react";
-import { UserPlus, X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import type { OrgUser, UserFormData, UserRole } from "../types";
+
+import type { OrgUser, UserFormData, UserRole, UserStatus } from "../types";
 
 interface UserFormModalProps {
   editingUser?: OrgUser | null;
-  onSave: (data: UserFormData) => void;
+  onSave: (data: UserFormData) => void | Promise<void>;
   onClose: () => void;
+  isSubmitting?: boolean;
 }
 
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  {
-    value: "maker",
-    label: "Maker",
-    description: "Creates and submits campaigns for approval.",
-  },
-  {
-    value: "checker",
-    label: "Checker",
-    description: "Reviews and approves or returns submissions.",
-  },
-  {
-    value: "admin",
-    label: "Admin",
-    description: "Full access: user management, stores, and org settings.",
-  },
+const ROLE_SELECT_OPTIONS: { value: UserRole; label: string }[] = [
+  { value: "maker", label: "Maker (Sales Associate)" },
+  { value: "checker", label: "Checker (Reviewer)" },
+  { value: "admin", label: "Admin (Organization admin)" },
 ];
-
-const ROLE_COLOR: Record<UserRole, string> = {
-  admin: "border-ithina-rose/40 bg-ithina-rose/10 text-ithina-rose",
-  maker: "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple",
-  checker: "border-ithina-emerald/40 bg-ithina-emerald/10 text-ithina-emerald",
-};
 
 const EMPTY_FORM: UserFormData = {
   firstName: "",
@@ -40,9 +24,15 @@ const EMPTY_FORM: UserFormData = {
   email: "",
   role: "maker",
   password: "",
+  status: "active",
 };
 
-export function UserFormModal({ editingUser, onSave, onClose }: UserFormModalProps) {
+export function UserFormModal({
+  editingUser,
+  onSave,
+  onClose,
+  isSubmitting = false,
+}: UserFormModalProps) {
   const isEditing = Boolean(editingUser);
   const [form, setForm] = useState<UserFormData>(
     editingUser
@@ -52,6 +42,7 @@ export function UserFormModal({ editingUser, onSave, onClose }: UserFormModalPro
           email: editingUser.email,
           role: editingUser.role,
           password: "",
+          status: editingUser.status,
         }
       : EMPTY_FORM,
   );
@@ -67,19 +58,20 @@ export function UserFormModal({ editingUser, onSave, onClose }: UserFormModalPro
       newErrors.email = "Enter a valid email address.";
     }
     if (!isEditing && !form.password.trim()) {
-      newErrors.password = "Password is required for new users.";
+      newErrors.password = "Initial password is required.";
     } else if (!isEditing && form.password.length < 8) {
       newErrors.password = "Password must be at least 8 characters.";
+    } else if (isEditing && form.password.trim() && form.password.length < 8) {
+      newErrors.password = "New password must be at least 8 characters.";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (validate()) {
-      onSave(form);
-    }
+    if (!validate()) return;
+    await onSave(form);
   }
 
   function setField<K extends keyof UserFormData>(key: K, value: UserFormData[K]) {
@@ -96,185 +88,201 @@ export function UserFormModal({ editingUser, onSave, onClose }: UserFormModalPro
       role="presentation"
     >
       <div
-        className="w-full max-w-[600px] overflow-hidden rounded-[20px] border border-ithina-border bg-ithina-sidebar shadow-[0_30px_80px_rgba(0,0,0,0.8)]"
+        className="w-full max-w-[560px] overflow-hidden rounded-2xl border border-ithina-border bg-ithina-sidebar shadow-[0_30px_80px_rgba(0,0,0,0.8)]"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="user-form-title"
       >
-        <header className="flex items-start justify-between border-b border-ithina-border px-7 py-5">
+        <header className="flex items-start justify-between border-b border-ithina-border px-6 py-5">
           <div className="flex items-center gap-3">
-            <div className="flex size-8 items-center justify-center rounded-lg border border-ithina-purple/30 bg-ithina-purple/10">
-              <UserPlus className="size-4 text-ithina-purple" />
+            <div className="flex size-9 items-center justify-center rounded-lg border border-ithina-purple/30 bg-ithina-purple/10">
+              {isEditing ? (
+                <Pencil className="size-[18px] text-ithina-purple" aria-hidden />
+              ) : (
+                <UserPlus className="size-[18px] text-ithina-purple" aria-hidden />
+              )}
             </div>
-            <div>
-              <h3 id="user-form-title" className="text-base font-bold text-white">
-                {isEditing ? "Edit User" : "Invite New User"}
-              </h3>
-              <p className="mt-0.5 text-xs text-slate-400">
-                {isEditing
-                  ? "Update user details and role."
-                  : "Create a new account and assign their role."}
-              </p>
-            </div>
+            <h3 id="user-form-title" className="text-base font-bold text-white">
+              {isEditing ? "Edit User" : "Invite New User"}
+            </h3>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
+            disabled={isSubmitting}
+            className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-50"
             aria-label="Close"
           >
-            <X className="size-5" />
+            <X className="size-5" aria-hidden />
           </button>
         </header>
 
         <form onSubmit={handleSubmit} noValidate>
-          <div className="space-y-5 px-7 py-6">
-
-            {/* Name row */}
+          <div className="space-y-5 px-6 py-6">
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                  First Name <span className="text-rose-400">*</span>
+              <div className="form-group">
+                <label htmlFor="invite-first-name" className="form-label">
+                  First name <span className="text-ithina-rose">*</span>
                 </label>
                 <input
+                  id="invite-first-name"
                   type="text"
                   value={form.firstName}
                   onChange={(e) => setField("firstName", e.target.value)}
-                  placeholder="e.g. Sarah"
-                  className={cn(
-                    "w-full rounded-lg border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:outline-none",
-                    errors.firstName
-                      ? "border-ithina-rose/50 focus:border-ithina-rose"
-                      : "border-ithina-border focus:border-ithina-purple",
-                  )}
+                  className={cn("form-input", errors.firstName && "is-error")}
+                  placeholder="First name"
+                  autoComplete="given-name"
                 />
                 {errors.firstName && (
-                  <p className="mt-1 text-xs text-ithina-rose">{errors.firstName}</p>
+                  <p className="text-xs text-ithina-rose">{errors.firstName}</p>
                 )}
               </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                  Last Name <span className="text-rose-400">*</span>
+              <div className="form-group">
+                <label htmlFor="invite-last-name" className="form-label">
+                  Last name <span className="text-ithina-rose">*</span>
                 </label>
                 <input
+                  id="invite-last-name"
                   type="text"
                   value={form.lastName}
                   onChange={(e) => setField("lastName", e.target.value)}
-                  placeholder="e.g. Chen"
-                  className={cn(
-                    "w-full rounded-lg border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:outline-none",
-                    errors.lastName
-                      ? "border-ithina-rose/50 focus:border-ithina-rose"
-                      : "border-ithina-border focus:border-ithina-purple",
-                  )}
+                  className={cn("form-input", errors.lastName && "is-error")}
+                  placeholder="Last name"
+                  autoComplete="family-name"
                 />
                 {errors.lastName && (
-                  <p className="mt-1 text-xs text-ithina-rose">{errors.lastName}</p>
+                  <p className="text-xs text-ithina-rose">{errors.lastName}</p>
                 )}
               </div>
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">
-                Email Address <span className="text-rose-400">*</span>
+            <div className="form-group">
+              <label htmlFor="invite-email" className="form-label">
+                Email address <span className="text-ithina-rose">*</span>
               </label>
-              <input
-                type="email"
-                value={form.email}
-                onChange={(e) => setField("email", e.target.value)}
-                placeholder="user@company.com"
-                className={cn(
-                  "w-full rounded-lg border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:outline-none",
-                  errors.email
-                    ? "border-ithina-rose/50 focus:border-ithina-rose"
-                    : "border-ithina-border focus:border-ithina-purple",
-                )}
-              />
-              {errors.email && (
-                <p className="mt-1 text-xs text-ithina-rose">{errors.email}</p>
-              )}
+              <div className="relative">
+                <Mail
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
+                  aria-hidden
+                />
+                <input
+                  id="invite-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setField("email", e.target.value)}
+                  className={cn("form-input pl-10", errors.email && "is-error")}
+                  placeholder="user@company.com"
+                  autoComplete="email"
+                  disabled={isEditing}
+                />
+              </div>
+              {errors.email && <p className="text-xs text-ithina-rose">{errors.email}</p>}
             </div>
 
-            {/* Password (new users only) */}
             {!isEditing && (
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                  Password <span className="text-rose-400">*</span>
+              <div className="form-group">
+                <label htmlFor="invite-password" className="form-label">
+                  Initial password <span className="text-ithina-rose">*</span>
                 </label>
                 <input
+                  id="invite-password"
                   type="password"
                   value={form.password}
                   onChange={(e) => setField("password", e.target.value)}
+                  className={cn("form-input", errors.password && "is-error")}
                   placeholder="Minimum 8 characters"
-                  className={cn(
-                    "w-full rounded-lg border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 transition-colors focus:outline-none",
-                    errors.password
-                      ? "border-ithina-rose/50 focus:border-ithina-rose"
-                      : "border-ithina-border focus:border-ithina-purple",
-                  )}
+                  autoComplete="new-password"
                 />
                 {errors.password && (
-                  <p className="mt-1 text-xs text-ithina-rose">{errors.password}</p>
+                  <p className="text-xs text-ithina-rose">{errors.password}</p>
                 )}
+                <p className="text-[11px] text-slate-500">
+                  Required by the API to create the account. The user can change it after first
+                  login.
+                </p>
               </div>
             )}
 
-            {/* Role selector */}
-            <div>
-              <label className="mb-3 block text-sm font-semibold text-slate-300">
-                Role <span className="text-rose-400">*</span>
+            <div className="form-group">
+              <label htmlFor="invite-role" className="form-label">
+                Role <span className="text-ithina-rose">*</span>
               </label>
-              <div className="space-y-2">
-                {ROLE_OPTIONS.map(({ value, label, description }) => {
-                  const isSelected = form.role === value;
-                  return (
-                    <button
-                      key={value}
-                      type="button"
-                      onClick={() => setField("role", value)}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all",
-                        isSelected
-                          ? cn("border-2", ROLE_COLOR[value])
-                          : "border border-ithina-border text-slate-400 hover:border-slate-600 hover:text-white",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "mt-0.5 size-3.5 shrink-0 rounded-full border-2 transition-colors",
-                          isSelected
-                            ? cn("bg-current", ROLE_COLOR[value].split(" ")[0])
-                            : "border-slate-600 bg-transparent",
-                        )}
-                      />
-                      <span>
-                        <p className="text-sm font-semibold leading-tight">{label}</p>
-                        <p className="mt-0.5 text-xs text-slate-500">{description}</p>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                id="invite-role"
+                value={form.role}
+                onChange={(e) => setField("role", e.target.value as UserRole)}
+                className="form-input cursor-pointer"
+                aria-label="User role"
+              >
+                {ROLE_SELECT_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
             </div>
+
+            {isEditing && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="edit-status" className="form-label">
+                    Status <span className="text-ithina-rose">*</span>
+                  </label>
+                  <select
+                    id="edit-status"
+                    value={form.status}
+                    onChange={(e) => setField("status", e.target.value as UserStatus)}
+                    className="form-input cursor-pointer"
+                    aria-label="Account status"
+                  >
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-password" className="form-label">
+                    New password <span className="text-slate-500">(optional)</span>
+                  </label>
+                  <input
+                    id="edit-password"
+                    type="password"
+                    value={form.password}
+                    onChange={(e) => setField("password", e.target.value)}
+                    className={cn("form-input", errors.password && "is-error")}
+                    placeholder="Leave blank to keep current password"
+                    autoComplete="new-password"
+                  />
+                  {errors.password && (
+                    <p className="text-xs text-ithina-rose">{errors.password}</p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
 
-          <footer className="flex items-center justify-end gap-3 border-t border-ithina-border px-7 py-4">
+          <footer className="flex items-center justify-end gap-3 border-t border-ithina-border px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:text-white"
+              disabled={isSubmitting}
+              className="btn btn-secondary disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
+              disabled={isSubmitting}
+              className="btn btn-primary gap-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <UserPlus className="size-4" />
-              {isEditing ? "Save Changes" : "Create User"}
+              {isEditing ? (
+                "Save changes"
+              ) : (
+                <>
+                  <Check className="size-4" aria-hidden />
+                  Send invitation
+                </>
+              )}
             </button>
           </footer>
         </form>

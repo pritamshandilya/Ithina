@@ -38,6 +38,7 @@ import { campaignKeys } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
 import type { CampaignListItem } from "@/types/campaigns";
 import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
@@ -88,8 +89,9 @@ export default function Wizard() {
     startDate: string;
     startTime: string;
     endDate: string;
+    endTime: string;
     autoApprove: boolean;
-  }>({ startDate: "", startTime: "08:00", endDate: "", autoApprove: false });
+  }>({ startDate: "", startTime: "08:00", endDate: "", endTime: "08:00", autoApprove: false });
   const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
     chroma29: [],
     chroma42: ['2.9"'],
@@ -113,6 +115,7 @@ export default function Wizard() {
   } = useAppSelector((s) => s.wizard);
 
   const campaignName = useAppSelector((s) => s.campaign.name);
+  const campaignActive = useAppSelector((s) => s.campaign.active);
 
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState("");
@@ -254,6 +257,63 @@ export default function Wizard() {
     [campaignNamed, dispatch],
   );
 
+  const handleAiCampaignNameChange = useCallback(
+    (value: string) => {
+      if (campaignActive) dispatch(setCampaignName(value));
+      else dispatch(activateCampaign(value.trim() || "Promo Campaign"));
+    },
+    [campaignActive, dispatch],
+  );
+
+  const aiScheduleStartLocal = useMemo(() => {
+    if (!schedule.startDate?.trim()) return "";
+    return `${schedule.startDate}T${(schedule.startTime || "08:00").slice(0, 5)}`;
+  }, [schedule.startDate, schedule.startTime]);
+
+  const aiScheduleEndLocal = useMemo(() => {
+    if (!schedule.endDate?.trim()) return "";
+    const t = (schedule.endTime || schedule.startTime || "08:00").slice(0, 5);
+    return `${schedule.endDate}T${t}`;
+  }, [schedule.endDate, schedule.endTime, schedule.startTime]);
+
+  const handleAiScheduleStartLocalChange = useCallback((value: string) => {
+    const parts = datetimeLocalValueToParts(value);
+    if (!parts) {
+      setSchedule((s) => ({ ...s, startDate: "", startTime: "08:00" }));
+      return;
+    }
+    setSchedule((s) => ({ ...s, startDate: parts.date, startTime: parts.time }));
+  }, []);
+
+  const handleAiScheduleEndLocalChange = useCallback((value: string) => {
+    const parts = datetimeLocalValueToParts(value);
+    if (!parts) {
+      setSchedule((s) => ({ ...s, endDate: "", endTime: s.startTime }));
+      return;
+    }
+    setSchedule((s) => ({ ...s, endDate: parts.date, endTime: parts.time }));
+  }, []);
+
+  /** Stable object so memo(DataStagingGrid) skips re-render while typing in chat (avoids table flicker). */
+  const aiCampaignToolbarMemo = useMemo(
+    () => ({
+      campaignName,
+      onCampaignNameChange: handleAiCampaignNameChange,
+      scheduleStartLocal: aiScheduleStartLocal,
+      scheduleEndLocal: aiScheduleEndLocal,
+      onScheduleStartLocalChange: handleAiScheduleStartLocalChange,
+      onScheduleEndLocalChange: handleAiScheduleEndLocalChange,
+    }),
+    [
+      campaignName,
+      handleAiCampaignNameChange,
+      aiScheduleStartLocal,
+      aiScheduleEndLocal,
+      handleAiScheduleStartLocalChange,
+      handleAiScheduleEndLocalChange,
+    ],
+  );
+
   const handleSubmit = useCallback(async () => {
     const text = inputText.trim();
     if (!text || intentMutation.isPending) return;
@@ -265,16 +325,47 @@ export default function Wizard() {
     pushMessage({ role: "user", text });
     setInputText("");
     setIsTyping(true);
-    generateCampaignName(text);
 
     try {
       const existingSessionId = pipelineSessionIdRef.current;
-      const { aiReply, skus, sessionId } = await intentMutation.mutateAsync({
+      const { aiReply, skus, sessionId, draftMeta } = await intentMutation.mutateAsync({
         text,
         constraints,
         ...(existingSessionId ? { sessionId: existingSessionId } : {}),
       });
       pipelineSessionIdRef.current = sessionId;
+
+      if (draftMeta.campaignThemeName) {
+        if (campaignActive) dispatch(setCampaignName(draftMeta.campaignThemeName));
+        else dispatch(activateCampaign(draftMeta.campaignThemeName));
+        dispatch(setCampaignNamed(true));
+      } else if (!campaignNamed) {
+        generateCampaignName(text);
+      }
+
+      if (draftMeta.scheduleStartIso || draftMeta.scheduleEndIso) {
+        setSchedule((prev) => {
+          const next = { ...prev };
+          if (draftMeta.scheduleStartIso) {
+            const local = isoToDatetimeLocalValue(draftMeta.scheduleStartIso);
+            const p = datetimeLocalValueToParts(local);
+            if (p) {
+              next.startDate = p.date;
+              next.startTime = p.time;
+            }
+          }
+          if (draftMeta.scheduleEndIso) {
+            const local = isoToDatetimeLocalValue(draftMeta.scheduleEndIso);
+            const p = datetimeLocalValueToParts(local);
+            if (p) {
+              next.endDate = p.date;
+              next.endTime = p.time;
+            }
+          }
+          return next;
+        });
+      }
+
       setIsTyping(false);
       pushMessage(aiReply);
       if (skus.length > 0) {
@@ -284,13 +375,25 @@ export default function Wizard() {
       setIsTyping(false);
       setError("Failed to process intent. Please try again.");
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
+  }, [
+    inputText,
+    intentMutation,
+    hasSplit,
+    showGrid,
+    constraints,
+    pushMessage,
+    generateCampaignName,
+    dispatch,
+    campaignActive,
+    campaignNamed,
+  ]);
 
   const handleResetPromoChat = useCallback(() => {
     if (intentMutation.isPending || hwConfirmMutation.isPending) return;
     pipelineSessionIdRef.current = null;
     dispatch(resetPromoAssistantChat());
     dispatch(setCampaignName(""));
+    setSchedule({ startDate: "", startTime: "08:00", endDate: "", endTime: "08:00", autoApprove: false });
     setInputText("");
     setIsTyping(false);
     setError(null);
@@ -310,6 +413,7 @@ export default function Wizard() {
         startDate: payload.startDate,
         startTime: payload.startTime,
         endDate: payload.endDate,
+        endTime: payload.startTime,
         autoApprove: payload.autoApprove,
       });
       dispatch(setWStep(5));
@@ -339,6 +443,7 @@ export default function Wizard() {
           startDate: schedule.startDate,
           startTime: schedule.startTime,
           endDate: schedule.endDate,
+          endTime: schedule.endTime,
         },
       });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
@@ -409,6 +514,7 @@ export default function Wizard() {
     schedule.startDate,
     schedule.startTime,
     schedule.endDate,
+    schedule.endTime,
     selectedDevices,
     toApprovalHardwareLabel,
   ]);
@@ -428,7 +534,7 @@ export default function Wizard() {
           : `session-${Date.now()}`;
       const created = await createCampaignFromWizard(name, hardwareTargetsForApi, {
         sessionId,
-        schedule: { startDate: "", startTime: "08:00", endDate: "" },
+        schedule: { startDate: "", startTime: "08:00", endDate: "", endTime: "08:00" },
       });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
     } catch {
@@ -649,6 +755,7 @@ export default function Wizard() {
                                 onRemoveCsvRow={handleRemoveCsvRow}
                                 onRemoveAllViolations={handleRemoveAllViolations}
                                 marginFloor={marginFloor}
+                                aiCampaignToolbar={aiCampaignToolbarMemo}
                               />
                             </div>
                           ) : (
@@ -706,7 +813,9 @@ export default function Wizard() {
                 scheduleDateLabel={formatWizardScheduleDate(schedule.startDate) || "Immediate"}
                 scheduleTimeLabel={schedule.startTime || "08:00"}
                 scheduleEndLabel={
-                  schedule.endDate?.trim() ? formatWizardScheduleDate(schedule.endDate) : undefined
+                  schedule.endDate?.trim()
+                    ? `${formatWizardScheduleDate(schedule.endDate)} · ${schedule.endTime || schedule.startTime || "08:00"}`
+                    : undefined
                 }
                 autoApproveNote={
                   schedule.autoApprove

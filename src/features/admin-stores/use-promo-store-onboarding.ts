@@ -44,10 +44,6 @@ export function usePromoStoreOnboarding() {
     basicForm.currency.trim().length > 0;
 
   const goToStep = (nextStep: OnboardingStep) => {
-    if (createdStore && nextStep < 2) {
-      setStep(2);
-      return;
-    }
     setStep(nextStep);
   };
 

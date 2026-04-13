@@ -4,8 +4,10 @@ export const MOCK_STORE_PROFILE: StoreProfile = {
   id: "4281",
   name: "Chicago North",
   address: "847 N Michigan Ave, Chicago, IL",
+  region: "Illinois",
   currency: "USD",
   defaultDimensions: "mm",
+  isActive: true,
 };
 
 /** Full org directory; store staff is a subset (POG-style assign / remove). */

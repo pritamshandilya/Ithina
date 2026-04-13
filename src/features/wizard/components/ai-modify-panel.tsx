@@ -1,6 +1,7 @@
 import { ArrowRight, ChevronLeft, Clock, MessageSquare, Plus, Trash2, Zap } from "lucide-react";
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 
+import ChatMarkdown from "@/components/shared/chat-markdown";
 import { cn } from "@/lib/utils";
 
 export interface AiChatMessage {
@@ -328,7 +329,7 @@ function AiModifyPanel({ resetKey }: AiModifyPanelProps) {
             {m.role === "ai" && (
               <p className="mb-1 font-mono text-[10px] font-bold uppercase tracking-widest text-ithina-purple">AI</p>
             )}
-            <p className="text-[12px] leading-relaxed">{m.text}</p>
+            <ChatMarkdown content={m.text} className="text-[12px] leading-relaxed" />
           </div>
         ))}
 

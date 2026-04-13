@@ -8,6 +8,7 @@ import {
   getValidationChecks,
   publishToFleet,
 } from "@/services/approval";
+import { organizationOverviewKeys } from "@/hooks/use-organization-overview";
 
 export const approvalKeys = {
   all: ["approval"] as const,
@@ -63,6 +64,7 @@ export function useApproveInboxItem() {
       qc.invalidateQueries({ queryKey: approvalKeys.inbox });
       qc.invalidateQueries({ queryKey: ["campaigns", "list"] });
       qc.invalidateQueries({ queryKey: ["fleet"] });
+      qc.invalidateQueries({ queryKey: organizationOverviewKeys.stats });
     },
   });
 }
@@ -75,6 +77,7 @@ export function useRejectInboxItem() {
       qc.invalidateQueries({ queryKey: approvalKeys.inbox });
       qc.invalidateQueries({ queryKey: ["campaigns", "list"] });
       qc.invalidateQueries({ queryKey: ["fleet"] });
+      qc.invalidateQueries({ queryKey: organizationOverviewKeys.stats });
     },
   });
 }

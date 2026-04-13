@@ -30,6 +30,13 @@ export interface ApiCampaignSKU {
   margin_pct: number;
   is_safe: boolean;
   violation_reason: string | null;
+  esl_id?: string | null;
+  ESL_ID?: string | null;
+  score?: number | null;
+  /** Human-readable schedule suggestion for this SKU (shown in the staging grid). */
+  agent_suggest_schedule?: string | null;
+  suggested_schedule_label?: string | null;
+  schedule_hint?: string | null;
 }
 
 // ─── Full campaign response ──────────────────────────────────────────────────
@@ -62,11 +69,26 @@ export interface ApiCampaignDraftRequest {
   session_id?: string | null;
 }
 
+/** Nested campaign hints from LangGraph draft (preferred by some backends). */
+export interface ApiCampaignDraftMeta {
+  campaign_name?: string | null;
+  schedule_start?: string | null;
+  schedule_end?: string | null;
+  schedule_notes?: string | null;
+}
+
 export interface ApiCampaignDraftResponse {
   status: "draft_staged";
   session_id: string;
   message: string;
   skus: ApiCampaignSKU[];
+  campaign_theme_name?: string | null;
+  recommended_campaign_name?: string | null;
+  recommended_schedule_start?: string | null;
+  recommended_schedule_end?: string | null;
+  suggested_schedule_start?: string | null;
+  suggested_schedule_end?: string | null;
+  campaign_meta?: ApiCampaignDraftMeta | null;
 }
 
 // ─── Generate / save (Phase 2) ───────────────────────────────────────────────

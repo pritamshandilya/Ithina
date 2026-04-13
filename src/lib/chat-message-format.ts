@@ -66,11 +66,23 @@ function toDisplayBlocks(text: string): string[] {
 const bubbleClass =
   "max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/15 bg-gradient-to-br from-ithina-purple/[0.08] to-ithina-purple/[0.03] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm";
 
+export type AssistantMessageChunk =
+  | { kind: "markdown"; source: string }
+  | { kind: "html"; html: string };
+
+function htmlChunk(html: string): AssistantMessageChunk {
+  return { kind: "html", html };
+}
+
+function markdownChunk(source: string): AssistantMessageChunk {
+  return { kind: "markdown", source };
+}
+
 /**
- * Returns one sanitized HTML fragment per chat bubble (paragraphs, sentence chunks,
- * or multiple `<p>` blocks from the API).
+ * Returns one fragment per chat bubble: Markdown (rendered in the UI) or sanitized HTML
+ * from the API (`<p>`, `<ul>`, etc.).
  */
-export function getAssistantMessageChunks(raw: string): string[] {
+export function getAssistantMessageChunks(raw: string): AssistantMessageChunk[] {
   const trimmed = raw.replace(/\r\n/g, "\n").trim();
   if (!trimmed) return [];
 
@@ -78,20 +90,20 @@ export function getAssistantMessageChunks(raw: string): string[] {
     const pMatches = [...trimmed.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)];
     if (pMatches.length > 1) {
       return pMatches.map((m) =>
-        sanitizeHtml(m[1].trim().replace(/\n/g, "<br />")),
+        htmlChunk(sanitizeHtml(m[1].trim().replace(/\n/g, "<br />"))),
       );
     }
-    return [sanitizeHtml(trimmed.replace(/\n/g, "<br />"))];
+    return [htmlChunk(sanitizeHtml(trimmed.replace(/\n/g, "<br />")))];
   }
 
   if (/<\s*ul[\s>]/i.test(trimmed) || /<\s*ol[\s>]/i.test(trimmed)) {
-    return [sanitizeHtml(trimmed.replace(/\n/g, "<br />"))];
+    return [htmlChunk(sanitizeHtml(trimmed.replace(/\n/g, "<br />")))];
   }
 
   const blocks = toDisplayBlocks(trimmed);
-  if (blocks.length === 0) return [sanitizeHtml(trimmed)];
+  if (blocks.length === 0) return [markdownChunk(trimmed)];
 
-  return blocks.map((block) => sanitizeHtml(block.replace(/\n/g, "<br />")));
+  return blocks.map((block) => markdownChunk(block));
 }
 
 /** Shared bubble styles for assistant message rows (used by chat UI). */

@@ -86,6 +86,9 @@ const wizardSlice = createSlice({
           ...r,
           /** New draft turn always wins for pricing; only preserve user include/exclude toggles. */
           included: prev ? prev.included : r.included !== false,
+          eslId: r.eslId ?? prev?.eslId,
+          rankingScore: r.rankingScore ?? prev?.rankingScore,
+          agentSuggestSchedule: r.agentSuggestSchedule ?? prev?.agentSuggestSchedule,
         };
       });
     },

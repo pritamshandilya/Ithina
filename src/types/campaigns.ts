@@ -15,6 +15,8 @@ export interface CampaignListItem {
   skus: number;
   hardware: string[];
   date: string;
+  /** ISO 8601 from API `created_at` (for dashboards / trends). */
+  createdAt: string;
   initiator: string;
   ownerId?: string;
   ownerName?: string;

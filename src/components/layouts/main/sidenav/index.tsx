@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileBarChart,
+  FileJson2,
   FileSignature,
   History,
   LayoutDashboard,
@@ -171,6 +172,11 @@ export default function Sidenav() {
       });
     }
     items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
+    items.push({
+      label: "Planograms",
+      to: `${storePrefix}/planograms` as never,
+      icon: FileJson2,
+    });
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",

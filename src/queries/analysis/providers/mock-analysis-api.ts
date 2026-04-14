@@ -20,7 +20,7 @@ export const mockAnalysisApiClient: AnalysisApiClient = {
   },
   async fetchPlanogramList(_storeId?: string): Promise<PlanogramSummary[]> {
     await simulateNetworkDelay(300);
-    return PLANOGRAMS.map((p) => {
+    return allPlanogramPayloads().map((p) => {
       const { planogram, metadata } = p;
       const fixture = planogram.fixture;
       const loc = planogram.physicalLocation;
@@ -48,7 +48,21 @@ export const mockAnalysisApiClient: AnalysisApiClient = {
   },
   async fetchPlanogramById(id: string): Promise<PlanogramPayload | null> {
     await simulateNetworkDelay(200);
-    return PLANOGRAMS.find((p) => p.planogram.id === id) ?? null;
+    return allPlanogramPayloads().find((p) => p.planogram.id === id) ?? null;
+  },
+  async savePlanogramPayload(payload: PlanogramPayload): Promise<PlanogramPayload> {
+    await simulateNetworkDelay(350);
+    const id = payload.planogram.id;
+    const next = customPlanograms.filter((p) => p.planogram.id !== id);
+    next.push(payload);
+    customPlanograms = next;
+    return payload;
+  },
+  async deletePlanogram(id: string): Promise<boolean> {
+    await simulateNetworkDelay(250);
+    const before = customPlanograms.length;
+    customPlanograms = customPlanograms.filter((p) => p.planogram.id !== id);
+    return customPlanograms.length < before;
   },
   async saveShelfArrangement(
     shelfName: string,
@@ -118,6 +132,17 @@ export const mockAnalysisApiClient: AnalysisApiClient = {
 };
 
 const PLANOGRAMS: PlanogramPayload[] = [PLANOGRAM_POC_001, PLANOGRAM_POC_002];
+
+/** User-imported or edited planograms; same id replaces a built-in for the session. */
+let customPlanograms: PlanogramPayload[] = [];
+
+function allPlanogramPayloads(): PlanogramPayload[] {
+  const overridden = new Set(customPlanograms.map((p) => p.planogram.id));
+  return [
+    ...customPlanograms,
+    ...PLANOGRAMS.filter((p) => !overridden.has(p.planogram.id)),
+  ];
+}
 
 const createdPlanogramShelves: Shelf[] = [];
 

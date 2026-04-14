@@ -53,6 +53,13 @@ export function isActiveItem(pathname: string, hash: string, item: NavItem): boo
     return pathname === item.to || pathname.startsWith(`${item.to}/`);
   }
   if (
+    item.to === "/checker/planograms" ||
+    (typeof item.to === "string" && /^\/admin\/[^/]+\/planograms$/.test(item.to))
+  ) {
+    const base = item.to as string;
+    return pathname === base || pathname.startsWith(`${base}/`);
+  }
+  if (
     item.to === "/maker/audits" ||
     item.to === "/maker/audits/planogram" ||
     item.to === "/maker/audits/adhoc"

@@ -27,7 +27,7 @@ export { useComplianceRuleSets, complianceRuleSetsKeys } from "./useComplianceRu
 export { useCreateComplianceRuleSet } from "./useCreateComplianceRuleSet";
 export { useRulesByRuleSetId, rulesByRuleSetIdKeys } from "./useRulesByRuleSetId";
 export { usePlanogramList, planogramListKeys } from "./usePlanogramList";
-export { usePlanogramById } from "./usePlanogramById";
+export { usePlanogramById, planogramKeys } from "./usePlanogramById";
 export {
   usePlanogramShelfPreview,
   planogramShelfPreviewKeys,
@@ -35,6 +35,9 @@ export {
 } from "./usePlanogramShelfPreview";
 export {
   useAssignPlanogramToShelf,
+  useCreatePlanogram,
+  useDeletePlanogram,
+  useUpdatePlanogram,
   useUpdateShelfArrangement,
 } from "./usePlanogramMutations";
 export { useHistoricalAnalyses } from "./useHistoricalAnalyses";

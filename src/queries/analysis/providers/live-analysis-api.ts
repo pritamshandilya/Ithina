@@ -1,7 +1,7 @@
-import { apiClient } from "@/queries/shared";
 import type { AdhocAnalysis } from "@/types/maker";
 import type { PlanogramArrangement, PlanogramPayload, PlanogramSummary } from "@/types/planogram";
 import type { Shelf } from "@/types/maker";
+import { mockAnalysisApiClient } from "./mock-analysis-api";
 
 import type { AnalysisApiClient, FetchAdhocAnalysesParams } from "../types";
 
@@ -14,15 +14,15 @@ export const liveAnalysisApiClient: AnalysisApiClient = {
   async fetchAdhocAnalyses({
     storeId,
   }: FetchAdhocAnalysesParams): Promise<AdhocAnalysis[]> {
-    return apiClient.get<AdhocAnalysis[]>("/maker/adhoc-analyses", {
-      storeId,
-    });
+    return mockAnalysisApiClient.fetchAdhocAnalyses({ storeId });
   },
   async fetchPlanogramList(storeId?: string): Promise<PlanogramSummary[]> {
-    return apiClient.get<PlanogramSummary[]>("/maker/planograms", { storeId });
+    void storeId;
+    return [];
   },
   async fetchPlanogramById(id: string): Promise<PlanogramPayload | null> {
-    return apiClient.get<PlanogramPayload>(`/maker/planograms/${id}`);
+    void id;
+    return null;
   },
   async saveShelfArrangement(
     shelfName: string,
@@ -30,39 +30,48 @@ export const liveAnalysisApiClient: AnalysisApiClient = {
     arrangement: PlanogramArrangement,
     storeId: string,
   ): Promise<Shelf> {
-    return apiClient.post<Shelf>("/maker/planograms/shelf-arrangements", {
+    return mockAnalysisApiClient.saveShelfArrangement(
       shelfName,
       planogramId,
       arrangement,
       storeId,
-    });
+    );
   },
   async assignPlanogramToShelf(
     shelfId: string,
     planogramId: string,
     arrangement: PlanogramArrangement,
   ): Promise<Shelf | null> {
-    return apiClient.post<Shelf>(`/maker/shelves/${shelfId}/planogram-assignment`, {
+    return mockAnalysisApiClient.assignPlanogramToShelf(
+      shelfId,
       planogramId,
       arrangement,
-    });
+    );
   },
   async updateShelfArrangement(
     shelfId: string,
     arrangement: PlanogramArrangement,
   ): Promise<Shelf | null> {
-    return apiClient.put<Shelf>(`/maker/shelves/${shelfId}/arrangement`, {
-      arrangement,
-    });
+    return mockAnalysisApiClient.updateShelfArrangement(shelfId, arrangement);
   },
   getCreatedPlanogramShelves(): Shelf[] {
-    return [];
+    return mockAnalysisApiClient.getCreatedPlanogramShelves();
   },
   getAssignPlanogramOverlays(): Map<
     string,
     { planogramId: string; arrangement: PlanogramArrangement }
   > {
-    return new Map();
+    return mockAnalysisApiClient.getAssignPlanogramOverlays();
+  },
+  async savePlanogramPayload(payload: PlanogramPayload): Promise<PlanogramPayload> {
+    void payload;
+    throw new Error(
+      "Saving planogram payload via analysis provider is not available because the backend endpoint is not implemented.",
+    );
+  },
+  async deletePlanogram(id: string): Promise<boolean> {
+    void id;
+    return false;
   },
 };
 

@@ -1,6 +1,6 @@
 import type { AnalysisApiMode } from "./types";
 
-const DEFAULT_ANALYSIS_API_MODE: AnalysisApiMode = "mock";
+const DEFAULT_ANALYSIS_API_MODE: AnalysisApiMode = "live";
 
 export function getAnalysisApiMode(): AnalysisApiMode {
   const rawMode =

@@ -32,5 +32,9 @@ export interface AnalysisApiClient {
     string,
     { planogramId: string; arrangement: PlanogramArrangement }
   >;
+  /** Persist or replace a planogram definition (mock: in-memory; live: API). */
+  savePlanogramPayload(payload: PlanogramPayload): Promise<PlanogramPayload>;
+  /** Remove a user-defined planogram; returns false if nothing was removed. */
+  deletePlanogram(id: string): Promise<boolean>;
 }
 

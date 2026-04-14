@@ -20,7 +20,6 @@ import {
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PLANOGRAM_POC_002 } from "@/lib/api/planogram-sample";
 import {
   usePlanogramShelfPreview,
   useUpdateShelfArrangement,
@@ -101,7 +100,7 @@ function PlanogramPreviewPage() {
 
   useEffect(() => {
     if (!preview) return;
-    const payload = preview.planogramPayload ?? PLANOGRAM_POC_002;
+    const payload = preview.planogramPayload;
     if (!payload?.planogram?.fixture?.shelves) return;
     const fixtureShelves = payload.planogram.fixture.shelves;
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
@@ -162,8 +161,8 @@ function PlanogramPreviewPage() {
     setSelectedCategories(new Set());
   }, [preview]);
 
-  const effectivePayload = preview?.planogramPayload ?? (preview ? PLANOGRAM_POC_002 : null);
-  const isPlaceholder = !!preview && !preview.planogramPayload;
+  const effectivePayload = preview?.planogramPayload ?? null;
+  const isMissingPlanogram = !!preview && !preview.planogramPayload;
 
   const shelfCapacities = useMemo(() => {
     const orig = effectivePayload?.planogram?.fixture?.shelves ?? [];
@@ -535,7 +534,7 @@ function PlanogramPreviewPage() {
                 </h1>
               )}
             </div>
-            {hasChanges && !isPlaceholder && (
+            {hasChanges && !isMissingPlanogram && (
               <Button
                 onClick={handleSave}
                 disabled={isSaving}
@@ -570,9 +569,9 @@ function PlanogramPreviewPage() {
 
           {preview && !isLoading && (
             <div className="space-y-3">
-              {isPlaceholder && (
+              {isMissingPlanogram && (
                 <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
-                  Sample planogram for display. Assign a planogram to this shelf to save edits.
+                  No planogram data is available for this shelf.
                 </div>
               )}
               <div

@@ -13,3 +13,4 @@ export type * from "./audits";
 export type * from "./reports";
 export type * from "./checker";
 export type * from "./knowledge-center";
+export type * from "./planograms";

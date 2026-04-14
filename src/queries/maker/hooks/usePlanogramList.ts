@@ -7,20 +7,22 @@
 import { useQuery } from "@tanstack/react-query";
 
 import { useSelectedStoreId } from "@/providers/store";
+import type { PlanogramApiStatus } from "@/models/request/planograms";
 import { fetchPlanogramList } from "../api/planogram";
 
 export const planogramListKeys = {
   all: ["maker", "planogram-list"] as const,
-  byStore: (storeId: string | undefined) => [...planogramListKeys.all, storeId ?? "all"] as const,
+  byStore: (storeId: string | undefined, status: PlanogramApiStatus | undefined) =>
+    [...planogramListKeys.all, storeId ?? "all", status ?? "all"] as const,
 };
 
-export function usePlanogramList(storeId?: string) {
+export function usePlanogramList(storeId?: string, status?: PlanogramApiStatus) {
   const selectedStoreId = useSelectedStoreId();
   const scopedStoreId = storeId ?? selectedStoreId;
 
   return useQuery({
-    queryKey: planogramListKeys.byStore(scopedStoreId),
-    queryFn: () => fetchPlanogramList(scopedStoreId),
+    queryKey: planogramListKeys.byStore(scopedStoreId, status),
+    queryFn: () => fetchPlanogramList(status),
     staleTime: 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });

@@ -6,6 +6,31 @@ import { IthBadge, IthTable, type IthColumnDef } from "@/components/ui/ith-table
 import { cn } from "@/lib/utils";
 import type { StagedSku } from "@/types/wizard";
 
+function escapeCellText(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
+function isBogoLikeOffer(row: StagedSku): boolean {
+  const t = (row.offerType ?? "").toLowerCase().trim();
+  const l = (row.offerLabel ?? "").toLowerCase().trim();
+  if (/\bbogo(f)?\b/.test(t)) return true;
+  if (t.includes("buy") && t.includes("get")) return true;
+  if (
+    l.includes("buy 1 get 1") ||
+    l.includes("buy one get one") ||
+    l.includes("bogof") ||
+    l.includes("bogo")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export type InputMode = "ai" | "csv";
 
 /* ─── CSV preview table ──────────────────────────────────────────────────── */
@@ -264,6 +289,8 @@ function DataStagingGrid({
   }, []);
 
   const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => {
+    const gridRows = data;
+
     const includeColumn: DataTableColumn<StagedSku> = {
       title: "",
       field: "included",
@@ -307,19 +334,92 @@ function DataStagingGrid({
     {
       title: "Product",
       field: "name",
-      minWidth: 180,
-      widthGrow: 1,
+      minWidth: 200,
+      widthGrow: 1.35,
       hozAlign: "left",
       headerHozAlign: "left",
+      vertAlign: "top",
+      variableHeight: true,
       formatter: (cell: unknown) => {
-        const val = (cell as { getValue: () => string }).getValue();
-        return `<span class="text-xs font-medium leading-tight text-slate-200">${val}</span>`;
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const val = escapeCellText(row.name ?? "");
+        const includedRows = gridRows.filter((r) => r.included !== false);
+        const freeInGrid = includedRows.filter((r) => r.isFree);
+        const bogo = isBogoLikeOffer(row);
+        const freeBadge = row.isFree
+          ? `<span class="shrink-0 rounded border border-ithina-purple/40 bg-ithina-purple/15 px-1 py-px font-mono text-[8px] font-bold uppercase leading-none text-ithina-purple">Free</span>`
+          : "";
+        const primaryBadge =
+          bogo && freeInGrid.length > 0 && !row.isFree
+            ? `<span class="shrink-0 rounded border border-slate-500/45 bg-slate-500/10 px-1 py-px font-mono text-[8px] font-bold uppercase leading-none text-slate-400">Primary</span>`
+            : "";
+        return `<div class="flex flex-wrap items-start gap-x-1.5 gap-y-1 text-xs font-medium leading-snug text-slate-200"><span class="min-w-0 max-w-full flex-1 break-words">${val}</span>${freeBadge}${primaryBadge}</div>`;
+      },
+    },
+    {
+      title: "Offer",
+      field: "offerLabel",
+      width: 132,
+      minWidth: 118,
+      maxWidth: 220,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      vertAlign: "top",
+      variableHeight: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const label = (row.offerLabel ?? "").trim();
+        const typeRaw = (row.offerType ?? "").trim();
+        const labelEsc = label ? escapeCellText(label) : "";
+        const typeEsc = typeRaw ? escapeCellText(typeRaw) : "";
+
+        const includedRows = gridRows.filter((r) => r.included !== false);
+        const freeRows = includedRows.filter((r) => r.isFree);
+        const bogo = isBogoLikeOffer(row);
+
+        let mainHtml = "";
+        if (!labelEsc && !typeEsc) {
+          mainHtml = `<span class="text-[11px] text-slate-600">—</span>`;
+        } else if (typeEsc && labelEsc) {
+          mainHtml = `<span class="text-[11px] leading-snug text-slate-200"><span class="font-mono text-[10px] text-slate-500">${typeEsc}</span><span class="mx-1 text-slate-600">·</span><span>${labelEsc}</span></span>`;
+        } else {
+          mainHtml = `<span class="text-[11px] leading-snug text-slate-200">${typeEsc || labelEsc}</span>`;
+        }
+
+        let roleHtml = "";
+        if (bogo && freeRows.length > 0) {
+          if (row.isFree) {
+            const primaries = includedRows.filter((r) => !r.isFree);
+            const names = primaries
+              .map((p) => p.name)
+              .slice(0, 3)
+              .join(", ");
+            const more = primaries.length > 3 ? "…" : "";
+            roleHtml = `<span class="mt-1 block text-[10px] font-medium text-ithina-purple/90">Free unit</span>`;
+            if (names) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] leading-snug text-slate-500">Paid with: ${escapeCellText(names)}${more}</span>`;
+            }
+          } else {
+            roleHtml = `<span class="mt-1 block text-[10px] text-slate-500">Primary (paid line)</span>`;
+            if (freeRows.length === 1) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] leading-snug text-slate-400">+ Free: ${escapeCellText(freeRows[0].name)}</span>`;
+            } else if (freeRows.length > 1) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] text-slate-400">+ ${freeRows.length} free units</span>`;
+            }
+          }
+        }
+
+        if (roleHtml) {
+          return `<div class="flex flex-col gap-0">${mainHtml}${roleHtml}</div>`;
+        }
+        return mainHtml;
       },
     },
     {
       title: "Current",
       field: "current",
       width: 100,
+      minWidth: 92,
       sorter: "number",
       hozAlign: "right",
       headerHozAlign: "right",
@@ -348,6 +448,23 @@ function DataStagingGrid({
       },
     },
     {
+      title: "Stock",
+      field: "stockQty",
+      width: 88,
+      minWidth: 80,
+      sorter: "number",
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const q = row.stockQty;
+        if (typeof q !== "number" || Number.isNaN(q)) {
+          return `<span class="font-mono text-[11px] text-slate-600">—</span>`;
+        }
+        return `<span class="font-mono text-xs text-slate-300">${q}</span>`;
+      },
+    },
+    {
       title: "Proposed",
       field: "proposed",
       width: 110,
@@ -370,9 +487,9 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Agent Suggest Schedule",
+      title: "Suggest dates",
       field: "agentSuggestSchedule",
-      minWidth: 168,
+      minWidth: 118,
       widthGrow: 0.65,
       sorter: "string",
       hozAlign: "left",
@@ -380,24 +497,24 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const raw = (row.agentSuggestSchedule ?? "").trim() || "—";
-        const esc = raw
-          .replace(/&/g, "&amp;")
-          .replace(/</g, "&lt;")
-          .replace(/>/g, "&gt;")
-          .replace(/"/g, "&quot;");
+        const esc = escapeCellText(raw);
         return `<span class="text-[11px] leading-snug text-slate-300">${esc}</span>`;
       },
     },
     ];
-  }, [onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
+  }, [data, onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
 
   const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
     const d = row.getData();
     const el = row.getElement();
     el.classList.toggle("wizard-staging-row-excluded", d.included === false);
+    el.classList.toggle("wizard-staging-row-free", d.isFree === true);
     if (!d.safe) {
       el.style.borderLeft = "2px solid rgb(251 113 133)";
       el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    } else if (d.isFree) {
+      el.style.borderLeft = "2px solid var(--color-ithina-purple)";
+      el.style.backgroundColor = "color-mix(in srgb, var(--color-ithina-purple) 12%, transparent)";
     } else {
       el.style.borderLeft = "";
       el.style.backgroundColor = "";
@@ -541,7 +658,7 @@ function DataStagingGrid({
                   value={aiCampaignToolbar.scheduleStartLocal}
                   onChange={(e) => aiCampaignToolbar.onScheduleStartLocalChange(e.target.value)}
                   aria-label="Campaign start"
-                  className="min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg px-2 py-1.5 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                  className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
                 />
                 <span className="shrink-0 text-xs font-medium text-slate-500">to</span>
                 <input
@@ -550,7 +667,7 @@ function DataStagingGrid({
                   value={aiCampaignToolbar.scheduleEndLocal}
                   onChange={(e) => aiCampaignToolbar.onScheduleEndLocalChange(e.target.value)}
                   aria-label="Campaign end"
-                  className="min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg px-2 py-1.5 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                  className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
                 />
               </div>
             </>

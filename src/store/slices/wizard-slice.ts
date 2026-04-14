@@ -89,6 +89,10 @@ const wizardSlice = createSlice({
           eslId: r.eslId ?? prev?.eslId,
           rankingScore: r.rankingScore ?? prev?.rankingScore,
           agentSuggestSchedule: r.agentSuggestSchedule ?? prev?.agentSuggestSchedule,
+          offerType: r.offerType ?? prev?.offerType,
+          offerLabel: r.offerLabel ?? prev?.offerLabel,
+          stockQty: r.stockQty ?? prev?.stockQty,
+          isFree: r.isFree ?? prev?.isFree ?? false,
         };
       });
     },

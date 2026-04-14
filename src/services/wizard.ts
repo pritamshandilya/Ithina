@@ -108,6 +108,13 @@ export async function submitWizardIntent(
     const eslRaw = s.esl_id ?? s.ESL_ID ?? undefined;
     const rankingScore = typeof s.score === "number" && !Number.isNaN(s.score) ? s.score : undefined;
     const rowSchedule = pickAgentSuggestScheduleLabel(s) ?? campaignWindowLabel ?? undefined;
+    const offerType =
+      s.offer_type?.trim() || s.offerType?.trim() || undefined;
+    const offerLabel =
+      s.offer_label?.trim() || s.offerLabel?.trim() || undefined;
+    const stockRaw = s.stock_qty ?? s.stockQty;
+    const stockQty =
+      typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? "",
@@ -118,9 +125,13 @@ export async function submitWizardIntent(
       baseCost: s.base_cost,
       discount,
       included: true,
+      isFree: s.is_free === true || s.isFree === true,
       ...(eslRaw ? { eslId: String(eslRaw) } : {}),
       ...(rankingScore !== undefined ? { rankingScore } : {}),
       ...(rowSchedule ? { agentSuggestSchedule: rowSchedule } : {}),
+      ...(offerType ? { offerType } : {}),
+      ...(offerLabel ? { offerLabel } : {}),
+      ...(stockQty !== undefined ? { stockQty } : {}),
     };
   });
 

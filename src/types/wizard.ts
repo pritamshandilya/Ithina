@@ -46,6 +46,14 @@ export interface StagedSku {
   rankingScore?: number;
   /** Per-SKU label from the promo assistant, e.g. "Oct 15 – Oct 20 (Soon)". */
   agentSuggestSchedule?: string;
+  /** Draft API: e.g. bundle, bogof. */
+  offerType?: string;
+  /** Draft API: e.g. "Bundle Primary", "FREE ITEM (Bundle Reward)". */
+  offerLabel?: string;
+  /** On-hand stock from draft API. */
+  stockQty?: number;
+  /** True when this SKU is the free / reward line in a bundle or BOGO. */
+  isFree?: boolean;
 }
 
 export type ChatRole = "user" | "ai";

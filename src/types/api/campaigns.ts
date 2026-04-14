@@ -33,6 +33,16 @@ export interface ApiCampaignSKU {
   esl_id?: string | null;
   ESL_ID?: string | null;
   score?: number | null;
+  /** Promo mechanics from NL draft (bundle primary, free reward, etc.). */
+  offer_type?: string | null;
+  offer_label?: string | null;
+  /** Some gateways serialize snake_case keys as camelCase. */
+  offerType?: string | null;
+  offerLabel?: string | null;
+  stock_qty?: number | null;
+  stockQty?: number | null;
+  is_free?: boolean | null;
+  isFree?: boolean | null;
   /** Human-readable schedule suggestion for this SKU (shown in the staging grid). */
   agent_suggest_schedule?: string | null;
   suggested_schedule_label?: string | null;

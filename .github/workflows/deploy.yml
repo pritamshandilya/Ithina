@@ -13,17 +13,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v5
         with:
           run_install: false
 
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: "pnpm"
 
       - name: Install dependencies
@@ -40,7 +40,7 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "dist/*"
           target: ${{ vars.DEPLOY_PATH }}
           strip_components: 1

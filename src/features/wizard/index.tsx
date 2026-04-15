@@ -38,10 +38,11 @@ import { campaignKeys } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 import { createCampaignFromWizard } from "@/services/campaigns";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { buildChatProductsLabel } from "@/lib/chat-products-label";
 import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
 import type { CampaignListItem } from "@/types/campaigns";
 import type { InboxItem } from "@/types/approval";
-import ChatPanel from "./components/chat-panel";
+import ChatPanel, { type ChatPanelHandle } from "./components/chat-panel";
 import DataStagingGrid from "./components/data-staging-grid";
 import type { InputMode } from "./components/data-staging-grid";
 import ModeChooser from "./components/mode-chooser";
@@ -126,6 +127,8 @@ export default function Wizard() {
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
+  const chatPanelRef = useRef<ChatPanelHandle>(null);
+  const stagingSectionRef = useRef<HTMLDivElement>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -367,7 +370,38 @@ export default function Wizard() {
       }
 
       setIsTyping(false);
-      pushMessage(aiReply);
+
+      const skuRowsForLabel = skus.length > 0 ? skus : gridData;
+      const productsLabel = buildChatProductsLabel(skuRowsForLabel);
+
+      const scheduleStartIso =
+        draftMeta.scheduleStartIso ??
+        (schedule.startDate?.trim()
+          ? `${schedule.startDate}T${(schedule.startTime || "08:00").slice(0, 5)}:00`
+          : null);
+      const scheduleEndIso =
+        draftMeta.scheduleEndIso ??
+        (schedule.endDate?.trim()
+          ? `${schedule.endDate}T${(schedule.endTime || schedule.startTime || "08:00").slice(0, 5)}:00`
+          : null);
+
+      const resolvedCampaignName =
+        draftMeta.campaignThemeName?.trim() || campaignName?.trim() || null;
+
+      const summaryEnrichment =
+        scheduleStartIso || scheduleEndIso || productsLabel || resolvedCampaignName
+          ? {
+              ...(resolvedCampaignName ? { campaignName: resolvedCampaignName } : {}),
+              scheduleStartIso,
+              scheduleEndIso,
+              ...(productsLabel ? { productsLabel } : {}),
+            }
+          : undefined;
+
+      pushMessage({
+        ...aiReply,
+        ...(summaryEnrichment ? { summaryEnrichment } : {}),
+      });
       if (skus.length > 0) {
         dispatch(mergeGridData(skus));
       }
@@ -386,7 +420,20 @@ export default function Wizard() {
     dispatch,
     campaignActive,
     campaignNamed,
+    campaignName,
+    gridData,
+    schedule.startDate,
+    schedule.startTime,
+    schedule.endDate,
+    schedule.endTime,
   ]);
+
+  const handleEditCampaignFromSummaryCard = useCallback(() => {
+    stagingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    window.requestAnimationFrame(() => {
+      chatPanelRef.current?.focusForCampaignEdit();
+    });
+  }, []);
 
   const handleResetPromoChat = useCallback(() => {
     if (intentMutation.isPending || hwConfirmMutation.isPending) return;
@@ -727,18 +774,24 @@ export default function Wizard() {
                         <>
                           <div className="flex min-h-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col">
                             <ChatPanel
+                              ref={chatPanelRef}
                               messages={messages}
                               isTyping={isTyping}
                               inputText={inputText}
                               onInputChange={setInputText}
                               onSubmit={handleSubmit}
                               onResetChat={handleResetPromoChat}
+                              onEditCampaignSummary={handleEditCampaignFromSummaryCard}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
                             />
                           </div>
                           {showGrid ? (
-                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <div
+                              ref={stagingSectionRef}
+                              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                              data-staging-section
+                            >
                               <DataStagingGrid
                                 data={gridData}
                                 isGenerating={hwConfirmMutation.isPending}

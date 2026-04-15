@@ -44,6 +44,14 @@ export function datetimeLocalValueToParts(local: string): { date: string; time: 
   return { date, time };
 }
 
+/** "Apr 17, 2026" style single date for summary cards. */
+export function formatIsoDateUsShort(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso.trim());
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
 /** "Oct 15 – Oct 20" style range for agent schedule hints (local calendar dates). */
 export function formatIsoRangeUsShort(startIso: string | null | undefined, endIso: string | null | undefined): string | null {
   if (!startIso?.trim()) return null;

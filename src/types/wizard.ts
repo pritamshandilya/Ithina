@@ -58,9 +58,19 @@ export interface StagedSku {
 
 export type ChatRole = "user" | "ai";
 
+/** Fills summary-card rows when the AI reply omits dates/products (follow-up turns). */
+export interface ChatSummaryEnrichment {
+  /** Campaign theme name from draft API / Redux — authoritative for the Name row. */
+  campaignName?: string | null;
+  scheduleStartIso?: string | null;
+  scheduleEndIso?: string | null;
+  productsLabel?: string | null;
+}
+
 export interface ChatMessage {
   role: ChatRole;
   text: string;
+  summaryEnrichment?: ChatSummaryEnrichment;
 }
 
 export type HardwareDeviceId = "chroma29" | "chroma42" | "lcd";

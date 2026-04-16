@@ -39,27 +39,27 @@ function getAdhocStatusClass(status: AdhocAnalysisStatus): string {
 
 const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
   {
-    title: "Shelf ID",
-    field: "shelfId",
+    title: "Fixture ID",
+    field: "fixtureId",
     width: 140,
     sorter: "string",
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.shelfId ?? "—"}</span>`;
+      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.fixtureId ?? "—"}</span>`;
     },
   },
   {
-    title: "Shelf Name",
-    field: "shelfName",
+    title: "Fixture Name",
+    field: "fixtureName",
     minWidth: 160,
     sorter: "string",
     headerSort: true,
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.shelfName ?? "—"}</span>`;
+      return `<span class="text-sm font-medium text-foreground">${row.fixtureName ?? "—"}</span>`;
     },
   },
   {
@@ -211,12 +211,12 @@ function AdhocAnalysisPage() {
       pageHeader={
         <PageHeader
           title="Adhoc Analysis"
-          description="Upload a shelf image and let AI analyze your retail space without a planogram."
+          description="Upload a fixture image and let AI analyze your retail space without a planogram."
         >
           <Button asChild variant="success" className="shrink-0">
             <Link
               to="/maker/audits/adhoc/new"
-              search={{ shelfId: undefined }}
+              search={{ fixtureId: undefined }}
             >
               <Plus className="size-4" aria-hidden />
               New Adhoc Analysis
@@ -250,13 +250,13 @@ function AdhocAnalysisPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-foreground">No adhoc analyses yet</h3>
                 <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Start by creating a new adhoc analysis. Upload a shelf image and let AI analyze
+                  Start by creating a new adhoc analysis. Upload a fixture image and let AI analyze
                   your retail space.
                 </p>
                 <Button asChild variant="success" className="mt-6">
                   <Link
                     to="/maker/audits/adhoc/new"
-                    search={{ shelfId: undefined }}
+                    search={{ fixtureId: undefined }}
                   >
                     <Plus className="size-4" aria-hidden />
                     New Adhoc Analysis

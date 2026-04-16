@@ -7,7 +7,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/layouts/main";
 import {
   useAssignPlanogramToShelf,
-  useCreateFixture,
   useCreateShelf,
   usePlanogramById,
   usePlanogramList,
@@ -24,6 +23,7 @@ import { useDimensionUnits } from "@/queries/checker";
 import { AddPlanogramHeader } from "./-add-planogram-header";
 import { AddShelfDetailsCard } from "./-add-shelf-details-card";
 import { PlanogramPreviewCard } from "./-planogram-preview-card";
+import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
@@ -32,6 +32,7 @@ export const Route = createFileRoute("/checker/shelf/new/")({
       .object({
         associateShelfId: z.string().optional(),
         associateShelfName: z.string().optional(),
+        fixtureId: z.string().optional(),
         templateId: z.string().optional(),
         addMode: z.enum(["manual", "template"]).optional(),
       })
@@ -39,14 +40,12 @@ export const Route = createFileRoute("/checker/shelf/new/")({
 });
 
 const fixtureTypeDedupeKey = (value: string) =>
-  value
-    .trim()
-    .toLowerCase()
-    .replace(/[_\s-]+/g, "");
+  fixtureTypeKey(value);
 
 type AddPlanogramPageSearch = {
   associateShelfId?: string;
   associateShelfName?: string;
+  fixtureId?: string;
   templateId?: string;
   addMode?: "manual" | "template";
 };
@@ -60,7 +59,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const location = useLocation();
   const params = useParams({ strict: false }) as { storeId?: string };
   const currentSearch = (location.search ?? {}) as AddPlanogramPageSearch;
-  const { associateShelfId, associateShelfName, templateId, addMode } =
+  const { associateShelfId, associateShelfName, fixtureId, templateId, addMode } =
     searchOverride ?? currentSearch;
   const isManualEntryMode = addMode === "manual";
   const isAdmin = location.pathname.includes("/admin/");
@@ -75,7 +74,6 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const { data: extraFixtureLabels = [] } = useStoreFixtureTypes();
   const { data: storeFixtures = [], isLoading: fixturesLoading } =
     useStoreFixtures();
-  const createFixtureMutation = useCreateFixture();
   const createShelfMutation = useCreateShelf();
   const assignPlanogramMutation = useAssignPlanogramToShelf();
   const isAssociateMode = !!associateShelfId;
@@ -91,7 +89,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const [fixtureType, setFixtureType] = useState("");
   const [dimWidth, setDimWidth] = useState("");
   const [dimHeight, setDimHeight] = useState("");
-  const [dimDepth, setDimDepth] = useState("");
+  const [, setDimDepth] = useState("");
   const [verticalPosition, setVerticalPosition] = useState("0");
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const lastSearchTemplateAppliedId = useRef<string | undefined>(undefined);
@@ -105,6 +103,19 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     if (!selectedTemplateId) return null;
     return shelfTemplates.find((t) => t.id === selectedTemplateId) ?? null;
   }, [shelfTemplates, selectedTemplateId]);
+
+  useEffect(() => {
+    if (!fixtureId) return;
+    const fixture = storeFixtures.find((item) => item.id === fixtureId);
+    if (!fixture) return;
+    setFixtureType(fixture.type);
+    setAisleCode((prev) => prev || fixture.physical_location.aisle);
+    setZone((prev) => prev || fixture.physical_location.zone);
+    setSection((prev) => prev || fixture.physical_location.section);
+    setDimWidth(String(fixture.dimensions.width));
+    setDimHeight(String(fixture.dimensions.height));
+    setDimDepth(String(fixture.dimensions.depth));
+  }, [fixtureId, storeFixtures]);
 
   const defaultDimensionUnit = useMemo<StoreDimensionUnit>(() => {
     const raw = selectedStore?.default_dimensions;
@@ -123,6 +134,7 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     setFixtureType(selectedTemplate.fixtureType);
     setDimWidth(String(selectedTemplate.width));
     setDimHeight(String(selectedTemplate.height));
+    setDimDepth(String(selectedTemplate.depth));
     if (selectedTemplate.zone) setZone(selectedTemplate.zone);
     if (selectedTemplate.section) setSection(selectedTemplate.section);
   }, [selectedTemplate]);
@@ -131,16 +143,29 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     const seen = new Set<string>();
     const deduped: { value: string; label: string }[] = [];
 
-    for (const label of extraFixtureLabels) {
-      const trimmed = label.trim();
+    const addOption = (raw: string | undefined) => {
+      const trimmed = raw?.trim() ?? "";
       const key = fixtureTypeDedupeKey(trimmed);
-      if (!trimmed || !key || seen.has(key)) continue;
+      if (!trimmed || !key || seen.has(key)) return;
       seen.add(key);
       deduped.push({ value: trimmed, label: trimmed });
+    };
+
+    for (const label of extraFixtureLabels) {
+      addOption(label);
     }
 
+    for (const fixture of storeFixtures) {
+      addOption(fixture.type);
+    }
+
+    // Ensure template-applied/current value is always selectable even if
+    // store fixture type options are delayed or missing this label.
+    addOption(selectedTemplate?.fixtureType);
+    addOption(fixtureType);
+
     return deduped;
-  }, [extraFixtureLabels]);
+  }, [extraFixtureLabels, storeFixtures, selectedTemplate, fixtureType]);
 
   const fixtureDepthByType = useMemo(() => {
     const map = new Map<string, string>();
@@ -177,8 +202,24 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   useEffect(() => {
     if (!fixtureType) return;
     const depthFromFixture = resolveDepthForFixtureType(fixtureType);
-    setDimDepth(depthFromFixture ? String(depthFromFixture) : "");
-  }, [fixtureType, resolveDepthForFixtureType]);
+    if (depthFromFixture) {
+      setDimDepth(String(depthFromFixture));
+      return;
+    }
+
+    // Keep template-provided depth when fixture type came from template but
+    // store fixture list does not contain a matching type label yet.
+    if (
+      selectedTemplate &&
+      fixtureTypeDedupeKey(selectedTemplate.fixtureType) ===
+        fixtureTypeDedupeKey(fixtureType)
+    ) {
+      setDimDepth(String(selectedTemplate.depth));
+      return;
+    }
+
+    setDimDepth("");
+  }, [fixtureType, resolveDepthForFixtureType, selectedTemplate]);
 
   useEffect(() => {
     if (isAssociateMode || !templateId) {
@@ -223,9 +264,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
       !!shelfName.trim() &&
       !duplicateNameError &&
       !isSaving &&
+      !fixturesLoading &&
       aisleCode.trim() !== "" &&
-      bayCode.trim() !== "" &&
-      dimDepth.trim() !== ""
+      bayCode.trim() !== ""
     );
   }, [
     selectedPlanogramId,
@@ -233,9 +274,9 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     duplicateNameError,
     isSaving,
     isAssociateMode,
+    fixturesLoading,
     aisleCode,
     bayCode,
-    dimDepth,
   ]);
 
   const handleSave = useCallback(async () => {
@@ -260,15 +301,15 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
         navigate({ to: shelfListPath as never });
       } else if (!isAssociateMode) {
+        if (fixturesLoading) {
+          setSaveError("Fixtures are still loading. Please wait a moment and try again.");
+          return;
+        }
+
         const fixtureTypeValue = fixtureType.trim() || "gondola";
         const fixtureWidth = Number(dimWidth) || 1;
         const fixtureHeight = Number(dimHeight) || 1;
-        const fixtureDepth = Number(dimDepth);
         const verticalPositionValue = Number(verticalPosition || "0");
-        if (!Number.isFinite(fixtureDepth) || fixtureDepth <= 0) {
-          setSaveError("Shelf depth is missing for the selected fixture type.");
-          return;
-        }
         if (!Number.isFinite(verticalPositionValue)) {
           setSaveError("Vertical position must be a valid number.");
           return;
@@ -279,47 +320,38 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         const sectionValue = section.trim() || "General";
 
         const normalize = (v: string) => v.trim().toLowerCase();
-        // Backend stores floats; use tolerance to avoid spurious mismatches.
-        const floatEq = (a: number, b: number) => Math.abs(a - b) < 1e-6;
-
-        const matchedFixture = !fixturesLoading
-          ? storeFixtures.find((f) => {
-              return (
-                normalize(f.type) === normalize(fixtureTypeValue) &&
-                normalize(f.dimension_unit) === normalize(defaultDimensionUnit) &&
-                normalize(f.physical_location.section) === normalize(sectionValue) &&
-                normalize(f.physical_location.aisle) === normalize(aisleValue) &&
-                normalize(f.physical_location.zone) === normalize(zoneValue) &&
-                floatEq(f.dimensions.width, fixtureWidth) &&
-                floatEq(f.dimensions.height, fixtureHeight) &&
-                floatEq(f.dimensions.depth, fixtureDepth)
-              );
-            })
+        const matchedFixtureFromSearch = fixtureId
+          ? storeFixtures.find((fixture) => fixture.id === fixtureId)
           : undefined;
+        const exactMatches = storeFixtures.filter((f) => {
+          return (
+            fixtureTypeDedupeKey(f.type) === fixtureTypeDedupeKey(fixtureTypeValue) &&
+            normalize(f.physical_location.section) === normalize(sectionValue) &&
+            normalize(f.physical_location.aisle) === normalize(aisleValue) &&
+            normalize(f.physical_location.zone) === normalize(zoneValue)
+          );
+        });
+        const typeMatches = storeFixtures.filter(
+          (f) =>
+            fixtureTypeDedupeKey(f.type) === fixtureTypeDedupeKey(fixtureTypeValue),
+        );
 
-        const fixtureId = matchedFixture
-          ? matchedFixture.id
-          : (
-              await createFixtureMutation.mutateAsync({
-                type: fixtureTypeValue,
-                dimensions: {
-                  width: fixtureWidth,
-                  height: fixtureHeight,
-                  depth: fixtureDepth,
-                },
-                dimension_unit: defaultDimensionUnit,
-                physical_location: {
-                  aisle: aisleValue,
-                  zone: zoneValue,
-                  section: sectionValue,
-                },
-              })
-            ).id;
+        const matchedFixture =
+          matchedFixtureFromSearch ??
+          exactMatches[0] ??
+          (typeMatches.length === 1 ? typeMatches[0] : undefined);
+
+        if (!matchedFixture) {
+          setSaveError(
+            "No matching fixture found. Please create/select a fixture first, then create shelf.",
+          );
+          return;
+        }
 
         await createShelfMutation.mutateAsync({
           code: `S${aisleValue}-${bayValue}`, // Unique business ID (string codes)
           name: shelfName.trim(),
-          fixture_id: fixtureId,
+          fixture_id: matchedFixture.id,
           width: fixtureWidth,
           height: fixtureHeight,
           vertical_position: verticalPositionValue,
@@ -349,14 +381,11 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
     fixtureType,
     dimWidth,
     dimHeight,
-    dimDepth,
     verticalPosition,
-    defaultDimensionUnit,
     shelfListPath,
     planogramPayload,
     storeFixtures,
     fixturesLoading,
-    createFixtureMutation,
     createShelfMutation,
     assignPlanogramMutation,
     navigate,

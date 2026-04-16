@@ -11,7 +11,6 @@ import {
   LayoutPanelLeft,
   Library,
   ListChecks,
-  Rows3,
   Settings,
   ShieldCheck,
   Store,
@@ -171,7 +170,7 @@ export default function Sidenav() {
         icon: LayoutPanelLeft,
       });
     }
-    items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
+    // items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
     items.push({
       label: "Planograms",
       to: `${storePrefix}/planograms` as never,
@@ -293,7 +292,7 @@ export default function Sidenav() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {role === "maker" && (
+              {/* {role === "maker" && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
@@ -310,7 +309,7 @@ export default function Sidenav() {
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              )}
+              )} */}
 
               {role === "maker" && (
                 <SidebarMenuItem>

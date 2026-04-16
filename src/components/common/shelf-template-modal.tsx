@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import type { ShelfTemplateFixtureType } from "@/types/shelf-template";
+import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
 
 const PRESET_FIXTURE_OPTIONS: Array<{ value: ShelfTemplateFixtureType; label: string }> = [
   { value: "gondola", label: "Gondola" },
@@ -16,10 +17,7 @@ const PRESET_FIXTURE_OPTIONS: Array<{ value: ShelfTemplateFixtureType; label: st
 ];
 
 function fixtureLabelDedupeKey(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "");
+  return fixtureTypeKey(s);
 }
 
 const PRESET_DEDUPE_KEYS = new Set(

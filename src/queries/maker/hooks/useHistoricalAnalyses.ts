@@ -11,6 +11,7 @@ import { useShelves } from "./useShelves";
 import type { HistoricalAnalysisRow } from "@/types/maker";
 import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
+import { getShelfFixtureId } from "@/lib/fixtures/analysis";
 
 export function useHistoricalAnalyses(): {
   data: HistoricalAnalysisRow[];
@@ -32,6 +33,8 @@ export function useHistoricalAnalyses(): {
       complianceScore: a.complianceScore,
       storeId: a.storeId,
       errorMessage: a.errorMessage,
+      fixtureId: a.fixtureId,
+      fixtureName: a.fixtureName,
       shelfId: a.shelfId,
       shelfName: a.shelfName,
     }));
@@ -46,6 +49,8 @@ export function useHistoricalAnalyses(): {
         runDate: s.lastAuditDate instanceof Date ? s.lastAuditDate : new Date(s.lastAuditDate!),
         status: "completed" as const,
         complianceScore: s.complianceScore,
+        fixtureId: getShelfFixtureId(s),
+        fixtureName: s.fixtureType ?? getShelfFixtureId(s),
         shelfId: s.id,
         shelfName: s.shelfName,
         planogramName: s.shelfName,

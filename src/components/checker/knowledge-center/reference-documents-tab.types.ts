@@ -14,6 +14,7 @@ export type ExtractionStatus =
 
 export interface DocumentRowProps {
   document: ReferenceDocument;
+  uploadedByLabel?: string;
   ruleNames: Map<string, string>;
   rules: RuleOption[];
   isEditing: boolean;

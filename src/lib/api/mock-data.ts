@@ -331,9 +331,16 @@ export function generateMockShelves(storeId?: string): Shelf[] {
     }
   );
 
+  const shelvesWithFixtureIds = shelves.map((shelf) => {
+    if (shelf.fixtureId) return shelf;
+    const aisle = shelf.aisleCode ?? shelf.aisleNumber ?? "na";
+    const bay = shelf.bayCode ?? shelf.bayNumber ?? "na";
+    return { ...shelf, fixtureId: `fixture-${aisle}-${bay}`.toLowerCase() };
+  });
+
   const variantSeed = getStoreVariantSeed(storeId);
   if (variantSeed === 0) {
-    return shelves;
+    return shelvesWithFixtureIds;
   }
 
   const statusCycle: Shelf["status"][] = [
@@ -344,7 +351,7 @@ export function generateMockShelves(storeId?: string): Shelf[] {
     "never-audited",
   ];
 
-  return shelves.map((shelf, index) => {
+  return shelvesWithFixtureIds.map((shelf, index) => {
     const status = statusCycle[(index + variantSeed) % statusCycle.length];
     const audited = status !== "never-audited";
     const scored = status !== "never-audited" && status !== "draft";
@@ -522,11 +529,11 @@ export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
   ];
   const statuses: AdhocAnalysis["status"][] = ["completed", "completed", "processing", "completed", "failed"];
   const fixtureContexts = [
-    { shelfId: "shelf-aisle3-bev-01", shelfName: "Aisle 3 Beverages", zone: "Grocery", section: "Beverages & Dairy", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
-    { shelfId: "shelf-snacks-02", shelfName: "Snacks Bay", zone: "Grocery", section: "Snacks & Personal Care", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
-    { shelfId: "shelf-dairy-03", shelfName: "Dairy Section", zone: "Dairy", section: "Milk & Yogurt", fixtureType: "cooler_shelving", dimensions: "800×1800 mm" },
-    { shelfId: "shelf-frozen-04", shelfName: "Frozen Foods", zone: "Frozen", section: "Ice Cream & Desserts", fixtureType: "freezer_shelving", dimensions: "1000×1900 mm" },
-    { shelfId: "shelf-bakery-05", shelfName: "Bakery End Cap", zone: "Bakery", section: "Bread & Pastries", fixtureType: "gondola", dimensions: "900×1600 mm" },
+    { fixtureId: "fixture-a3-1", fixtureName: "Aisle 3 Beverages Fixture", shelfId: "shelf-aisle3-bev-01", shelfName: "Aisle 3 Beverages", zone: "Grocery", section: "Beverages & Dairy", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { fixtureId: "fixture-a2-2", fixtureName: "Snacks Fixture", shelfId: "shelf-snacks-02", shelfName: "Snacks Bay", zone: "Grocery", section: "Snacks & Personal Care", fixtureType: "wall_shelving", dimensions: "1200×2000 mm" },
+    { fixtureId: "fixture-a4-1", fixtureName: "Dairy Fixture", shelfId: "shelf-dairy-03", shelfName: "Dairy Section", zone: "Dairy", section: "Milk & Yogurt", fixtureType: "cooler_shelving", dimensions: "800×1800 mm" },
+    { fixtureId: "fixture-a5-2", fixtureName: "Frozen Fixture", shelfId: "shelf-frozen-04", shelfName: "Frozen Foods", zone: "Frozen", section: "Ice Cream & Desserts", fixtureType: "freezer_shelving", dimensions: "1000×1900 mm" },
+    { fixtureId: "fixture-a6-1", fixtureName: "Bakery End Cap Fixture", shelfId: "shelf-bakery-05", shelfName: "Bakery End Cap", zone: "Bakery", section: "Bread & Pastries", fixtureType: "gondola", dimensions: "900×1600 mm" },
   ];
   return names.map((name, i) => {
     const ctx = fixtureContexts[i % fixtureContexts.length];
@@ -539,6 +546,8 @@ export function generateMockAdhocAnalyses(storeId?: string): AdhocAnalysis[] {
       status: statuses[i],
       complianceScore: statuses[i] === "completed" ? randomScore(72, 98) : undefined,
       errorMessage: statuses[i] === "failed" ? "Image quality too low for analysis" : undefined,
+      fixtureId: ctx.fixtureId,
+      fixtureName: ctx.fixtureName,
       shelfId: ctx.shelfId,
       shelfName: ctx.shelfName,
       zone: ctx.zone,

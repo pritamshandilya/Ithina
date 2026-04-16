@@ -11,6 +11,8 @@ export type StoreFixtureModalValues = {
   type: string;
   /** Optional unique fixture identifier (backend will generate if omitted). */
   code?: string;
+  /** Optional planogram associated with this fixture. */
+  planogramId?: string;
   width: string;
   height: string;
   depth: string;
@@ -23,6 +25,7 @@ export type StoreFixtureModalValues = {
 const DEFAULT_VALUES: StoreFixtureModalValues = {
   type: "",
   code: undefined,
+  planogramId: "",
   width: "",
   height: "",
   depth: "",
@@ -39,6 +42,7 @@ interface StoreFixtureModalProps {
   isSaving?: boolean;
   mode?: "create" | "edit";
   initialValues?: Partial<StoreFixtureModalValues>;
+  planogramOptions?: { id: string; name: string }[];
 }
 
 export function StoreFixtureModal({
@@ -48,6 +52,7 @@ export function StoreFixtureModal({
   isSaving = false,
   mode = "create",
   initialValues,
+  planogramOptions = [],
 }: StoreFixtureModalProps) {
   const normalizeText = (value: string | undefined): string => {
     if (value === undefined) return "";
@@ -67,6 +72,7 @@ export function StoreFixtureModal({
     ...DEFAULT_VALUES,
     type: normalizeText(initialValues?.type),
     code: normalizeOptionalText(initialValues?.code),
+    planogramId: normalizeText(initialValues?.planogramId),
     width: normalizeText(initialValues?.width),
     height: normalizeText(initialValues?.height),
     depth: normalizeText(initialValues?.depth),
@@ -82,6 +88,7 @@ export function StoreFixtureModal({
       ...DEFAULT_VALUES,
       type: normalizeText(initialValues?.type),
       code: normalizeOptionalText(initialValues?.code),
+      planogramId: normalizeText(initialValues?.planogramId),
       width: normalizeText(initialValues?.width),
       height: normalizeText(initialValues?.height),
       depth: normalizeText(initialValues?.depth),
@@ -126,6 +133,22 @@ export function StoreFixtureModal({
               onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
               placeholder="e.g. FG-001"
             />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="fixture-planogram">Associated planogram (optional)</Label>
+            <Select
+              id="fixture-planogram"
+              value={form.planogramId ?? ""}
+              onChange={(e) => setForm((f) => ({ ...f, planogramId: e.target.value }))}
+            >
+              <option value="">No associated planogram</option>
+              {planogramOptions.map((planogram) => (
+                <option key={planogram.id} value={planogram.id}>
+                  {planogram.name} ({planogram.id})
+                </option>
+              ))}
+            </Select>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

@@ -21,14 +21,14 @@ function MakerManualAuditsPage() {
 
   const resolveAdhocAnalysisId = (
     explicitAnalysisId: string | undefined,
-    shelfId: string,
+    fixtureId: string,
     submittedAt?: Date
   ): string | null => {
     if (explicitAnalysisId) return explicitAnalysisId;
     if (adhocAnalyses.length === 0) return null;
 
-    const shelfMatches = adhocAnalyses.filter((row) => row.shelfId === shelfId);
-    const candidates = shelfMatches.length > 0 ? shelfMatches : adhocAnalyses;
+    const fixtureMatches = adhocAnalyses.filter((row) => row.fixtureId === fixtureId);
+    const candidates = fixtureMatches.length > 0 ? fixtureMatches : adhocAnalyses;
 
     if (!submittedAt) return candidates[0]?.id ?? null;
 
@@ -65,7 +65,7 @@ function MakerManualAuditsPage() {
       } else {
         navigate({
           to: "/maker/audits/adhoc/new",
-          search: { shelfId },
+          search: { fixtureId: shelfId },
         });
       }
     } else if (action === "view-report" || action === "view-details") {
@@ -75,7 +75,11 @@ function MakerManualAuditsPage() {
           params: { shelfId },
         });
       } else {
-        const resolvedAnalysisId = resolveAdhocAnalysisId(adhocAnalysisId, shelfId, submittedAt);
+        const resolvedAnalysisId = resolveAdhocAnalysisId(
+          adhocAnalysisId,
+          shelfId,
+          submittedAt,
+        );
         if (!resolvedAnalysisId) {
           navigate({
             to: "/maker/historical-analysis",

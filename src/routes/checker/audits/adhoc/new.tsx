@@ -4,7 +4,8 @@ import { NewAdhocAnalysisPage } from "@/routes/maker/audits/adhoc/new/index";
 export const Route = createFileRoute("/checker/audits/adhoc/new")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      shelfId: (search.shelfId as string) || undefined,
+      fixtureId:
+        (search.fixtureId as string) || (search.shelfId as string) || undefined,
       from: (search.from as string) || undefined,
     };
   },

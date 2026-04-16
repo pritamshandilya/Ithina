@@ -5,18 +5,61 @@ import {
   useState,
   type Ref,
 } from "react";
-import { format } from "date-fns";
 import type { DataTableColumn } from "@/components/ui/data-table";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { Button } from "@/components/ui/button";
-import { FileText, LayoutGrid, Plus, ScanLine, Trash2 } from "lucide-react";
+import { FilePenLine, FileText, LayoutGrid, Plus, ScanLine, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
-const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
+export const CATEGORIZE_OPTIONS = ["By Category", "By Brand"] as const;
+
+export function getDefaultComplianceRuleSetName(
+  ruleSets: ComplianceRuleSetSummary[],
+): string {
+  return ruleSets.find((s) => s.isDefault)?.name ?? "Default Rules";
+}
+
+export function renderComplianceSelectCell(
+  row: PlanogramShelfRow,
+  ruleSets: ComplianceRuleSetSummary[],
+): string {
+  const defaultName = getDefaultComplianceRuleSetName(ruleSets);
+  const selected = row.complianceRuleSet ?? defaultName;
+  const sets: { name: string }[] =
+    ruleSets.length > 0 ? ruleSets : [{ name: "Default Rules" }];
+  const options = sets
+    .map((s) => {
+      const sel = s.name === selected ? " selected" : "";
+      return `<option value="${s.name}"${sel}>${s.name}</option>`;
+    })
+    .join("");
+  return `
+    <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="compliance"
+      class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+      ${options}
+    </select>
+  `;
+}
+
+export function renderCategorizeSelectCell(row: PlanogramShelfRow): string {
+  const selected = row.categorizeBy ?? "By Category";
+  const options = CATEGORIZE_OPTIONS.map(
+    (opt) =>
+      `<option value="${opt}"${
+        opt === selected ? " selected" : ""
+      }>${opt}</option>`,
+  ).join("");
+  return `
+    <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="categorize"
+      class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+      ${options}
+    </select>
+  `;
+}
 
 export const PLANOGRAM_INITIAL_SORT = {
   field: "shelfName" as const,
@@ -29,12 +72,14 @@ export interface CreatePlanogramColumnsOptions {
   onOpenMenu: (row: PlanogramShelfRow, triggerEl: HTMLElement) => void;
   ruleSets: ComplianceRuleSetSummary[];
   useShelfIdField?: "id" | "shelf_id";
+  showComplianceColumns?: boolean;
 }
 
 export function createPlanogramColumns({
   onOpenMenu,
   ruleSets,
   useShelfIdField = "id",
+  showComplianceColumns = true,
 }: CreatePlanogramColumnsOptions): DataTableColumn<PlanogramShelfRow>[] {
   void useShelfIdField;
 
@@ -42,7 +87,7 @@ export function createPlanogramColumns({
     {
       title: "Code",
       field: "shelfCode",
-      width: 120,
+      width: 92,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
@@ -55,7 +100,9 @@ export function createPlanogramColumns({
     {
       title: "Shelf Name",
       field: "shelfName",
-      minWidth: 180,
+      minWidth: 200,
+      widthGrow: 2,
+      width: 240,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
@@ -69,38 +116,11 @@ export function createPlanogramColumns({
       },
     },
     {
-      title: "Aisle",
-      field: "aisleCode",
-      width: 70,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const val =
-          row.aisleCode ??
-          (row.aisleNumber != null ? `A${row.aisleNumber}` : null) ??
-          "—";
-        return `<span class="text-sm font-medium text-foreground tabular-nums">${val}</span>`;
-      },
-    },
-    {
-      title: "Zone",
-      field: "zone",
-      width: 100,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
-      },
-    },
-    
-    {
       title: "Section",
       field: "section",
-      minWidth: 140,
+      minWidth: 120,
+      widthGrow: 1,
+      width: 136,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
@@ -110,9 +130,10 @@ export function createPlanogramColumns({
       },
     },
     {
-      title: "Fixture",
+      title: "Fixture Name",
       field: "fixtureType",
-      width: 120,
+      minWidth: 120,
+      width: 152,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
@@ -125,7 +146,7 @@ export function createPlanogramColumns({
     {
       title: "Width",
       field: "width",
-      width: 100,
+      width: 76,
       sorter: "number",
       headerSort: true,
       headerFilter: false,
@@ -138,7 +159,7 @@ export function createPlanogramColumns({
     {
       title: "Height",
       field: "height",
-      width: 100,
+      width: 76,
       sorter: "number",
       headerSort: true,
       headerFilter: false,
@@ -151,7 +172,7 @@ export function createPlanogramColumns({
     {
       title: "Depth",
       field: "depth",
-      width: 100,
+      width: 76,
       sorter: "number",
       headerSort: true,
       headerFilter: false,
@@ -161,80 +182,40 @@ export function createPlanogramColumns({
         return `<span class="text-sm tabular-nums font-medium text-foreground">${value}</span>`;
       },
     },
-    {
-      title: "Compliance",
-      field: "complianceRuleSet",
-      width: 160,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const defaultName =
-          ruleSets.find((s) => s.isDefault)?.name ?? "Default Rules";
-        const selected = row.complianceRuleSet ?? defaultName;
-        const sets: { name: string }[] =
-          ruleSets.length > 0 ? ruleSets : [{ name: "Default Rules" }];
-        const options = sets
-          .map((s) => {
-            const sel = s.name === selected ? " selected" : "";
-            return `<option value="${s.name}"${sel}>${s.name}</option>`;
-          })
-          .join("");
-        return `
-        <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="compliance"
-          class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-          ${options}
-        </select>
-      `;
-      },
-    },
-    {
-      title: "Categorize By",
-      field: "categorizeBy",
-      width: 140,
-      sorter: "string",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const selected = row.categorizeBy ?? "By Category";
-        const options = CATEGORIZE_OPTIONS.map(
-          (opt) =>
-            `<option value="${opt}"${
-              opt === selected ? " selected" : ""
-            }>${opt}</option>`
-        ).join("");
-        return `
-        <select data-planogram-dropdown data-shelf-id="${row.id}" data-field="categorize"
-          class="w-full min-w-0 rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
-          ${options}
-        </select>
-      `;
-      },
-    },
-    {
-      title: "Last Run",
-      field: "lastRun",
-      width: 120,
-      sorter: "date",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        if (!row.lastRun) {
-          return `<span class="text-xs text-muted-foreground italic">No runs</span>`;
-        }
-        return `<span class="text-sm text-foreground">${format(
-          new Date(row.lastRun),
-          "MMM d, yyyy"
-        )}</span>`;
-      },
-    },
+    ...(showComplianceColumns
+      ? [
+          {
+            title: "Compliance",
+            field: "complianceRuleSet",
+            width: 176,
+            minWidth: 160,
+            sorter: "string" as const,
+            headerSort: true,
+            headerFilter: false,
+            formatter: (cell: unknown) => {
+              const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+              return renderComplianceSelectCell(row, ruleSets);
+            },
+          },
+          {
+            title: "Categorize By",
+            field: "categorizeBy",
+            width: 140,
+            minWidth: 128,
+            sorter: "string" as const,
+            headerSort: true,
+            headerFilter: false,
+            formatter: (cell: unknown) => {
+              const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+              return renderCategorizeSelectCell(row);
+            },
+          },
+        ]
+      : []),
     {
       title: "Products",
       field: "productsCount",
-      width: 100,
+      width: 88,
       sorter: "number",
       headerSort: true,
       headerFilter: false,
@@ -245,24 +226,10 @@ export function createPlanogramColumns({
       },
     },
     {
-      title: "Issues",
-      field: "issuesCount",
-      width: 90,
-      sorter: "number",
-      headerSort: true,
-      headerFilter: false,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        const n = row.issuesCount ?? 0;
-        const cls =
-          n > 0 ? "text-destructive font-semibold" : "text-muted-foreground";
-        return `<span class="tabular-nums text-sm ${cls}">${n}</span>`;
-      },
-    },
-    {
       title: "Status",
       field: "status",
-      width: 130,
+      width: 152,
+      minWidth: 132,
       sorter: "string",
       headerSort: true,
       headerFilter: false,
@@ -276,7 +243,8 @@ export function createPlanogramColumns({
     {
       title: "Action",
       field: "id",
-      width: 56,
+      width: 52,
+      minWidth: 48,
       headerSort: false,
       headerFilter: false,
       hozAlign: "center",
@@ -327,16 +295,26 @@ function computeMenuPosition(
   trigger: HTMLElement,
   menuWidth: number,
   menuHeight: number,
+  anchorPoint?: { x: number; y: number },
 ): { left: number; top: number } {
-  const rect = trigger.getBoundingClientRect();
-  let left = rect.left;
-  let top = rect.bottom + MENU_GAP;
+  const useAnchorFallback =
+    !!anchorPoint &&
+    (!trigger.isConnected ||
+      (trigger.getBoundingClientRect().left === 0 &&
+        trigger.getBoundingClientRect().top === 0));
+  const rect = useAnchorFallback ? null : trigger.getBoundingClientRect();
+  let left = useAnchorFallback ? anchorPoint!.x : (rect?.left ?? MENU_VIEWPORT_PAD);
+  let top = useAnchorFallback
+    ? anchorPoint!.y + MENU_GAP
+    : (rect?.bottom ?? MENU_VIEWPORT_PAD) + MENU_GAP;
   if (left + menuWidth + MENU_VIEWPORT_PAD > window.innerWidth) {
     left = window.innerWidth - menuWidth - MENU_VIEWPORT_PAD;
   }
   left = Math.max(MENU_VIEWPORT_PAD, left);
   if (top + menuHeight + MENU_VIEWPORT_PAD > window.innerHeight) {
-    top = rect.top - menuHeight - MENU_GAP;
+    top = useAnchorFallback
+      ? anchorPoint!.y - menuHeight - MENU_GAP
+      : (rect?.top ?? MENU_VIEWPORT_PAD) - menuHeight - MENU_GAP;
   }
   top = Math.max(MENU_VIEWPORT_PAD, top);
   return { left, top };
@@ -345,11 +323,15 @@ function computeMenuPosition(
 export interface PlanogramActionsMenuProps {
   row: PlanogramShelfRow;
   triggerEl: HTMLElement;
+  anchorPoint?: { x: number; y: number };
   variant: PlanogramActionsMenuVariant;
   onClose: () => void;
-  onNewRun?: (shelfId: string) => void;
+  onRunAdhoc?: (row: PlanogramShelfRow) => void;
+  onRunPlanogram?: (row: PlanogramShelfRow) => void;
   onViewComplianceRule?: (row: PlanogramShelfRow) => void;
-  onAssociatePlanogram?: (shelfId: string) => void;
+  onAssociatePlanogram?: (row: PlanogramShelfRow) => void;
+  onEditShelf?: (row: PlanogramShelfRow) => void;
+  onAddShelf?: (row: PlanogramShelfRow) => void;
   onDeleteShelf?: (shelfId: string) => void;
 }
 
@@ -360,11 +342,15 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
   {
     row,
     triggerEl,
+    anchorPoint,
     variant,
     onClose,
-    onNewRun,
+    onRunAdhoc,
+    onRunPlanogram,
     onViewComplianceRule,
     onAssociatePlanogram,
+    onEditShelf,
+    onAddShelf,
     onDeleteShelf,
   }: PlanogramActionsMenuProps,
   ref: Ref<HTMLDivElement>,
@@ -389,7 +375,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
       if (!menuNode) return;
       const mw = menuNode.offsetWidth;
       const mh = menuNode.offsetHeight;
-      setPos(computeMenuPosition(triggerEl, mw, mh));
+      setPos(computeMenuPosition(triggerEl, mw, mh, anchorPoint));
       setPlaced(true);
     };
 
@@ -411,7 +397,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
       window.removeEventListener("scroll", update, true);
       window.removeEventListener("resize", update);
     };
-  }, [triggerEl, row.id, variant, row.planogramId]);
+  }, [triggerEl, anchorPoint, row.id, variant, row.planogramId]);
 
   const content = (
     <div
@@ -423,61 +409,90 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
       )}
       style={{ left: pos.left, top: pos.top }}
     >
-      {variant === "checker" && !row.planogramId ? (
-        <>
-          <Button
-            type="button"
-            variant="icon-ghost"
-            className={actionMenuButtonClass}
-            onClick={() => {
-              onAssociatePlanogram?.(row.id);
-              onClose();
-            }}
-          >
-            <LayoutGrid className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0">Planogram analysis</span>
-          </Button>
-          <Button
-            type="button"
-            variant="icon-ghost"
-            className={actionMenuButtonClass}
-            onClick={() => {
-              onNewRun?.(row.id);
-              onClose();
-            }}
-          >
-            <ScanLine className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0">Adhoc analysis</span>
-          </Button>
-        </>
-      ) : (
-        <>
-          <Button
-            type="button"
-            variant="icon-ghost"
-            className={actionMenuButtonClass}
-            onClick={() => {
-              onNewRun?.(row.id);
-              onClose();
-            }}
-          >
-            <Plus className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0">New</span>
-          </Button>
-          <Button
-            type="button"
-            variant="icon-ghost"
-            className={actionMenuButtonClass}
-            onClick={() => {
-              onViewComplianceRule?.(row);
-              onClose();
-            }}
-          >
-            <FileText className="shrink-0 text-muted-foreground" />
-            <span className="min-w-0">View Compliance Rule</span>
-          </Button>
-        </>
-      )}
+      {variant === "checker" && !row.planogramId && onAssociatePlanogram ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onAssociatePlanogram(row);
+            onClose();
+          }}
+        >
+          <LayoutGrid className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">Associate Planogram</span>
+        </Button>
+      ) : null}
+      {onEditShelf ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onEditShelf(row);
+            onClose();
+          }}
+        >
+          <FilePenLine className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">Edit</span>
+        </Button>
+      ) : null}
+      {onAddShelf ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onAddShelf(row);
+            onClose();
+          }}
+        >
+          <Plus className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">Add Shelf</span>
+        </Button>
+      ) : null}
+      {onRunPlanogram ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onRunPlanogram(row);
+            onClose();
+          }}
+        >
+          <LayoutGrid className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">Planogram analysis</span>
+        </Button>
+      ) : null}
+      {onRunAdhoc ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onRunAdhoc(row);
+            onClose();
+          }}
+        >
+          <ScanLine className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">Adhoc analysis</span>
+        </Button>
+      ) : null}
+      {onViewComplianceRule ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onViewComplianceRule?.(row);
+            onClose();
+          }}
+        >
+          <FileText className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">View Compliance Rule</span>
+        </Button>
+      ) : null}
       <div className="-mx-1 my-1 h-px bg-border" />
       <Button
         type="button"

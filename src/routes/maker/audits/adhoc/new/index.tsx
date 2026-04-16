@@ -3,11 +3,13 @@ import { useState } from "react";
 
 import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
 import { useShelves } from "@/queries/maker";
+import { groupShelvesByFixture } from "@/lib/fixtures/analysis";
 
 export const Route = createFileRoute("/maker/audits/adhoc/new/")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      shelfId: (search.shelfId as string) || undefined,
+      fixtureId:
+        (search.fixtureId as string) || (search.shelfId as string) || undefined,
       from: (search.from as string) || undefined,
     };
   },
@@ -26,27 +28,31 @@ function defaultBackPathForAdhocNew(pathname: string): string {
 export function NewAdhocAnalysisPage() {
   const location = useLocation();
   const search = (location.search ?? {}) as {
-    shelfId?: string;
+    fixtureId?: string;
     from?: string;
   };
-  const shelfId = search.shelfId;
+  const fixtureId = search.fixtureId;
   const fromState = (location.state as { from?: string } | undefined)?.from;
   const backTo =
     search.from ?? fromState ?? defaultBackPathForAdhocNew(location.pathname);
 
   const { data: shelves } = useShelves();
-  const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
-  const isShelfLocked = !!shelfId;
+  const fixtureOptions = groupShelvesByFixture(shelves ?? []).map((fixture) => ({
+    id: fixture.fixtureId,
+    shelfName: fixture.fixtureName,
+  }));
+  const [selectedFixtureId, setSelectedFixtureId] = useState<string>(fixtureId || "");
+  const isFixtureLocked = !!fixtureId;
 
   return (
     <AnalysisFlowPage
       title="New Adhoc Analysis"
       backTo={backTo}
       showShelfSelection
-      selectedShelfId={selectedShelfId}
-      onShelfSelect={setSelectedShelfId}
-      shelves={shelves}
-      isShelfSelectionLocked={isShelfLocked}
+      selectedShelfId={selectedFixtureId}
+      onShelfSelect={setSelectedFixtureId}
+      shelves={fixtureOptions}
+      isShelfSelectionLocked={isFixtureLocked}
     />
   );
 }

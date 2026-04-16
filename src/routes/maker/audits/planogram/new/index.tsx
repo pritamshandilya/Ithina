@@ -1,4 +1,3 @@
-import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
 
@@ -23,19 +22,21 @@ import {
   usePlanogramList,
   useAssignPlanogramToShelf,
 } from "@/queries/maker";
+import { groupShelvesByFixture } from "@/lib/fixtures/analysis";
 import type { PlanogramArrangement } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
   validateSearch: (search: Record<string, unknown>) => {
     return {
-      shelfId: (search.shelfId as string) || undefined,
+      fixtureId:
+        (search.fixtureId as string) || (search.shelfId as string) || undefined,
     };
   },
   component: MakerPOGAnalysisRouteComponent,
 });
 
 type AddPOGAnalysisPageSearch = {
-  shelfId?: string;
+  fixtureId?: string;
 };
 
 type AddPOGAnalysisPageProps = {
@@ -51,10 +52,9 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams({ strict: false }) as { storeId?: string };
-  const queryClient = useQueryClient();
   const { toast } = useToast();
-  const { shelfId } = searchOverride ?? {};
-  const isShelfLocked = !!shelfId;
+  const { fixtureId } = searchOverride ?? {};
+  const isFixtureLocked = !!fixtureId;
   const isAdmin = location.pathname.includes("/admin/");
   const backPath = isAdmin && params.storeId
     ? `/admin/${params.storeId}/shelf`
@@ -64,7 +64,9 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
   const assignPlanogramMutation = useAssignPlanogramToShelf();
 
   const [selectedPlanogramId, setSelectedPlanogramId] = useState<string>("");
-  const [selectedShelfId, setSelectedShelfId] = useState<string>(shelfId || "");
+  const [selectedFixtureId, setSelectedFixtureId] = useState<string>(
+    fixtureId || "",
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -72,8 +74,13 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
     usePlanogramById(selectedPlanogramId ? selectedPlanogramId : null);
 
   const canSave = useMemo(() => {
-    return !!selectedPlanogramId && !!selectedShelfId && !isSaving;
-  }, [selectedPlanogramId, selectedShelfId, isSaving]);
+    return !!selectedPlanogramId && !!selectedFixtureId && !isSaving;
+  }, [selectedPlanogramId, selectedFixtureId, isSaving]);
+
+  const fixtureGroups = useMemo(
+    () => groupShelvesByFixture(shelves ?? []),
+    [shelves],
+  );
 
   const handleSave = useCallback(async () => {
     if (!canSave) return;
@@ -89,12 +96,28 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
           })) ?? [],
       };
 
-      await assignPlanogramMutation.mutateAsync({
-        shelfId: selectedShelfId,
-        planogramId: selectedPlanogramId,
-        arrangement,
+      const targetFixture = fixtureGroups.find(
+        (fixtureGroup) => fixtureGroup.fixtureId === selectedFixtureId,
+      );
+      const targetShelves = targetFixture?.shelves ?? [];
+
+      if (targetShelves.length === 0) {
+        throw new Error("Selected fixture has no shelves to attach.");
+      }
+
+      await Promise.all(
+        targetShelves.map((shelf) =>
+          assignPlanogramMutation.mutateAsync({
+            shelfId: shelf.id,
+            planogramId: selectedPlanogramId,
+            arrangement,
+          }),
+        ),
+      );
+      toast({
+        title: "Analysis configured",
+        description: "POG Analysis is now ready for the selected fixture.",
       });
-      toast({ title: "Analysis configured", description: "POG Analysis is now ready for the selected shelf." });
       navigate({ to: backPath as never });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Failed to configure analysis");
@@ -104,11 +127,11 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
   }, [
     canSave,
     selectedPlanogramId,
-    selectedShelfId,
+    selectedFixtureId,
+    fixtureGroups,
     planogramPayload,
     backPath,
     navigate,
-    queryClient,
     toast,
   ]);
 
@@ -140,7 +163,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                 <CardHeader>
                   <CardTitle className="text-base">Configure analysis</CardTitle>
                   <CardDescription>
-                    Select an existing planogram and an existing shelf to pair them together for analysis.
+                    Select an existing planogram and an existing fixture to pair them together for analysis.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -166,29 +189,31 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="shelf-select">Shelf to analyze</Label>
+                    <Label htmlFor="fixture-select">Fixture to analyze</Label>
                     {shelvesLoading ? (
                       <Skeleton className="h-9 w-full" />
                     ) : (
                       <Select
-                        id="shelf-select"
-                        value={selectedShelfId}
-                        onChange={(e) => setSelectedShelfId(e.target.value)}
-                        aria-label="Select shelf"
-                        disabled={isShelfLocked}
+                        id="fixture-select"
+                        value={selectedFixtureId}
+                        onChange={(e) => setSelectedFixtureId(e.target.value)}
+                        aria-label="Select fixture"
+                        disabled={isFixtureLocked}
                       >
-                        <option value="">Select a shelf...</option>
-                        {(shelves ?? []).map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.shelfName}
-                            {s.planogramId ? ` (Already has a planogram mapped)` : ""}
+                        <option value="">Select a fixture...</option>
+                        {fixtureGroups.map((fixtureGroup) => (
+                          <option key={fixtureGroup.fixtureId} value={fixtureGroup.fixtureId}>
+                            {fixtureGroup.fixtureName}
+                            {fixtureGroup.shelves.some((s) => s.planogramId)
+                              ? " (Has planogram mapping)"
+                              : ""}
                           </option>
                         ))}
                       </Select>
                     )}
-                    {isShelfLocked ? (
+                    {isFixtureLocked ? (
                       <p className="text-xs text-muted-foreground">
-                        Shelf selection is locked for this analysis run.
+                        Fixture selection is locked for this analysis run.
                       </p>
                     ) : null}
                   </div>

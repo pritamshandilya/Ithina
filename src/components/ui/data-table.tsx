@@ -89,6 +89,19 @@ export interface DataTableProps<T = object> {
   isBulkEnabled?: boolean;
   /** Optional callback when bulk selection changes */
   onSelectionChange?: (rows: T[]) => void;
+  /** Group rows by field name or accessor */
+  groupBy?: string | ((row: T) => string);
+  /** Group header formatter when grouping is enabled */
+  groupHeader?: (
+    value: string,
+    count: number,
+    data: T[],
+    group: unknown,
+  ) => string | HTMLElement;
+  /** Whether groups start expanded (default: true) */
+  groupStartOpen?: boolean;
+  /** Group toggle trigger area: arrow only or entire header */
+  groupToggleElement?: "arrow" | "header";
 }
 
 /**
@@ -121,6 +134,10 @@ export function DataTable<T extends object>({
   showRowNumber = true,
   isBulkEnabled = false,
   onSelectionChange,
+  groupBy,
+  groupHeader,
+  groupStartOpen = true,
+  groupToggleElement = "header",
 }: DataTableProps<T>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorFull | null>(null);
@@ -199,6 +216,15 @@ export function DataTable<T extends object>({
       options.dataTreeStartExpanded = dataTreeStartExpanded;
       if (dataTreeElementColumn) {
         options.dataTreeElementColumn = dataTreeElementColumn;
+      }
+    }
+
+    if (groupBy) {
+      options.groupBy = groupBy;
+      options.groupStartOpen = groupStartOpen;
+      options.groupToggleElement = groupToggleElement;
+      if (groupHeader) {
+        options.groupHeader = groupHeader;
       }
     }
 
@@ -288,6 +314,10 @@ export function DataTable<T extends object>({
     showRowNumber,
     isBulkEnabled,
     onSelectionChange,
+    groupBy,
+    groupHeader,
+    groupStartOpen,
+    groupToggleElement,
   ]);
 
   // Keep row updates cheap when only data changes.
@@ -300,7 +330,7 @@ export function DataTable<T extends object>({
   return (
     <div
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
+        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-auto",
         className
       )}
       role="region"

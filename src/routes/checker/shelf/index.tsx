@@ -59,10 +59,6 @@ export function PlanogramAnalysisPage() {
   const shelfNewPath = isAdmin
     ? "/admin/$storeId/shelf/new"
     : "/checker/shelf/new";
-  const adhocNewPath = "/admin/$storeId/audits/adhoc/new";
-  const pogNewPath = "/admin/$storeId/audits/planogram/new";
-  const checkerAdhocNewPath = "/checker/audits/adhoc/new";
-  const checkerPogNewPath = "/checker/audits/planogram/new";
 
   const pageDescription =
     activeTab === "shelves"
@@ -110,8 +106,6 @@ export function PlanogramAnalysisPage() {
           shelvesPanel={
             <CheckerShelfListPage
               shelfDetailPath={shelfDetailPath}
-              adhocNewPath={isAdmin ? adhocNewPath : checkerAdhocNewPath}
-              pogNewPath={isAdmin ? pogNewPath : checkerPogNewPath}
             />
           }
           templatesPanel={<ShelfTemplatesContent showHeaderCard />}

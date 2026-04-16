@@ -7,5 +7,5 @@ export const Route = createFileRoute("/checker/fixture-types/")({
 });
 
 function CheckerFixtureTypesRoute() {
-  return <StoreFixturesPage />;
+  return <StoreFixturesPage canEdit />;
 }

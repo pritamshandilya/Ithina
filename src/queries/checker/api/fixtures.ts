@@ -5,6 +5,7 @@ export interface StoreFixtureApiModel {
   store_id: string;
   type: string;
   code?: string;
+  planogram_id?: string | null;
   dimensions: {
     width: number;
     height: number;
@@ -23,6 +24,7 @@ export interface StoreFixtureApiModel {
 export interface CreateStoreFixturePayload {
   type: string;
   code?: string;
+  planogram_id?: string;
   dimensions: {
     width: number;
     height: number;
@@ -39,6 +41,7 @@ export interface CreateStoreFixturePayload {
 export interface UpdateStoreFixturePayload {
   type?: string;
   code?: string;
+  planogram_id?: string | null;
   dimensions?: {
     width?: number;
     height?: number;

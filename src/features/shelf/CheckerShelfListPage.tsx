@@ -2,7 +2,6 @@ import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 
-import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
 import {
   createPlanogramColumns,
   PLANOGRAM_INITIAL_SORT,
@@ -10,20 +9,18 @@ import {
   PlanogramActionsMenu,
 } from "@/components/planogram/planogram-table-columns";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import {
   useShelves,
-  useComplianceRuleSets,
   useDeleteShelf,
   usePlanogramList,
   useCreateFixture,
   useCreateShelf,
 } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";
@@ -318,8 +315,6 @@ function toPlanogramRow(
 
 export interface CheckerShelfListPageProps {
   shelfDetailPath: string;
-  adhocNewPath: string;
-  pogNewPath: string;
 }
 
 function getOptionalStoreId(params: unknown): string | undefined {
@@ -336,14 +331,8 @@ function asRouterParams(params: Record<string, string | undefined>): never {
   return params as never;
 }
 
-function asRouterSearch(search: Record<string, string | undefined>): never {
-  return search as never;
-}
-
 export function CheckerShelfListPage({
   shelfDetailPath,
-  adhocNewPath,
-  pogNewPath,
 }: CheckerShelfListPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -361,7 +350,6 @@ export function CheckerShelfListPage({
   const createFixtureMutation = useCreateFixture();
   const createShelfMutation = useCreateShelf();
   const { data: planogramList } = usePlanogramList();
-  const { data: ruleSets } = useComplianceRuleSets();
   const _selectedStoreId = selectedStore?.id || mockUser.storeId;
   void _selectedStoreId;
 
@@ -370,12 +358,6 @@ export function CheckerShelfListPage({
     page: 1,
     pageSize: 10,
   });
-  const [complianceOverrides, setComplianceOverrides] = useState<
-    Record<string, string>
-  >({});
-  const [categorizeOverrides, setCategorizeOverrides] = useState<
-    Record<string, string>
-  >({});
   const [actionsMenu, setActionsMenu] = useState<{
     row: PlanogramShelfRow;
     triggerEl: HTMLElement;
@@ -384,12 +366,6 @@ export function CheckerShelfListPage({
   const [shelfIdPendingDelete, setShelfIdPendingDelete] = useState<string | null>(
     null,
   );
-  const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
-  const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
-    useState<ComplianceRuleSetSummary | null>(null);
-  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<
-    string | null
-  >(null);
   const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
   const [bulkAddMode, setBulkAddMode] = useState<"file" | "paste">("file");
   const [bulkAddStep, setBulkAddStep] = useState<"input" | "preview">("input");
@@ -449,35 +425,6 @@ export function CheckerShelfListPage({
     );
   }, [planogramRows, searchQuery]);
 
-  const rowsWithOverrides = useMemo(() => {
-    return filteredRows.map((r) => ({
-      ...r,
-      complianceRuleSet: complianceOverrides[r.id] ?? r.complianceRuleSet,
-      categorizeBy: categorizeOverrides[r.id] ?? r.categorizeBy,
-    }));
-  }, [filteredRows, complianceOverrides, categorizeOverrides]);
-
-  useEffect(() => {
-    const el = tableWrapperRef.current;
-    if (!el) return;
-    const handleChange = (e: Event) => {
-      const select = (e.target as HTMLElement).closest?.(
-        "[data-planogram-dropdown]",
-      );
-      if (!select || !(select instanceof HTMLSelectElement)) return;
-      const shelfId = select.getAttribute("data-shelf-id");
-      const field = select.getAttribute("data-field");
-      const value = select.value;
-      if (!shelfId || !field) return;
-      if (field === "compliance")
-        setComplianceOverrides((prev) => ({ ...prev, [shelfId]: value }));
-      if (field === "categorize")
-        setCategorizeOverrides((prev) => ({ ...prev, [shelfId]: value }));
-    };
-    el.addEventListener("change", handleChange);
-    return () => el.removeEventListener("change", handleChange);
-  }, []);
-
   useEffect(() => {
     if (!actionsMenu) return;
     const handlePointerDown = (e: Event) => {
@@ -526,41 +473,12 @@ export function CheckerShelfListPage({
     [navigate, shelfDetailPath, storeId],
   );
 
-  const handleViewComplianceRule = useCallback(
+  const handleEditShelf = useCallback(
     (row: PlanogramShelfRow) => {
-      const ruleSetName = row.complianceRuleSet ?? "Default Rules";
-      const set = (ruleSets ?? []).find((s) => s.name === ruleSetName) ?? null;
-      setComplianceSheetRuleSet(set);
-      setComplianceSheetRuleSetName(ruleSetName);
-      setComplianceSheetOpen(true);
+      handleRowClick(row);
       setActionsMenu(null);
     },
-    [ruleSets],
-  );
-
-  const handleNewRun = useCallback(
-    (shelfId: string) => {
-      const shouldSendStoreParam = adhocNewPath.includes("$storeId");
-      navigate({
-        to: asRouterPath(adhocNewPath),
-        params: asRouterParams(shouldSendStoreParam ? { storeId } : {}),
-        search: asRouterSearch({ shelfId, from: location.pathname }),
-      });
-      setActionsMenu(null);
-    },
-    [navigate, adhocNewPath, storeId, location.pathname],
-  );
-
-  const handleAssociatePlanogram = useCallback(
-    (shelfId: string) => {
-      const shouldSendStoreParam = pogNewPath.includes("$storeId");
-      navigate({
-        to: asRouterPath(pogNewPath),
-        params: asRouterParams(shouldSendStoreParam ? { storeId } : {}),
-        search: asRouterSearch({ shelfId }),
-      });
-    },
-    [navigate, pogNewPath, storeId],
+    [handleRowClick],
   );
 
   const handleDeleteShelf = useCallback(
@@ -593,15 +511,43 @@ export function CheckerShelfListPage({
     }
   }, [deleteShelfMutation, shelfIdPendingDelete, toast]);
 
-  const tableColumns = useMemo(
-    () =>
-      createPlanogramColumns({
-        onOpenMenu: handleOpenMenu,
-        ruleSets: ruleSets ?? [],
-        useShelfIdField: "shelf_id",
-      }),
-    [handleOpenMenu, ruleSets],
-  );
+  const tableColumns = useMemo((): DataTableColumn<PlanogramShelfRow>[] => {
+    const base = createPlanogramColumns({
+      onOpenMenu: handleOpenMenu,
+      ruleSets: [],
+      useShelfIdField: "shelf_id",
+      showComplianceColumns: false,
+    });
+    return base.map((col) => {
+      const field = String(col.field);
+      if (field === "width" || field === "height" || field === "depth") {
+        return {
+          ...col,
+          minWidth: Math.max(col.minWidth ?? 0, 100),
+          width: typeof col.width === "number" ? Math.max(col.width, 88) : col.width,
+          hozAlign: "right",
+          headerHozAlign: "right",
+        };
+      }
+      if (field === "productsCount") {
+        return {
+          ...col,
+          minWidth: Math.max(col.minWidth ?? 0, 118),
+          width: typeof col.width === "number" ? Math.max(col.width, 104) : col.width,
+          hozAlign: "right",
+          headerHozAlign: "right",
+        };
+      }
+      if (col.title === "Action") {
+        return {
+          ...col,
+          minWidth: Math.max(col.minWidth ?? 0, 80),
+          width: typeof col.width === "number" ? Math.max(col.width, 64) : col.width,
+        };
+      }
+      return col;
+    });
+  }, [handleOpenMenu]);
 
   const pageSizeSelectorOptions = useMemo(
     () => [...PLANOGRAM_PAGE_SIZE_OPTIONS],
@@ -1080,14 +1026,14 @@ export function CheckerShelfListPage({
               <div ref={tableWrapperRef}>
                 <DataTable<PlanogramShelfRow>
                   columns={tableColumns}
-                  data={rowsWithOverrides}
+                  data={filteredRows}
                   rowIdField="id"
                   initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No shelves match your search"
                   pageSize={10}
                   pageSizeSelector={pageSizeSelectorOptions}
                   headerFilters={false}
-                  layout="fitData"
+                  layout="fitColumns"
                   onPaginationChange={setTablePagination}
                   onRowClick={handleRowClick}
                   isBulkEnabled
@@ -1106,19 +1052,11 @@ export function CheckerShelfListPage({
           triggerEl={actionsMenu.triggerEl}
           variant="checker"
           onClose={() => setActionsMenu(null)}
-          onNewRun={handleNewRun}
-          onViewComplianceRule={handleViewComplianceRule}
-          onAssociatePlanogram={handleAssociatePlanogram}
+          onEditShelf={handleEditShelf}
           onDeleteShelf={handleDeleteShelf}
         />
       )}
 
-      <ComplianceRuleViewSheet
-        open={complianceSheetOpen}
-        onOpenChange={setComplianceSheetOpen}
-        ruleSet={complianceSheetRuleSet}
-        ruleSetName={complianceSheetRuleSetName}
-      />
     </>
   );
 }

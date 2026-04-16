@@ -6,7 +6,6 @@ import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-
 import {
   createPlanogramColumns,
   PLANOGRAM_INITIAL_SORT,
-  PLANOGRAM_PAGE_SIZE_OPTIONS,
   PlanogramActionsMenu,
 } from "@/components/planogram/planogram-table-columns";
 import { DataTable } from "@/components/ui/data-table";
@@ -19,6 +18,9 @@ import { mockUser } from "@/lib/api/mock-data";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import { getShelfFixtureId, groupShelvesByFixture } from "@/lib/fixtures/analysis";
+
+const MAKER_PLANOGRAM_PAGE_SIZE_OPTIONS = [20, 50, 75, 100] as const;
 
 /** Map shelf to planogram row with derived/mock planogram-specific fields */
 function toPlanogramRow(
@@ -66,6 +68,15 @@ function toPlanogramRow(
 }
 
 export function PlanogramMakerPage() {
+  const escapeHtml = useCallback((value: string) => {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }, []);
+
   const navigate = useNavigate();
   const { data: shelves, isLoading } = useShelves();
   const { data: planogramList } = usePlanogramList();
@@ -77,8 +88,9 @@ export function PlanogramMakerPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [tablePagination, setTablePagination] = useState({
     page: 1,
-    pageSize: 10,
+    pageSize: 50,
   });
+  const [isFixtureGroupingEnabled] = useState(true);
   const [complianceOverrides, setComplianceOverrides] = useState<
     Record<string, string>
   >({});
@@ -88,6 +100,7 @@ export function PlanogramMakerPage() {
   const [actionsMenu, setActionsMenu] = useState<{
     row: PlanogramShelfRow;
     triggerEl: HTMLElement;
+    anchorPoint: { x: number; y: number };
   } | null>(null);
   const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
   const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
@@ -129,10 +142,22 @@ export function PlanogramMakerPage() {
   );
 
   const planogramRows = useMemo(() => {
-    return (shelves ?? []).map((s) =>
-      toPlanogramRow(s, planogramMap, defaultRuleSetName),
-    );
+    return (shelves ?? []).map((s) => ({
+      ...toPlanogramRow(s, planogramMap, defaultRuleSetName),
+      fixtureId: getShelfFixtureId(s),
+    }));
   }, [shelves, planogramMap, defaultRuleSetName]);
+
+  const fixtureMap = useMemo(
+    () =>
+      new Map(
+        groupShelvesByFixture(shelves ?? []).map((fixture) => [
+          fixture.fixtureId,
+          fixture,
+        ]),
+      ),
+    [shelves],
+  );
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -144,6 +169,9 @@ export function PlanogramMakerPage() {
         r.categorizeBy?.toLowerCase().includes(q) ||
         String(r.aisleCode ?? "").toLowerCase().includes(q) ||
         String(r.bayCode ?? r.bayNumber ?? "").toLowerCase().includes(q) ||
+        String((r as { fixtureId?: string }).fixtureId ?? "")
+          .toLowerCase()
+          .includes(q) ||
         r.shelfCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
@@ -181,6 +209,26 @@ export function PlanogramMakerPage() {
   }, []);
 
   useEffect(() => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const handleClick = (event: Event) => {
+      const target = event.target as HTMLElement;
+      const startButton = target.closest(
+        "[data-action='start-fixture-analysis']",
+      ) as HTMLElement | null;
+      if (!startButton) return;
+      const fixtureId = startButton.getAttribute("data-fixture-id");
+      if (!fixtureId) return;
+      navigate({
+        to: "/maker/audits/planogram/new",
+        search: { fixtureId },
+      });
+    };
+    el.addEventListener("click", handleClick);
+    return () => el.removeEventListener("click", handleClick);
+  }, [navigate]);
+
+  useEffect(() => {
     if (!actionsMenu) return;
     const handlePointerDown = (e: Event) => {
       const target = e.target as Node;
@@ -213,7 +261,15 @@ export function PlanogramMakerPage() {
         skipNextOpenMenuFromTriggerRef.current = false;
         return;
       }
-      setActionsMenu({ row, triggerEl });
+      const triggerRect = triggerEl.getBoundingClientRect();
+      setActionsMenu({
+        row,
+        triggerEl,
+        anchorPoint: {
+          x: triggerRect.left,
+          y: triggerRect.top,
+        },
+      });
     },
     [],
   );
@@ -267,8 +323,46 @@ export function PlanogramMakerPage() {
   );
 
   const pageSizeSelectorOptions = useMemo(
-    () => [...PLANOGRAM_PAGE_SIZE_OPTIONS],
+    () => [...MAKER_PLANOGRAM_PAGE_SIZE_OPTIONS],
     [],
+  );
+
+  const groupedByFixture = useCallback(
+    (row: PlanogramShelfRow) => getShelfFixtureId(row),
+    [],
+  );
+
+  const fixtureGroupHeader = useCallback(
+    (value: string, count: number) => {
+      const fixture = fixtureMap.get(value);
+      const firstShelf = fixture?.shelves[0];
+      const aisleLabel =
+        firstShelf?.aisleCode ??
+        (firstShelf?.aisleNumber != null ? `A${firstShelf.aisleNumber}` : "—");
+      const bayLabel =
+        firstShelf?.bayCode ??
+        (firstShelf?.bayNumber != null ? String(firstShelf.bayNumber) : "—");
+      const fixtureName = fixture?.fixtureName?.trim() || "";
+      const subtitle = `Aisle ${aisleLabel} · Bay ${bayLabel}`;
+      const displayLabel = fixtureName.length > 0 ? fixtureName : "Fixture";
+      const safeFixtureName = escapeHtml(displayLabel);
+      const safeSubtitle = escapeHtml(subtitle);
+      return `
+        <span class="fixture-group-header inline-flex items-center gap-2 py-1">
+          <span class="fixture-group-label">${safeFixtureName} (${safeSubtitle})</span>
+          <span class="fixture-group-count">${count} shelf${count === 1 ? "" : "s"}</span>
+          <button
+            type="button"
+            class="inline-flex items-center rounded-md border border-border/60 bg-card/60 px-2 py-1 text-[11px] font-medium text-foreground hover:bg-accent/50"
+            data-action="start-fixture-analysis"
+            data-fixture-id="${value}"
+          >
+            Start Analysis
+          </button>
+        </span>
+      `;
+    },
+    [fixtureMap, escapeHtml],
   );
 
   return (
@@ -289,19 +383,20 @@ export function PlanogramMakerPage() {
                 aria-label="Search shelves"
               />
             </div>
-            <Button
+            {/* <Button
               asChild
               variant="success"
               className="shrink-0"
             >
               <Link
                 to="/maker/audits/planogram/new"
-                search={{ shelfId: undefined }}
+                search={{ fixtureId: undefined }}
               >
                 <Plus className="size-4" aria-hidden />
                 Add POG Analysis
               </Link>
-            </Button>
+            </Button> */}
+            
           </div>
 
           {filteredRows.length > 0 && (
@@ -325,7 +420,7 @@ export function PlanogramMakerPage() {
             </p>
           )}
 
-          <div className="mt-4 flex-1 min-h-0 overflow-auto">
+          <div className="mt-4">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -352,7 +447,7 @@ export function PlanogramMakerPage() {
                 >
                   <Link
                     to="/maker/audits/planogram/new"
-                    search={{ shelfId: undefined }}
+                    search={{ fixtureId: undefined }}
                   >
                     <Plus className="size-4" aria-hidden />
                     Add POG Analysis
@@ -367,12 +462,18 @@ export function PlanogramMakerPage() {
                   rowIdField="id"
                   initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No shelves match your search"
-                  pageSize={10}
+                  pageSize={50}
                   pageSizeSelector={pageSizeSelectorOptions}
                   headerFilters={false}
                   layout="fitData"
                   onPaginationChange={setTablePagination}
                   onRowClick={handleRowClick}
+                  groupBy={isFixtureGroupingEnabled ? groupedByFixture : undefined}
+                  groupHeader={
+                    isFixtureGroupingEnabled ? fixtureGroupHeader : undefined
+                  }
+                  groupStartOpen
+                  groupToggleElement="header"
                 />
               </div>
             )}
@@ -385,9 +486,10 @@ export function PlanogramMakerPage() {
           ref={actionsMenuRef}
           row={actionsMenu.row}
           triggerEl={actionsMenu.triggerEl}
+          anchorPoint={actionsMenu.anchorPoint}
           variant="maker"
           onClose={() => setActionsMenu(null)}
-          onNewRun={handleNewRun}
+          onRunAdhoc={(row) => handleNewRun(row.id)}
           onViewComplianceRule={handleViewComplianceRule}
         />
       )}

@@ -1,5 +1,5 @@
 /**
- * Shelf Audit – Image Upload & Analysis
+ * Fixture Audit – Image Upload & Analysis
  *
  * Shared for adhoc and planogram-based flows.
  * Three states: Before Upload, Processing, Results.
@@ -37,7 +37,7 @@ export interface AnalysisFlowPageProps {
   title: string;
   /** Route to navigate back to */
   backTo: string;
-  /** Shelf name (planogram flow) */
+  /** Fixture/Shelf name (planogram flow) */
   shelfName?: string;
   /** Planogram name (planogram flow) */
   planogramName?: string;
@@ -47,15 +47,15 @@ export interface AnalysisFlowPageProps {
   expectedLayoutPreview?: React.ReactNode;
   /** Planogram expected data – planogram-based only. When provided, shows PlanogramExpectedPanel on the right. Not used in adhoc flow (upload stays full width). */
   planogramExpectedData?: ImageComparisonData;
-  /** Whether to show a shelf selection dropdown */
+  /** Whether to show a fixture selection dropdown */
   showShelfSelection?: boolean;
-  /** Currently selected shelf id */
+  /** Currently selected fixture id */
   selectedShelfId?: string;
   /** Callback when shelf changes */
   onShelfSelect?: (id: string) => void;
-  /** Available shelves for selection */
+  /** Available fixtures for selection */
   shelves?: Array<{ id: string; shelfName: string }>;
-  /** Lock shelf selection (e.g. preselected from shelf actions) */
+  /** Lock fixture selection (e.g. preselected from fixture actions) */
   isShelfSelectionLocked?: boolean;
 }
 
@@ -170,21 +170,21 @@ export function AnalysisFlowPage({
               <div className="space-y-0.5">
                 <h1 className="text-xl font-bold text-foreground sm:text-2xl">{title}</h1>
                 <p className="text-xs text-muted-foreground">
-                  Upload your shelf image to begin analysis
+                  Upload your fixture image to begin analysis
                 </p>
               </div>
             </div>
             {showShelfSelection && (
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">Select Shelf:</span>
+                <span className="text-sm font-medium text-foreground">Select Fixture:</span>
                 <Select
                   className="w-[200px] h-9"
                   value={selectedShelfId || ""}
                   onChange={(e) => onShelfSelect?.(e.target.value)}
-                  aria-label="Select shelf"
+                  aria-label="Select fixture"
                   disabled={isShelfSelectionLocked}
                 >
-                  <option value="">No shelf selected (Adhoc)</option>
+                  <option value="">No fixture selected (Adhoc)</option>
                   {shelves?.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.shelfName}
@@ -213,10 +213,10 @@ export function AnalysisFlowPage({
                   : "lg:grid-cols-1"
               )}
             >
-              {/* Shelf View (left) */}
+              {/* Fixture View (left) */}
               <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm">
                 <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-                  <h2 className="text-sm font-semibold text-foreground">Shelf image</h2>
+                  <h2 className="text-sm font-semibold text-foreground">Fixture image</h2>
                   {state === "processing" && (
                     <span className="text-xs text-muted-foreground">Analyzing…</span>
                   )}
@@ -236,7 +236,7 @@ export function AnalysisFlowPage({
                       variant="success"
                     >
                       <Camera className="size-4" aria-hidden />
-                      Capture or Upload Shelf Image
+                      Capture or Upload Fixture Image
                     </Button>
                   )}
                 </div>
@@ -247,17 +247,13 @@ export function AnalysisFlowPage({
                   accept={ACCEPTED_TYPES.join(",")}
                   onChange={handleFileSelect}
                   className="sr-only"
-                  aria-label="Upload shelf image"
+                  aria-label="Upload fixture image"
                 />
 
                 {imagePreview ? (
                   <div className="relative flex-1 min-h-0 flex flex-col">
                     <div className="flex-1 min-h-0 w-full overflow-hidden bg-muted/50 flex items-center justify-center">
-                      <img
-                        src={imagePreview}
-                        alt="Shelf preview"
-                        className="max-h-full max-w-full object-contain"
-                      />
+                      <img src={imagePreview} alt="Fixture preview" className="max-h-full max-w-full object-contain" />
                     </div>
                     {state === "processing" && (
                       <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
@@ -311,7 +307,7 @@ export function AnalysisFlowPage({
                       <ImageIcon className="h-8 w-8 text-accent" aria-hidden />
                     </div>
                     <p className="text-sm font-medium text-foreground">
-                      Drop your shelf image here
+                      Drop your fixture image here
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">or click to browse</p>
                     <p className="mt-1 text-xs text-muted-foreground/80">

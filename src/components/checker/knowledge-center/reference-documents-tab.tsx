@@ -23,6 +23,7 @@ import {
   useReferenceDocuments,
   useUpdateReferenceDocumentLinks,
   useUploadReferenceDocument,
+  useOrgUsers,
 } from "@/queries/checker";
 import { useToast } from "@/hooks/use-toast";
 import type { ReferenceDocument } from "@/types/checker";
@@ -48,6 +49,7 @@ export function ReferenceDocumentsTab() {
 
   const { data: documents, isLoading, error } = useReferenceDocuments();
   const { data: rules } = useComplianceRules();
+  const { data: orgUsers = [] } = useOrgUsers();
   const uploadDoc = useUploadReferenceDocument();
   const generateRules = useGenerateDocumentRules();
   const deleteDocument = useDeleteReferenceDocument();
@@ -186,8 +188,19 @@ export function ReferenceDocumentsTab() {
   };
 
   const ruleNames = useMemo(
-    () => new Map(rules?.map((r) => [r.ruleId, `${r.ruleId} - ${r.ruleName}`]) ?? []),
+    () => new Map(rules?.map((r) => [r.ruleId, r.ruleName]) ?? []),
     [rules]
+  );
+
+  const userDisplayNames = useMemo(
+    () =>
+      new Map(
+        orgUsers.map((user) => {
+          const fullName = `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim();
+          return [user.id, fullName.length > 0 ? fullName : user.email];
+        }),
+      ),
+    [orgUsers],
   );
 
   return (
@@ -332,6 +345,7 @@ export function ReferenceDocumentsTab() {
                 <ReferenceDocumentRow
                   key={doc.id}
                   document={doc}
+                  uploadedByLabel={userDisplayNames.get(doc.uploadedBy)}
                   ruleNames={ruleNames}
                   rules={rules ?? []}
                   isEditing={editingDocId === doc.id}

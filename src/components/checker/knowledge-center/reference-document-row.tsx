@@ -18,6 +18,7 @@ import { getStatusUi } from "./reference-documents-tab.utils";
 
 export function ReferenceDocumentRow({
   document,
+  uploadedByLabel,
   ruleNames,
   rules,
   isEditing,
@@ -58,20 +59,22 @@ export function ReferenceDocumentRow({
           </div>
           <p className="text-xs text-muted-foreground">
             Uploaded {format(new Date(document.uploadedDate), "MMM d, yyyy")} by{" "}
-            {document.uploadedBy}
+            {uploadedByLabel ?? document.uploadedBy}
           </p>
         </div>
       </div>
 
       <div className="flex flex-col gap-2 sm:items-end">
         {isEditing ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[440px] sm:flex-row sm:items-start sm:justify-end sm:gap-2">
             <RuleSelectorDropdown
               rules={rules}
               selectedIds={editLinkedRuleIds}
               onChange={onEditLinkedRuleIdsChange}
               placeholder="Select rules to link"
-              triggerClassName="flex min-w-[180px] items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
+              usePortal
+              panelAlign="right"
+              triggerClassName="flex w-full sm:w-[240px] items-center justify-between gap-2 rounded-md border border-border bg-card px-2 py-1.5 text-left text-xs hover:bg-muted/50 focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <div className="flex gap-1">
               <Button size="sm" variant="outline" onClick={onCancelEdit} disabled={isSaving}>

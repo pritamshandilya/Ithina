@@ -83,6 +83,7 @@ export interface Shelf {
  */
 export interface Audit {
   id: string;
+  fixtureId?: string;
   shelfId: string;
   submittedBy: string; // User ID
   submittedAt?: Date; // Optional for drafts
@@ -117,6 +118,10 @@ export interface AdhocAnalysis {
   status: AdhocAnalysisStatus;
   complianceScore?: number; // 0-100 when completed
   errorMessage?: string; // When status is failed
+  /** Fixture ID from capture context */
+  fixtureId?: string;
+  /** Fixture display name from capture context */
+  fixtureName?: string;
   /** Shelf ID from capture context */
   shelfId?: string;
   /** Shelf name from capture context */
@@ -144,6 +149,8 @@ export interface HistoricalAnalysisRow {
   complianceScore?: number;
   storeId?: string;
   errorMessage?: string;
+  fixtureId?: string;
+  fixtureName?: string;
   shelfId?: string;
   shelfName?: string;
   planogramName?: string;

@@ -23,23 +23,24 @@ import type {
 } from "@/types/checker";
 import {
   KNOWLEDGE_SHELF_TYPES,
-  mockDocuments,
   mockRules,
   nextRuleId,
   nextVersionId,
 } from "./knowledge-center.mock";
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const documentLinksById = new Map<string, string[]>();
 
 function mapDocumentResponseToReferenceDocument(
   document: DocumentApiResponse,
 ): ReferenceDocument {
+  const linkedRuleIds = documentLinksById.get(document.id) ?? [];
   return {
     id: document.id,
     name: document.name || "Untitled document",
     uploadedDate: new Date(document.uploaded_at ?? document.created_at),
     uploadedBy: document.uploaded_by ?? "Unknown",
-    linkedRuleIds: [],
+    linkedRuleIds: [...linkedRuleIds],
     processingStatus: document.processing_status,
   };
 }
@@ -202,9 +203,10 @@ export async function fetchReferenceDocuments(
     "/documents",
     { document_type: documentType },
   );
-  return documents
+  const mapped = documents
     .map(mapDocumentResponseToReferenceDocument)
     .sort((a, b) => b.uploadedDate.getTime() - a.uploadedDate.getTime());
+  return mapped;
 }
 
 export async function fetchReferenceDocumentById(
@@ -467,6 +469,7 @@ export async function generateRulesFromReferenceDocument(
 export async function deleteReferenceDocument(documentId: string): Promise<void> {
   ensureCheckerAccess();
   await apiClient.delete(`/documents/${documentId}`);
+  documentLinksById.delete(documentId);
 }
 
 export async function updateReferenceDocumentLinks(
@@ -474,15 +477,11 @@ export async function updateReferenceDocumentLinks(
   linkedRuleIds: string[]
 ): Promise<ReferenceDocument> {
   ensureKnowledgeCenterAccess();
-  await delay(250);
-
-  const doc = mockDocuments.find((d) => d.id === documentId);
-  if (!doc) throw new Error("Document was not found.");
-
-  const prevRuleIds = new Set(doc.linkedRuleIds);
+  await delay(100);
+  const document = await fetchReferenceDocumentById(documentId);
+  const prevRuleIds = new Set(documentLinksById.get(documentId) ?? []);
   const nextRuleIds = new Set(linkedRuleIds);
-
-  doc.linkedRuleIds = linkedRuleIds;
+  documentLinksById.set(documentId, [...linkedRuleIds]);
 
   prevRuleIds.forEach((ruleId) => {
     if (!nextRuleIds.has(ruleId)) {
@@ -503,5 +502,8 @@ export async function updateReferenceDocumentLinks(
     }
   });
 
-  return doc;
+  return {
+    ...document,
+    linkedRuleIds: [...linkedRuleIds],
+  };
 }

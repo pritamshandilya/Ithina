@@ -1,24 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Edit3, Search, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
+import { useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
-import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
 import {
-  DataTable,
-  type DataTableCell,
+  createPlanogramColumns,
+} from "@/components/planogram/planogram-table-columns";
+import type { PlanogramShelfRow } from "@/types/maker";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
+import {
   type DataTableColumn,
 } from "@/components/ui/data-table";
-import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
+import { usePlanogramList } from "@/queries/maker";
+import { useShelves } from "@/queries/maker";
+import { useComplianceRuleSets } from "@/queries/maker";
+import { useShelfTemplates } from "@/queries/checker";
 import {
   createStoreFixture,
   deleteStoreFixture,
@@ -27,13 +27,23 @@ import {
   type StoreFixtureApiModel,
 } from "@/queries/checker/api/fixtures";
 import { storeDefaultsKeys } from "@/queries/checker/hooks/useStoreFixtureTypes";
-import { StoreConfigurationModals } from "./store-configuration-modals";
+import { buildFixtureGroupHeader, groupByFixtureRow } from "./fixture-grouping";
+import { StoreFixturesPageView } from "./store-fixtures-page-view";
+import { useFixtureShelfRows } from "./use-fixture-shelf-rows";
+import { usePersistedFixturePlanogramOverrides } from "./use-persisted-fixture-planogram-overrides";
+import { useSubmitBulkShelves } from "./use-submit-bulk-shelves";
 
 interface StoreFixturesPageProps {
   canEdit?: boolean;
 }
 
+const FIXTURE_PLANOGRAM_ASSOCIATIONS_STORAGE_KEY =
+  "checker-fixture-planogram-associations";
+
 export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const params = useParams({ strict: false }) as { storeId?: string };
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { selectedStore } = useGlobalStore();
@@ -44,7 +54,59 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
   const [isDeletingFixture, setIsDeletingFixture] = useState(false);
   const [defaultDimensionUnit, setDefaultDimensionUnit] = useState<StoreDimensionUnit>("mm");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAddShelfModalOpen, setIsAddShelfModalOpen] = useState(false);
+  const [pendingFixtureForShelf, setPendingFixtureForShelf] = useState<string | null>(null);
+  const [tablePagination, setTablePagination] = useState({
+    page: 1,
+    pageSize: 50,
+  });
+  const [actionsMenu, setActionsMenu] = useState<{
+    row: PlanogramShelfRow;
+    triggerEl: HTMLElement;
+    mode: "fixture" | "shelf";
+    anchorPoint?: { x: number; y: number };
+  } | null>(null);
+  const [fixtureComplianceOverrides, setFixtureComplianceOverrides] = useState<
+    Record<string, string>
+  >({});
+  const [fixtureCategorizeOverrides, setFixtureCategorizeOverrides] = useState<
+    Record<string, string>
+  >({});
+  const [fixturePlanogramOverrides, setFixturePlanogramOverrides] = useState<
+    Record<string, string | null>
+  >({});
+  const [planogramAssociationModalOpen, setPlanogramAssociationModalOpen] =
+    useState(false);
+  const [fixtureIdForPlanogramAssociation, setFixtureIdForPlanogramAssociation] =
+    useState<string | null>(null);
+  const [pendingPlanogramId, setPendingPlanogramId] = useState<string>("");
+  const [isBulkAddModalOpen, setIsBulkAddModalOpen] = useState(false);
+  const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
+  const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
+    useState<ComplianceRuleSetSummary | null>(null);
+  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<string | null>(null);
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+  const { data: planogramList = [] } = usePlanogramList();
+  const { data: ruleSets = [] } = useComplianceRuleSets();
+  const { data: shelves = [] } = useShelves();
+  const { data: shelfTemplates = [], isLoading: shelfTemplatesLoading } = useShelfTemplates();
+  const isAdminPath = location.pathname.includes("/admin/");
+  const storeId = params.storeId ?? selectedStore?.id;
+  const selectedStoreId = selectedStore?.id;
+  const shelfNewPath = isAdminPath ? "/admin/$storeId/shelf/new" : "/checker/shelf/new";
+  const fixtureAssociationsStorageKey = storeId
+    ? `${FIXTURE_PLANOGRAM_ASSOCIATIONS_STORAGE_KEY}:${storeId}`
+    : FIXTURE_PLANOGRAM_ASSOCIATIONS_STORAGE_KEY;
 
+  const planogramNameById = useMemo(
+    () => new Map(planogramList.map((p) => [p.id, p.name])),
+    [planogramList],
+  );
+  const planogramOptions = useMemo(
+    () => planogramList.map((p) => ({ id: p.id, name: p.name })),
+    [planogramList],
+  );
   const { data: fixtures = [] } = useQuery({
     queryKey: ["maker", "fixtures", "list", selectedStore?.id ?? "no-store"],
     queryFn: fetchStoreFixtures,
@@ -52,24 +114,54 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     staleTime: 60 * 1000,
   });
 
-  const filteredFixtures = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return fixtures;
-    return fixtures.filter((fixture) => {
-      const code = fixture.code?.toLowerCase() ?? "";
-      const type = fixture.type.toLowerCase();
-      const section = fixture.physical_location.section.toLowerCase();
-      const aisle = fixture.physical_location.aisle.toLowerCase();
-      const zone = fixture.physical_location.zone.toLowerCase();
-      return (
-        type.includes(query) ||
-        code.includes(query) ||
-        section.includes(query) ||
-        aisle.includes(query) ||
-        zone.includes(query)
-      );
+  const {
+    defaultRuleSetName,
+    fixtureById,
+    effectivePlanogramByFixtureId,
+    fixtureShelfRows,
+    rowIdToFixtureId,
+    shelvesByFixtureId,
+  } = useFixtureShelfRows({
+    fixtures,
+    shelves,
+    ruleSets,
+    searchQuery,
+    planogramNameById,
+    fixturePlanogramOverrides,
+    fixtureComplianceOverrides,
+    fixtureCategorizeOverrides,
+  });
+
+  usePersistedFixturePlanogramOverrides({
+    storageKey: fixtureAssociationsStorageKey,
+    overrides: fixturePlanogramOverrides,
+    setOverrides: setFixturePlanogramOverrides,
+  });
+
+  const openAddShelfModal = useCallback((fixtureId?: string) => {
+    setPendingFixtureForShelf(fixtureId ?? null);
+    setIsAddShelfModalOpen(true);
+  }, []);
+
+  const handleContinueAddShelf = useCallback(
+    (payload: { addMode: "manual" | "template"; templateId?: string }) => {
+    navigate({
+      to: shelfNewPath as never,
+      params: (isAdminPath ? { storeId } : {}) as never,
+      search: {
+        addMode: payload.addMode,
+        templateId: payload.templateId,
+        fixtureId: pendingFixtureForShelf ?? undefined,
+      } as never,
     });
-  }, [fixtures, searchQuery]);
+    setIsAddShelfModalOpen(false);
+  }, [isAdminPath, navigate, pendingFixtureForShelf, shelfNewPath, storeId]);
+
+  const handleBulkActions = useCallback(() => {
+    setIsBulkAddModalOpen(true);
+  }, []);
+
+  const handleSubmitBulkShelves = useSubmitBulkShelves(selectedStoreId);
 
   if (!selectedStore) {
     return (
@@ -111,6 +203,12 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
             zone: values.zone.trim() || editingFixture.physical_location.zone,
           },
         });
+        if (values.planogramId !== undefined) {
+          setFixturePlanogramOverrides((prev) => ({
+            ...prev,
+            [editingFixture.id]: values.planogramId?.trim() || null,
+          }));
+        }
       } else {
         await createStoreFixture(selectedStore.id, {
           type,
@@ -184,261 +282,293 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     }
   };
 
-  const columns: DataTableColumn<StoreFixtureApiModel>[] = [
-    {
-      title:"Code",
-      field: "code",
-      headerFilter: false,
-      minWidth: 120,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.code ?? "No code"}
-          </span>
-        `;
-      },
+  const handleOpenFixtureActions = useCallback(
+    (row: PlanogramShelfRow, triggerEl: HTMLElement) => {
+      const triggerRect = triggerEl.getBoundingClientRect();
+      setActionsMenu({
+        row,
+        triggerEl,
+        mode: "shelf",
+        anchorPoint: {
+          x: triggerRect.left,
+          y: triggerRect.top,
+        },
+      });
     },
-    {
-      title: "Fixture Type",
-      field: "type",
-      headerFilter: false,
-      minWidth: 220,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <div class="text-left">
-            <p class="text-sm font-semibold text-foreground">${fixture.type}</p>
-          </div>
-        `;
-      },
+    [],
+  );
+
+  const handleAddShelfForFixture = useCallback(
+    (row: PlanogramShelfRow) => {
+      if (!row.fixtureId) {
+        toast({
+          title: "Fixture missing",
+          description: "Cannot add shelf without a fixture context.",
+          variant: "warning",
+        });
+        return;
+      }
+      openAddShelfModal(row.fixtureId);
+      setActionsMenu(null);
     },
-    // {
-    //   title: "Code",
-    //   field: "code",
-    //   headerFilter: false,
-    //   minWidth: 120,
-    //   hozAlign: "left",
-    //   headerHozAlign: "left",
-    //   formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-    //     const fixture = cell.getData();
-    //     console.log("fixture code", fixture.code);
-    //     return `
-    //       <span class="text-xs text-muted-foreground">
-    //         ${fixture.code ?? "No code"}
-    //       </span>
-    //     `;
-    //   },
-    // },
-    {
-      title: "Dimensions (W×H×D)",
-      field: "dimensions.width",
-      minWidth: 160,
-      headerFilter: false,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        const { width, height, depth } = fixture.dimensions;
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${width}×${height}×${depth} ${fixture.dimension_unit}
-          </span>
-        `;
-      },
+    [openAddShelfModal, toast],
+  );
+
+  const handleAssociateFixturePlanogram = useCallback((row: PlanogramShelfRow) => {
+    const fixtureId = row.fixtureId;
+    if (!fixtureId) return;
+    setFixtureIdForPlanogramAssociation(fixtureId);
+    setPendingPlanogramId(effectivePlanogramByFixtureId.get(fixtureId) ?? "");
+    setPlanogramAssociationModalOpen(true);
+    setActionsMenu(null);
+  }, [effectivePlanogramByFixtureId]);
+
+  const handleFixtureRowClick = useCallback(
+    (row: PlanogramShelfRow) => {
+      const fixture = row.fixtureId ? fixtures.find((f) => f.id === row.fixtureId) : null;
+      if (!fixture || !canEdit) return;
+      setEditingFixture(fixture);
+      setDefaultDimensionUnit((fixture.dimension_unit as StoreDimensionUnit) || "mm");
+      setFixtureModalOpen(true);
     },
-    {
-      title: "Section",
-      field: "physical_location.section",
-      headerFilter: false,
-      minWidth: 150,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.physical_location.section}
-          </span>
-        `;
-      },
+    [canEdit, fixtures],
+  );
+
+  const handleEditShelf = useCallback(
+    (row: PlanogramShelfRow) => {
+      if (row.id.startsWith("fixture-")) return;
+      const path = isAdminPath
+        ? "/admin/$storeId/shelf/$shelfId"
+        : "/checker/shelf/$shelfId";
+      navigate({
+        to: path as never,
+        params: (isAdminPath ? { storeId, shelfId: row.id } : { shelfId: row.id }) as never,
+      });
     },
-    {
-      title: "Aisle",
-      field: "physical_location.aisle",
-      minWidth: 120,
-      headerFilter: false,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.physical_location.aisle}
-          </span>
-        `;
-      },
+    [isAdminPath, navigate, storeId],
+  );
+
+  const handleDeleteShelf = useCallback(
+    (shelfId: string) => {
+      toast({
+        title: "Delete shelf",
+        description: `Delete request queued for shelf ${shelfId}.`,
+        variant: "warning",
+      });
     },
-    {
-      title: "Zone",
-      field: "physical_location.zone",
-      minWidth: 130,
-      headerFilter: false,
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: DataTableCell<StoreFixtureApiModel>) => {
-        const fixture = cell.getData();
-        return `
-          <span class="text-xs text-muted-foreground">
-            ${fixture.physical_location.zone}
-          </span>
-        `;
-      },
+    [toast],
+  );
+
+  const handleSavePlanogramAssociation = useCallback(() => {
+    if (!fixtureIdForPlanogramAssociation) return;
+    setFixturePlanogramOverrides((prev) => ({
+      ...prev,
+      [fixtureIdForPlanogramAssociation]: pendingPlanogramId || null,
+    }));
+    setPlanogramAssociationModalOpen(false);
+    setFixtureIdForPlanogramAssociation(null);
+    setPendingPlanogramId("");
+    toast({
+      title: "Planogram association saved",
+      description: "Association is currently stored on frontend only.",
+      variant: "success",
+    });
+  }, [fixtureIdForPlanogramAssociation, pendingPlanogramId, toast]);
+
+  const handleViewFixtureComplianceRule = useCallback(
+    (row: PlanogramShelfRow) => {
+      const ruleSetName = row.complianceRuleSet ?? "Default Rules";
+      const set = ruleSets.find((s) => s.name === ruleSetName) ?? null;
+      setComplianceSheetRuleSet(set);
+      setComplianceSheetRuleSetName(ruleSetName);
+      setComplianceSheetOpen(true);
+      setActionsMenu(null);
     },
-    ...(canEdit
-      ? [
-          {
-            title: "Actions",
-            field: "actions",
-            width: 100,
-            headerSort: false,
-            headerFilter: false,
-            hozAlign: "right" as const,
-            formatter: () => {
-              const editBtn = renderToStaticMarkup(
-                <IconButton
-                  type="button"
-                  className="edit-fixture-btn"
-                  variant="icon-ghost"
-                  size="icon-sm"
-                  aria-label="Edit fixture"
-                  icon={<Edit3 size={16} aria-hidden />}
-                />,
-              );
-              const deleteBtn = renderToStaticMarkup(
-                <IconButton
-                  type="button"
-                  className="delete-fixture-btn"
-                  variant="destructive-ghost"
-                  size="icon-sm"
-                  aria-label="Delete fixture"
-                  icon={<Trash2 size={16} aria-hidden />}
-                />,
-              );
-              return `<div class="flex items-center justify-end gap-1">${editBtn}${deleteBtn}</div>`;
-            },
-            cellClick: (e: unknown, cell: DataTableCell<StoreFixtureApiModel>) => {
-              if (
-                e &&
-                typeof e === "object" &&
-                "stopPropagation" in e &&
-                typeof e.stopPropagation === "function"
-              ) {
-                e.stopPropagation();
-              }
-              const fixture = cell.getData();
-              const target =
-                e && typeof e === "object" && "target" in e && e.target instanceof Element
-                  ? e.target.closest("button")
-                  : null;
-              if (target?.classList.contains("edit-fixture-btn")) {
-                setEditingFixture(fixture);
-                setDefaultDimensionUnit((fixture.dimension_unit as StoreDimensionUnit) || "mm");
-                setFixtureModalOpen(true);
-              } else if (target?.classList.contains("delete-fixture-btn")) {
-                setFixtureToDelete(fixture);
-              }
-            },
-          },
-        ]
-      : []),
-  ];
+    [ruleSets],
+  );
+
+  useEffect(() => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const handleChange = (e: Event) => {
+      const select = (e.target as HTMLElement).closest?.("[data-planogram-dropdown]");
+      if (!select || !(select instanceof HTMLSelectElement)) return;
+      const rowId = select.getAttribute("data-shelf-id");
+      const field = select.getAttribute("data-field");
+      const value = select.value;
+      if (!rowId || !field) return;
+      const fixtureId = rowIdToFixtureId.get(rowId) ?? rowId;
+      if (field === "compliance") {
+        setFixtureComplianceOverrides((prev) => ({ ...prev, [fixtureId]: value }));
+      }
+      if (field === "categorize") {
+        setFixtureCategorizeOverrides((prev) => ({ ...prev, [fixtureId]: value }));
+      }
+    };
+    el.addEventListener("change", handleChange);
+    return () => el.removeEventListener("change", handleChange);
+  }, [rowIdToFixtureId]);
+
+  useEffect(() => {
+    const el = tableWrapperRef.current;
+    if (!el) return;
+    const handleClick = (event: Event) => {
+      const target = event.target as HTMLElement;
+      const trigger = target.closest(
+        "[data-action='fixture-group-menu']",
+      ) as HTMLElement | null;
+      if (!trigger) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const fixtureId = trigger.getAttribute("data-fixture-id");
+      if (!fixtureId) return;
+      const fixture = fixtureById.get(fixtureId);
+      if (!fixture) return;
+      const firstShelf = (shelvesByFixtureId.get(fixtureId) ?? [])[0];
+      const row: PlanogramShelfRow = {
+        ...(firstShelf ?? {
+          id: `fixture-${fixture.id}`,
+          shelfName: fixture.type,
+          status: "never-audited",
+        }),
+        fixtureId,
+        planogramId: effectivePlanogramByFixtureId.get(fixtureId) ?? undefined,
+        complianceRuleSet:
+          fixtureComplianceOverrides[fixtureId] ?? defaultRuleSetName,
+        categorizeBy: fixtureCategorizeOverrides[fixtureId] ?? "By Category",
+      };
+      const rect = trigger.getBoundingClientRect();
+      setActionsMenu({
+        row,
+        triggerEl: trigger,
+        mode: "fixture",
+        anchorPoint: { x: rect.left, y: rect.top },
+      });
+    };
+    el.addEventListener("click", handleClick, true);
+    return () => el.removeEventListener("click", handleClick, true);
+  }, [
+    defaultRuleSetName,
+    effectivePlanogramByFixtureId,
+    fixtureById,
+    fixtureCategorizeOverrides,
+    fixtureComplianceOverrides,
+    shelvesByFixtureId,
+  ]);
+
+  useEffect(() => {
+    if (!actionsMenu) return;
+    const onPointerDown = (event: Event) => {
+      const target = event.target as Node | null;
+      const menuEl =
+        actionsMenuRef.current ??
+        document.querySelector("[data-planogram-actions-menu]");
+      if (menuEl?.contains(target)) return;
+      const triggerBtn = (target as HTMLElement | null)?.closest?.(
+        "[data-action=\"open-menu\"], [data-action=\"fixture-group-menu\"]",
+      );
+      if (triggerBtn && triggerBtn === actionsMenu.triggerEl) return;
+      setActionsMenu(null);
+    };
+    document.addEventListener("mousedown", onPointerDown);
+    document.addEventListener("touchstart", onPointerDown, { passive: true });
+    return () => {
+      document.removeEventListener("mousedown", onPointerDown);
+      document.removeEventListener("touchstart", onPointerDown);
+    };
+  }, [actionsMenu]);
+
+  const columns: DataTableColumn<PlanogramShelfRow>[] = useMemo(
+    () =>
+      createPlanogramColumns({
+        onOpenMenu: handleOpenFixtureActions,
+        ruleSets,
+        useShelfIdField: "id",
+      }),
+    [handleOpenFixtureActions, ruleSets],
+  );
+
+  const groupedByFixture = useCallback((row: PlanogramShelfRow) => groupByFixtureRow(row), []);
+
+  const fixtureGroupHeader = useCallback(
+    (value: string, count: number) => buildFixtureGroupHeader(fixtureById, value, count),
+    [fixtureById],
+  );
+
+  const editingFixturePlanogramId = editingFixture
+    ? (effectivePlanogramByFixtureId.get(editingFixture.id) ??
+      editingFixture.planogram_id ??
+      null)
+    : null;
 
   return (
-    <MainLayout
-      pageHeader={
-        <PageHeader
-          title="Fixtures"
-          description="View and manage store fixture configuration."
-        
-        />
-      }
-    >
-      <div className="min-h-screen bg-primary px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4">
-        <div className="mx-auto w-full max-w-screen-2xl space-y-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative group w-full sm:max-w-md">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
-              <Input
-                placeholder="Search fixture by type, code, or location..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-12 border-border bg-card pl-11 text-foreground placeholder:text-muted-foreground transition-all hover:border-accent/50 focus:border-accent"
-              />
-            </div>
-            {canEdit && (
-              <Button
-                type="button"
-                variant="outline"
-                className="h-10 items-center gap-1.5 px-4"
-                onClick={() => {
-                  setDefaultDimensionUnit(
-                    (selectedStore.default_dimensions as StoreDimensionUnit) || "mm",
-                  );
-                  setEditingFixture(null);
-                  setFixtureModalOpen(true);
-                }}
-                disabled={isCreatingFixture}
-              >
-                {isCreatingFixture ? "Adding..." : "Add fixture"}
-              </Button>
-            )}
-          </div>
-
-          <div className="flex-1 min-h-0">
-            <DataTable<StoreFixtureApiModel>
-              columns={columns}
-              data={filteredFixtures}
-              pageSize={10}
-              emptyMessage="No fixtures found matching your search"
-            />
-          </div>
-        </div>
-
-        <StoreConfigurationModals
-          fixtureModalOpen={fixtureModalOpen}
-          onCloseFixtureModal={() => {
-            setFixtureModalOpen(false);
-            setEditingFixture(null);
-          }}
-          onSaveFixture={handleCreateFixture}
-          isFixtureSaving={isCreatingFixture}
-          editingFixture={editingFixture}
-          defaultDimensionUnit={defaultDimensionUnit}
-        />
-
-        <ConfirmModal
-          isOpen={!!fixtureToDelete}
-          onClose={() => {
-            if (isDeletingFixture) return;
-            setFixtureToDelete(null);
-          }}
-          onConfirm={() => {
-            if (!fixtureToDelete) return;
-            void handleDeleteFixture(fixtureToDelete);
-          }}
-          title="Delete fixture?"
-          description={`This will permanently delete "${fixtureToDelete?.type ?? "this fixture"}".`}
-          confirmLabel="Delete"
-          cancelLabel="Cancel"
-          variant="destructive"
-          isLoading={isDeletingFixture}
-        />
-      </div>
-    </MainLayout>
+    <StoreFixturesPageView
+      canEdit={canEdit}
+      searchQuery={searchQuery}
+      onSearchChange={setSearchQuery}
+      isCreatingFixture={isCreatingFixture}
+      onOpenCreateFixture={() => {
+        setDefaultDimensionUnit((selectedStore.default_dimensions as StoreDimensionUnit) || "mm");
+        setEditingFixture(null);
+        setFixtureModalOpen(true);
+      }}
+      onOpenAddShelf={() => openAddShelfModal()}
+      onBulkAddShelves={handleBulkActions}
+      onBulkActions={handleBulkActions}
+      tableWrapperRef={tableWrapperRef}
+      fixtureShelfRows={fixtureShelfRows}
+      tablePagination={tablePagination}
+      setTablePagination={setTablePagination}
+      columns={columns}
+      onRowClick={handleFixtureRowClick}
+      groupedByFixture={groupedByFixture}
+      fixtureGroupHeader={fixtureGroupHeader}
+      isDeleteConfirmOpen={!!fixtureToDelete}
+      onCloseDeleteConfirm={() => {
+        if (isDeletingFixture) return;
+        setFixtureToDelete(null);
+      }}
+      onConfirmDelete={() => {
+        if (!fixtureToDelete) return;
+        void handleDeleteFixture(fixtureToDelete);
+      }}
+      fixtureToDeleteType={fixtureToDelete?.type}
+      isDeletingFixture={isDeletingFixture}
+      fixtureModalOpen={fixtureModalOpen}
+      onCloseFixtureModal={() => {
+        setFixtureModalOpen(false);
+        setEditingFixture(null);
+      }}
+      onSaveFixture={handleCreateFixture}
+      editingFixture={editingFixture}
+      editingFixturePlanogramId={editingFixturePlanogramId}
+      defaultDimensionUnit={defaultDimensionUnit}
+      planogramOptions={planogramOptions}
+      actionsMenu={actionsMenu}
+      actionsMenuRef={actionsMenuRef}
+      onCloseActionsMenu={() => setActionsMenu(null)}
+      onEditShelf={handleEditShelf}
+      onDeleteShelf={handleDeleteShelf}
+      onAddShelfForFixture={handleAddShelfForFixture}
+      onViewComplianceRule={handleViewFixtureComplianceRule}
+      onAssociatePlanogram={handleAssociateFixturePlanogram}
+      isBulkAddModalOpen={isBulkAddModalOpen}
+      onCloseBulkAddModal={() => setIsBulkAddModalOpen(false)}
+      onSubmitBulkShelves={handleSubmitBulkShelves}
+      isAddShelfModalOpen={isAddShelfModalOpen}
+      onCloseAddShelfModal={() => setIsAddShelfModalOpen(false)}
+      shelfTemplates={shelfTemplates}
+      shelfTemplatesLoading={shelfTemplatesLoading}
+      onContinueAddShelf={handleContinueAddShelf}
+      planogramAssociationModalOpen={planogramAssociationModalOpen}
+      onClosePlanogramAssociationModal={() => setPlanogramAssociationModalOpen(false)}
+      pendingPlanogramId={pendingPlanogramId}
+      onChangePendingPlanogramId={setPendingPlanogramId}
+      onSavePlanogramAssociation={handleSavePlanogramAssociation}
+      complianceSheetOpen={complianceSheetOpen}
+      onOpenChangeComplianceSheet={setComplianceSheetOpen}
+      complianceSheetRuleSet={complianceSheetRuleSet}
+      complianceSheetRuleSetName={complianceSheetRuleSetName}
+    />
   );
 }

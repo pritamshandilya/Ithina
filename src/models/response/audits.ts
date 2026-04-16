@@ -19,6 +19,7 @@ export type AuditModeResponse =
 
 export interface AuditResponse {
   id: string;
+  fixtureId?: string;
   shelfId: string;
   submittedBy: string;
   submittedAt?: string; // ISO date string
@@ -57,6 +58,8 @@ export interface AdhocAnalysisResponse {
   status: AdhocAnalysisStatusResponse;
   complianceScore?: number;
   errorMessage?: string;
+  fixtureId?: string;
+  fixtureName?: string;
   shelfId?: string;
   shelfName?: string;
   zone?: string;

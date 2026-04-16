@@ -661,3 +661,94 @@
 .data-table-wrapper .tabulator-row.tabulator-selectable:hover {
   cursor: pointer;
 }
+
+.data-table-wrapper .tabulator-row.tabulator-group {
+  background: color-mix(in oklab, var(--muted) 30%, var(--card)) !important;
+  border-top: 1px solid color-mix(in oklab, var(--border) 70%, transparent);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .tabulator-cell {
+  color: var(--foreground) !important;
+  background: transparent !important;
+  border-right: none !important;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .tabulator-group {
+  color: var(--foreground) !important;
+  white-space: nowrap;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .tabulator-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 0.4rem;
+  color: var(--muted-foreground);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .tabulator-group-toggle::before {
+  color: var(--muted-foreground);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .fixture-group-header {
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .fixture-group-label {
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.data-table-wrapper .tabulator-row.tabulator-group .fixture-group-count {
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+/* GYS-inspired Tabulator styling, mapped to current theme tokens */
+.data-table-wrapper {
+  --tabulator-header-bg: color-mix(in oklab, var(--primary) 20%, var(--card));
+  --tabulator-row-even: color-mix(in oklab, var(--muted) 40%, var(--card));
+  --tabulator-row-hover: color-mix(in oklab, var(--primary) 8%, var(--card));
+  --tabulator-footer-bg: color-mix(in oklab, var(--primary) 6%, var(--card));
+  --tabulator-footer-pill: var(--card);
+  --tabulator-footer-pill-hover: color-mix(in oklab, var(--primary) 14%, var(--card));
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
+  padding: 0.6rem 0.75rem;
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--foreground);
+}
+
+.data-table-wrapper .tabulator-header .tabulator-col {
+  border-right: 1px solid color-mix(in oklab, var(--border) 70%, transparent) !important;
+}
+
+.data-table-wrapper .tabulator-cell {
+  padding-top: 0.62rem;
+  padding-bottom: 0.62rem;
+  border-right: 1px solid color-mix(in oklab, var(--border) 58%, transparent) !important;
+  border-bottom: 1px solid color-mix(in oklab, var(--border) 72%, transparent);
+  font-size: 0.8125rem;
+  color: var(--foreground);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected {
+  background: color-mix(in oklab, var(--primary) 18%, var(--card)) !important;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page-counter,
+.data-table-wrapper .tabulator-footer .tabulator-paginator label {
+  font-family: var(--font-sans);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.data-table-wrapper .tabulator-footer .tabulator-page {
+  border-radius: calc(var(--radius) - 4px);
+}

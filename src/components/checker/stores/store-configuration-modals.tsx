@@ -22,11 +22,14 @@ interface StoreConfigurationModalsProps {
   onSaveFixture: (values: StoreFixtureModalValues) => void | Promise<void>;
   isFixtureSaving: boolean;
   editingFixture: StoreFixtureApiModel | null;
+  editingFixturePlanogramId?: string | null;
   defaultDimensionUnit: StoreDimensionUnit;
+  planogramOptions?: { id: string; name: string }[];
 }
 
 function getFixtureInitialValues(
   editingFixture: StoreFixtureApiModel | null,
+  editingFixturePlanogramId: string | null | undefined,
   defaultDimensionUnit: StoreDimensionUnit,
 ) {
   if (!editingFixture) {
@@ -36,6 +39,7 @@ function getFixtureInitialValues(
   return {
     type: editingFixture.type,
     code: editingFixture.code,
+    planogramId: editingFixturePlanogramId ?? editingFixture.planogram_id ?? "",
     width:
       editingFixture.dimensions?.width !== undefined &&
       editingFixture.dimensions?.width !== null
@@ -70,7 +74,9 @@ export function StoreConfigurationModals({
   onSaveFixture,
   isFixtureSaving,
   editingFixture,
+  editingFixturePlanogramId,
   defaultDimensionUnit,
+  planogramOptions = [],
 }: StoreConfigurationModalsProps) {
   return (
     <>
@@ -90,7 +96,12 @@ export function StoreConfigurationModals({
         onSave={onSaveFixture}
         isSaving={isFixtureSaving}
         mode={editingFixture ? "edit" : "create"}
-        initialValues={getFixtureInitialValues(editingFixture, defaultDimensionUnit)}
+        initialValues={getFixtureInitialValues(
+          editingFixture,
+          editingFixturePlanogramId,
+          defaultDimensionUnit,
+        )}
+        planogramOptions={planogramOptions}
       />
     </>
   );

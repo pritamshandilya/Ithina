@@ -223,7 +223,7 @@ function ShelfManagementPage() {
                 onClick={() =>
                   navigate({
                     to: "/maker/audits/planogram/new",
-                    search: { shelfId: undefined },
+                    search: { fixtureId: undefined },
                   })
                 }
                 variant="success"

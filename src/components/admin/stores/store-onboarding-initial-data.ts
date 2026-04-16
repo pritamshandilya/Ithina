@@ -61,7 +61,7 @@ export const DEFAULT_ONBOARDING_SHELF_TEMPLATES: ShelfTemplateConfig[] = [
   {
     name: '4-shelf standard (48"W)',
     description: "4 shelves · gondola bay",
-    fixtureType: "gondola",
+    fixtureType: "Gondola (standard)",
     zone: "Grocery",
     section: "General",
     width: "48",
@@ -71,7 +71,7 @@ export const DEFAULT_ONBOARDING_SHELF_TEMPLATES: ShelfTemplateConfig[] = [
   {
     name: '5-shelf tall (48"W)',
     description: "5 shelves · tall gondola",
-    fixtureType: "gondola",
+    fixtureType: "Gondola (standard)",
     zone: "Grocery",
     section: "General",
     width: "48",
@@ -81,7 +81,7 @@ export const DEFAULT_ONBOARDING_SHELF_TEMPLATES: ShelfTemplateConfig[] = [
   {
     name: "3-shelf cooler",
     description: "3 shelves · refrigerated bay",
-    fixtureType: "cooler",
+    fixtureType: "Cooler/Chiller",
     zone: "Dairy",
     section: "Cold",
     width: "48",

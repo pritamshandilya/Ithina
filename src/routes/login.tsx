@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { Lock, Mail } from "lucide-react";
 import { motion } from "framer-motion";
 import { useState } from "react";
@@ -6,9 +6,24 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import ithinaLogo from "@/assets/ithina_logo.png";
-import { PromoAuthService, getDashboardUrlForRole } from "@/lib/auth/promo-auth";
+import {
+  getDashboardUrlForRole,
+  getPostAuthEntryPath,
+  PromoAuthService,
+} from "@/lib/auth/promo-auth";
+import { StoreContext } from "@/lib/store-context";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => {
+    if (!PromoAuthService.isAuthenticated()) return;
+    const user = PromoAuthService.getCurrentUser();
+    if (!user) return;
+    if (user.role === "admin") {
+      throw redirect({ to: getDashboardUrlForRole("admin") });
+    }
+    const storeId = StoreContext.getStoreId();
+    throw redirect({ to: storeId ? getDashboardUrlForRole(user.role) : "/select-store" });
+  },
   component: LoginPage,
 });
 
@@ -28,8 +43,7 @@ function LoginPage() {
 
     try {
       const user = await PromoAuthService.login(formData.email, formData.password);
-      const dashboardUrl = getDashboardUrlForRole(user.role);
-      navigate({ to: dashboardUrl });
+      navigate({ to: getPostAuthEntryPath(user.role) });
     } catch {
       setError("Invalid credentials. Please try again.");
     } finally {

@@ -8,12 +8,21 @@ import { cn } from "@/lib/utils";
 /**
  * APIs sometimes emit Unicode bullets (`•`) instead of Markdown list markers.
  * CommonMark ignores `•`, so lines collapse into one paragraph; normalize to `-`.
+ *
+ * Also fixes assistant product lines like `… Free | **⚠️margin**` where `|` can confuse
+ * GFM/table parsing and glued `⚠️` + text collides under tight line-height.
  */
 function normalizeChatMarkdownSource(source: string): string {
-  return source.replace(
+  let s = source.replace(
     /^(\s*)[\u2022\u2023\u2043\u2219\u25AA\u25AB\u25E6\u00B7\u30FB][\s\u00A0]*/gm,
     "$1- ",
   );
+
+  s = s.replace(/^(\s*(?:[-*+]|\d+\.)\s+)([^\n]*?)\s\|\s/gm, "$1$2 · ");
+
+  s = s.replace(/\u26A0\uFE0F?(?=[A-Za-z*]|-\d)/g, (m) => `${m} `);
+
+  return s;
 }
 
 const chatMarkdownComponents: Partial<Components> = {
@@ -24,7 +33,7 @@ const chatMarkdownComponents: Partial<Components> = {
   ol: ({ children }) => (
     <ol className="my-2 list-decimal space-y-1 break-words pl-4">{children}</ol>
   ),
-  li: ({ children }) => <li className="leading-snug">{children}</li>,
+  li: ({ children }) => <li className="leading-[1.45]">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold text-slate-100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ href, children }) => (
@@ -95,7 +104,12 @@ interface ChatMarkdownProps {
 function ChatMarkdownInner({ content, className }: ChatMarkdownProps) {
   const normalized = normalizeChatMarkdownSource(content);
   return (
-    <div className={cn("min-w-0 break-words text-[13px] leading-snug text-slate-200", className)}>
+    <div
+      className={cn(
+        "promo-chat-md min-w-0 break-words text-[13px] leading-snug text-slate-200",
+        className,
+      )}
+    >
       <Markdown remarkPlugins={[remarkGfm]} components={chatMarkdownComponents}>
         {normalized}
       </Markdown>

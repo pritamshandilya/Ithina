@@ -19,9 +19,6 @@ interface ChatMessagesProps {
 
   className?: string;
 
-  /** Campaign summary card Edit — focus chat + scroll staging (NL wizard). */
-  onEditCampaignSummary?: () => void;
-
 }
 
 
@@ -30,7 +27,6 @@ export default function ChatMessages({
   messages,
   isTyping,
   className,
-  onEditCampaignSummary,
 }: ChatMessagesProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -98,8 +94,6 @@ export default function ChatMessages({
               onLayoutChange={scrollToBottom}
 
               summaryEnrichment={msg.summaryEnrichment}
-
-              onEditCampaignSummary={onEditCampaignSummary}
 
             />
 

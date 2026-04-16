@@ -76,8 +76,6 @@ export interface SummaryCardRow {
 export interface SummaryCard {
   intro: string;
   rows: SummaryCardRow[];
-  /** When true the card renders Launch campaign / Edit action buttons. */
-  hasActions?: boolean;
 }
 
 export interface OptionItem {
@@ -284,16 +282,7 @@ function buildSummaryCard(allText: string, enrichment?: ChatSummaryEnrichment | 
   // Intro is rendered separately (lead markdown chunk + deduped); keep card scannable.
   const intro = "";
 
-  // Show action buttons when the card has a name + offer + at least one date/product
-  const hasName = rows.some((r) => r.label === "Name");
-  const hasOffer = rows.some((r) => r.label === "Offer");
-  const hasDateOrProduct = rows.some((r) =>
-    r.label === "Start" || r.label === "End" || r.label === "Products" ||
-    r.label === "Main Item" || r.label === "Free Item",
-  );
-  const hasActions = hasName && hasOffer && hasDateOrProduct;
-
-  return { intro, rows, hasActions };
+  return { intro, rows };
 }
 
 // ─── Option-grid detection ────────────────────────────────────────────────────
@@ -424,6 +413,156 @@ function extractSummaryNarrative(plainText: string, card: SummaryCard): {
   };
 }
 
+/** Last non-list line(s) ending with `?` — closing prompt; everything above is detail (e.g. markdown lists). */
+function extractClosingQuestionParagraph(full: string): { before: string; closing: string } | null {
+  const t = full.trim();
+  if (!t.includes("?")) return null;
+
+  const lines = t.split("\n");
+  let closeStart = -1;
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const raw = lines[i];
+    const line = raw.trim();
+    if (!line.endsWith("?")) continue;
+    if (/^\s*[-*]\s/.test(raw) || /^\s*\d+\.\s/.test(raw)) continue;
+    closeStart = i;
+    break;
+  }
+
+  if (closeStart === -1) {
+    const lastQ = t.lastIndexOf("?");
+    if (lastQ === -1) return null;
+    const nl = t.lastIndexOf("\n", lastQ);
+    const closing = (nl === -1 ? t.slice(0, lastQ + 1) : t.slice(nl + 1, lastQ + 1)).trim();
+    const before = (nl === -1 ? "" : t.slice(0, nl)).trim();
+    if (!closing.endsWith("?")) return null;
+    return { before, closing };
+  }
+
+  const closing = lines.slice(closeStart).join("\n").trim();
+  const before = lines.slice(0, closeStart).join("\n").trim();
+  return { before, closing };
+}
+
+/** Last short non-list paragraph (often apology / sign-off ending with `.`) so detail can move to prior bubbles. */
+function extractClosingTailParagraph(full: string): { before: string; closing: string } | null {
+  const t = full.trim();
+  const paras = t.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length < 2) return null;
+  const last = paras[paras.length - 1];
+  if (last.length > 420) return null;
+  if (/^\s*[-*]\s/m.test(last) || /^\s*\d+\.\s/m.test(last)) return null;
+  const before = paras.slice(0, -1).join("\n\n").trim();
+  if (before.length < 40) return null;
+  return { before, closing: last };
+}
+
+function extractDetailAndClosing(full: string): { before: string; closing: string } | null {
+  return extractClosingQuestionParagraph(full) ?? extractClosingTailParagraph(full);
+}
+
+const DETAIL_CHUNK_MAX = 720;
+
+/** Pack paragraphs into staggered bubble-sized markdown chunks. */
+function splitIntoMarkdownChunks(text: string, maxLen = DETAIL_CHUNK_MAX): string[] {
+  const paras = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length === 0) return [];
+
+  const out: string[] = [];
+  let buf = "";
+
+  const flush = () => {
+    if (buf.trim()) out.push(buf.trim());
+    buf = "";
+  };
+
+  const emitHardSlices = (p: string) => {
+    let i = 0;
+    while (i < p.length) {
+      let end = Math.min(i + maxLen, p.length);
+      if (end < p.length) {
+        const nl = p.lastIndexOf("\n", end);
+        const sp = p.lastIndexOf(" ", end);
+        const cut = Math.max(nl > i + 24 ? nl : -1, sp > i + 24 ? sp : -1);
+        if (cut !== -1) end = cut;
+      }
+      const slice = p.slice(i, end).trim();
+      if (slice) out.push(slice);
+      i = end;
+      while (i < p.length && /\s/.test(p[i]!)) i++;
+    }
+  };
+
+  for (const p of paras) {
+    const candidate = buf ? `${buf}\n\n${p}` : p;
+    if (candidate.length <= maxLen) {
+      buf = candidate;
+      continue;
+    }
+    flush();
+    if (p.length <= maxLen) {
+      buf = p;
+      continue;
+    }
+    emitHardSlices(p);
+  }
+  flush();
+  return out;
+}
+
+/**
+ * Move long markdown out of the summary card into follow-up bubbles (possibly several chunks).
+ * `note` then `question` so the closing line stays at the end for extraction.
+ */
+function partitionSummaryMarkdownTail(
+  question: string | undefined,
+  note: string | undefined,
+): { cardQuestion?: string; cardNote?: string; detailMarkdownPieces: string[] } {
+  const combined = [note, question].filter(Boolean).join("\n\n").trim();
+  if (!combined) return { detailMarkdownPieces: [] };
+
+  const newlineCount = combined.match(/\n/g)?.length ?? 0;
+  const hasList = /(?:^|\n)\s*[-*]\s+\S/m.test(combined);
+  const needsSplit =
+    combined.length > 220 ||
+    newlineCount >= 2 ||
+    hasList ||
+    /~~|`/.test(combined) ||
+    newlineCount >= 4;
+
+  if (!needsSplit) {
+    return {
+      cardQuestion: question,
+      cardNote: note,
+      detailMarkdownPieces: [],
+    };
+  }
+
+  const extracted = extractDetailAndClosing(combined);
+  if (!extracted) {
+    return {
+      detailMarkdownPieces: splitIntoMarkdownChunks(combined),
+      cardQuestion: undefined,
+      cardNote: undefined,
+    };
+  }
+
+  const { before, closing } = extracted;
+  if (!before.trim()) {
+    return {
+      cardQuestion: closing,
+      cardNote: undefined,
+      detailMarkdownPieces: [],
+    };
+  }
+
+  return {
+    detailMarkdownPieces: splitIntoMarkdownChunks(before.trim()),
+    cardQuestion: closing,
+    cardNote: undefined,
+  };
+}
+
 // ─── Category chip-list detection ────────────────────────────────────────────
 
 const CATEGORY_INTRO_RE = /categor(?:y|ies)|available in your store|pick a categor/i;
@@ -465,11 +604,20 @@ export function getAssistantMessageChunks(
   if (proposalFromText || (proposalFromEnrichment && /bundle|campaign|offer|promo/i.test(plainText))) {
     const card = buildSummaryCard(plainText, summaryEnrichment);
     if (card) {
-      const { lead, question, note } = extractSummaryNarrative(plainText, card);
+      const { lead, question, note } = extractSummaryNarrative(trimmed, card);
+      const part = partitionSummaryMarkdownTail(question, note);
       const slimCard: SummaryCard = { ...card, intro: "" };
       const out: AssistantMessageChunk[] = [];
       if (lead?.trim()) out.push(markdownChunk(lead.trim()));
-      out.push({ kind: "summary-card", card: slimCard, question, note });
+      out.push({
+        kind: "summary-card",
+        card: slimCard,
+        question: part.cardQuestion,
+        note: part.cardNote,
+      });
+      for (const piece of part.detailMarkdownPieces) {
+        if (piece.trim()) out.push(markdownChunk(piece.trim()));
+      }
       return out;
     }
   }
@@ -493,11 +641,24 @@ export function getAssistantMessageChunks(
       if (combinedProposal) {
         const card = buildSummaryCard(combined, summaryEnrichment);
         if (card) {
-          const { lead, question, note } = extractSummaryNarrative(combined, card);
+          const htmlCombined = pMatches.map((m) => m[1].trim().replace(/\n/g, "\n")).join("\n\n");
+          const { lead, question, note } = extractSummaryNarrative(
+            htmlCombined || combined,
+            card,
+          );
+          const part = partitionSummaryMarkdownTail(question, note);
           const slimCard: SummaryCard = { ...card, intro: "" };
           const out: AssistantMessageChunk[] = [];
           if (lead?.trim()) out.push(markdownChunk(lead.trim()));
-          out.push({ kind: "summary-card", card: slimCard, question, note });
+          out.push({
+            kind: "summary-card",
+            card: slimCard,
+            question: part.cardQuestion,
+            note: part.cardNote,
+          });
+          for (const piece of part.detailMarkdownPieces) {
+            if (piece.trim()) out.push(markdownChunk(piece.trim()));
+          }
           return out;
         }
       }

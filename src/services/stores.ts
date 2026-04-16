@@ -24,6 +24,15 @@ export interface CreateStorePayload {
   is_active?: boolean;
 }
 
+/** Partial update for PUT /store (matches API StoreUpdateRequest). */
+export interface UpdateStorePayload {
+  name?: string;
+  address?: string;
+  region?: string;
+  currency?: string;
+  is_active?: boolean;
+}
+
 export type StoreStaffUserType = "admin" | "checker" | "maker";
 
 /** Store staff row from GET /store/users (matches API UserResponse). */
@@ -59,21 +68,24 @@ export async function listStoreUsers(
   return data;
 }
 
+export async function updateStore(
+  storeId: string,
+  payload: UpdateStorePayload,
+): Promise<Store> {
+  const { data } = await promoApiClient.put<Store>(`${API_PREFIX}/store`, payload, {
+    headers: {
+      "X-Store-Id": storeId,
+    },
+  });
+
+  return data;
+}
+
 export async function updateStoreActive(
   storeId: string,
   is_active: boolean,
 ): Promise<Store> {
-  const { data } = await promoApiClient.put<Store>(
-    `${API_PREFIX}/store`,
-    { is_active },
-    {
-      headers: {
-        "X-Store-Id": storeId,
-      },
-    },
-  );
-
-  return data;
+  return updateStore(storeId, { is_active });
 }
 
 export async function deleteCurrentStore(storeId: string): Promise<void> {
@@ -95,5 +107,14 @@ export async function assignUserToStore(storeId: string, userId: string): Promis
       },
     },
   );
+}
+
+/** Admin: remove a user from store staff (DELETE /store/users/{user_id} with X-Store-Id). */
+export async function removeUserFromStore(storeId: string, userId: string): Promise<void> {
+  await promoApiClient.delete(`${API_PREFIX}/store/users/${encodeURIComponent(userId)}`, {
+    headers: {
+      "X-Store-Id": storeId,
+    },
+  });
 }
 

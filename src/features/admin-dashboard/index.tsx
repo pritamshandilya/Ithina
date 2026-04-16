@@ -1,4 +1,4 @@
-import { ArrowUpRight, Bell, CircleCheck, Clock, ShieldCheck, Store, Users } from "lucide-react";
+import { ArrowUpRight, Bell, Clock, ShieldCheck, Store, Users } from "lucide-react";
 import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
@@ -96,15 +96,6 @@ export default function AdminDashboard() {
   const handleStoreCardClick = (storeId: string) => {
     StoreContext.setStoreId(storeId);
     navigate({ to: "/admin/store-dashboard" });
-  };
-
-  const openApprovalQueue = () => {
-    if (stores.length === 1) {
-      StoreContext.setStoreId(stores[0].id);
-      navigate({ to: "/admin/approvals" });
-      return;
-    }
-    navigate({ to: "/admin/stores" });
   };
 
   return (
@@ -269,24 +260,6 @@ export default function AdminDashboard() {
             {stores.length === 0 ? (
               <p className="text-sm text-muted-foreground">No stores yet. Create one from Stores.</p>
             ) : null}
-          </div>
-
-          <div className="rounded-xl border border-border/60 bg-card/40 px-5 py-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-muted-foreground">
-                Admins see pending maker submissions and who approved or rejected them (checker or admin).
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-2 border-border/80"
-                onClick={openApprovalQueue}
-              >
-                <CircleCheck className="size-4" aria-hidden />
-                Open Approval Queue
-              </Button>
-            </div>
           </div>
         </div>
       </div>

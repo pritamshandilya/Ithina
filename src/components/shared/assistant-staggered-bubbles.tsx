@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronUp, Info, Pencil, Rocket, Zap } from "lucide-react";
+import { ChevronDown, ChevronUp, Info, Zap } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import ChatMarkdown from "@/components/shared/chat-markdown";
@@ -87,15 +87,11 @@ function SummaryCardView({
   card,
   question,
   note,
-  onEditClick,
 }: {
   card: SummaryCard;
   question?: string;
   note?: string;
-  onEditClick?: () => void;
 }) {
-  const [launched, setLaunched] = useState(false);
-
   return (
     <div>
       {card.intro && (
@@ -133,16 +129,11 @@ function SummaryCardView({
         })}
       </div>
 
-      {/* ── Follow-up question (full backend message, split from trailing note) ── */}
+      {/* ── Follow-up question (markdown: lists, bold, strikethrough, code) ── */}
       {question && (
-        <p
-          className={cn(
-            "mt-2.5 leading-snug text-slate-300",
-            card.hasActions ? "text-[12px]" : "text-[13px]",
-          )}
-        >
-          {question}
-        </p>
+        <div className="mt-2.5 min-w-0 text-[13px] leading-snug text-slate-300 [&_p]:text-inherit">
+          <ChatMarkdown content={question} />
+        </div>
       )}
 
       {/* ── Backend reminder / constraint text (e.g. "Remember, campaigns can run…") ── */}
@@ -152,42 +143,14 @@ function SummaryCardView({
           role="note"
         >
           <Info className="mt-0.5 size-4 shrink-0 text-ithina-amber" aria-hidden />
-          <div className="min-w-0">
+          <div className="min-w-0 text-[12px] leading-snug text-slate-300 [&_p]:mb-1 [&_p:last-child]:mb-0">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-ithina-amber">
               Note
             </p>
-            <p className="mt-1 text-[12px] leading-snug text-slate-300">{note}</p>
+            <div className="mt-1">
+              <ChatMarkdown content={note} className="text-[12px] leading-snug text-slate-300" />
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Action buttons (only when card is a full campaign proposal) ── */}
-      {card.hasActions && (
-        <div className="mt-2.5 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setLaunched(true)}
-            disabled={launched}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ithina-purple py-2.5 text-[13px] font-semibold text-white shadow-[0_0_16px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover active:scale-[0.98] disabled:cursor-default disabled:opacity-90"
-          >
-            {launched ? (
-              <>
-                <Rocket className="size-4 shrink-0" aria-hidden />
-                Launched!
-              </>
-            ) : (
-              "Launch campaign"
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={onEditClick}
-            className="flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-ithina-purple/30 bg-ithina-purple/10 px-4 py-2.5 text-[13px] font-medium text-ithina-purple/90 transition-all hover:bg-ithina-purple/20"
-            aria-label="Edit campaign — focus chat and staging grid"
-          >
-            <Pencil className="size-3.5 shrink-0" aria-hidden />
-            Edit
-          </button>
         </div>
       )}
     </div>
@@ -245,12 +208,10 @@ function ChunkBubble({
   chunk,
   chunkIdx,
   messageKey,
-  onEditCampaignSummary,
 }: {
   chunk: AssistantMessageChunk;
   chunkIdx: number;
   messageKey: number;
-  onEditCampaignSummary?: () => void;
 }) {
   return (
     <div
@@ -275,12 +236,7 @@ function ChunkBubble({
       )}
 
       {chunk.kind === "summary-card" && (
-        <SummaryCardView
-          card={chunk.card}
-          question={chunk.question}
-          note={chunk.note}
-          onEditClick={onEditCampaignSummary}
-        />
+        <SummaryCardView card={chunk.card} question={chunk.question} note={chunk.note} />
       )}
 
       {chunk.kind === "option-grid" && (
@@ -299,8 +255,6 @@ interface AssistantStaggeredBubblesProps {
   onLayoutChange?: () => void;
   /** Draft schedule / staged SKUs when the model omits them in follow-up text. */
   summaryEnrichment?: ChatSummaryEnrichment | null;
-  /** Campaign summary Edit — parent scrolls grid and focuses intent input. */
-  onEditCampaignSummary?: () => void;
 }
 
 /**
@@ -312,7 +266,6 @@ const AssistantStaggeredBubbles = memo(function AssistantStaggeredBubbles({
   messageKey,
   onLayoutChange,
   summaryEnrichment,
-  onEditCampaignSummary,
 }: AssistantStaggeredBubblesProps) {
   const chunks = useMemo(
     () => getAssistantMessageChunks(text, summaryEnrichment),
@@ -387,7 +340,6 @@ const AssistantStaggeredBubbles = memo(function AssistantStaggeredBubbles({
           chunk={chunk}
           chunkIdx={chunkIdx}
           messageKey={messageKey}
-          onEditCampaignSummary={onEditCampaignSummary}
         />
       ))}
       {showThinking && <TypingDots />}

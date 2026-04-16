@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SelectStoreRouteImport } from './routes/select-store'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MakerRouteImport } from './routes/_maker'
 import { Route as CheckerRouteImport } from './routes/_checker'
@@ -54,6 +55,11 @@ import { Route as AdminAdminApprovalsRouteImport } from './routes/_admin/admin/a
 import { Route as AdminAdminStoresIndexRouteImport } from './routes/_admin/admin/stores/index'
 import { Route as AdminAdminStoresNewRouteImport } from './routes/_admin/admin/stores/new'
 
+const SelectStoreRoute = SelectStoreRouteImport.update({
+  id: '/select-store',
+  path: '/select-store',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -278,6 +284,7 @@ const AdminAdminStoresNewRoute = AdminAdminStoresNewRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/select-store': typeof SelectStoreRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/approval': typeof AuthenticatedApprovalRoute
   '/campaigns': typeof AuthenticatedCampaignsRoute
@@ -320,6 +327,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/select-store': typeof SelectStoreRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/approval': typeof AuthenticatedApprovalRoute
   '/campaigns': typeof AuthenticatedCampaignsRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/_checker': typeof CheckerRouteWithChildren
   '/_maker': typeof MakerRouteWithChildren
   '/login': typeof LoginRoute
+  '/select-store': typeof SelectStoreRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/approval': typeof AuthenticatedApprovalRoute
   '/_authenticated/campaigns': typeof AuthenticatedCampaignsRoute
@@ -410,6 +419,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/select-store'
     | '/admin'
     | '/approval'
     | '/campaigns'
@@ -452,6 +462,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/select-store'
     | '/admin'
     | '/approval'
     | '/campaigns'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/_checker'
     | '/_maker'
     | '/login'
+    | '/select-store'
     | '/_authenticated/admin'
     | '/_authenticated/approval'
     | '/_authenticated/campaigns'
@@ -544,10 +556,18 @@ export interface RootRouteChildren {
   CheckerRoute: typeof CheckerRouteWithChildren
   MakerRoute: typeof MakerRouteWithChildren
   LoginRoute: typeof LoginRoute
+  SelectStoreRoute: typeof SelectStoreRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/select-store': {
+      id: '/select-store'
+      path: '/select-store'
+      fullPath: '/select-store'
+      preLoaderRoute: typeof SelectStoreRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -986,6 +1006,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckerRoute: CheckerRouteWithChildren,
   MakerRoute: MakerRouteWithChildren,
   LoginRoute: LoginRoute,
+  SelectStoreRoute: SelectStoreRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

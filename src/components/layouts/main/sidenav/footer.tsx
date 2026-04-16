@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useSidebar } from "@/components/ui/sidebar";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
 import { profilePathForRole } from "@/lib/profile-routes";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,8 @@ function MenuItem({
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SidenavFooter() {
   const navigate = useNavigate();
+  const { isMobile, state } = useSidebar();
+  const isCollapsed = !isMobile && state === "collapsed";
   const user = PromoAuthService.getCurrentUser();
 
   const [open, setOpen] = useState(false);
@@ -62,10 +65,15 @@ export default function SidenavFooter() {
 
   if (!user) {
     return (
-      <div className="shrink-0 border-t border-white/[0.05] bg-black/20 p-4">
-        <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "shrink-0 border-t border-white/[0.05] bg-black/20",
+          isCollapsed ? "flex justify-center px-0 py-3" : "p-4",
+        )}
+      >
+        <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
           <div className="size-9 shrink-0 rounded-full border border-ithina-border bg-ithina-panel" />
-          <p className="text-sm font-medium text-white">Guest</p>
+          {!isCollapsed ? <p className="text-sm font-medium text-white">Guest</p> : null}
         </div>
       </div>
     );
@@ -94,7 +102,14 @@ export default function SidenavFooter() {
 
       {/* ── Upward popup ── */}
       {open && (
-        <div className="absolute bottom-full left-2 right-2 mb-1 overflow-hidden rounded-xl border border-ithina-border bg-ithina-sidebar shadow-2xl z-50">
+        <div
+          className={cn(
+            "absolute z-50 overflow-hidden rounded-xl border border-ithina-border bg-ithina-sidebar shadow-2xl",
+            isCollapsed
+              ? "bottom-0 left-full ml-1 w-64 max-w-[min(16rem,calc(100vw-1rem))]"
+              : "bottom-full left-2 right-2 mb-1",
+          )}
+        >
 
           {/* User info header */}
           <div className="flex items-center gap-3 border-b border-ithina-border/60 px-4 py-3.5">
@@ -147,32 +162,60 @@ export default function SidenavFooter() {
         </div>
       )}
 
-      <p className="px-4 pb-2 font-mono text-[10px] text-slate-600">v0.0.3</p>
+      <p
+        className={cn(
+          "pb-2 font-mono text-[10px] text-slate-600",
+          isCollapsed ? "px-0 text-center" : "px-4",
+        )}
+      >
+        v0.0.3
+      </p>
 
       {/* ── Profile trigger button ── */}
       <button
+        type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-3 border-t border-white/[0.05] bg-black/20 p-4 text-left transition-colors hover:bg-black/30"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={isCollapsed ? `${fullName}, open account menu` : undefined}
+        className={cn(
+          "flex w-full min-w-0 items-center border-t border-white/[0.05] bg-black/20 text-left transition-colors hover:bg-black/30",
+          isCollapsed ? "justify-center gap-0 px-0 py-2.5" : "gap-3 p-4",
+        )}
       >
-        <Avatar className="size-9 shrink-0 rounded-full border border-ithina-purple/30">
+        <Avatar
+          className={cn(
+            "shrink-0 rounded-full border border-ithina-purple/30",
+            isCollapsed ? "size-8" : "size-9",
+          )}
+        >
           <AvatarFallback className="rounded-full bg-ithina-purple/20 text-xs font-bold text-ithina-purple">
             {initials}
           </AvatarFallback>
         </Avatar>
 
-        <div className="min-w-0 flex-1 overflow-hidden">
-          <p className="truncate text-sm font-medium leading-tight text-white">{fullName}</p>
-          <p className={cn("inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest", roleColor)}>
-            {roleLabel}
-          </p>
-        </div>
+        {!isCollapsed ? (
+          <>
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <p className="truncate text-sm font-medium leading-tight text-white">{fullName}</p>
+              <p
+                className={cn(
+                  "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest",
+                  roleColor,
+                )}
+              >
+                {roleLabel}
+              </p>
+            </div>
 
-        <ChevronDown
-          className={cn(
-            "size-3.5 shrink-0 text-slate-600 transition-transform duration-200",
-            open && "rotate-180",
-          )}
-        />
+            <ChevronDown
+              className={cn(
+                "size-3.5 shrink-0 text-slate-600 transition-transform duration-200",
+                open && "rotate-180",
+              )}
+            />
+          </>
+        ) : null}
       </button>
     </div>
   );

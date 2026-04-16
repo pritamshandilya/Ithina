@@ -3,8 +3,15 @@ import { useMemo, useState } from "react";
 
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdminStores, useUpdateAdminStoreActive, type StoreWithStaffCount } from "@/hooks/use-admin-stores";
+import {
+  useAdminStores,
+  useUpdateAdminStore,
+  useUpdateAdminStoreActive,
+  type StoreWithStaffCount,
+} from "@/hooks/use-admin-stores";
 import { cn } from "@/lib/utils";
+
+import { AdminEditStoreModal, AdminStaffStoreModal } from "./admin-stores-modals";
 
 const filterInputClass =
   "w-full min-w-0 rounded-md border border-ithina-border bg-ithina-bg px-2 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-ithina-purple focus:outline-none";
@@ -12,6 +19,10 @@ const filterInputClass =
 export default function AdminStoresPage() {
   const { data: stores = [], isLoading, isError, error } = useAdminStores();
   const updateStoreActiveMutation = useUpdateAdminStoreActive();
+  const updateStoreMutation = useUpdateAdminStore();
+
+  const [editStore, setEditStore] = useState<StoreWithStaffCount | null>(null);
+  const [teamStore, setTeamStore] = useState<StoreWithStaffCount | null>(null);
 
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -134,18 +145,24 @@ export default function AdminStoresPage() {
             <button
               type="button"
               title="Edit store"
-              disabled
-              className="rounded-lg border border-ithina-border p-2 text-slate-500 opacity-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setEditStore(row);
+              }}
+              className="rounded-lg border border-ithina-border p-2 text-slate-300 transition-colors hover:border-ithina-purple/40 hover:bg-ithina-purple/10 hover:text-white"
               aria-label="Edit"
             >
               <Pencil className="size-3.5" />
             </button>
             <button
               type="button"
-              title="Store team"
-              disabled
-              className="rounded-lg border border-ithina-border p-2 text-slate-500 opacity-50"
-              aria-label="Store team"
+              title="Manage store staff"
+              onClick={(e) => {
+                e.stopPropagation();
+                setTeamStore(row);
+              }}
+              className="rounded-lg border border-ithina-border p-2 text-slate-300 transition-colors hover:border-ithina-purple/40 hover:bg-ithina-purple/10 hover:text-white"
+              aria-label="Manage store staff"
             >
               <Users className="size-3.5" />
             </button>
@@ -310,6 +327,25 @@ export default function AdminStoresPage() {
           )}
         </div>
       </div>
+
+      <AdminEditStoreModal
+        store={editStore}
+        onClose={() => {
+          updateStoreMutation.reset();
+          setEditStore(null);
+        }}
+        isPending={updateStoreMutation.isPending}
+        error={updateStoreMutation.error as Error | null}
+        onSave={(payload) => {
+          if (!editStore) return;
+          updateStoreMutation.mutate(
+            { storeId: editStore.id, payload },
+            { onSuccess: () => setEditStore(null) },
+          );
+        }}
+      />
+
+      <AdminStaffStoreModal store={teamStore} onClose={() => setTeamStore(null)} />
     </div>
   );
 }

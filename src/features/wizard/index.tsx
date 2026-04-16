@@ -42,7 +42,7 @@ import { buildChatProductsLabel } from "@/lib/chat-products-label";
 import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
 import type { CampaignListItem } from "@/types/campaigns";
 import type { InboxItem } from "@/types/approval";
-import ChatPanel, { type ChatPanelHandle } from "./components/chat-panel";
+import ChatPanel from "./components/chat-panel";
 import DataStagingGrid from "./components/data-staging-grid";
 import type { InputMode } from "./components/data-staging-grid";
 import ModeChooser from "./components/mode-chooser";
@@ -127,8 +127,6 @@ export default function Wizard() {
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
-  const chatPanelRef = useRef<ChatPanelHandle>(null);
-  const stagingSectionRef = useRef<HTMLDivElement>(null);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -427,13 +425,6 @@ export default function Wizard() {
     schedule.endDate,
     schedule.endTime,
   ]);
-
-  const handleEditCampaignFromSummaryCard = useCallback(() => {
-    stagingSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    window.requestAnimationFrame(() => {
-      chatPanelRef.current?.focusForCampaignEdit();
-    });
-  }, []);
 
   const handleResetPromoChat = useCallback(() => {
     if (intentMutation.isPending || hwConfirmMutation.isPending) return;
@@ -774,24 +765,18 @@ export default function Wizard() {
                         <>
                           <div className="flex min-h-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col">
                             <ChatPanel
-                              ref={chatPanelRef}
                               messages={messages}
                               isTyping={isTyping}
                               inputText={inputText}
                               onInputChange={setInputText}
                               onSubmit={handleSubmit}
                               onResetChat={handleResetPromoChat}
-                              onEditCampaignSummary={handleEditCampaignFromSummaryCard}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
                             />
                           </div>
                           {showGrid ? (
-                            <div
-                              ref={stagingSectionRef}
-                              className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
-                              data-staging-section
-                            >
+                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-staging-section>
                               <DataStagingGrid
                                 data={gridData}
                                 isGenerating={hwConfirmMutation.isPending}

@@ -66,7 +66,9 @@ export default function RoutePageHeader() {
     location.pathname === "/maker/profile" ||
     location.pathname === "/checker/profile" ||
     location.pathname === "/admin/profile";
-  const showNewCampaign = (role === "maker" || role === "admin") && !isProfilePage;
+  const isAdminOrganizationSettingsPage = location.pathname === "/admin/organization-settings";
+  const showNewCampaign =
+    (role === "maker" || role === "admin") && !isProfilePage && !isAdminOrganizationSettingsPage;
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
   return (

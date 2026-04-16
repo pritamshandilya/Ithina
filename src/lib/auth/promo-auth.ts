@@ -37,10 +37,6 @@ export interface PromoUser {
   organization: OrganizationSummary;
 }
 
-interface StoreSummary {
-  id: string;
-}
-
 const USER_KEY = "promo_auth_user";
 const EXPIRY_KEY = "promo_auth_expiry";
 
@@ -103,31 +99,20 @@ export function getDashboardUrlForRole(role: string): string {
   }
 }
 
-export class PromoAuthService {
-  /**
-   * Makers/checkers need a default store for X-Store-Id. Admins start in organization
-   * scope and pick a store manually via the switcher.
-   */
-  private static async ensureActiveStore(role: string): Promise<void> {
-    if (role === "admin") {
-      return;
-    }
-
-    const existing = StoreContext.getStoreId();
-    if (existing) return;
-
-    try {
-      const { data } = await promoApiClient.get<StoreSummary[]>(`${API_PREFIX}/stores`);
-      const firstStore = data[0];
-      if (firstStore?.id) {
-        StoreContext.setStoreId(firstStore.id);
-      }
-    } catch {
-      // Do not block login/user hydration if store lookup fails.
-      // Campaign endpoints will surface a clear backend error.
-    }
+/** First route after sign-in: makers/checkers choose a store before the role dashboard. */
+export function getPostAuthEntryPath(role: string): string {
+  switch (role) {
+    case "admin":
+      return "/admin/dashboard";
+    case "checker":
+    case "maker":
+      return "/select-store";
+    default:
+      return "/select-store";
   }
+}
 
+export class PromoAuthService {
   static async loginWithForm(
     username: string,
     password: string,
@@ -155,10 +140,7 @@ export class PromoAuthService {
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
     resetClientSessionState();
-    if (user.role === "admin") {
-      StoreContext.clearStoreId();
-    }
-    await this.ensureActiveStore(user.role);
+    StoreContext.clearStoreId();
 
     return user;
   }
@@ -178,10 +160,7 @@ export class PromoAuthService {
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
     resetClientSessionState();
-    if (user.role === "admin") {
-      StoreContext.clearStoreId();
-    }
-    await this.ensureActiveStore(user.role);
+    StoreContext.clearStoreId();
 
     return user;
   }
@@ -208,7 +187,6 @@ export class PromoAuthService {
     );
     const user = mapCurrentUser(data);
     saveUser(user);
-    await this.ensureActiveStore(user.role);
     return user;
   }
 

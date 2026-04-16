@@ -964,3 +964,8 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
   }
 }
 
+/* Promo Assistant — chat markdown: list lines with emoji / mixed glyphs */
+.promo-chat-md li {
+  text-wrap: pretty;
+}
+

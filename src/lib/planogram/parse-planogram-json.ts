@@ -208,7 +208,7 @@ export function parsePlanogramJsonText(text: string): PlanogramPayload {
     throw new Error("Planogram JSON must be an object.");
   }
 
-  let inner: unknown = parsed.planogram !== undefined ? parsed.planogram : parsed;
+  const inner: unknown = parsed.planogram !== undefined ? parsed.planogram : parsed;
   if (!isRecord(inner)) {
     throw new Error("Missing planogram object.");
   }

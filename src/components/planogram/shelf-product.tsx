@@ -54,11 +54,10 @@ export function ShelfProduct({
   return (
     <div
       className={cn(
-        "group relative flex min-w-0 flex-col border border-border px-1 py-0.5 transition-colors",
+        "group relative flex min-w-0 flex-col rounded-md border border-border/70 bg-card/30 px-1 py-0.5 transition-colors",
         shapeClass,
         categoryColor,
-        isHighDemand && "ring-[3px] ring-yellow-400/80 ring-offset-1",
-        className
+        className,
       )}
       style={{ flex: `${widthFraction} 1 0%` }}
       role="article"

@@ -75,7 +75,7 @@ export function AddShelfModeModal({
                 : "border-border bg-background/40 hover:border-accent/60"
             }`}
           >
-            <p className="font-medium text-foreground">Use Template (Bulk)</p>
+            <p className="font-medium text-foreground">Use Template</p>
             <p className="text-xs text-muted-foreground">
               Apply shelf template values and add shelves faster.
             </p>

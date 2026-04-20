@@ -15,7 +15,7 @@ import {
   ShieldCheck,
   Store,
   Users,
-  Zap,
+  Zap
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -52,7 +52,7 @@ import { useStores as useCheckerStores, useOrgStores } from "@/queries/checker";
 import { useStores as useMakerStores } from "@/queries/maker";
 import SidenavFooter from "./footer";
 import { TeamSwitcher } from "./header-switch";
-import { isActiveItem, isMyAuditsActive, type NavItem } from "./nav-utils";
+import { type NavItem, isActiveItem, isMyAuditsActive } from "./nav-utils";
 
 export default function Sidenav() {
   const location = useLocation();
@@ -71,10 +71,22 @@ export default function Sidenav() {
     const segments = location.pathname.split("/").filter(Boolean);
     // If it's just /admin or /admin/dashboard or /dashboard, it's org context
     // If it's /admin/something/... where something is NOT stores/users/organization-settings, it's store context
-    if (location.pathname === "/dashboard" || location.pathname === "/admin" || segments[1] === "dashboard") return true;
-    if (segments[0] === "admin" && (segments[1] === "stores" || segments[1] === "users" || segments[1] === "organization-settings")) return true;
-    if (location.pathname === "/stores" || location.pathname === "/users") return true;
-    
+    if (
+      location.pathname === "/dashboard" ||
+      location.pathname === "/admin" ||
+      segments[1] === "dashboard"
+    )
+      return true;
+    if (
+      segments[0] === "admin" &&
+      (segments[1] === "stores" ||
+        segments[1] === "users" ||
+        segments[1] === "organization-settings")
+    )
+      return true;
+    if (location.pathname === "/stores" || location.pathname === "/users")
+      return true;
+
     return false;
   }, [role, location.pathname]);
 
@@ -96,7 +108,7 @@ export default function Sidenav() {
   }, [currentUser]);
 
   const [myAuditsExpanded, setMyAuditsExpanded] = useState(() =>
-    isMyAuditsActive(location.pathname)
+    isMyAuditsActive(location.pathname),
   );
 
   useEffect(() => {
@@ -106,7 +118,9 @@ export default function Sidenav() {
   }, [location.pathname]);
 
   const roleItems = useMemo<NavItem[]>(() => {
-    const isStoreContext = location.pathname.startsWith("/checker") || (role === "admin" && selectedStore && !isOrgContext);
+    const isStoreContext =
+      location.pathname.startsWith("/checker") ||
+      (role === "admin" && selectedStore && !isOrgContext);
 
     if (role === "admin" && !isStoreContext) {
       const items: NavItem[] = [];
@@ -148,24 +162,28 @@ export default function Sidenav() {
     const items: NavItem[] = [];
     const isAdminStoreView = role === "admin" && selectedStore;
     // We use the store name as the ID in the URL as requested
-    const storePrefix = isAdminStoreView ? `/admin/${selectedStore.name}` : "/checker";
+    const storePrefix = isAdminStoreView
+      ? `/admin/${selectedStore.name}`
+      : "/checker";
 
     if (enabledCoreNav.has("approvals")) {
-      items.push({ 
-        label: "Audit Review", 
-        to: (isAdminStoreView ? `${storePrefix}/audit-review` : "/approvals") as never, 
-        icon: ShieldCheck 
+      items.push({
+        label: "Audit Review",
+        to: (isAdminStoreView
+          ? `${storePrefix}/audit-review`
+          : "/approvals") as never,
+        icon: ShieldCheck,
       });
     }
     if (isAdminStoreView) {
       items.push({
-        label: "Fixtures",
+        label: "Display Unit",
         to: `${storePrefix}/fixture-types` as never,
         icon: LayoutPanelLeft,
       });
     } else {
       items.push({
-        label: "Fixtures",
+        label: "Display Unit",
         to: "/checker/fixture-types",
         icon: LayoutPanelLeft,
       });
@@ -179,7 +197,9 @@ export default function Sidenav() {
     if (enabledCoreNav.has("knowledge-center")) {
       items.push({
         label: "Knowledge Center",
-        to: (isAdminStoreView ? `${storePrefix}/knowledge-center` : "/knowledge-center") as never,
+        to: (isAdminStoreView
+          ? `${storePrefix}/knowledge-center`
+          : "/knowledge-center") as never,
         icon: Library,
       });
     }
@@ -187,8 +207,14 @@ export default function Sidenav() {
       label: "Reports",
       icon: FileBarChart,
       items: [
-        { label: "Store Level", to: `${storePrefix}/reports/store-level` as never },
-        { label: "Shelf Level", to: `${storePrefix}/reports/shelf-level` as never },
+        {
+          label: "Store Level",
+          to: `${storePrefix}/reports/store-level` as never,
+        },
+        {
+          label: "Shelf Level",
+          to: `${storePrefix}/reports/shelf-level` as never,
+        },
         { label: "Adhoc Report", to: `${storePrefix}/reports/adhoc` as never },
       ],
     });
@@ -233,37 +259,44 @@ export default function Sidenav() {
       <SidebarHeader
         className={cn(
           "gap-3",
-          sidebarState === "collapsed" && "items-center px-2"
+          sidebarState === "collapsed" && "items-center px-2",
         )}
       >
         <div
           className={cn(
             "flex w-full items-center gap-3",
-            sidebarState === "collapsed"
-              ? "justify-center"
-              : "justify-start"
+            sidebarState === "collapsed" ? "justify-center" : "justify-start",
           )}
         >
           {sidebarState !== "collapsed" && (
             <div className="relative h-14 min-w-0 flex-1">
-              <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-white/6 bg-card p-2 shadow-[0_12px_28px_rgba(3,8,20,0.22)]">
-                <img src={logo} alt="Logo" className="h-full w-full object-contain" />
+              <div className="bg-card relative flex h-full w-full items-center justify-center overflow-hidden rounded-xl border border-white/6 p-2 shadow-[0_12px_28px_rgba(3,8,20,0.22)]">
+                <img
+                  src={logo}
+                  alt="Logo"
+                  className="h-full w-full object-contain"
+                />
                 <div className="absolute inset-0 rounded-[inherit] border border-white/6" />
               </div>
             </div>
           )}
           <SidebarToggle
             className={cn(
-              "static inset-auto right-auto top-auto shrink-0 border-sidebar-border bg-card shadow-none",
+              "border-sidebar-border bg-card static inset-auto top-auto right-auto shrink-0 shadow-none",
               sidebarState === "collapsed"
                 ? "size-9 rounded-xl"
-                : "size-8 rounded-full"
+                : "size-8 rounded-full",
             )}
           />
         </div>
         {currentUser && (
           <TeamSwitcher
-            organization={currentUser?.organization || { name: "My Organization", id: "default-org" }}
+            organization={
+              currentUser?.organization || {
+                name: "My Organization",
+                id: "default-org",
+              }
+            }
             stores={stores ?? []}
             currentRole={role}
             isOrgDashboard={isOrgContext}
@@ -285,7 +318,13 @@ export default function Sidenav() {
                     icon: LayoutDashboard,
                   })}
                 >
-                  <Link to={(role === "admin" && selectedStore && !isOrgContext ? `/admin/${selectedStore.name}/dashboard` : "/dashboard") as never}>
+                  <Link
+                    to={
+                      (role === "admin" && selectedStore && !isOrgContext
+                        ? `/admin/${selectedStore.name}/dashboard`
+                        : "/dashboard") as never
+                    }
+                  >
                     <LayoutDashboard />
                     Dashboard
                   </Link>
@@ -321,19 +360,31 @@ export default function Sidenav() {
                           tooltip="My Audits"
                           className="cursor-pointer"
                         >
-                          <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
-                          <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">My Audits</span>
+                          <ListChecks className="text-sidebar-foreground size-4 shrink-0 stroke-2 group-data-[collapsible=icon]:stroke-[2.5]" />
+                          <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">
+                            My Audits
+                          </span>
                         </SidebarMenuButton>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent side="right" align="start" className="w-56">
+                      <DropdownMenuContent
+                        side="right"
+                        align="start"
+                        className="w-56"
+                      >
                         <DropdownMenuItem asChild>
-                          <Link to="/maker/audits/planogram" className="flex items-center gap-2">
+                          <Link
+                            to="/maker/audits/planogram"
+                            className="flex items-center gap-2"
+                          >
                             <LayoutGrid className="size-4" />
                             Planogram based analysis
                           </Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
-                          <Link to="/maker/audits/adhoc" className="flex items-center gap-2">
+                          <Link
+                            to="/maker/audits/adhoc"
+                            className="flex items-center gap-2"
+                          >
                             <Zap className="size-4" />
                             Adhoc Analysis
                           </Link>
@@ -350,7 +401,7 @@ export default function Sidenav() {
                         asChild={false}
                       >
                         <span className="flex w-full items-center gap-2">
-                          <ListChecks className="size-4 shrink-0 stroke-2 text-sidebar-foreground group-data-[collapsible=icon]:stroke-[2.5]" />
+                          <ListChecks className="text-sidebar-foreground size-4 shrink-0 stroke-2 group-data-[collapsible=icon]:stroke-[2.5]" />
                           <span className="flex-1 truncate">My Audits</span>
                           <ChevronDown
                             className={`size-4 shrink-0 transition-transform ${myAuditsExpanded ? "rotate-180" : ""}`}
@@ -362,7 +413,9 @@ export default function Sidenav() {
                           <SidebarMenuSubItem>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={location.pathname.startsWith("/maker/audits/planogram")}
+                              isActive={location.pathname.startsWith(
+                                "/maker/audits/planogram",
+                              )}
                             >
                               <Link to="/maker/audits/planogram">
                                 <LayoutGrid />
@@ -373,7 +426,9 @@ export default function Sidenav() {
                           <SidebarMenuSubItem>
                             <SidebarMenuSubButton
                               asChild
-                              isActive={location.pathname.startsWith("/maker/audits/adhoc")}
+                              isActive={location.pathname.startsWith(
+                                "/maker/audits/adhoc",
+                              )}
                             >
                               <Link to="/maker/audits/adhoc">
                                 <Zap />
@@ -392,7 +447,9 @@ export default function Sidenav() {
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
-                    isActive={location.pathname.startsWith("/maker/historical-analysis")}
+                    isActive={location.pathname.startsWith(
+                      "/maker/historical-analysis",
+                    )}
                     tooltip="Historical Analysis"
                   >
                     <Link to="/maker/historical-analysis">
@@ -405,7 +462,11 @@ export default function Sidenav() {
 
               {roleItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = isActiveItem(location.pathname, location.hash, item);
+                const isActive = isActiveItem(
+                  location.pathname,
+                  location.hash,
+                  item,
+                );
 
                 if (item.items) {
                   return (
@@ -418,10 +479,16 @@ export default function Sidenav() {
                               isActive={isActive}
                             >
                               <Icon />
-                              <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                              <span className="group-data-[collapsible=icon]:hidden">
+                                {item.label}
+                              </span>
                             </SidebarMenuButton>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent side="right" align="start" className="w-56">
+                          <DropdownMenuContent
+                            side="right"
+                            align="start"
+                            className="w-56"
+                          >
                             {item.items.map((subItem) => (
                               <DropdownMenuItem key={subItem.label} asChild>
                                 <Link to={subItem.to}>{subItem.label}</Link>
@@ -438,16 +505,21 @@ export default function Sidenav() {
                           >
                             <Icon />
                             <span>{item.label}</span>
-                            <ChevronRight className={cn(
-                              "ml-auto transition-transform duration-200",
-                              reportsOpen && "rotate-90"
-                            )} />
+                            <ChevronRight
+                              className={cn(
+                                "ml-auto transition-transform duration-200",
+                                reportsOpen && "rotate-90",
+                              )}
+                            />
                           </SidebarMenuButton>
                           {reportsOpen && (
                             <SidebarMenuSub>
                               {item.items.map((subItem) => (
                                 <SidebarMenuSubItem key={subItem.label}>
-                                  <SidebarMenuSubButton asChild isActive={location.pathname === subItem.to}>
+                                  <SidebarMenuSubButton
+                                    asChild
+                                    isActive={location.pathname === subItem.to}
+                                  >
                                     <Link to={subItem.to}>{subItem.label}</Link>
                                   </SidebarMenuSubButton>
                                 </SidebarMenuSubItem>
@@ -462,7 +534,11 @@ export default function Sidenav() {
 
                 return (
                   <SidebarMenuItem key={item.label}>
-                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive}
+                      tooltip={item.label}
+                    >
                       <Link to={item.to!} hash={item.hash}>
                         <Icon />
                         {item.label}
@@ -477,7 +553,7 @@ export default function Sidenav() {
       </SidebarContent>
       <SidebarFooter>
         <div className="pb-1 text-center group-data-[collapsible=icon]:hidden">
-          <span className="font-mono text-[11px] text-muted-foreground/60 select-none">
+          <span className="text-muted-foreground/60 font-mono text-[11px] select-none">
             v{__APP_VERSION__}
           </span>
         </div>

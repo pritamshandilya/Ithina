@@ -78,9 +78,11 @@ import { Route as CheckerReportsShelfLevelIndexRouteImport } from './routes/chec
 import { Route as CheckerReportsAdhocIndexRouteImport } from './routes/checker/reports/adhoc/index'
 import { Route as CheckerPlanogramsNewIndexRouteImport } from './routes/checker/planograms/new/index'
 import { Route as CheckerPlanogramsPlanogramIdIndexRouteImport } from './routes/checker/planograms/$planogramId/index'
+import { Route as CheckerFixtureTypesShelfIdIndexRouteImport } from './routes/checker/fixture-types/$shelfId/index'
 import { Route as CheckerAuditReportAuditIdIndexRouteImport } from './routes/checker/audit-report/$auditId/index'
 import { Route as AdminStoreIdShelfIndexRouteImport } from './routes/admin/$storeId/shelf.index'
 import { Route as AdminStoreIdPlanogramsIndexRouteImport } from './routes/admin/$storeId/planograms.index'
+import { Route as AdminStoreIdFixtureTypesIndexRouteImport } from './routes/admin/$storeId/fixture-types.index'
 import { Route as CheckerShelfShelfIdAnalysisRouteImport } from './routes/checker/shelf/$shelfId/analysis'
 import { Route as CheckerAuditsPlanogramNewRouteImport } from './routes/checker/audits/planogram/new'
 import { Route as CheckerAuditsAdhocNewRouteImport } from './routes/checker/audits/adhoc/new'
@@ -92,6 +94,7 @@ import { Route as AdminStoreIdReportsShelfLevelRouteImport } from './routes/admi
 import { Route as AdminStoreIdReportsAdhocRouteImport } from './routes/admin/$storeId/reports/adhoc'
 import { Route as AdminStoreIdPlanogramsNewRouteImport } from './routes/admin/$storeId/planograms.new'
 import { Route as AdminStoreIdPlanogramsPlanogramIdRouteImport } from './routes/admin/$storeId/planograms.$planogramId'
+import { Route as AdminStoreIdFixtureTypesShelfIdRouteImport } from './routes/admin/$storeId/fixture-types.$shelfId'
 import { Route as AdminStoreIdAuditReportAuditIdRouteImport } from './routes/admin/$storeId/audit-report.$auditId'
 import { Route as MakerShelvesShelfIdEditIndexRouteImport } from './routes/maker/shelves/$shelfId/edit/index'
 import { Route as MakerAuditsPlanogramNewIndexRouteImport } from './routes/maker/audits/planogram/new/index'
@@ -470,6 +473,12 @@ const CheckerPlanogramsPlanogramIdIndexRoute =
     path: '/planograms/$planogramId/',
     getParentRoute: () => CheckerRouteRoute,
   } as any)
+const CheckerFixtureTypesShelfIdIndexRoute =
+  CheckerFixtureTypesShelfIdIndexRouteImport.update({
+    id: '/fixture-types/$shelfId/',
+    path: '/fixture-types/$shelfId/',
+    getParentRoute: () => CheckerRouteRoute,
+  } as any)
 const CheckerAuditReportAuditIdIndexRoute =
   CheckerAuditReportAuditIdIndexRouteImport.update({
     id: '/audit-report/$auditId/',
@@ -486,6 +495,12 @@ const AdminStoreIdPlanogramsIndexRoute =
     id: '/planograms/',
     path: '/planograms/',
     getParentRoute: () => AdminStoreIdRoute,
+  } as any)
+const AdminStoreIdFixtureTypesIndexRoute =
+  AdminStoreIdFixtureTypesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AdminStoreIdFixtureTypesRoute,
   } as any)
 const CheckerShelfShelfIdAnalysisRoute =
   CheckerShelfShelfIdAnalysisRouteImport.update({
@@ -550,6 +565,12 @@ const AdminStoreIdPlanogramsPlanogramIdRoute =
     id: '/planograms/$planogramId',
     path: '/planograms/$planogramId',
     getParentRoute: () => AdminStoreIdRoute,
+  } as any)
+const AdminStoreIdFixtureTypesShelfIdRoute =
+  AdminStoreIdFixtureTypesShelfIdRouteImport.update({
+    id: '/$shelfId',
+    path: '/$shelfId',
+    getParentRoute: () => AdminStoreIdFixtureTypesRoute,
   } as any)
 const AdminStoreIdAuditReportAuditIdRoute =
   AdminStoreIdAuditReportAuditIdRouteImport.update({
@@ -645,7 +666,7 @@ export interface FileRoutesByFullPath {
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
-  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesRoute
+  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesRouteWithChildren
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
   '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
@@ -675,6 +696,7 @@ export interface FileRoutesByFullPath {
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/maker/store-settings/': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/audit-report/$auditId': typeof AdminStoreIdAuditReportAuditIdRoute
+  '/admin/$storeId/fixture-types/$shelfId': typeof AdminStoreIdFixtureTypesShelfIdRoute
   '/admin/$storeId/planograms/$planogramId': typeof AdminStoreIdPlanogramsPlanogramIdRoute
   '/admin/$storeId/planograms/new': typeof AdminStoreIdPlanogramsNewRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
@@ -686,9 +708,11 @@ export interface FileRoutesByFullPath {
   '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
   '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
+  '/admin/$storeId/fixture-types/': typeof AdminStoreIdFixtureTypesIndexRoute
   '/admin/$storeId/planograms/': typeof AdminStoreIdPlanogramsIndexRoute
   '/admin/$storeId/shelf/': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId/': typeof CheckerAuditReportAuditIdIndexRoute
+  '/checker/fixture-types/$shelfId/': typeof CheckerFixtureTypesShelfIdIndexRoute
   '/checker/planograms/$planogramId/': typeof CheckerPlanogramsPlanogramIdIndexRoute
   '/checker/planograms/new/': typeof CheckerPlanogramsNewIndexRoute
   '/checker/reports/adhoc/': typeof CheckerReportsAdhocIndexRoute
@@ -731,7 +755,6 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileIndexRoute
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
-  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesRoute
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
   '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
@@ -761,6 +784,7 @@ export interface FileRoutesByTo {
   '/maker/shelves': typeof MakerShelvesIndexRoute
   '/maker/store-settings': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/audit-report/$auditId': typeof AdminStoreIdAuditReportAuditIdRoute
+  '/admin/$storeId/fixture-types/$shelfId': typeof AdminStoreIdFixtureTypesShelfIdRoute
   '/admin/$storeId/planograms/$planogramId': typeof AdminStoreIdPlanogramsPlanogramIdRoute
   '/admin/$storeId/planograms/new': typeof AdminStoreIdPlanogramsNewRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
@@ -772,9 +796,11 @@ export interface FileRoutesByTo {
   '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
   '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
+  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesIndexRoute
   '/admin/$storeId/planograms': typeof AdminStoreIdPlanogramsIndexRoute
   '/admin/$storeId/shelf': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId': typeof CheckerAuditReportAuditIdIndexRoute
+  '/checker/fixture-types/$shelfId': typeof CheckerFixtureTypesShelfIdIndexRoute
   '/checker/planograms/$planogramId': typeof CheckerPlanogramsPlanogramIdIndexRoute
   '/checker/planograms/new': typeof CheckerPlanogramsNewIndexRoute
   '/checker/reports/adhoc': typeof CheckerReportsAdhocIndexRoute
@@ -828,7 +854,7 @@ export interface FileRoutesById {
   '/maker/audits/planogram': typeof MakerAuditsPlanogramRouteRouteWithChildren
   '/admin/$storeId/audit-review': typeof AdminStoreIdAuditReviewRoute
   '/admin/$storeId/dashboard': typeof AdminStoreIdDashboardRoute
-  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesRoute
+  '/admin/$storeId/fixture-types': typeof AdminStoreIdFixtureTypesRouteWithChildren
   '/admin/$storeId/knowledge-center': typeof AdminStoreIdKnowledgeCenterRoute
   '/admin/$storeId/shelf-templates': typeof AdminStoreIdShelfTemplatesRoute
   '/admin/$storeId/store-settings': typeof AdminStoreIdStoreSettingsRoute
@@ -858,6 +884,7 @@ export interface FileRoutesById {
   '/maker/shelves/': typeof MakerShelvesIndexRoute
   '/maker/store-settings/': typeof MakerStoreSettingsIndexRoute
   '/admin/$storeId/audit-report/$auditId': typeof AdminStoreIdAuditReportAuditIdRoute
+  '/admin/$storeId/fixture-types/$shelfId': typeof AdminStoreIdFixtureTypesShelfIdRoute
   '/admin/$storeId/planograms/$planogramId': typeof AdminStoreIdPlanogramsPlanogramIdRoute
   '/admin/$storeId/planograms/new': typeof AdminStoreIdPlanogramsNewRoute
   '/admin/$storeId/reports/adhoc': typeof AdminStoreIdReportsAdhocRoute
@@ -869,9 +896,11 @@ export interface FileRoutesById {
   '/checker/audits/adhoc/new': typeof CheckerAuditsAdhocNewRoute
   '/checker/audits/planogram/new': typeof CheckerAuditsPlanogramNewRoute
   '/checker/shelf/$shelfId/analysis': typeof CheckerShelfShelfIdAnalysisRoute
+  '/admin/$storeId/fixture-types/': typeof AdminStoreIdFixtureTypesIndexRoute
   '/admin/$storeId/planograms/': typeof AdminStoreIdPlanogramsIndexRoute
   '/admin/$storeId/shelf/': typeof AdminStoreIdShelfIndexRoute
   '/checker/audit-report/$auditId/': typeof CheckerAuditReportAuditIdIndexRoute
+  '/checker/fixture-types/$shelfId/': typeof CheckerFixtureTypesShelfIdIndexRoute
   '/checker/planograms/$planogramId/': typeof CheckerPlanogramsPlanogramIdIndexRoute
   '/checker/planograms/new/': typeof CheckerPlanogramsNewIndexRoute
   '/checker/reports/adhoc/': typeof CheckerReportsAdhocIndexRoute
@@ -955,6 +984,7 @@ export interface FileRouteTypes {
     | '/maker/shelves/'
     | '/maker/store-settings/'
     | '/admin/$storeId/audit-report/$auditId'
+    | '/admin/$storeId/fixture-types/$shelfId'
     | '/admin/$storeId/planograms/$planogramId'
     | '/admin/$storeId/planograms/new'
     | '/admin/$storeId/reports/adhoc'
@@ -966,9 +996,11 @@ export interface FileRouteTypes {
     | '/checker/audits/adhoc/new'
     | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
+    | '/admin/$storeId/fixture-types/'
     | '/admin/$storeId/planograms/'
     | '/admin/$storeId/shelf/'
     | '/checker/audit-report/$auditId/'
+    | '/checker/fixture-types/$shelfId/'
     | '/checker/planograms/$planogramId/'
     | '/checker/planograms/new/'
     | '/checker/reports/adhoc/'
@@ -1011,7 +1043,6 @@ export interface FileRouteTypes {
     | '/profile'
     | '/admin/$storeId/audit-review'
     | '/admin/$storeId/dashboard'
-    | '/admin/$storeId/fixture-types'
     | '/admin/$storeId/knowledge-center'
     | '/admin/$storeId/shelf-templates'
     | '/admin/$storeId/store-settings'
@@ -1041,6 +1072,7 @@ export interface FileRouteTypes {
     | '/maker/shelves'
     | '/maker/store-settings'
     | '/admin/$storeId/audit-report/$auditId'
+    | '/admin/$storeId/fixture-types/$shelfId'
     | '/admin/$storeId/planograms/$planogramId'
     | '/admin/$storeId/planograms/new'
     | '/admin/$storeId/reports/adhoc'
@@ -1052,9 +1084,11 @@ export interface FileRouteTypes {
     | '/checker/audits/adhoc/new'
     | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
+    | '/admin/$storeId/fixture-types'
     | '/admin/$storeId/planograms'
     | '/admin/$storeId/shelf'
     | '/checker/audit-report/$auditId'
+    | '/checker/fixture-types/$shelfId'
     | '/checker/planograms/$planogramId'
     | '/checker/planograms/new'
     | '/checker/reports/adhoc'
@@ -1137,6 +1171,7 @@ export interface FileRouteTypes {
     | '/maker/shelves/'
     | '/maker/store-settings/'
     | '/admin/$storeId/audit-report/$auditId'
+    | '/admin/$storeId/fixture-types/$shelfId'
     | '/admin/$storeId/planograms/$planogramId'
     | '/admin/$storeId/planograms/new'
     | '/admin/$storeId/reports/adhoc'
@@ -1148,9 +1183,11 @@ export interface FileRouteTypes {
     | '/checker/audits/adhoc/new'
     | '/checker/audits/planogram/new'
     | '/checker/shelf/$shelfId/analysis'
+    | '/admin/$storeId/fixture-types/'
     | '/admin/$storeId/planograms/'
     | '/admin/$storeId/shelf/'
     | '/checker/audit-report/$auditId/'
+    | '/checker/fixture-types/$shelfId/'
     | '/checker/planograms/$planogramId/'
     | '/checker/planograms/new/'
     | '/checker/reports/adhoc/'
@@ -1673,6 +1710,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerPlanogramsPlanogramIdIndexRouteImport
       parentRoute: typeof CheckerRouteRoute
     }
+    '/checker/fixture-types/$shelfId/': {
+      id: '/checker/fixture-types/$shelfId/'
+      path: '/fixture-types/$shelfId'
+      fullPath: '/checker/fixture-types/$shelfId/'
+      preLoaderRoute: typeof CheckerFixtureTypesShelfIdIndexRouteImport
+      parentRoute: typeof CheckerRouteRoute
+    }
     '/checker/audit-report/$auditId/': {
       id: '/checker/audit-report/$auditId/'
       path: '/audit-report/$auditId'
@@ -1693,6 +1737,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/$storeId/planograms/'
       preLoaderRoute: typeof AdminStoreIdPlanogramsIndexRouteImport
       parentRoute: typeof AdminStoreIdRoute
+    }
+    '/admin/$storeId/fixture-types/': {
+      id: '/admin/$storeId/fixture-types/'
+      path: '/'
+      fullPath: '/admin/$storeId/fixture-types/'
+      preLoaderRoute: typeof AdminStoreIdFixtureTypesIndexRouteImport
+      parentRoute: typeof AdminStoreIdFixtureTypesRoute
     }
     '/checker/shelf/$shelfId/analysis': {
       id: '/checker/shelf/$shelfId/analysis'
@@ -1770,6 +1821,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/$storeId/planograms/$planogramId'
       preLoaderRoute: typeof AdminStoreIdPlanogramsPlanogramIdRouteImport
       parentRoute: typeof AdminStoreIdRoute
+    }
+    '/admin/$storeId/fixture-types/$shelfId': {
+      id: '/admin/$storeId/fixture-types/$shelfId'
+      path: '/$shelfId'
+      fullPath: '/admin/$storeId/fixture-types/$shelfId'
+      preLoaderRoute: typeof AdminStoreIdFixtureTypesShelfIdRouteImport
+      parentRoute: typeof AdminStoreIdFixtureTypesRoute
     }
     '/admin/$storeId/audit-report/$auditId': {
       id: '/admin/$storeId/audit-report/$auditId'
@@ -1851,6 +1909,22 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AdminStoreIdFixtureTypesRouteChildren {
+  AdminStoreIdFixtureTypesShelfIdRoute: typeof AdminStoreIdFixtureTypesShelfIdRoute
+  AdminStoreIdFixtureTypesIndexRoute: typeof AdminStoreIdFixtureTypesIndexRoute
+}
+
+const AdminStoreIdFixtureTypesRouteChildren: AdminStoreIdFixtureTypesRouteChildren =
+  {
+    AdminStoreIdFixtureTypesShelfIdRoute: AdminStoreIdFixtureTypesShelfIdRoute,
+    AdminStoreIdFixtureTypesIndexRoute: AdminStoreIdFixtureTypesIndexRoute,
+  }
+
+const AdminStoreIdFixtureTypesRouteWithChildren =
+  AdminStoreIdFixtureTypesRoute._addFileChildren(
+    AdminStoreIdFixtureTypesRouteChildren,
+  )
+
 interface AdminStoreIdShelfShelfIdRouteChildren {
   AdminStoreIdShelfShelfIdAnalysisRoute: typeof AdminStoreIdShelfShelfIdAnalysisRoute
 }
@@ -1869,7 +1943,7 @@ const AdminStoreIdShelfShelfIdRouteWithChildren =
 interface AdminStoreIdRouteChildren {
   AdminStoreIdAuditReviewRoute: typeof AdminStoreIdAuditReviewRoute
   AdminStoreIdDashboardRoute: typeof AdminStoreIdDashboardRoute
-  AdminStoreIdFixtureTypesRoute: typeof AdminStoreIdFixtureTypesRoute
+  AdminStoreIdFixtureTypesRoute: typeof AdminStoreIdFixtureTypesRouteWithChildren
   AdminStoreIdKnowledgeCenterRoute: typeof AdminStoreIdKnowledgeCenterRoute
   AdminStoreIdShelfTemplatesRoute: typeof AdminStoreIdShelfTemplatesRoute
   AdminStoreIdStoreSettingsRoute: typeof AdminStoreIdStoreSettingsRoute
@@ -1892,7 +1966,7 @@ interface AdminStoreIdRouteChildren {
 const AdminStoreIdRouteChildren: AdminStoreIdRouteChildren = {
   AdminStoreIdAuditReviewRoute: AdminStoreIdAuditReviewRoute,
   AdminStoreIdDashboardRoute: AdminStoreIdDashboardRoute,
-  AdminStoreIdFixtureTypesRoute: AdminStoreIdFixtureTypesRoute,
+  AdminStoreIdFixtureTypesRoute: AdminStoreIdFixtureTypesRouteWithChildren,
   AdminStoreIdKnowledgeCenterRoute: AdminStoreIdKnowledgeCenterRoute,
   AdminStoreIdShelfTemplatesRoute: AdminStoreIdShelfTemplatesRoute,
   AdminStoreIdStoreSettingsRoute: AdminStoreIdStoreSettingsRoute,
@@ -1977,6 +2051,7 @@ interface CheckerRouteRouteChildren {
   CheckerAuditsAdhocNewRoute: typeof CheckerAuditsAdhocNewRoute
   CheckerAuditsPlanogramNewRoute: typeof CheckerAuditsPlanogramNewRoute
   CheckerAuditReportAuditIdIndexRoute: typeof CheckerAuditReportAuditIdIndexRoute
+  CheckerFixtureTypesShelfIdIndexRoute: typeof CheckerFixtureTypesShelfIdIndexRoute
   CheckerPlanogramsPlanogramIdIndexRoute: typeof CheckerPlanogramsPlanogramIdIndexRoute
   CheckerPlanogramsNewIndexRoute: typeof CheckerPlanogramsNewIndexRoute
   CheckerReportsAdhocIndexRoute: typeof CheckerReportsAdhocIndexRoute
@@ -2004,6 +2079,7 @@ const CheckerRouteRouteChildren: CheckerRouteRouteChildren = {
   CheckerAuditsAdhocNewRoute: CheckerAuditsAdhocNewRoute,
   CheckerAuditsPlanogramNewRoute: CheckerAuditsPlanogramNewRoute,
   CheckerAuditReportAuditIdIndexRoute: CheckerAuditReportAuditIdIndexRoute,
+  CheckerFixtureTypesShelfIdIndexRoute: CheckerFixtureTypesShelfIdIndexRoute,
   CheckerPlanogramsPlanogramIdIndexRoute:
     CheckerPlanogramsPlanogramIdIndexRoute,
   CheckerPlanogramsNewIndexRoute: CheckerPlanogramsNewIndexRoute,

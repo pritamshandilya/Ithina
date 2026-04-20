@@ -1,15 +1,15 @@
-import { Plus, Search } from "lucide-react";
+import { Folder, Plus, Search } from "lucide-react";
 import type { RefObject } from "react";
 
-import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
-import { PlanogramActionsMenu } from "@/components/planogram/planogram-table-columns";
-import { StoreConfigurationModals } from "@/components/checker/stores/store-configuration-modals";
-import { AddShelfModeModal } from "@/components/checker/stores/add-shelf-mode-modal";
 import {
   BulkAddShelvesModal,
   type ParsedBulkPayload,
 } from "@/components/checker/stores/bulk-add-shelves-modal";
+import { StoreConfigurationModals } from "@/components/checker/stores/store-configuration-modals";
+import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
 import MainLayout from "@/components/layouts/main";
+import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
+import { PlanogramActionsMenu } from "@/components/planogram/planogram-table-columns";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/confirm-modal";
@@ -18,11 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
-import type { PlanogramShelfRow } from "@/types/maker";
-import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import type { StoreFixtureApiModel } from "@/queries/checker/api/fixtures";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { PlanogramShelfRow } from "@/types/maker";
 
 const FIXTURE_TABLE_PAGE_SIZE_OPTIONS: number[] = [10, 20, 50, 75, 100];
 
@@ -34,15 +33,12 @@ interface StoreFixturesPageViewProps {
   onOpenCreateFixture: () => void;
   onOpenAddShelf: () => void;
   onBulkAddShelves: () => void;
-  onBulkActions: () => void;
   tableWrapperRef: RefObject<HTMLDivElement | null>;
   fixtureShelfRows: PlanogramShelfRow[];
   tablePagination: { page: number; pageSize: number };
   setTablePagination: (value: { page: number; pageSize: number }) => void;
   columns: DataTableColumn<PlanogramShelfRow>[];
   onRowClick: (row: PlanogramShelfRow) => void;
-  groupedByFixture: (row: PlanogramShelfRow) => string;
-  fixtureGroupHeader: (value: string, count: number) => string;
   isDeleteConfirmOpen: boolean;
   onCloseDeleteConfirm: () => void;
   onConfirmDelete: () => void;
@@ -68,17 +64,12 @@ interface StoreFixturesPageViewProps {
   onAddShelfForFixture: (row: PlanogramShelfRow) => void;
   onViewComplianceRule: (row: PlanogramShelfRow) => void;
   onAssociatePlanogram: (row: PlanogramShelfRow) => void;
+  onViewFixture: (row: PlanogramShelfRow) => void;
+  onDeleteFixture: (row: PlanogramShelfRow) => void;
+  onRunAdhocAnalysis: (row: PlanogramShelfRow) => void;
   isBulkAddModalOpen: boolean;
   onCloseBulkAddModal: () => void;
   onSubmitBulkShelves: (payload: ParsedBulkPayload) => Promise<number>;
-  isAddShelfModalOpen: boolean;
-  onCloseAddShelfModal: () => void;
-  shelfTemplates: { id: string; name: string }[];
-  shelfTemplatesLoading: boolean;
-  onContinueAddShelf: (payload: {
-    addMode: "manual" | "template";
-    templateId?: string;
-  }) => void;
   planogramAssociationModalOpen: boolean;
   onClosePlanogramAssociationModal: () => void;
   pendingPlanogramId: string;
@@ -98,15 +89,12 @@ export function StoreFixturesPageView({
   onOpenCreateFixture,
   onOpenAddShelf,
   onBulkAddShelves,
-  onBulkActions,
   tableWrapperRef,
   fixtureShelfRows,
   tablePagination,
   setTablePagination,
   columns,
   onRowClick,
-  groupedByFixture,
-  fixtureGroupHeader,
   isDeleteConfirmOpen,
   onCloseDeleteConfirm,
   onConfirmDelete,
@@ -127,14 +115,12 @@ export function StoreFixturesPageView({
   onAddShelfForFixture,
   onViewComplianceRule,
   onAssociatePlanogram,
+  onViewFixture,
+  onDeleteFixture,
+  onRunAdhocAnalysis,
   isBulkAddModalOpen,
   onCloseBulkAddModal,
   onSubmitBulkShelves,
-  isAddShelfModalOpen,
-  onCloseAddShelfModal,
-  shelfTemplates,
-  shelfTemplatesLoading,
-  onContinueAddShelf,
   planogramAssociationModalOpen,
   onClosePlanogramAssociationModal,
   pendingPlanogramId,
@@ -149,21 +135,21 @@ export function StoreFixturesPageView({
     <MainLayout
       pageHeader={
         <PageHeader
-          title="Fixtures"
-          description="View and manage store fixture configuration."
+          title="Display Unit"
+          description="View and manage store display units configuration."
         />
       }
     >
-      <div className="bg-primary px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4">
+      <div className="bg-primary px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto w-full max-w-screen-2xl space-y-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative group w-full sm:max-w-md">
-              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent" />
+            <div className="group relative w-full sm:max-w-md">
+              <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
                 placeholder="Search fixture by type, code, or location..."
                 value={searchQuery}
                 onChange={(e) => onSearchChange(e.target.value)}
-                className="h-12 border-border bg-card pl-11 text-foreground placeholder:text-muted-foreground transition-all hover:border-accent/50 focus:border-accent"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus:border-accent h-12 pl-11 transition-all"
               />
             </div>
             {canEdit && (
@@ -172,10 +158,20 @@ export function StoreFixturesPageView({
                   type="button"
                   variant="outline"
                   className="h-10 items-center gap-1.5 px-4"
+                  onClick={onBulkAddShelves}
+                >
+                  <Folder className="size-4" aria-hidden />
+                  Bulk Add Shelves
+                </Button>
+                <Button
+                  type="button"
+                  variant="success"
+                  className="h-10 items-center gap-1.5 px-4"
                   onClick={onOpenCreateFixture}
                   disabled={isCreatingFixture}
                 >
-                  {isCreatingFixture ? "Adding..." : "Add fixture"}
+                  <Plus className="size-4" aria-hidden />
+                  Add fixture
                 </Button>
                 <Button
                   type="button"
@@ -186,23 +182,15 @@ export function StoreFixturesPageView({
                   <Plus className="size-4" aria-hidden />
                   Add Shelf
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-10 items-center gap-1.5 px-4"
-                  onClick={onBulkAddShelves}
-                >
-                  Bulk Add Shelf
-                </Button>
               </div>
             )}
           </div>
 
-          <div ref={tableWrapperRef} className="flex-1 min-h-0">
+          <div ref={tableWrapperRef} className="min-h-0 flex-1">
             {fixtureShelfRows.length > 0 && (
-              <p className="mb-2 shrink-0 text-sm text-muted-foreground">
+              <p className="text-muted-foreground mb-2 shrink-0 text-sm">
                 Showing{" "}
-                <span className="font-semibold text-foreground">
+                <span className="text-foreground font-semibold">
                   {Math.max(
                     0,
                     Math.min(
@@ -213,8 +201,10 @@ export function StoreFixturesPageView({
                   )}
                 </span>{" "}
                 of{" "}
-                <span className="font-semibold text-foreground">{fixtureShelfRows.length}</span>{" "}
-                shelf{fixtureShelfRows.length !== 1 ? "s" : ""}
+                <span className="text-foreground font-semibold">
+                  {fixtureShelfRows.length}
+                </span>{" "}
+                fixture{fixtureShelfRows.length !== 1 ? "s" : ""}
               </p>
             )}
             <DataTable<PlanogramShelfRow>
@@ -228,10 +218,6 @@ export function StoreFixturesPageView({
               layout="fitData"
               onPaginationChange={setTablePagination}
               onRowClick={onRowClick}
-              groupBy={groupedByFixture}
-              groupHeader={fixtureGroupHeader}
-              groupStartOpen
-              groupToggleElement="arrow"
             />
           </div>
         </div>
@@ -268,13 +254,28 @@ export function StoreFixturesPageView({
             variant="checker"
             onClose={onCloseActionsMenu}
             onEditShelf={actionsMenu.mode === "shelf" ? onEditShelf : undefined}
-            onDeleteShelf={actionsMenu.mode === "shelf" ? onDeleteShelf : undefined}
-            onAddShelf={actionsMenu.mode === "fixture" ? onAddShelfForFixture : undefined}
+            onDeleteShelf={
+              actionsMenu.mode === "shelf" ? onDeleteShelf : undefined
+            }
+            onAddShelf={
+              actionsMenu.mode === "fixture" ? onAddShelfForFixture : undefined
+            }
+            onView={actionsMenu.mode === "fixture" ? onViewFixture : undefined}
+            onDeleteFixture={
+              actionsMenu.mode === "fixture" ? onDeleteFixture : undefined
+            }
+            onRunAdhoc={
+              actionsMenu.mode === "fixture" ? onRunAdhocAnalysis : undefined
+            }
             onViewComplianceRule={
               actionsMenu.mode === "fixture" ? onViewComplianceRule : undefined
             }
             onAssociatePlanogram={
               actionsMenu.mode === "fixture" ? onAssociatePlanogram : undefined
+            }
+            editLabel={actionsMenu.mode === "fixture" ? "Edit Fixture" : "Edit"}
+            deleteLabel={
+              actionsMenu.mode === "fixture" ? "Delete Fixture" : "Delete"
             }
           />
         ) : null}
@@ -285,23 +286,17 @@ export function StoreFixturesPageView({
           onSubmitBulk={onSubmitBulkShelves}
         />
 
-        <AddShelfModeModal
-          isOpen={isAddShelfModalOpen}
-          onClose={onCloseAddShelfModal}
-          shelfTemplates={shelfTemplates}
-          shelfTemplatesLoading={shelfTemplatesLoading}
-          onContinue={onContinueAddShelf}
-        />
-
         <Modal
           isOpen={planogramAssociationModalOpen}
           onClose={onClosePlanogramAssociationModal}
           className="max-w-lg"
           showCloseButton
         >
-          <div className="rounded-xl border border-border bg-card p-6 shadow-2xl">
-            <h3 className="text-lg font-semibold text-foreground">Associate Planogram</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+          <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
+            <h3 className="text-foreground text-lg font-semibold">
+              Associate Planogram
+            </h3>
+            <p className="text-muted-foreground mt-1 text-sm">
               This association is currently stored on frontend only.
             </p>
             <div className="mt-4 space-y-2">
@@ -320,7 +315,10 @@ export function StoreFixturesPageView({
               </Select>
             </div>
             <div className="mt-6 flex justify-end gap-2">
-              <Button variant="outline" onClick={onClosePlanogramAssociationModal}>
+              <Button
+                variant="outline"
+                onClick={onClosePlanogramAssociationModal}
+              >
                 Cancel
               </Button>
               <Button variant="success" onClick={onSavePlanogramAssociation}>

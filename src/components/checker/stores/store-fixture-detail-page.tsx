@@ -1,0 +1,378 @@
+import { useLocation, useNavigate } from "@tanstack/react-router";
+import { ArrowLeft, Check } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+import MainLayout from "@/components/layouts/main";
+import { SectionPillTabs } from "@/components/shared";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { getFixturePlanogramAssociationsStorageKey } from "@/lib/fixtures/fixture-planogram-storage";
+import { useStore as useGlobalStore } from "@/providers/store";
+import {
+  useCreateShelf,
+  usePlanogramById,
+  usePlanogramList,
+  usePlanogramShelfPreview,
+  useShelves,
+  useUpdateShelf,
+} from "@/queries/maker";
+import { useShelfTemplates } from "@/queries/checker";
+import { fetchStoreFixtures, updateStoreFixture } from "@/queries/checker/api/fixtures";
+
+import { StoreFixtureDetailFixtureTabCard } from "./store-fixture-detail-fixture-tab-card";
+import type { FixtureFormDraft } from "./store-fixture-detail-fixture-tab-card";
+import { StoreFixtureDetailPlanogramTab } from "./store-fixture-detail-planogram-tab";
+import { StoreFixtureDetailShelvesTab } from "./store-fixture-detail-shelves-tab";
+import { AddShelfFormModal } from "./add-shelf-form-modal";
+import { usePersistedFixturePlanogramOverrides } from "./use-persisted-fixture-planogram-overrides";
+import { useStoreFixtureDetailPlanogramEditor } from "./use-store-fixture-detail-planogram-editor";
+
+export interface StoreFixtureDetailPageProps {
+  shelfId: string;
+  storeId?: string;
+  isAdminPath?: boolean;
+  fallbackPath: string;
+}
+
+type DetailTabId = "fixture" | "shelf" | "planogram";
+
+const DETAIL_TABS: { id: DetailTabId; label: string }[] = [
+  { id: "fixture", label: "Fixture Details" },
+  { id: "shelf", label: "Shelves" },
+  { id: "planogram", label: "Planogram" },
+];
+
+export function StoreFixtureDetailPage({
+  shelfId,
+  storeId,
+  isAdminPath: _isAdminPath = false,
+  fallbackPath,
+}: StoreFixtureDetailPageProps) {
+  const { toast } = useToast();
+  const { selectedStore } = useGlobalStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const routeState = (location.state as { from?: string; fixtureId?: string } | undefined) ?? {};
+  const from = routeState.from;
+
+  const effectiveStoreId = storeId ?? selectedStore?.id;
+  const { data: preview, isLoading } = usePlanogramShelfPreview(shelfId);
+  const selectedFixtureId = preview?.shelf?.fixtureId ?? routeState.fixtureId;
+  const { data: shelfRows = [] } = useShelves(selectedFixtureId);
+  const { data: planogramList = [] } = usePlanogramList();
+  const { data: fixtures = [] } = useQuery({
+    queryKey: ["maker", "fixtures", "list", effectiveStoreId ?? "no-store"],
+    queryFn: fetchStoreFixtures,
+    staleTime: 60 * 1000,
+  });
+  const updateShelfMutation = useUpdateShelf();
+  const { data: shelfTemplates = [], isLoading: shelfTemplatesLoading } = useShelfTemplates();
+  const createShelfMutation = useCreateShelf();
+
+  const fixture = useMemo(
+    () => fixtures.find((item) => item.id === selectedFixtureId) ?? null,
+    [fixtures, selectedFixtureId],
+  );
+
+  const [activeTab, setActiveTab] = useState<DetailTabId>("fixture");
+  const [isFixtureEditing, setIsFixtureEditing] = useState(false);
+  const [isFixtureSaving, setIsFixtureSaving] = useState(false);
+  const [isAddShelfModalOpen, setIsAddShelfModalOpen] = useState(false);
+  const [isCreatingShelf, setIsCreatingShelf] = useState(false);
+  const [fixturePlanogramOverrides, setFixturePlanogramOverrides] = useState<
+    Record<string, string | null>
+  >({});
+  const [fixtureDraft, setFixtureDraft] = useState<FixtureFormDraft>({
+    type: "",
+    code: "",
+    width: "",
+    height: "",
+    depth: "",
+    dimensionUnit: "mm",
+    aisle: "",
+    section: "",
+    zone: "",
+    planogramId: "",
+  });
+  const fixtureAssociationStorageKey = getFixturePlanogramAssociationsStorageKey(effectiveStoreId);
+
+  usePersistedFixturePlanogramOverrides({
+    storageKey: fixtureAssociationStorageKey,
+    overrides: fixturePlanogramOverrides,
+    setOverrides: setFixturePlanogramOverrides,
+  });
+
+  const effectiveFixturePlanogramId = fixture
+    ? (fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? "")
+    : "";
+  const { data: associatedPlanogramPayload } = usePlanogramById(
+    preview?.planogramPayload ? null : (effectiveFixturePlanogramId || null),
+  );
+  const resolvedPlanogramPayload = preview?.planogramPayload ?? associatedPlanogramPayload ?? null;
+
+  const planogramEditor = useStoreFixtureDetailPlanogramEditor({
+    shelfId,
+    preview: preview ?? undefined,
+    resolvedPlanogramPayload,
+  });
+
+  useEffect(() => {
+    if (!fixture) return;
+    setFixtureDraft({
+      type: fixture.type,
+      code: fixture.code ?? "",
+      width: String(fixture.dimensions.width),
+      height: String(fixture.dimensions.height),
+      depth: String(fixture.dimensions.depth),
+      dimensionUnit: fixture.dimension_unit || "mm",
+      aisle: fixture.physical_location.aisle,
+      section: fixture.physical_location.section,
+      zone: fixture.physical_location.zone,
+      planogramId: fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? "",
+    });
+  }, [fixture, fixturePlanogramOverrides]);
+
+  const planogram = resolvedPlanogramPayload?.planogram;
+  const metadata = resolvedPlanogramPayload?.metadata;
+  const planogramOptions = planogramList.map((item) => ({ id: item.id, name: item.name }));
+  const isMissingPlanogram = !!preview && !resolvedPlanogramPayload;
+
+  const handleBack = () => {
+    navigate({ to: from ?? fallbackPath, replace: true });
+  };
+
+  const handleSaveFixture = useCallback(async () => {
+    if (!fixture || !effectiveStoreId) return;
+    const width = Number(fixtureDraft.width);
+    const height = Number(fixtureDraft.height);
+    const depth = Number(fixtureDraft.depth);
+    if (!fixtureDraft.type.trim() || !Number.isFinite(width) || !Number.isFinite(height) || !Number.isFinite(depth)) {
+      toast({ title: "Invalid fixture details", description: "Please enter valid fixture values.", variant: "destructive" });
+      return;
+    }
+    setIsFixtureSaving(true);
+    try {
+      await updateStoreFixture(effectiveStoreId, fixture.id, {
+        type: fixtureDraft.type.trim(),
+        code: fixtureDraft.code.trim() || undefined,
+        dimensions: { width, height, depth },
+        dimension_unit: fixtureDraft.dimensionUnit,
+        physical_location: {
+          aisle: fixtureDraft.aisle.trim(),
+          section: fixtureDraft.section.trim(),
+          zone: fixtureDraft.zone.trim(),
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["maker", "fixtures", "list"] });
+      setIsFixtureEditing(false);
+      toast({ title: "Fixture updated", description: "Fixture details were saved.", variant: "success" });
+    } catch (saveError) {
+      toast({
+        title: "Failed to save fixture",
+        description: saveError instanceof Error ? saveError.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFixtureSaving(false);
+    }
+  }, [effectiveStoreId, fixture, fixtureDraft, queryClient, toast]);
+
+  const handleSavePlanogramAssociation = useCallback(() => {
+    if (!fixture) return;
+    setFixturePlanogramOverrides((previous) => ({
+      ...previous,
+      [fixture.id]: fixtureDraft.planogramId || null,
+    }));
+    toast({
+      title: "Planogram association saved",
+      description: "This association is currently stored on frontend only.",
+      variant: "success",
+    });
+  }, [fixture, fixtureDraft.planogramId, toast]);
+
+  const handleInlineShelfUpdate = useCallback(
+    async (
+      targetShelfId: string,
+      updates: Partial<{
+        name: string;
+        code: string;
+        width: number;
+        height: number;
+        vertical_position: number;
+      }>,
+    ) => {
+      await updateShelfMutation.mutateAsync({
+        shelfId: targetShelfId,
+        payload: updates,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["maker", "shelves"] });
+    },
+    [queryClient, updateShelfMutation],
+  );
+
+  const handleCreateShelf = useCallback(
+    async (values: {
+      name: string;
+      code?: string;
+      width: number;
+      height: number;
+      vertical_position: number;
+    }) => {
+      if (!selectedFixtureId) {
+        toast({
+          title: "Fixture missing",
+          description: "Cannot add shelf without a fixture context.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setIsCreatingShelf(true);
+      const generatedCode = `SH-${Date.now().toString().slice(-6)}`;
+      try {
+        await createShelfMutation.mutateAsync({
+          ...values,
+          code: values.code?.trim() || generatedCode,
+          fixture_id: selectedFixtureId,
+        });
+        await queryClient.invalidateQueries({ queryKey: ["maker", "shelves"] });
+        setIsAddShelfModalOpen(false);
+        toast({
+          title: "Shelf created",
+          description: "New shelf has been added to this fixture.",
+          variant: "success",
+        });
+      } catch (error) {
+        toast({
+          title: "Failed to create shelf",
+          description: error instanceof Error ? error.message : "Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsCreatingShelf(false);
+      }
+    },
+    [createShelfMutation, queryClient, selectedFixtureId, toast],
+  );
+
+  return (
+    <MainLayout>
+      <div className="min-h-screen bg-primary px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
+          <header className="flex flex-wrap items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={handleBack} aria-label="Back">
+              <ArrowLeft className="size-4" aria-hidden />
+            </Button>
+            <div className="min-w-0 flex-1">
+              {isLoading ? (
+                <Skeleton className="h-8 w-64" />
+              ) : (
+                <>
+                  <h1 className="truncate text-2xl font-bold text-foreground">
+                    {preview?.shelf.shelfName ?? fixture?.type ?? "Fixture details"}
+                  </h1>
+                  <p className="text-sm text-muted-foreground">
+                    {fixture?.type ?? "Fixture"} · v{planogram?.version ?? "1.0"} · {metadata?.location ?? "—"}
+                  </p>
+                </>
+              )}
+            </div>
+            {activeTab === "planogram" &&
+              planogramEditor.hasChanges &&
+              !planogramEditor.isMissingPlanogram && (
+                <Button
+                  onClick={planogramEditor.handleSaveArrangement}
+                  disabled={planogramEditor.isSavingArrangement}
+                  variant="success"
+                >
+                  <Check className="size-4" aria-hidden />
+                  {planogramEditor.isSavingArrangement ? "Saving..." : "Save Planogram"}
+                </Button>
+              )}
+          </header>
+
+          <SectionPillTabs
+            tabs={DETAIL_TABS}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            ariaLabel="Fixture detail sections"
+          />
+
+          {activeTab === "fixture" && (
+            <StoreFixtureDetailFixtureTabCard
+              fixtureDraft={fixtureDraft}
+              setFixtureDraft={setFixtureDraft}
+              isFixtureEditing={isFixtureEditing}
+              setIsFixtureEditing={setIsFixtureEditing}
+              isFixtureSaving={isFixtureSaving}
+              onSaveFixture={handleSaveFixture}
+            />
+          )}
+
+          {activeTab === "shelf" && !isLoading && (
+            <StoreFixtureDetailShelvesTab
+              onOpenAddShelf={() => setIsAddShelfModalOpen(true)}
+              onInlineShelfUpdate={handleInlineShelfUpdate}
+              shelfRows={shelfRows}
+              fixtureId={selectedFixtureId}
+            />
+          )}
+
+          {activeTab === "planogram" && !isLoading && (
+            <StoreFixtureDetailPlanogramTab
+              isMissingPlanogram={isMissingPlanogram}
+              effectivePayload={planogramEditor.effectivePayload}
+              planogramFixture={planogramEditor.planogramFixture}
+              highDemandSkus={planogramEditor.highDemandSkus}
+              stats={planogramEditor.stats}
+              shelvesToShow={planogramEditor.shelvesToShow}
+              baseShelves={planogramEditor.baseShelves}
+              shelfCapacities={planogramEditor.shelfCapacities}
+              removedItems={planogramEditor.removedItems}
+              selectedCategories={planogramEditor.selectedCategories}
+              onToggleCategory={planogramEditor.onToggleCategory}
+              editHandlers={planogramEditor.editHandlers}
+              onRestoreProduct={planogramEditor.onRestoreProduct}
+              onRemoveProduct={planogramEditor.editHandlers.onRemoveProduct}
+              onMoveProduct={planogramEditor.editHandlers.onMoveProduct}
+              dragRef={planogramEditor.dragRef}
+              planogramOptions={planogramOptions}
+              planogramId={fixtureDraft.planogramId}
+              onPlanogramIdChange={(value) =>
+                setFixtureDraft((prev) => ({ ...prev, planogramId: value }))
+              }
+              onSaveAssociation={handleSavePlanogramAssociation}
+              effectiveFixturePlanogramId={effectiveFixturePlanogramId}
+            />
+          )}
+        </div>
+      </div>
+      <AddShelfFormModal
+        isOpen={isAddShelfModalOpen}
+        onClose={() => setIsAddShelfModalOpen(false)}
+        onSubmit={handleCreateShelf}
+        isSaving={isCreatingShelf}
+        shelfTemplates={shelfTemplates}
+        shelfTemplatesLoading={shelfTemplatesLoading}
+        defaultDimensionUnit={(fixture?.dimension_unit ?? "mm") as StoreDimensionUnit}
+        fixtureOptions={
+          selectedFixtureId && fixture
+            ? [
+                {
+                  id: selectedFixtureId,
+                  label: fixture.code
+                    ? `${fixture.code} (${fixture.type})`
+                    : `${fixture.type} - ${fixture.physical_location.zone}/${fixture.physical_location.section}`,
+                },
+              ]
+            : []
+        }
+        selectedFixtureId={selectedFixtureId ?? ""}
+        disableFixtureSelect
+      />
+    </MainLayout>
+  );
+}

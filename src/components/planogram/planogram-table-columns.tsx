@@ -326,6 +326,7 @@ export interface PlanogramActionsMenuProps {
   anchorPoint?: { x: number; y: number };
   variant: PlanogramActionsMenuVariant;
   onClose: () => void;
+  onView?: (row: PlanogramShelfRow) => void;
   onRunAdhoc?: (row: PlanogramShelfRow) => void;
   onRunPlanogram?: (row: PlanogramShelfRow) => void;
   onViewComplianceRule?: (row: PlanogramShelfRow) => void;
@@ -333,6 +334,9 @@ export interface PlanogramActionsMenuProps {
   onEditShelf?: (row: PlanogramShelfRow) => void;
   onAddShelf?: (row: PlanogramShelfRow) => void;
   onDeleteShelf?: (shelfId: string) => void;
+  onDeleteFixture?: (row: PlanogramShelfRow) => void;
+  editLabel?: string;
+  deleteLabel?: string;
 }
 
 const actionMenuButtonClass =
@@ -345,6 +349,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
     anchorPoint,
     variant,
     onClose,
+    onView,
     onRunAdhoc,
     onRunPlanogram,
     onViewComplianceRule,
@@ -352,6 +357,9 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
     onEditShelf,
     onAddShelf,
     onDeleteShelf,
+    onDeleteFixture,
+    editLabel = "Edit",
+    deleteLabel = "Delete",
   }: PlanogramActionsMenuProps,
   ref: Ref<HTMLDivElement>,
 ) {
@@ -409,7 +417,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
       )}
       style={{ left: pos.left, top: pos.top }}
     >
-      {variant === "checker" && !row.planogramId && onAssociatePlanogram ? (
+      {variant === "checker" && onAssociatePlanogram ? (
         <Button
           type="button"
           variant="icon-ghost"
@@ -423,6 +431,20 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           <span className="min-w-0">Associate Planogram</span>
         </Button>
       ) : null}
+      {onView ? (
+        <Button
+          type="button"
+          variant="icon-ghost"
+          className={actionMenuButtonClass}
+          onClick={() => {
+            onView(row);
+            onClose();
+          }}
+        >
+          <FileText className="shrink-0 text-muted-foreground" />
+          <span className="min-w-0">View</span>
+        </Button>
+      ) : null}
       {onEditShelf ? (
         <Button
           type="button"
@@ -434,7 +456,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           }}
         >
           <FilePenLine className="shrink-0 text-muted-foreground" />
-          <span className="min-w-0">Edit</span>
+          <span className="min-w-0">{editLabel}</span>
         </Button>
       ) : null}
       {onAddShelf ? (
@@ -462,10 +484,10 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           }}
         >
           <LayoutGrid className="shrink-0 text-muted-foreground" />
-          <span className="min-w-0">Planogram analysis</span>
+          <span className="min-w-0">Planogram Analysis</span>
         </Button>
       ) : null}
-      {onRunAdhoc ? (
+      {/* {onRunAdhoc ? (
         <Button
           type="button"
           variant="icon-ghost"
@@ -478,7 +500,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           <ScanLine className="shrink-0 text-muted-foreground" />
           <span className="min-w-0">Adhoc analysis</span>
         </Button>
-      ) : null}
+      ) : null} */}
       {onViewComplianceRule ? (
         <Button
           type="button"
@@ -499,12 +521,16 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
         variant="destructive-ghost"
         className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0"
         onClick={() => {
-          onDeleteShelf?.(row.id);
+          if (onDeleteFixture) {
+            onDeleteFixture(row);
+          } else {
+            onDeleteShelf?.(row.id);
+          }
           onClose();
         }}
       >
         <Trash2 />
-        Delete
+        {deleteLabel}
       </Button>
     </div>
   );

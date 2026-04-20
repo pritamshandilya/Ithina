@@ -4,26 +4,9 @@ import { Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { useToast } from "@/hooks/use-toast";
+import bulkShelvesSample from "@/lib/constants/bulk-shelves-sample.json";
 
-const BULK_SHELVES_SAMPLE_JSON = JSON.stringify(
-  {
-    fixtures: [
-      {
-        code: "FRONT-01",
-        type: "Gondola",
-        dimensions: { width: 120, height: 200, depth: 45 },
-        dimension_unit: "cm",
-        physical_location: { section: "Produce", aisle: "A1", zone: "North" },
-        shelves: [
-          { code: "S-A1-01", name: "Top Shelf", width: 100, height: 35, vertical_position: 10 },
-          { code: "S-A1-02", name: "Middle Shelf", width: 98, height: 35, vertical_position: 55 },
-        ],
-      },
-    ],
-  },
-  null,
-  2,
-);
+const BULK_SHELVES_SAMPLE_JSON = JSON.stringify(bulkShelvesSample, null, 2);
 
 export type BulkShelfInput = {
   code: string;

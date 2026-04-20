@@ -16,7 +16,14 @@ export function buildFixtureGroupHeader(
   const section = fixture?.physical_location.section ?? "—";
   return `
     <span class="fixture-group-header inline-flex items-center gap-2 py-1">
-      <span class="fixture-group-label">${fixtureLabel} (Aisle ${aisle} · Zone ${zone} · Section ${section})</span>
+      <button
+        type="button"
+        class="fixture-group-label text-left hover:text-accent transition-colors"
+        data-action="fixture-group-open"
+        data-fixture-id="${value}"
+      >
+        ${fixtureLabel} (Aisle ${aisle} · Zone ${zone} · Section ${section})
+      </button>
       <div class="flex items-center justify-end gap-2 w-full">
       <span class="fixture-group-count">${count} shelf${count === 1 ? "" : "s"}</span>
       <button

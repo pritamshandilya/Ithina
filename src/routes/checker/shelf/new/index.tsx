@@ -1,10 +1,26 @@
-import { createFileRoute, useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { z } from "zod";
 
-import { useToast } from "@/hooks/use-toast";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
+import { AddPlanogramHeader } from "./-add-planogram-header";
+import { AddShelfDetailsCard } from "./-add-shelf-details-card";
+import { PlanogramPreviewCard } from "./-planogram-preview-card";
 import MainLayout from "@/components/layouts/main";
+import { useToast } from "@/hooks/use-toast";
+import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
+import { cn } from "@/lib/utils";
+import { useStore } from "@/providers/store";
+import {
+  useDimensionUnits,
+  useShelfTemplates,
+  useStoreFixtureTypes,
+} from "@/queries/checker";
 import {
   useAssignPlanogramToShelf,
   useCreateShelf,
@@ -13,17 +29,8 @@ import {
   useShelves,
   useStoreFixtures,
 } from "@/queries/maker";
-import { useShelfTemplates, useStoreFixtureTypes } from "@/queries/checker";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { ShelfTemplate } from "@/types/shelf-template";
-import { cn } from "@/lib/utils";
-import { useStore } from "@/providers/store";
-import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
-import { useDimensionUnits } from "@/queries/checker";
-import { AddPlanogramHeader } from "./-add-planogram-header";
-import { AddShelfDetailsCard } from "./-add-shelf-details-card";
-import { PlanogramPreviewCard } from "./-planogram-preview-card";
-import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,
@@ -39,8 +46,7 @@ export const Route = createFileRoute("/checker/shelf/new/")({
       .parse(search),
 });
 
-const fixtureTypeDedupeKey = (value: string) =>
-  fixtureTypeKey(value);
+const fixtureTypeDedupeKey = (value: string) => fixtureTypeKey(value);
 
 type AddPlanogramPageSearch = {
   associateShelfId?: string;
@@ -59,13 +65,20 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const location = useLocation();
   const params = useParams({ strict: false }) as { storeId?: string };
   const currentSearch = (location.search ?? {}) as AddPlanogramPageSearch;
-  const { associateShelfId, associateShelfName, fixtureId, templateId, addMode } =
-    searchOverride ?? currentSearch;
+  const {
+    associateShelfId,
+    associateShelfName,
+    fixtureId,
+    templateId,
+    addMode,
+  } = searchOverride ?? currentSearch;
   const isManualEntryMode = addMode === "manual";
   const isAdmin = location.pathname.includes("/admin/");
   const storeId = params.storeId as string | undefined;
   const shelfListPath =
-    isAdmin && storeId ? `/admin/${storeId}/shelf` : "/checker/shelf";
+    isAdmin && storeId
+      ? `/admin/${storeId}/fixture-types`
+      : "/checker/fixture-types";
   const { toast } = useToast();
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves } = useShelves();
@@ -186,16 +199,16 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   const applyShelfTemplate = useCallback(
     (tpl: ShelfTemplate, options?: { prefillShelfName?: boolean }) => {
       const prefillShelfName = options?.prefillShelfName ?? true;
-    setFixtureType(tpl.fixtureType);
-    setZone(tpl.zone ?? "");
-    setSection(tpl.section ?? "");
-    setDimWidth(String(tpl.width));
-    setDimHeight(String(tpl.height));
+      setFixtureType(tpl.fixtureType);
+      setZone(tpl.zone ?? "");
+      setSection(tpl.section ?? "");
+      setDimWidth(String(tpl.width));
+      setDimHeight(String(tpl.height));
       if (prefillShelfName) {
         setShelfName((prev) => (prev.trim() ? prev : tpl.name));
       }
     },
-    []
+    [],
   );
 
   // Depth comes from the store fixtures API (derived by fixture type + unit).
@@ -243,15 +256,15 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
   }, [isAssociateMode, associateShelfName]);
 
   const { data: planogramPayload, isLoading: planogramLoading } =
-    usePlanogramById(
-      selectedPlanogramId ? selectedPlanogramId : null
-    );
+    usePlanogramById(selectedPlanogramId ? selectedPlanogramId : null);
 
   const duplicateNameError = useMemo(() => {
     if (!shelfName.trim() || isSaving) return null;
     const excludeId = isAssociateMode ? associateShelfId : undefined;
     const exists = (shelves ?? []).some(
-      (s) => s.id !== excludeId && s.shelfName.toLowerCase() === shelfName.trim().toLowerCase()
+      (s) =>
+        s.id !== excludeId &&
+        s.shelfName.toLowerCase() === shelfName.trim().toLowerCase(),
     );
     return exists ? `A shelf named "${shelfName.trim()}" already exists` : null;
   }, [shelves, shelfName, isSaving, isAssociateMode, associateShelfId]);
@@ -298,11 +311,16 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
           planogramId: selectedPlanogramId,
           arrangement,
         });
-        toast({ title: "Planogram associated", description: "The planogram has been associated with the shelf." });
+        toast({
+          title: "Planogram associated",
+          description: "The planogram has been associated with the shelf.",
+        });
         navigate({ to: shelfListPath as never });
       } else if (!isAssociateMode) {
         if (fixturesLoading) {
-          setSaveError("Fixtures are still loading. Please wait a moment and try again.");
+          setSaveError(
+            "Display Units are still loading. Please wait a moment and try again.",
+          );
           return;
         }
 
@@ -325,15 +343,18 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
           : undefined;
         const exactMatches = storeFixtures.filter((f) => {
           return (
-            fixtureTypeDedupeKey(f.type) === fixtureTypeDedupeKey(fixtureTypeValue) &&
-            normalize(f.physical_location.section) === normalize(sectionValue) &&
+            fixtureTypeDedupeKey(f.type) ===
+              fixtureTypeDedupeKey(fixtureTypeValue) &&
+            normalize(f.physical_location.section) ===
+              normalize(sectionValue) &&
             normalize(f.physical_location.aisle) === normalize(aisleValue) &&
             normalize(f.physical_location.zone) === normalize(zoneValue)
           );
         });
         const typeMatches = storeFixtures.filter(
           (f) =>
-            fixtureTypeDedupeKey(f.type) === fixtureTypeDedupeKey(fixtureTypeValue),
+            fixtureTypeDedupeKey(f.type) ===
+            fixtureTypeDedupeKey(fixtureTypeValue),
         );
 
         const matchedFixture =
@@ -394,14 +415,19 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto max-w-screen-2xl space-y-4">
           <AddPlanogramHeader
             shelfListPath={shelfListPath}
             isAssociateMode={isAssociateMode}
           />
 
-          <div className={cn("grid gap-4", isAssociateMode ? "lg:grid-cols-2" : "w-full")}>
+          <div
+            className={cn(
+              "grid gap-4",
+              isAssociateMode ? "lg:grid-cols-2" : "w-full",
+            )}
+          >
             <div className="space-y-4">
               <AddShelfDetailsCard
                 isAssociateMode={isAssociateMode}

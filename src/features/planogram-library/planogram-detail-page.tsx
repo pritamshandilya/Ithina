@@ -15,6 +15,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanogramJsonOverview } from "@/features/planogram-library/planogram-json-overview";
+import { PlanogramRenderedPreview } from "@/features/planogram-library/planogram-rendered-preview";
 import { usePlanogramSectionHref } from "@/features/planogram-library/use-planogram-section-href";
 import { useToast } from "@/hooks/use-toast";
 import { parsePlanogramJsonText } from "@/lib/planogram/parse-planogram-json";
@@ -37,6 +38,7 @@ export function PlanogramDetailPage() {
 
   useEffect(() => {
     if (!data) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEditor(JSON.stringify(data, null, 2));
     setDraftPreview(null);
     setParseError(null);
@@ -80,7 +82,7 @@ export function PlanogramDetailPage() {
         variant: "destructive",
       });
     }
-  }, [editor, saveMutation, toast]);
+  }, [editor, planogramId, saveMutation, toast]);
 
   const handleDelete = useCallback(async () => {
     const ok = window.confirm("Remove this planogram from the library?");
@@ -194,11 +196,21 @@ export function PlanogramDetailPage() {
             </Card>
           ) : null}
 
-          <PlanogramJsonOverview
-            payload={displayPayload}
-            isLoading={isLoading && !draftPreview}
-            emptyMessage="Planogram not found."
-          />
+          <Card className="border-border bg-card/80">
+            <CardContent className="space-y-4 p-4">
+              <PlanogramJsonOverview
+                payload={displayPayload}
+                isLoading={isLoading && !draftPreview}
+                emptyMessage="Planogram not found."
+                embedded
+              />
+              <PlanogramRenderedPreview
+                payload={displayPayload}
+                isLoading={isLoading && !draftPreview}
+                embedded
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </MainLayout>

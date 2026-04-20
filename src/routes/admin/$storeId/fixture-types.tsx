@@ -1,7 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-
-import { StoreFixturesPage } from "@/components/checker/stores/StoreFixturesPage";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/admin/$storeId/fixture-types")({
-  component: () => <StoreFixturesPage canEdit />,
+  component: AdminFixtureTypesLayoutRoute,
 });
+
+function AdminFixtureTypesLayoutRoute() {
+  return <Outlet />;
+}

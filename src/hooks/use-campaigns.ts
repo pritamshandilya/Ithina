@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { useEffect } from "react";
+
+import { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 import { toast } from "@/hooks/use-toast";
 import {
@@ -20,15 +23,24 @@ import {
   getMonthNames,
   postCampaignChat,
   rejectCampaign,
+  submitCampaign,
   updateCampaign,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
 import type {
+  ApiCampaignApproveRequest,
   ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
+  ApiCampaignSubmitRequest,
 } from "@/types/api/campaigns";
+
+export type {
+  UseCampaignEventsContext,
+  UseCampaignEventsOptions,
+} from "@/hooks/use-campaign-events";
+export { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 export const campaignKeys = {
   all: ["campaigns"] as const,
@@ -151,10 +163,34 @@ export function useDeleteCampaign() {
   });
 }
 
+export function useSubmitCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: ApiCampaignSubmitRequest;
+    }) => submitCampaign(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
+    },
+  });
+}
+
 export function useApproveCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => approveCampaign(id),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: ApiCampaignApproveRequest;
+    }) => approveCampaign(id, payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: campaignKeys.list });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
@@ -230,6 +266,36 @@ export function useCampaignTimeline(campaignId: string) {
     staleTime: 10_000,
     gcTime: 5 * 60_000,
   });
+}
+
+/**
+ * Poll campaign events (legacy API). Prefer `useCampaignEvents` for start/stop/auto-stop.
+ * `enabled` toggles polling without unmounting; timeline cache is shared via invalidation on `campaignKeys.timeline(id)`.
+ */
+export function useCampaignEventsPolling(
+  campaignId: string,
+  enabled: boolean,
+  intervalMs = 3_000,
+) {
+  const { events, isLoading, isFetching, error, refetch, startPolling, stopPolling } =
+    useCampaignEvents(campaignId, {
+      intervalMs,
+      initialPolling: enabled,
+      shouldStop: () => false,
+    });
+
+  useEffect(() => {
+    if (enabled) startPolling();
+    else stopPolling();
+  }, [enabled, startPolling, stopPolling]);
+
+  return {
+    data: events,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  };
 }
 
 /** Post a chat message to the Campaign Studio AI (returns an event entry) */

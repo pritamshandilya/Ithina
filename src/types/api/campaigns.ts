@@ -91,6 +91,7 @@ export interface ApiCampaignDraftResponse {
   status: "draft_staged";
   session_id: string;
   message: string;
+  suggestions?: string[];
   skus: ApiCampaignSKU[];
   campaign_theme_name?: string | null;
   recommended_campaign_name?: string | null;
@@ -104,11 +105,57 @@ export interface ApiCampaignDraftResponse {
 // ─── Generate / save (Phase 2) ───────────────────────────────────────────────
 export interface ApiCampaignGenerateRequest {
   session_id: string;
-  name: string;
+  name?: string | null;
   hardware_targets: string[];
   scheduled_start?: string | null;
   scheduled_end?: string | null;
   scheduled_time?: string | null;
+}
+
+// ─── Submit for approval (Maker sends selected variant) ─────────────────────
+export interface ApiCampaignSubmitRequest {
+  selected_variant_id: string;
+  schedule_type?: string;
+}
+
+// ─── Approve (Checker confirms variant + triggers batch render) ─────────────
+export interface ApiCampaignApproveRequest {
+  selected_variant_id: string;
+  schedule_type?: string;
+}
+
+// ─── ESL layout elements (drawing commands from payload_snapshot) ─────────────
+export interface EslRectElement {
+  type: "rect";
+  x: number;
+  y: number;
+  x2: number;
+  y2: number;
+  color: string;
+  rounded?: boolean;
+}
+
+export interface EslTextElement {
+  type: "text";
+  x: number;
+  y: number;
+  content: string;
+  font_size: number;
+  bold?: boolean;
+  align?: "left" | "center" | "right";
+  color: string;
+  strike?: boolean;
+}
+
+export type EslLayoutElement = EslRectElement | EslTextElement;
+
+// ─── Layout variant from pipeline events ────────────────────────────────────
+export interface LayoutVariant {
+  variant_id: string;
+  hardware_type: string;
+  image_url?: string;
+  elements?: EslLayoutElement[];
+  background_candidates?: string[];
 }
 
 // ─── Campaign Chat (LangGraph conversational turn) ──────────────────────────

@@ -1,16 +1,21 @@
-/**
+﻿/**
  * ApprovalQueueTabulator — redesigned with IthTable (native HTML table).
  * Three tabs: Pending Approval · Approved · All
  * Design: Ithina Design System §2.4 + screenshots.
  */
 
-import { AlertTriangle, Check, Clock, Search, X, Zap } from "lucide-react";
+import { AlertTriangle, Check, Clock, Loader2, Search, X, Zap } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 
 import LoadingSpinner from "@/components/shared/loading-spinner";
 import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
-import { useInboxItems } from "@/hooks/use-approval";
-import { useApproveCampaign, useCampaignList, useRejectCampaign } from "@/hooks/use-campaigns";
+import { ApprovalPublishWatcher } from "@/features/approval/approval-publish-watcher";
+import { getSubmittedVariantId } from "@/features/campaign-studio/types";
+import type { ApiCampaignEventResponse } from "@/types/api/campaigns";
+import { useApproveInboxItem, useInboxItems, useRejectInboxItem } from "@/hooks/use-approval";
+import { campaignKeys, useCampaignList, useCampaignTimeline } from "@/hooks/use-campaigns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
@@ -80,6 +85,23 @@ function GuardRailsBadge({
   );
 }
 
+/* ─── Submitted variant badge ────────────────────────────────────────────── */
+
+/**
+ * Lazily loads the campaign timeline (React-Query cached) and shows the
+ * variant letter that the Maker selected before submitting for approval.
+ */
+function VariantBadge({ campaignId }: { campaignId: string }) {
+  const { data: events = [] } = useCampaignTimeline(campaignId);
+  const variantId = getSubmittedVariantId(events);
+  if (!variantId) return null;
+  return (
+    <span className="inline-flex items-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10 px-2 py-0.5 font-mono text-[10px] text-ithina-purple">
+      Variant {variantId}
+    </span>
+  );
+}
+
 /* ─── Checkbox cell & header ─────────────────────────────────────────────── */
 
 function CheckboxCell({
@@ -107,37 +129,24 @@ function CheckboxCell({
   );
 }
 
-/* ─── Static mock data ───────────────────────────────────────────────────── */
-
-const APPROVED_ROWS: ApprovedRow[] = [
-  { id: "CMP-9941-A", title: "Weekend Beverage Promo",  approvedBy: "Store Manager", skus: 42, hardware: ['ESL 4.2"', 'LCD 10"'],  approvedAt: "Mar 8 · 08:00 AM",  status: "Deployed"  },
-  { id: "CMP-9940-B", title: "Sushi Clearance – Urgent", approvedBy: "Sarah J.",    skus: 4,  hardware: ['ESL 4.2"', 'ESL 2.9"'], approvedAt: "Mar 7 · 11:15 AM",  status: "Deployed"  },
-  { id: "CMP-9938-D", title: "Spring Produce Launch",    approvedBy: "Store Manager",skus: 76, hardware: ['ESL 4.2"', 'LCD 10"'],  approvedAt: "Mar 6 · 14:00 PM",  status: "Scheduled" },
-  { id: "CMP-9936-F", title: "BOGO Snacks Promotion",    approvedBy: "Sarah J.",    skus: 22, hardware: ['ESL 4.2"'],               approvedAt: "Mar 3 · 09:30 AM",  status: "Deployed"  },
-];
-
-const ALL_ROWS: AllRow[] = [
-  { id: "CMP-9937-E", title: "Dairy & Bakery Weekend",  initiator: "Marcus T.",      skus: 31, approvalStatus: "Pending",  guardRails: "Pass",       date: "Mar 14 · 10:05 AM" },
-  { id: "CMP-9939-C", title: "Electronics Flash Sale",   initiator: "Sarah J.",       skus: 18, approvalStatus: "Pending",  guardRails: "1 warning",  date: "Mar 13 · 15:22 PM" },
-  { id: "CMP-9942-H", title: "Frozen Food Clearance",    initiator: "Auto-Scheduled", skus: 12, approvalStatus: "Pending",  guardRails: "Pass",       date: "Mar 12 · 09:44 AM" },
-  { id: "CMP-9941-A", title: "Weekend Beverage Promo",   initiator: "Store Manager",  skus: 42, approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 8 · 08:00 AM"  },
-  { id: "CMP-9940-B", title: "Sushi Clearance – Urgent", initiator: "Sarah J.",       skus: 4,  approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 7 · 11:15 AM"  },
-  { id: "CMP-9938-D", title: "Spring Produce Launch",    initiator: "Store Manager",  skus: 76, approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 6 · 14:00 PM"  },
-  { id: "CMP-9935-G", title: "Valentine's Day Special",  initiator: "Auto-Scheduled", skus: 15, approvalStatus: "Approved", guardRails: "Pass",       date: "Feb 14 · 08:00 AM" },
-  { id: "CMP-9934-X", title: "New Year Markdowns",       initiator: "Marcus T.",      skus: 9,  approvalStatus: "Rejected", guardRails: "2 warnings", date: "Jan 2 · 10:00 AM"  },
-];
+/* Mock data arrays removed — all tabs use real campaign data from API. */
 
 /* ─── Component ──────────────────────────────────────────────────────────── */
 
 export default function ApprovalQueueTabulator() {
   const { data: inbox = [], isLoading, isError } = useInboxItems();
   const { data: campaigns = [] } = useCampaignList();
-  const approveMutation = useApproveCampaign();
-  const rejectMutation = useRejectCampaign();
+  const approveMutation = useApproveInboxItem();
+  const rejectMutation = useRejectInboxItem();
+
+  const navigate = useNavigate();
+  const qc = useQueryClient();
 
   const [tab, setTab]       = useState<TabId>("pending");
   const [search, setSearch] = useState("");
   const [page, setPage]     = useState(1);
+  /** Set of campaign IDs currently being polled for `campaign_published`. */
+  const [publishWatchIds, setPublishWatchIds] = useState<Set<string>>(() => new Set());
 
   /* Pending tab selection */
   const [selectedIds,    setSelectedIds]    = useState<Set<string>>(() => new Set());
@@ -179,10 +188,37 @@ export default function ApprovalQueueTabulator() {
     [filteredPending],
   );
 
+  /**
+   * Read the submitted variant id from the React-Query timeline cache (already
+   * populated by VariantBadge). Avoids a redundant GET /events on approve.
+   */
+  const getCachedVariant = useCallback(
+    (campaignId: string): string | undefined =>
+      getSubmittedVariantId(
+        qc.getQueryData<ApiCampaignEventResponse[]>(
+          campaignKeys.timeline(campaignId),
+        ) ?? [],
+      ) ?? undefined,
+    [qc],
+  );
+
   const bulkApprove = useCallback(() => {
-    selectedIds.forEach((id) => approveMutation.mutate(id));
+    const pendingItems = filteredPending.filter((i) => selectedIds.has(i.id));
+    pendingItems.forEach((item) => {
+      if (!item.id) {
+        toast({ title: "Cannot approve", description: "Campaign ID is missing.", variant: "destructive" });
+        return;
+      }
+      approveMutation.mutate(
+        { id: item.id, scheduleType: item.scheduleType, selectedVariantId: getCachedVariant(item.id) },
+        {
+          onSuccess: () =>
+            setPublishWatchIds((prev) => new Set([...prev, item.id])),
+        },
+      );
+    });
     setSelectedIds(new Set());
-  }, [approveMutation, selectedIds]);
+  }, [approveMutation, filteredPending, getCachedVariant, selectedIds]);
 
   const bulkReject = useCallback(() => {
     selectedIds.forEach((id) => rejectMutation.mutate(id));
@@ -198,48 +234,66 @@ export default function ApprovalQueueTabulator() {
       const action = actionEl?.getAttribute("data-action");
       if (!action) return;
 
+      if (!row.id) {
+        toast({ title: "Cannot perform action", description: "Campaign ID is missing.", variant: "destructive" });
+        return;
+      }
+
       if (action === "approve") {
-        approveMutation.mutate(row.id);
+        approveMutation.mutate(
+          { id: row.id, scheduleType: row.scheduleType, selectedVariantId: getCachedVariant(row.id) },
+          {
+            onSuccess: () =>
+              setPublishWatchIds((prev) => new Set([...prev, row.id])),
+          },
+        );
       }
       if (action === "approve-live") {
-        approveMutation.mutate(row.id, {
-          onSuccess: () => {
-            toast({
-              title: "Approved & queued for fleet",
-              description:
-                "Approval is saved. The campaign will appear on Fleet when the backend schedules or starts publishing.",
-            });
+        approveMutation.mutate(
+          { id: row.id, scheduleType: row.scheduleType, selectedVariantId: getCachedVariant(row.id) },
+          {
+            onSuccess: () => {
+              setPublishWatchIds((prev) => new Set([...prev, row.id]));
+              toast({
+                title: "Approved & publishing",
+                description:
+                  "We'll notify you when batch render completes (campaign published).",
+              });
+            },
           },
-        });
+        );
       }
       if (action === "reject") {
         rejectMutation.mutate(row.id);
       }
+      if (action === "history") {
+        void navigate({
+          to: "/maker/campaign/$campaignId/studio",
+          params: { campaignId: row.id },
+        });
+      }
     },
-    [approveMutation, rejectMutation, togglePendingSelect],
+    [approveMutation, getCachedVariant, rejectMutation, togglePendingSelect, navigate],
   );
 
   /* ── All tab ── */
 
   const filteredAll = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const allRowsFromCampaigns: AllRow[] =
-      campaigns.length > 0
-        ? campaigns.map((c) => ({
-            id: c.id,
-            title: c.name,
-            initiator: c.ownerName ?? c.initiator,
-            skus: c.skus,
-            approvalStatus:
-              c.approvalStatus === "approved"
-                ? "Approved"
-                : c.approvalStatus === "rejected"
-                  ? "Rejected"
-                  : "Pending",
-            guardRails: "Pass",
-            date: c.date,
-          }))
-        : ALL_ROWS;
+    const allRowsFromCampaigns: AllRow[] = campaigns.map((c) => ({
+      id: c.id,
+      title: c.name,
+      initiator: c.ownerName ?? c.initiator,
+      skus: c.skus,
+      approvalStatus:
+        c.approvalStatus === "approved"
+          ? "Approved"
+          : c.approvalStatus === "rejected"
+            ? "Rejected"
+            : "Pending",
+      guardRails: "Pass",
+      date: c.date,
+    }));
     return allRowsFromCampaigns.filter((r) => !q || r.title.toLowerCase().includes(q) || r.initiator.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
   }, [campaigns, search]);
 
@@ -277,8 +331,7 @@ export default function ApprovalQueueTabulator() {
         approvedAt: c.reviewedAt ?? c.date,
         status: "Deployed",
       }));
-    const source = approvedRowsFromCampaigns.length > 0 ? approvedRowsFromCampaigns : APPROVED_ROWS;
-    return source.filter((r) => !q || r.title.toLowerCase().includes(q) || r.approvedBy.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
+    return approvedRowsFromCampaigns.filter((r) => !q || r.title.toLowerCase().includes(q) || r.approvedBy.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
   }, [campaigns, search]);
 
   /* ── Column definitions ── */
@@ -327,6 +380,7 @@ export default function ApprovalQueueTabulator() {
                   Expires 48H
                 </span>
               )}
+              <VariantBadge campaignId={row.id} />
             </div>
             <p className="mt-0.5 font-mono text-[10px] text-slate-400">{row.id}</p>
             {row.subtitle && <p className="mt-0.5 font-mono text-[10px] text-slate-500">{row.subtitle}</p>}
@@ -377,42 +431,59 @@ export default function ApprovalQueueTabulator() {
         label: "Actions",
         align: "right",
         width: "min-w-[300px] w-[320px]",
-        render: (_row) => (
-          <div className="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
-            <button
-              type="button"
-              data-action="approve"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
-            >
-              <Check className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Approve
-            </button>
-            <button
-              type="button"
-              data-action="approve-live"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-ithina-purple/35 bg-ithina-purple/15 px-2.5 py-1.5 text-[10px] font-semibold text-ithina-purple transition-all hover:bg-ithina-purple hover:text-white"
-            >
-              <Zap className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Approve &amp; Go Live
-            </button>
-            <button
-              type="button"
-              data-action="reject"
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-400/20 bg-transparent px-2.5 py-1.5 text-[10px] font-semibold text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"
-            >
-              <X className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Reject
-            </button>
-            <button
-              type="button"
-              data-action="history"
-              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
-            >
-              <Clock className="size-3 shrink-0" aria-hidden />
-              History
-            </button>
-          </div>
-        ),
+        render: (row) =>
+          row.apiStatus === "publishing" ? (
+            /* Campaign is already approved and being batch-rendered — no actions */
+            <div className="flex items-center justify-end gap-2">
+              <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/[0.08] px-3 py-1.5 font-mono text-[10px] text-amber-400">
+                <Loader2 className="size-3 shrink-0 animate-spin" aria-hidden />
+                Batch rendering…
+              </span>
+              <button
+                type="button"
+                data-action="history"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
+              >
+                <Clock className="size-3 shrink-0" aria-hidden />
+                View
+              </button>
+            </div>
+          ) : (
+            <div className="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
+              <button
+                type="button"
+                data-action="approve"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
+              >
+                <Check className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                Approve
+              </button>
+              <button
+                type="button"
+                data-action="approve-live"
+                className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-ithina-purple/35 bg-ithina-purple/15 px-2.5 py-1.5 text-[10px] font-semibold text-ithina-purple transition-all hover:bg-ithina-purple hover:text-white"
+              >
+                <Zap className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                Approve &amp; Go Live
+              </button>
+              <button
+                type="button"
+                data-action="reject"
+                className="inline-flex items-center gap-1 rounded-lg border border-rose-400/20 bg-transparent px-2.5 py-1.5 text-[10px] font-semibold text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"
+              >
+                <X className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
+                Reject
+              </button>
+              <button
+                type="button"
+                data-action="history"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
+              >
+                <Clock className="size-3 shrink-0" aria-hidden />
+                History
+              </button>
+            </div>
+          ),
       },
     ],
     [pendingAllSelected, pendingAnySelected, selectedIds, toggleAllPending],
@@ -736,6 +807,20 @@ export default function ApprovalQueueTabulator() {
           />
         )}
       </div>
+
+      {[...publishWatchIds].map((id) => (
+        <ApprovalPublishWatcher
+          key={id}
+          campaignId={id}
+          onDone={() =>
+            setPublishWatchIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            })
+          }
+        />
+      ))}
     </div>
   );
 }

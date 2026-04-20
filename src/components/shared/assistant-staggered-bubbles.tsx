@@ -32,38 +32,47 @@ const CHIP_PREVIEW_COUNT = 5;
 
 function ChipList({ intro, items }: { intro: string; items: string[] }) {
   const [expanded, setExpanded] = useState(false);
-  const visible = expanded ? items : items.slice(0, CHIP_PREVIEW_COUNT);
-  const remaining = items.length - CHIP_PREVIEW_COUNT;
+  const normalizedItems = useMemo(
+    () =>
+      items
+        .map((item) => item.replace(/\*\*/g, "").trim())
+        .filter(Boolean),
+    [items],
+  );
+  const visible = expanded ? normalizedItems : normalizedItems.slice(0, CHIP_PREVIEW_COUNT);
+  const remaining = normalizedItems.length - CHIP_PREVIEW_COUNT;
 
   return (
-    <div>
+    <div className="min-w-0">
       {intro && <p className="mb-2 text-[13px] leading-snug text-slate-200">{intro}</p>}
-      <div className="flex flex-wrap gap-1.5">
-        {visible.map((item) => (
-          <span
-            key={item}
-            className="rounded-full border border-ithina-purple/30 bg-ithina-purple/10 px-3 py-1 text-[12px] font-medium text-ithina-purple/90"
-          >
-            {item}
-          </span>
-        ))}
-        {remaining > 0 && !expanded && (
-          <button
-            type="button"
-            onClick={() => setExpanded(true)}
-            className="flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/30 px-3 py-1 text-[12px] text-ithina-purple/60 transition-colors hover:border-ithina-purple/60 hover:text-ithina-purple"
-          >
-            + {remaining} more
-            <ChevronDown className="size-3" />
-          </button>
-        )}
+      <div className="rounded-xl border border-ithina-purple/20 bg-ithina-purple/[0.06] px-3 py-2.5">
+        <div className="flex flex-wrap gap-2">
+          {visible.map((item) => (
+            <span
+              key={item}
+              className="inline-flex max-w-full items-center rounded-full border border-ithina-purple/40 bg-ithina-purple/[0.12] px-3 py-1.5 text-[12px] font-medium leading-tight text-ithina-purple/90 break-words"
+            >
+              {item}
+            </span>
+          ))}
+          {remaining > 0 && !expanded && (
+            <button
+              type="button"
+              onClick={() => setExpanded(true)}
+              className="inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/45 bg-ithina-purple/[0.06] px-3 py-1.5 text-[12px] font-medium text-ithina-purple/80 transition-colors hover:border-ithina-purple/70 hover:bg-ithina-purple/10 hover:text-ithina-purple"
+            >
+              + {remaining} more
+              <ChevronDown className="size-3 shrink-0 opacity-80" />
+            </button>
+          )}
+        </div>
         {expanded && remaining > 0 && (
           <button
             type="button"
             onClick={() => setExpanded(false)}
-            className="flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/30 px-3 py-1 text-[12px] text-ithina-purple/60 transition-colors hover:border-ithina-purple/60 hover:text-ithina-purple"
+            className="mt-2 inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/45 bg-transparent px-3 py-1.5 text-[11px] text-ithina-purple/75 transition-colors hover:border-ithina-purple/60 hover:text-ithina-purple"
           >
-            − less
+            Show less
             <ChevronUp className="size-3" />
           </button>
         )}
@@ -109,10 +118,15 @@ function SummaryCardView({
 
           return (
             <div key={i}>
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-[11px] text-slate-400">{row.label}</span>
+              <div
+                className={cn(
+                  "flex items-center justify-between gap-3 px-3",
+                  row.badge ? "min-h-[2.875rem] py-3" : "py-2.5",
+                )}
+              >
+                <span className="shrink-0 text-[11px] text-slate-400">{row.label}</span>
                 {row.badge ? (
-                  <span className="rounded-full border border-ithina-purple/40 bg-ithina-purple/20 px-2.5 py-0.5 text-[11px] font-semibold text-ithina-purple/90">
+                  <span className="shrink-0 rounded-full border border-ithina-purple/40 bg-ithina-purple/20 px-2.5 py-1 text-[11px] font-semibold leading-tight text-ithina-purple/90">
                     {row.value}
                   </span>
                 ) : (
@@ -122,7 +136,7 @@ function SummaryCardView({
                 )}
               </div>
               {!isLastRow && (
-                <div className={cn("mx-3 h-px", isLastInGroup ? "bg-white/[0.1]" : "bg-white/[0.04]")} />
+                <div className={cn("mx-3 h-px shrink-0", isLastInGroup ? "bg-white/[0.1]" : "bg-white/[0.04]")} />
               )}
             </div>
           );
@@ -161,28 +175,34 @@ function OptionGrid({ intro, options }: { intro: string; options: OptionItem[] }
   const [selected, setSelected] = useState<string | null>(null);
 
   return (
-    <div>
-      {intro && <p className="mb-2 text-[13px] leading-snug text-slate-200">{intro}</p>}
-      <div className="grid grid-cols-2 gap-2">
-        {options.map((opt) => (
-          <button
-            key={opt.label}
-            type="button"
-            onClick={() => setSelected(opt.label)}
-            className={cn(
-              "rounded-xl border p-2.5 text-left transition-all",
-              selected === opt.label
-                ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
-                : "border-ithina-purple/20 bg-white/[0.03] hover:border-ithina-purple/40 hover:bg-ithina-purple/10",
-            )}
-          >
-            <span className="mb-1 block text-[17px]">{opt.icon}</span>
-            <span className="block text-[12px] font-semibold leading-tight text-slate-100">
-              {opt.label}
-            </span>
-            <span className="mt-0.5 block text-[10.5px] text-slate-400">{opt.sub}</span>
-          </button>
-        ))}
+    <div className="min-w-0">
+      {intro && (
+        <p className="mb-2.5 text-[13px] font-medium leading-snug text-slate-100">{intro}</p>
+      )}
+      <div className="rounded-xl border border-ithina-purple/20 bg-ithina-purple/[0.05] p-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          {options.map((opt) => (
+            <button
+              key={opt.label}
+              type="button"
+              onClick={() => setSelected(opt.label)}
+              className={cn(
+                "rounded-xl border p-2.5 text-left transition-all",
+                selected === opt.label
+                  ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
+                  : "border-ithina-purple/25 bg-white/[0.04] hover:border-ithina-purple/45 hover:bg-ithina-purple/10",
+              )}
+            >
+              <span className="mb-1 block text-[17px] leading-none">{opt.icon}</span>
+              <span className="block text-[12px] font-semibold leading-tight text-slate-100">
+                {opt.label}
+              </span>
+              {opt.sub ? (
+                <span className="mt-0.5 block text-[10.5px] leading-snug text-slate-400">{opt.sub}</span>
+              ) : null}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );

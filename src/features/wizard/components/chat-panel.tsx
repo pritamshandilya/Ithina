@@ -17,6 +17,9 @@ interface ChatPanelProps {
   onResetChat?: () => void;
   inputDisabled?: boolean;
   hasSplit: boolean;
+  /** Quick-reply suggestion chips returned by the backend draft endpoint. */
+  suggestions?: string[];
+  onSuggestionClick?: (text: string) => void;
   children?: React.ReactNode;
 }
 
@@ -29,6 +32,8 @@ const ChatPanel = memo(function ChatPanel({
   onResetChat,
   inputDisabled,
   hasSplit,
+  suggestions,
+  onSuggestionClick,
   children,
 }: ChatPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -88,6 +93,20 @@ const ChatPanel = memo(function ChatPanel({
 
       <div className={cn("shrink-0 bg-ithina-bg/40", hasSplit ? "mt-auto border-t border-ithina-border/50 p-4" : "p-4")}>
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
+          {suggestions && suggestions.length > 0 && !isTyping && !inputDisabled && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {suggestions.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => onSuggestionClick?.(chip)}
+                  className="rounded-xl border border-ithina-purple/25 bg-white/[0.04] px-3 py-2.5 text-left text-[12px] font-medium leading-snug text-slate-100 transition-all hover:border-ithina-purple/45 hover:bg-ithina-purple/10"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="group flex min-w-0 items-center gap-2 rounded-xl border border-ithina-border/60 bg-ithina-bg px-2 py-2 shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
             <textarea
               ref={textareaRef}

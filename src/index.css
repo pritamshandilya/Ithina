@@ -264,6 +264,16 @@
   100% { top: 0%; opacity: 0; }
 }
 
+/** Campaign Studio AI refine: sweep top→bottom; use `animation-direction: alternate` for bottom→top return */
+@keyframes ai-scanning-sweep-y {
+  0% {
+    top: 0;
+  }
+  100% {
+    top: calc(100% - 40px);
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
@@ -967,5 +977,11 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
 /* Promo Assistant — chat markdown: list lines with emoji / mixed glyphs */
 .promo-chat-md li {
   text-wrap: pretty;
+}
+
+@keyframes indeterminate {
+  0% { transform: translateX(-100%); width: 40%; }
+  50% { width: 60%; }
+  100% { transform: translateX(250%); width: 40%; }
 }
 

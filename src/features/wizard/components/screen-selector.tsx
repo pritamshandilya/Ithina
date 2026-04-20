@@ -1,13 +1,16 @@
 import { Check } from "lucide-react";
-import { memo, useMemo, useState } from "react";
+import { memo } from "react";
 
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useHardwareDevices } from "@/hooks/use-wizard";
 
 import type { WizardMode } from "./mode-chooser";
-import CampaignStudioModal, { type AppliedDesignSelection } from "./campaign-studio-modal";
+import type { AppliedDesignSelection } from "./campaign-studio-modal";
+import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
+import type { LayoutVariant } from "@/types/api/campaigns";
 import NlHardwareStep from "./nl-hardware-step";
+import { defaultPromoApiBase } from "@/features/wizard/lib/preview-layout";
 
 interface ScreenSelectorProps {
   mode: WizardMode;
@@ -27,6 +30,15 @@ interface ScreenSelectorProps {
   onToggleSize: (id: HardwareDeviceId, size: string) => void;
   onNext: () => void;
   storeNumber?: string;
+  /** NL Step 2: POST /campaigns/generate + open real Campaign Studio route. */
+  onConfigureDesign?: () => void | Promise<void>;
+  isGeneratingLayouts?: boolean;
+  /** Last apply from Campaign Studio (template/upload/ai); null uses generated layout only. */
+  selectedDesign?: AppliedDesignSelection | null;
+  generatedVariants?: LayoutVariant[];
+  eslPreviewPlaceholders?: EslPlaceholders;
+  imageCacheBuster?: number;
+  apiBaseUrl?: string;
 }
 
 const previewStyles: Record<HardwareDeviceId, string> = {
@@ -44,18 +56,24 @@ function ScreenSelector({
   activeDevice,
   onSetActiveDevice,
   designConfigured,
-  onSetDesignConfigured,
-  showStudio,
+  onSetDesignConfigured: _onSetDesignConfigured,
+  showStudio: _showStudio,
   onSetShowStudio,
   selectedVariant,
-  onSetSelectedVariant,
+  onSetSelectedVariant: _onSetSelectedVariant,
   sizeByDevice,
   onToggleSize,
   onNext,
   storeNumber = "4281",
+  onConfigureDesign,
+  isGeneratingLayouts = false,
+  selectedDesign = null,
+  generatedVariants = [],
+  eslPreviewPlaceholders,
+  imageCacheBuster = 0,
+  apiBaseUrl = defaultPromoApiBase(),
 }: ScreenSelectorProps) {
   const { data: devices = [] } = useHardwareDevices();
-  const [selectedDesign, setSelectedDesign] = useState<AppliedDesignSelection | null>(null);
 
   const isNl = mode === "nl";
   const title = isNl ? "Select Target Screens" : "Select Your Screens";
@@ -63,14 +81,6 @@ function ScreenSelector({
     ? `Choose which display types to generate layouts for. Based on Store #${storeNumber} hardware profile.`
     : "Choose which display types you'll be uploading banners for.";
   const nextLabel = isNl ? "Generate Creative Layouts" : "Next: Upload Banners";
-
-  const designDevice = useMemo<HardwareDeviceId | null>(() => {
-    if (activeDevice && selectedDevices.includes(activeDevice)) return activeDevice;
-    if (selectedDevices.includes("lcd") && (sizeByDevice.lcd?.length ?? 0) > 0) return "lcd";
-    if (selectedDevices.includes("chroma42") && (sizeByDevice.chroma42?.length ?? 0) > 0) return "chroma42";
-    if (selectedDevices.includes("chroma29") && (sizeByDevice.chroma29?.length ?? 0) > 0) return "chroma29";
-    return selectedDevices[0] ?? null;
-  }, [activeDevice, selectedDevices, sizeByDevice]);
 
   return (
     <div
@@ -96,9 +106,17 @@ function ScreenSelector({
             {stepNumber}
           </span>
         </div>
-        <div className="flex-1">
-          <span className="text-xs font-semibold text-white">{title}</span>
-          <span className="ml-2 text-[10px] text-slate-500">{subtitle}</span>
+        <div className="min-w-0 flex-1">
+          <div>
+            <span className="text-xs font-semibold text-white">{title}</span>
+            <span className="ml-2 text-[10px] text-slate-500">{subtitle}</span>
+          </div>
+          {isNl ? (
+            <p className="mt-1 max-w-2xl text-[10px] leading-snug text-slate-500">
+              <span className="font-medium text-slate-400">Design formats:</span> ESL (Chroma e‑ink) and LCD
+              Banner — select hardware targets and sizes below, then continue to generate AI layouts.
+            </p>
+          ) : null}
         </div>
         <span className="rounded-full border border-ithina-border px-2 py-0.5 font-mono text-[9px] text-slate-600">
           Step {stepNumber} of {totalSteps}
@@ -116,8 +134,14 @@ function ScreenSelector({
           onToggleSize={onToggleSize}
           designConfigured={designConfigured}
           onSetShowStudio={onSetShowStudio}
+          onConfigureDesign={onConfigureDesign}
+          isGeneratingLayouts={isGeneratingLayouts}
           selectedVariant={selectedVariant}
           selectedDesign={selectedDesign}
+          generatedVariants={generatedVariants}
+          eslPreviewPlaceholders={eslPreviewPlaceholders}
+          imageCacheBuster={imageCacheBuster}
+          apiBaseUrl={apiBaseUrl}
           onNext={onNext}
         />
       ) : (
@@ -200,21 +224,6 @@ function ScreenSelector({
           </button>
         </div>
       </div>
-      )}
-
-      {isNl && (
-        <CampaignStudioModal
-          open={showStudio}
-          onClose={() => onSetShowStudio(false)}
-          mode={designDevice === "lcd" ? "lcd" : "esl"}
-          selectedVariant={selectedVariant}
-          onSelectVariant={onSetSelectedVariant}
-          onApply={(selection) => {
-            setSelectedDesign(selection);
-            onSetDesignConfigured(true);
-            onSetShowStudio(false);
-          }}
-        />
       )}
 
     </div>

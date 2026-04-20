@@ -91,7 +91,7 @@ export async function submitWizardIntent(
   prompt: string,
   _constraints: WizardConstraints,
   options?: { sessionId?: string | null },
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta }> {
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
   const response = await draftCampaignFromPrompt({
     prompt,
     source_type: "nl",
@@ -140,6 +140,7 @@ export async function submitWizardIntent(
     skus,
     sessionId: response.session_id,
     draftMeta,
+    suggestions: response.suggestions ?? [],
   };
 }
 

@@ -8,6 +8,10 @@ export interface InboxItem {
   metaVariant: "success" | "muted" | "warning";
   urgent: boolean;
   status?: "pending" | "approved" | "rejected";
+  /** Raw API status string — used to detect `publishing` and suppress action buttons. */
+  apiStatus?: string;
+  /** Derived from campaign's `scheduledAt`: "scheduled" if a future date exists, else "immediate". */
+  scheduleType?: "immediate" | "scheduled";
 
   // Prototype-only fields (used for the approval queue table layout).
   hardwareTargets?: string[];

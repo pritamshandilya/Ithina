@@ -163,11 +163,12 @@ function mergeSummaryEnrichment(
   const byLabel = new Map(rows.map((r) => [r.label, r]));
 
   const start = formatIsoDateUsShort(enrichment.scheduleStartIso);
-  if (start && !byLabel.has("Start")) {
+  // Backend campaign_meta dates are source of truth; overwrite NLP-parsed dates.
+  if (start) {
     byLabel.set("Start", { label: "Start", value: start });
   }
   const end = formatIsoDateUsShort(enrichment.scheduleEndIso);
-  if (end && !byLabel.has("End")) {
+  if (end) {
     byLabel.set("End", { label: "End", value: end });
   }
   const pl = enrichment.productsLabel?.trim();
@@ -291,10 +292,55 @@ const PROMO_TYPE_KEYWORDS = /buy.{0,10}get|bogo|percent|discount|bundle|clearanc
 
 const PROMO_OPTION_MAP: Array<{ test: RegExp; icon: string; label: string; sub: string }> = [
   { test: /buy\s*\d\s*get\s*\d\s*free|bogo/i, icon: "🎁", label: "Buy 2 Get 1 Free", sub: "BOGO offer" },
-  { test: /percent|%\s*(?:off|discount)/i, icon: "%", label: "% Discount", sub: "10–50% off" },
-  { test: /bundle/i, icon: "📦", label: "Bundle Deal", sub: "Buy together, save" },
+  {
+    test: /\bdiscount\b|percentage\s+off|\bpercent\b|%\s*(?:off|discount)/i,
+    icon: "%",
+    label: "% Discount",
+    sub: "10–50% off",
+  },
+  { test: /bundle|free\s+gift/i, icon: "📦", label: "Bundle Deal", sub: "Buy together, save" },
   { test: /clearance/i, icon: "🏷️", label: "Clearance", sub: "Overstock & expiry" },
 ];
+
+/**
+ * Split `• **Title** — description...` (or `–` / hyphen) into card label + body from the API string.
+ * Icons are inferred from keywords only; all copy is dynamic.
+ */
+function parsePromoBulletLine(raw: string): OptionItem {
+  const strippedBold = raw.replace(/\*\*/g, "").trim();
+  let label: string;
+  let sub: string;
+  const em = strippedBold.match(/^(.+?)\s*[—–]\s+([\s\S]+)$/);
+  const spacedHyphen = strippedBold.match(/^(.+?)\s+-\s+([\s\S]+)$/);
+  if (em) {
+    label = em[1].trim();
+    sub = em[2].trim();
+  } else if (spacedHyphen) {
+    label = spacedHyphen[1].trim();
+    sub = spacedHyphen[2].trim();
+  } else {
+    label = strippedBold;
+    sub = "";
+  }
+
+  let icon = "✨";
+  const forTest = strippedBold.toLowerCase();
+  for (const opt of PROMO_OPTION_MAP) {
+    if (opt.test.test(forTest)) {
+      icon = opt.icon;
+      break;
+    }
+  }
+  return { icon, label, sub };
+}
+
+/** Text before the first markdown bullet line (intro paragraph for option-grid). */
+function introBeforeMarkdownBullets(text: string): string {
+  const lines = text.split("\n");
+  const idx = lines.findIndex((l) => /^[-*•]\s/.test(l.trim()));
+  if (idx <= 0) return "";
+  return lines.slice(0, idx).join("\n").trim();
+}
 
 function tryBuildOptionGrid(text: string): AssistantMessageChunk | null {
   if (!PROMO_TYPE_KEYWORDS.test(text)) return null;
@@ -304,19 +350,65 @@ function tryBuildOptionGrid(text: string): AssistantMessageChunk | null {
 
   const matched: OptionItem[] = [];
   for (const item of candidates) {
-    for (const opt of PROMO_OPTION_MAP) {
-      if (opt.test.test(item) && !matched.find((m) => m.label === opt.label)) {
-        matched.push({ icon: opt.icon, label: opt.label, sub: opt.sub });
-      }
-    }
+    const line = item.replace(/\*\*/g, "").trim();
+    if (!PROMO_OPTION_MAP.some((opt) => opt.test.test(line))) continue;
+    const parsed = parsePromoBulletLine(item);
+    if (!matched.some((m) => m.label === parsed.label)) matched.push(parsed);
   }
 
   if (matched.length < 2) return null;
 
-  const introMatch = text.match(/^([^\n?]+\?)/);
-  const intro = introMatch ? introMatch[1].trim() : "What type of promotion?";
+  const head = introBeforeMarkdownBullets(text);
+  const intro = head || "What type of promotion?";
 
   return { kind: "option-grid", intro, options: matched };
+}
+
+/**
+ * Explains Discount / BOGO / Bundle / Clearance in bullets — must run BEFORE campaign-summary
+ * detection so staged wizard enrichment does not steal the closing question or reorder chunks.
+ */
+function tryBuildPromoTypesExplainerChunks(raw: string): AssistantMessageChunk[] | null {
+  const trimmed = raw.replace(/\r\n/g, "\n").trim();
+  const lines = trimmed.split("\n");
+  let firstBullet = -1;
+  let lastBullet = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (/^[-*•]\s/.test(t)) {
+      if (firstBullet < 0) firstBullet = i;
+      lastBullet = i;
+    }
+  }
+  if (firstBullet < 0) return null;
+
+  const items = extractMarkdownListItems(trimmed);
+  if (items.length < 2) return null;
+
+  const options = items.map(parsePromoBulletLine).filter((o) => o.label.length > 0);
+  if (options.length < 2) return null;
+
+  const plain = trimmed.replace(/\*\*/g, "").toLowerCase();
+  const promoContext = /\b(promotion|promo)\b/.test(plain);
+  const explainsTypes =
+    /\b(types of promotions?|main types|three main types)\b/.test(plain) ||
+    /\bset up\b[\s\S]{0,48}\b(types|promotion)/i.test(plain) ||
+    (promoContext && /discount|bogo|bundle|clearance/i.test(plain));
+
+  if (!explainsTypes) return null;
+
+  const intro = lines.slice(0, firstBullet).join("\n").trim();
+  const closing = lines.slice(lastBullet + 1).join("\n").trim() || undefined;
+
+  const out: AssistantMessageChunk[] = [
+    {
+      kind: "option-grid",
+      intro: intro || "What type of promotion?",
+      options,
+    },
+  ];
+  if (closing) out.push(markdownChunk(closing));
+  return out;
 }
 
 /** True when this sentence mostly repeats what the summary card already shows. */
@@ -565,17 +657,82 @@ function partitionSummaryMarkdownTail(
 
 // ─── Category chip-list detection ────────────────────────────────────────────
 
-const CATEGORY_INTRO_RE = /categor(?:y|ies)|available in your store|pick a categor/i;
+const CATEGORY_INTRO_RE =
+  /categor(?:y|ies)|full\s+list\s+of\s+categories|list\s+of\s+categories|available\s+in\s+your\s+store|pick\s+a\s+categor/i;
 
 function tryBuildChipList(intro: string, items: string[]): AssistantMessageChunk | null {
   if (items.length < 3) return null;
   return { kind: "chip-list", intro, items };
 }
 
+/**
+ * Split "intro paragraph + bullet categories + closing question" (markdown) into parts.
+ * Used so we never drop the trailing sentence and can stagger intro / chips / closing.
+ */
+function extractCategoryListParts(text: string): {
+  intro: string;
+  items: string[];
+  closing?: string;
+} | null {
+  const lines = text.split("\n");
+  let firstBullet = -1;
+  let lastBullet = -1;
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (/^[-*•]\s/.test(t)) {
+      if (firstBullet < 0) firstBullet = i;
+      lastBullet = i;
+    }
+  }
+  if (firstBullet < 0) return null;
+
+  const items = extractMarkdownListItems(text);
+  if (items.length < 3) return null;
+
+  const intro = lines.slice(0, firstBullet).join("\n").trim();
+  const closingRaw = lines.slice(lastBullet + 1).join("\n").trim();
+
+  const introLine = text.split("\n").find((l) => l.trim() && !/^[-*•]\s/.test(l.trim()))?.trim() ?? "";
+  const matchesCategoryIntent =
+    CATEGORY_INTRO_RE.test(introLine) || CATEGORY_INTRO_RE.test(intro) || items.length >= 8;
+  if (!matchesCategoryIntent) return null;
+
+  return {
+    intro: intro || "Pick a category:",
+    items,
+    closing: closingRaw || undefined,
+  };
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 const bubbleClass =
   "max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/15 bg-gradient-to-br from-ithina-purple/[0.08] to-ithina-purple/[0.03] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm";
+
+/** When the reply is only empty JSON, avoid showing raw `[]` / `{}` in the chat UI. */
+function isTrivialStructuredPayload(trimmed: string): boolean {
+  if (!trimmed) return true;
+  try {
+    const v = JSON.parse(trimmed) as unknown;
+    if (v === null) return true;
+    if (typeof v === "string" && v.trim() === "") return true;
+    if (Array.isArray(v) && v.length === 0) return true;
+    if (
+      typeof v === "object" &&
+      v !== null &&
+      !Array.isArray(v) &&
+      Object.keys(v as Record<string, unknown>).length === 0
+    ) {
+      return true;
+    }
+  } catch {
+    /* not JSON — show as normal text */
+  }
+  return false;
+}
+
+const TRIVIAL_PAYLOAD_FALLBACK =
+  "Thanks — I've noted that. Let me know if you'd like anything else.";
 
 /**
  * Returns one fragment per chat bubble: Markdown (rendered in the UI), sanitized HTML,
@@ -588,10 +745,36 @@ export function getAssistantMessageChunks(
   const trimmed = raw.replace(/\r\n/g, "\n").trim();
   if (!trimmed) return [];
 
+  if (isTrivialStructuredPayload(trimmed)) {
+    return [markdownChunk(TRIVIAL_PAYLOAD_FALLBACK)];
+  }
+
+  // Explains promo types (Discount / BOGO / …) — before campaign-summary so enrichment
+  // does not merge unrelated draft_meta into this reply or reorder the closing question.
+  const promoTypesChunks = tryBuildPromoTypesExplainerChunks(trimmed);
+  if (promoTypesChunks) return promoTypesChunks;
+
+  // Category chip-list — must run before campaign-summary. Otherwise enrichment +
+  // `partitionSummaryMarkdownTail` turns the bullet block into plain markdown and
+  // the UI shows a long list instead of pills inside assistant bubbles.
+  if (/\n/.test(trimmed)) {
+    const categoryParts = extractCategoryListParts(trimmed);
+    if (categoryParts) {
+      const chip = tryBuildChipList("", categoryParts.items);
+      if (chip) {
+        const out: AssistantMessageChunk[] = [];
+        if (categoryParts.intro.trim()) out.push(markdownChunk(categoryParts.intro.trim()));
+        out.push(chip);
+        if (categoryParts.closing?.trim()) out.push(markdownChunk(categoryParts.closing.trim()));
+        return out;
+      }
+    }
+  }
+
   // Strip markdown bold markers for plain-text analysis only
   const plainText = trimmed.replace(/\*\*/g, "");
 
-  // ── Campaign summary detection (runs FIRST on the whole raw text) ───────────
+  // ── Campaign summary detection (runs on the whole raw text) ─────────────────
   // This catches multi-sentence AI responses before they get split into bubbles.
   // Enrichment fills Start/End/Products when the model omits them on follow-up turns.
   const proposalFromText = looksLikeCampaignProposal(plainText);
@@ -682,8 +865,19 @@ export function getAssistantMessageChunks(
     const intro = introMatch ? introMatch[1].replace(/<[^>]+>/g, "").trim() : "";
 
     if (CATEGORY_INTRO_RE.test(intro) || items.length >= 5) {
-      const chip = tryBuildChipList(intro || "Pick a category:", items);
-      if (chip) return [chip];
+      const listChip = intro.trim() ? tryBuildChipList("", items) : tryBuildChipList("Pick a category:", items);
+      if (listChip) {
+        const afterMatch = trimmed.match(/<\/(?:ul|ol)>\s*([\s\S]*)$/i);
+        const afterText = afterMatch?.[1]
+          ?.replace(/<br\s*\/?>/gi, "\n")
+          .replace(/<[^>]+>/g, "")
+          .trim();
+        const out: AssistantMessageChunk[] = [];
+        if (intro.trim()) out.push(markdownChunk(intro.trim()));
+        out.push(listChip);
+        if (afterText) out.push(markdownChunk(afterText));
+        return out;
+      }
     }
 
     return [htmlChunk(sanitizeHtml(trimmed.replace(/\n/g, "<br />")))];
@@ -696,16 +890,6 @@ export function getAssistantMessageChunks(
   if (blocks.length <= 2) {
     const optGrid = tryBuildOptionGrid(plainText);
     if (optGrid) return [optGrid];
-  }
-
-  // Category chip-list from markdown bullet list
-  if (/\n/.test(trimmed)) {
-    const mdItems = extractMarkdownListItems(trimmed);
-    const introLine = trimmed.split("\n").find((l) => !/^[-*•]/.test(l.trim()) && l.trim())?.trim() ?? "";
-    if (mdItems.length >= 3 && (CATEGORY_INTRO_RE.test(introLine) || mdItems.length >= 8)) {
-      const chip = tryBuildChipList(introLine || "Pick a category:", mdItems);
-      if (chip) return [chip];
-    }
   }
 
   if (blocks.length === 0) return [markdownChunk(trimmed)];

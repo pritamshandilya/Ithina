@@ -6,6 +6,7 @@
 import { Check, ChevronRight, CirclePause, History, Pencil, PlayCircle, Trash2 } from "lucide-react";
 
 import type { IthColumnDef } from "@/components/ui/ith-table";
+import { derivePipelineForRow } from "@/services/campaigns";
 import type { CampaignListItem, CampaignListStatus } from "@/types/campaigns";
 
 export type CampaignProtoStatus =
@@ -53,22 +54,6 @@ const PIPELINE_STAGE_CLASS: Record<string, string> = {
   Design:      "text-blue-400   font-semibold",
   Data:        "text-slate-400  font-semibold",
 };
-
-export function derivePipeline(status: CampaignListStatus): string[] {
-  switch (status) {
-    case "Active":
-    case "Completed":
-      return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
-    case "Scheduled":
-      return ["Data", "Design", "Guard Rails", "Scheduled"];
-    case "Pending":
-      return ["Data", "Design", "Guard Rails", "Approval"];
-    case "Draft":
-      return ["Data", "Design"];
-    case "Rejected":
-      return ["Data", "Design", "Guard Rails", "Approval"];
-  }
-}
 
 function PipelineStages({ pipeline }: { pipeline: string[] }) {
   return (
@@ -234,7 +219,7 @@ export function buildCampaignColumns({
       key: "pipeline",
       label: "Pipeline Stage",
       render: (row) => {
-        const pipeline = row.pipeline ?? derivePipeline(row.status);
+        const pipeline = derivePipelineForRow(row);
         return <PipelineStages pipeline={pipeline} />;
       },
     },

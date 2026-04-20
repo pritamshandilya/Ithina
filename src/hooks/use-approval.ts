@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
+import { toast } from "@/hooks/use-toast";
 import {
   approveInboxItem,
   getInboxItems,
@@ -59,12 +61,30 @@ export function usePublishToFleet() {
 export function useApproveInboxItem() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: approveInboxItem,
+    mutationFn: ({
+      id,
+      scheduleType,
+      selectedVariantId,
+    }: {
+      id: string;
+      scheduleType?: "immediate" | "scheduled";
+      selectedVariantId?: string;
+    }) => approveInboxItem(id, scheduleType, selectedVariantId),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: approvalKeys.inbox });
       qc.invalidateQueries({ queryKey: ["campaigns", "list"] });
       qc.invalidateQueries({ queryKey: ["fleet"] });
       qc.invalidateQueries({ queryKey: organizationOverviewKeys.stats });
+    },
+    onError: (error: unknown) => {
+      if (axios.isAxiosError(error) && error.response?.status === 403) {
+        toast({
+          title: "Cannot approve this campaign",
+          description:
+            "You cannot approve a campaign you submitted. Another checker must review it.",
+          variant: "destructive",
+        });
+      }
     },
   });
 }

@@ -1,4 +1,4 @@
-import { Building2, ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, User } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -104,10 +104,10 @@ export default function SidenavFooter() {
       {open && (
         <div
           className={cn(
-            "absolute z-50 overflow-hidden rounded-xl border border-ithina-border bg-ithina-sidebar shadow-2xl",
-            isCollapsed
-              ? "bottom-0 left-full ml-1 w-64 max-w-[min(16rem,calc(100vw-1rem))]"
-              : "bottom-full left-2 right-2 mb-1",
+            "absolute z-50 overflow-hidden rounded-lg border border-ithina-border bg-ithina-sidebar shadow-2xl",
+            /* Fly out to the right of the sidebar (same idea as organization switcher), not above the row */
+            "left-full ml-1.5 w-64 max-w-[min(16rem,calc(100vw-1rem))]",
+            isCollapsed ? "bottom-1" : "bottom-0",
           )}
         >
 
@@ -139,16 +139,6 @@ export default function SidenavFooter() {
                 setOpen(false);
               }}
             />
-            {user.role === "admin" && (
-              <MenuItem
-                icon={<Building2 className="size-4 text-slate-500" />}
-                label="Store Settings"
-                onClick={() => {
-                  navigate({ to: "/admin/store-settings" });
-                  setOpen(false);
-                }}
-              />
-            )}
           </div>
 
           <div className="border-t border-ithina-border/60 p-1">
@@ -168,7 +158,7 @@ export default function SidenavFooter() {
           isCollapsed ? "px-0 text-center" : "px-4",
         )}
       >
-        v0.0.3
+        v 1.0.0.3
       </p>
 
       {/* ── Profile trigger button ── */}

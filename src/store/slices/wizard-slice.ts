@@ -67,14 +67,16 @@ const wizardSlice = createSlice({
       state.messages.push(action.payload);
     },
     setGridData(state, action: PayloadAction<StagedSku[]>) {
-      state.gridData = action.payload.map((r) => ({
+      const rows = action.payload;
+      if (!Array.isArray(rows)) return;
+      state.gridData = rows.map((r) => ({
         ...r,
         included: r.included !== false,
       }));
     },
     mergeGridData(state, action: PayloadAction<StagedSku[]>) {
       const incoming = action.payload;
-      if (incoming.length === 0) return;
+      if (!Array.isArray(incoming) || incoming.length === 0) return;
 
       const existingByKey = new Map(
         state.gridData.map((r) => [r.sku, r]),

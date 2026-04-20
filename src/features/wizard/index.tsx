@@ -1,14 +1,14 @@
 import { AlertTriangle, ArrowRight } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   activateCampaign,
   activateCampaignWithId,
   setCampaignName,
-  setPendingApproval,
   setStagedSkus,
 } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
@@ -33,15 +33,14 @@ import {
   updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
-import { approvalKeys } from "@/hooks/use-approval";
-import { campaignKeys } from "@/hooks/use-campaigns";
+import { campaignKeys, useCampaignEvents, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
-import { createCampaignFromWizard } from "@/services/campaigns";
-import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { createCampaignFromWizard, generateCampaign } from "@/services/campaigns";
+import { mergeLayoutVariants } from "@/features/campaign-studio/types";
+import type { LayoutVariant } from "@/types/api/campaigns";
 import { buildChatProductsLabel } from "@/lib/chat-products-label";
+import { isPromoDiscoveryQuery } from "@/lib/promo-discovery-intent";
 import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
-import type { CampaignListItem } from "@/types/campaigns";
-import type { InboxItem } from "@/types/approval";
 import ChatPanel from "./components/chat-panel";
 import DataStagingGrid from "./components/data-staging-grid";
 import type { InputMode } from "./components/data-staging-grid";
@@ -53,6 +52,10 @@ import WizardStepHeader from "./components/wizard-step-header";
 import GuardRailsStep from "./components/guard-rails-step";
 import ScheduleStep from "./components/schedule-step";
 import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
+import CampaignStudioModal, { type AppliedDesignSelection } from "./components/campaign-studio-modal";
+import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
+import { defaultPromoApiBase } from "./lib/preview-layout";
+import { toast } from "@/hooks/use-toast";
 
 interface CsvRow {
   sku: string;
@@ -84,6 +87,8 @@ export default function Wizard() {
   const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<HardwareDeviceId, string>>>({});
   const [activeDevice, setActiveDevice] = useState<HardwareDeviceId | null>(null);
   const [designConfigured, setDesignConfigured] = useState(false);
+  /** Last Campaign Studio apply (template/upload) or AI; drives Step 2 preview labels. */
+  const [appliedStudioSelection, setAppliedStudioSelection] = useState<AppliedDesignSelection | null>(null);
   const [showStudio, setShowStudio] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
   const [schedule, setSchedule] = useState<{
@@ -117,16 +122,105 @@ export default function Wizard() {
 
   const campaignName = useAppSelector((s) => s.campaign.name);
   const campaignActive = useAppSelector((s) => s.campaign.active);
+  const campaignIdFromStore = useAppSelector((s) => s.campaign.id);
 
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [designGeneratePending, setDesignGeneratePending] = useState(false);
+  /** Tracks whether the Campaign Studio modal is in "generating" overlay state */
+  const [studioGenerating, setStudioGenerating] = useState(false);
+  /** Layout rows merged from timeline events (preserves image_url across partial API payloads) */
+  const [generatedVariants, setGeneratedVariants] = useState<LayoutVariant[]>([]);
+  const [isRefining, setIsRefining] = useState(false);
+  /** Bumped on each layout_refined to cache-bust identical image URLs */
+  const [imageCacheBuster, setImageCacheBuster] = useState(0);
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
+  const chatMutation = usePostCampaignChat();
+  const submitMutation = useSubmitCampaign();
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
+
+  /**
+   * IDs of all events we already knew about at the moment polling was (re-)started.
+   * The event handler only reacts to events NOT in this set, preventing stale
+   * `layout_generated` results from falsely triggering when polling restarts after
+   * a chat message is sent.
+   */
+  const knownEventIdsAtPollStart = useRef<Set<string>>(new Set());
+
+  /** True while we wait for a layout event after POST /chat (drives AI reply bubble). */
+  const expectingChatLayoutEventRef = useRef(false);
+
+  /** Stable ref so async callbacks can read the latest studioEvents without stale closure. */
+  const studioEventsRef = useRef<ReturnType<typeof useCampaignEvents>["events"]>([]);
+
+  /**
+   * Poll campaign events — NO shouldStop here; we stop manually in the effect below
+   * so that restarting polling after chat doesn't immediately quit on old events.
+   */
+  const {
+    events: studioEvents,
+    startPolling: startStudioPolling,
+    stopPolling: stopStudioPolling,
+  } = useCampaignEvents(
+    campaignIdFromStore ?? "",
+    {
+      intervalMs: 2_500,
+      initialPolling: false,
+    },
+  );
+
+  // Keep stable ref in sync with current events (always store a real array)
+  useEffect(() => {
+    studioEventsRef.current = Array.isArray(studioEvents) ? studioEvents : [];
+  }, [studioEvents]);
+
+  const [lastAiResponse, setLastAiResponse] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const knownIds = knownEventIdsAtPollStart.current;
+    const timeline = Array.isArray(studioEvents) ? studioEvents : [];
+    // Only react to events that arrived AFTER this polling cycle started
+    const newEvent = [...timeline]
+      .reverse()
+      .find(
+        (e) =>
+          !knownIds.has(e.id) &&
+          (e.event_type === "layout_generated" ||
+            e.event_type === "layout_refined" ||
+            e.event_type === "error"),
+      );
+
+    if (!newEvent) return;
+
+    stopStudioPolling();
+
+    if (newEvent.event_type === "error") {
+      setStudioGenerating(false);
+      setIsRefining(false);
+      expectingChatLayoutEventRef.current = false;
+      return;
+    }
+
+    const rawVariants = newEvent.payload_snapshot?.variants;
+    if (rawVariants != null) {
+      setGeneratedVariants((prev) => mergeLayoutVariants(prev, rawVariants as LayoutVariant[]));
+    }
+    setStudioGenerating(false);
+    setIsRefining(false);
+    if (expectingChatLayoutEventRef.current) {
+      setImageCacheBuster(Date.now());
+      if (newEvent.message && newEvent.message.trim() !== "") {
+        setLastAiResponse(newEvent.message);
+      }
+    }
+    expectingChatLayoutEventRef.current = false;
+  }, [studioEvents, stopStudioPolling]);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -187,6 +281,16 @@ export default function Wizard() {
     [gridData],
   );
 
+  const eslPreviewPlaceholders = useMemo<EslPlaceholders>(
+    () => ({
+      name: gridData[0]?.name ?? "",
+      price: gridData[0]?.proposed != null ? `$${gridData[0].proposed.toFixed(2)}` : "",
+      was: gridData[0]?.current != null ? `$${gridData[0].current.toFixed(2)}` : "",
+      offer_label: gridData[0]?.offerLabel ?? "",
+    }),
+    [gridData],
+  );
+
   // ── Navigation helpers ─────────────────────────────────────────────
   const handleSelectMode = useCallback((mode: WizardMode, input: WizardEntryInput) => {
     dispatch(setWMode(mode));
@@ -196,6 +300,7 @@ export default function Wizard() {
     dispatch(setShowGrid(input === "csv"));
     setActiveDevice(null);
     setDesignConfigured(false);
+    setAppliedStudioSelection(null);
     setShowStudio(false);
     setSelectedVariant("B");
     setSizeByDevice({
@@ -315,21 +420,21 @@ export default function Wizard() {
     ],
   );
 
-  const handleSubmit = useCallback(async () => {
-    const text = inputText.trim();
+  const handleSubmit = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? inputText).trim();
     if (!text || intentMutation.isPending) return;
 
     if (!hasSplit) dispatch(setHasSplit(true));
-    if (!showGrid) dispatch(setShowGrid(true));
     setError(null);
 
     pushMessage({ role: "user", text });
     setInputText("");
+    setSuggestions([]);
     setIsTyping(true);
 
     try {
       const existingSessionId = pipelineSessionIdRef.current;
-      const { aiReply, skus, sessionId, draftMeta } = await intentMutation.mutateAsync({
+      const { aiReply, skus, sessionId, draftMeta, suggestions: newSuggestions } = await intentMutation.mutateAsync({
         text,
         constraints,
         ...(existingSessionId ? { sessionId: existingSessionId } : {}),
@@ -368,6 +473,13 @@ export default function Wizard() {
       }
 
       setIsTyping(false);
+      setSuggestions(newSuggestions);
+
+      // Staging grid: show for promo-discovery questions ("what promos do we have") or when
+      // the draft returns SKUs (campaign build). Avoid opening an empty grid on every turn.
+      const openStaging =
+        isPromoDiscoveryQuery(text) || skus.length > 0 || (showGrid && gridData.length > 0);
+      dispatch(setShowGrid(openStaging));
 
       const skuRowsForLabel = skus.length > 0 ? skus : gridData;
       const productsLabel = buildChatProductsLabel(skuRowsForLabel);
@@ -403,16 +515,22 @@ export default function Wizard() {
       if (skus.length > 0) {
         dispatch(mergeGridData(skus));
       }
-    } catch {
+    } catch (err) {
       setIsTyping(false);
-      setError("Failed to process intent. Please try again.");
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        pipelineSessionIdRef.current = null;
+        setError("Session expired. Your next message will start a fresh draft.");
+      } else {
+        setError("Failed to process intent. Please try again.");
+      }
     }
   }, [
     inputText,
     intentMutation,
     hasSplit,
-    showGrid,
     constraints,
+    showGrid,
+    gridData.length,
     pushMessage,
     generateCampaignName,
     dispatch,
@@ -426,6 +544,15 @@ export default function Wizard() {
     schedule.endTime,
   ]);
 
+  const handleSuggestionClick = useCallback(
+    (text: string) => {
+      setSuggestions([]);
+      setInputText("");
+      handleSubmit(text);
+    },
+    [handleSubmit],
+  );
+
   const handleResetPromoChat = useCallback(() => {
     if (intentMutation.isPending || hwConfirmMutation.isPending) return;
     pipelineSessionIdRef.current = null;
@@ -433,6 +560,7 @@ export default function Wizard() {
     dispatch(setCampaignName(""));
     setSchedule({ startDate: "", startTime: "08:00", endDate: "", endTime: "08:00", autoApprove: false });
     setInputText("");
+    setSuggestions([]);
     setIsTyping(false);
     setError(null);
   }, [dispatch, intentMutation.isPending, hwConfirmMutation.isPending]);
@@ -440,6 +568,63 @@ export default function Wizard() {
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
   }, [dispatch]);
+
+  /**
+   * Step 2 — "Configure Design":
+   *   1. POST /campaigns/generate  →  202 Accepted
+   *   2. Open Campaign Studio modal immediately (generating overlay visible)
+   *   3. Poll /events until layout_generated fires, then reveal variant cards
+   */
+  const handleNlConfigureDesign = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target and size before generating layouts.");
+      return;
+    }
+
+    // Re-open studio for an already-generated campaign
+    if (campaignIdFromStore) {
+      setShowStudio(true);
+      return;
+    }
+
+    if (!pipelineSessionIdRef.current) {
+      setError("Complete Step 1 chat first so a draft session exists, then try again.");
+      return;
+    }
+
+    setDesignGeneratePending(true);
+    setError(null);
+    try {
+      const name = campaignName?.trim() || undefined;
+      const created = await generateCampaign({
+        session_id: pipelineSessionIdRef.current,
+        hardware_targets: hardwareTargetsForApi,
+        ...(name ? { name } : {}),
+      });
+      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
+
+      // Open the modal in "generating" mode — event polling starts immediately.
+      // Snapshot the IDs of any existing events so the effect only reacts to NEW ones.
+      knownEventIdsAtPollStart.current = new Set(studioEventsRef.current.map((e) => e.id));
+      setGeneratedVariants([]);
+      setStudioGenerating(true);
+      setShowStudio(true);
+      startStudioPolling();
+    } catch {
+      setError("Failed to generate layouts. Check your connection and try again.");
+    } finally {
+      setDesignGeneratePending(false);
+    }
+  }, [
+    buildHardwareTargetsForApi,
+    campaignIdFromStore,
+    campaignName,
+    dispatch,
+    queryClient,
+    startStudioPolling,
+  ]);
 
   const handleNlNextFromGuardRails = useCallback(() => {
     dispatch(setWStep(4));
@@ -459,102 +644,47 @@ export default function Wizard() {
     [dispatch],
   );
 
-  const handleNlSubmit = useCallback(async () => {
-    const hardwareTargetsForApi = buildHardwareTargetsForApi();
-    if (hardwareTargetsForApi.length === 0) {
-      setError("Select at least one hardware target before submit.");
+  // ── Step 5: Send for Approval ─────────────────────────────────────
+  const handleNlSubmit = useCallback(() => {
+    if (!campaignIdFromStore) {
+      setError("No campaign found. Please complete the wizard from the beginning.");
       return;
     }
-    const resolvedName = campaignName || "Untitled Campaign";
-    let resolvedId = `inbox-${Date.now()}`;
-    let submitSucceeded = false;
-    let created: CampaignListItem | null = null;
-    try {
-      const sessionId =
-        pipelineSessionIdRef.current ??
-        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `session-${Date.now()}`);
-      created = await createCampaignFromWizard(resolvedName, hardwareTargetsForApi, {
-        sessionId,
-        schedule: {
-          startDate: schedule.startDate,
-          startTime: schedule.startTime,
-          endDate: schedule.endDate,
-          endTime: schedule.endTime,
+    const scheduleType = schedule.startDate?.trim() ? "scheduled" : "immediate";
+    submitMutation.mutate(
+      {
+        id: campaignIdFromStore,
+        payload: {
+          selected_variant_id: selectedVariant,
+          schedule_type: scheduleType,
         },
-      });
-      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
-      resolvedId = created.id;
-      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
-      submitSucceeded = true;
-    } catch {
-      setError("Failed to submit campaign for approval. Please fix and try again.");
-      return;
-    }
-
-    if (!submitSucceeded || !created) return;
-
-    const now = new Date();
-    const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
-    const hardwareTargets = selectedDevices.map(toApprovalHardwareLabel);
-
-    const currentUser = PromoAuthService.getCurrentUser();
-    const fromProfile = currentUser
-      ? [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ").trim()
-      : "";
-    const initiatorDisplay =
-      created.ownerName?.trim() ||
-      created.initiator?.trim() ||
-      fromProfile ||
-      "You";
-
-    const pendingInboxItem: InboxItem = {
-      id: resolvedId,
-      title: resolvedName,
-      subtitle: "Waiting for approver decision",
-      initiator: initiatorDisplay,
-      skus:
-        inputMode === "csv"
-          ? csvRows.length
-          : gridData.length > 0
-            ? includedGridSkuCount
-            : 3,
-      meta: "Pending",
-      metaVariant: "muted",
-      urgent: false,
-      status: "pending",
-      hardwareTargets,
-      guardRailsLabel: "All Pass",
-      submittedAt,
-    };
-
-    queryClient.setQueryData<InboxItem[] | undefined>(approvalKeys.inbox, (prev) => {
-      if (!prev) return [pendingInboxItem];
-      const withoutDuplicate = prev.filter((item) => item.id !== pendingInboxItem.id);
-      return [pendingInboxItem, ...withoutDuplicate];
-    });
-
-    dispatch(setPendingApproval(true));
-    dispatch(resetWizard());
-    dispatch(resetStudio());
-    navigate({ to: "/campaigns" });
+      },
+      {
+        onSuccess: () => {
+          toast({
+            title: "Sent for Approval",
+            description: `Variant ${selectedVariant} is now pending review by the approver.`,
+          });
+          dispatch(resetWizard());
+          dispatch(resetStudio());
+          navigate({ to: "/maker/dashboard" });
+        },
+        onError: () => {
+          toast({
+            title: "Submission failed",
+            description: "Could not send the campaign for approval. Please try again.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
   }, [
-    buildHardwareTargetsForApi,
-    campaignName,
-    csvRows.length,
-    dispatch,
-    gridData.length,
-    includedGridSkuCount,
-    inputMode,
-    navigate,
-    queryClient,
+    campaignIdFromStore,
+    selectedVariant,
     schedule.startDate,
-    schedule.startTime,
-    schedule.endDate,
-    schedule.endTime,
-    selectedDevices,
-    toApprovalHardwareLabel,
+    submitMutation,
+    dispatch,
+    navigate,
   ]);
 
   // Manual flow confirm
@@ -636,11 +766,61 @@ export default function Wizard() {
 
   const marginFloor = parseInt(constraints.marginFloor) / 100;
 
+  // ── Studio: chat send handler ─────────────────────────────────────
+  const handleStudioChatSend = useCallback(
+    (message: string) => {
+      if (!campaignIdFromStore) return;
+      setIsRefining(true);
+      chatMutation.mutate(
+        {
+          campaignId: campaignIdFromStore,
+          payload: { message, variant_id: selectedVariant },
+        },
+        {
+          onSuccess: () => {
+            expectingChatLayoutEventRef.current = true;
+            // Snapshot known IDs BEFORE restarting polling so the event effect
+            // won't falsely stop on the already-seen layout_generated event.
+            knownEventIdsAtPollStart.current = new Set(
+              studioEventsRef.current.map((e) => e.id),
+            );
+            startStudioPolling();
+          },
+          onError: () => {
+            expectingChatLayoutEventRef.current = false;
+            setIsRefining(false);
+            toast({ title: "Refinement failed", description: "Please try again.", variant: "destructive" });
+          },
+        },
+      );
+    },
+    [campaignIdFromStore, selectedVariant, chatMutation, startStudioPolling],
+  );
+
+  // ── Studio: Apply to Campaign (draft) — continue wizard; do not POST /submit here ──
+  const handleStudioApplyToCampaign = useCallback(
+    (variantId: string) => {
+      const v =
+        variantId === "A" || variantId === "B" || variantId === "C" ? variantId : selectedVariant;
+      stopStudioPolling();
+      expectingChatLayoutEventRef.current = false;
+      setIsRefining(false);
+      setStudioGenerating(false);
+      setSelectedVariant(v);
+      setDesignConfigured(true);
+      setAppliedStudioSelection({ source: "ai" });
+      setShowStudio(false);
+      toast({
+        title: "Design applied",
+        description: `Variant ${v} is saved on this draft. Continue to Guard Rails when ready.`,
+      });
+    },
+    [selectedVariant, stopStudioPolling],
+  );
+
   // ── Proceed button visibility for NL step 1 ────────────────────────
   const canProceedNl =
-    (inputMode === "ai" &&
-      showGrid &&
-      (gridData.length === 0 || includedGridSkuCount > 0)) ||
+    (inputMode === "ai" && (gridData.length === 0 || includedGridSkuCount > 0)) ||
     (inputMode === "csv" && csvConfirmed);
 
   return (
@@ -773,6 +953,8 @@ export default function Wizard() {
                               onResetChat={handleResetPromoChat}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
+                              suggestions={suggestions}
+                              onSuggestionClick={handleSuggestionClick}
                             />
                           </div>
                           {showGrid ? (
@@ -832,6 +1014,13 @@ export default function Wizard() {
                 onToggleSize={handleToggleDeviceSize}
                 onNext={handleNlNextFromScreens}
                 storeNumber={constraints.store}
+                onConfigureDesign={handleNlConfigureDesign}
+                isGeneratingLayouts={designGeneratePending}
+                selectedDesign={appliedStudioSelection}
+                generatedVariants={generatedVariants}
+                eslPreviewPlaceholders={eslPreviewPlaceholders}
+                imageCacheBuster={imageCacheBuster}
+                apiBaseUrl={defaultPromoApiBase()}
               />
             )}
 
@@ -846,6 +1035,7 @@ export default function Wizard() {
             {wStep === 5 && wMode === "nl" && (
               <SubmitReviewStep
                 onSubmit={handleNlSubmit}
+                isSubmitting={submitMutation.isPending}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={inputMode === "csv" ? csvRows.length : includedGridSkuCount}
                 scheduleDateLabel={formatWizardScheduleDate(schedule.startDate) || "Immediate"}
@@ -900,6 +1090,35 @@ export default function Wizard() {
           </div>
         )}
       </div>
+
+      {/* ── Campaign Studio Modal ──────────────────────────────────── */}
+      <CampaignStudioModal
+        open={showStudio}
+        onClose={() => setShowStudio(false)}
+        mode={
+          selectedDevices.includes("lcd") && !selectedDevices.includes("chroma42")
+            ? "lcd"
+            : "esl"
+        }
+        selectedVariant={selectedVariant}
+        onSelectVariant={setSelectedVariant}
+        onApply={(selection) => {
+          setDesignConfigured(true);
+          setAppliedStudioSelection(selection);
+          setShowStudio(false);
+          if (selection.source !== "ai") {
+            toast({ title: "Design applied", description: `Template "${selection.templateName ?? "custom"}" applied.` });
+          }
+        }}
+        isGenerating={studioGenerating}
+        generatedVariants={generatedVariants}
+        imageCacheBuster={imageCacheBuster}
+        isRefining={isRefining}
+        onSendChat={handleStudioChatSend}
+        lastAiResponse={lastAiResponse}
+        onSubmitForApproval={handleStudioApplyToCampaign}
+        placeholders={eslPreviewPlaceholders}
+      />
     </>
   );
 }

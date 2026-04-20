@@ -9,6 +9,7 @@ import {
 import CampaignModal from "./components/campaign-modal";
 import CampaignsScheduledTab from "./campaigns-scheduled-tab";
 import type { CampaignCreateForm, CampaignListItem, CampaignListStatus } from "@/types/campaigns";
+import { derivePipelineForRow } from "@/services/campaigns";
 import { useCampaignList, useDeleteCampaign, useUpdateCampaign } from "@/hooks/use-campaigns";
 import { cn } from "@/lib/utils";
 
@@ -22,20 +23,6 @@ function toProto(status: CampaignListStatus): Exclude<StatusFilter, "all"> | "pe
     case "Completed": return "completed";
     case "Draft":     return "draft";
     default:          return "pending";
-  }
-}
-
-function derivePipeline(status: CampaignListStatus): string[] {
-  switch (status) {
-    case "Active":
-    case "Completed":
-      return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
-    case "Scheduled":
-      return ["Data", "Design", "Guard Rails", "Scheduled"];
-    case "Draft":
-      return ["Data", "Design"];
-    default:
-      return ["Data", "Design", "Guard Rails", "Approval"];
   }
 }
 
@@ -177,7 +164,7 @@ export default function CampaignsPrototype() {
       .map((c) => ({
         ...c,
         _protoStatus: toProto(c.status),
-        _pipeline: c.pipeline ?? derivePipeline(c.status),
+        _pipeline: derivePipelineForRow(c),
         _paused: pausedById[c.id] ?? c.paused ?? false,
       }));
   }, [campaigns, activeFilter, search, pausedById]);

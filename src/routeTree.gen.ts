@@ -54,6 +54,7 @@ import { Route as AdminAdminCampaignsRouteImport } from './routes/_admin/admin/c
 import { Route as AdminAdminApprovalsRouteImport } from './routes/_admin/admin/approvals'
 import { Route as AdminAdminStoresIndexRouteImport } from './routes/_admin/admin/stores/index'
 import { Route as AdminAdminStoresNewRouteImport } from './routes/_admin/admin/stores/new'
+import { Route as MakerMakerCampaignCampaignIdStudioRouteImport } from './routes/_maker/maker/campaign.$campaignId.studio'
 
 const SelectStoreRoute = SelectStoreRouteImport.update({
   id: '/select-store',
@@ -280,6 +281,12 @@ const AdminAdminStoresNewRoute = AdminAdminStoresNewRouteImport.update({
   path: '/new',
   getParentRoute: () => AdminAdminStoresRoute,
 } as any)
+const MakerMakerCampaignCampaignIdStudioRoute =
+  MakerMakerCampaignCampaignIdStudioRouteImport.update({
+    id: '/maker/campaign/$campaignId/studio',
+    path: '/maker/campaign/$campaignId/studio',
+    getParentRoute: () => MakerRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -323,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/maker/wizard': typeof MakerMakerWizardRoute
   '/admin/stores/new': typeof AdminAdminStoresNewRoute
   '/admin/stores/': typeof AdminAdminStoresIndexRoute
+  '/maker/campaign/$campaignId/studio': typeof MakerMakerCampaignCampaignIdStudioRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -365,6 +373,7 @@ export interface FileRoutesByTo {
   '/maker/wizard': typeof MakerMakerWizardRoute
   '/admin/stores/new': typeof AdminAdminStoresNewRoute
   '/admin/stores': typeof AdminAdminStoresIndexRoute
+  '/maker/campaign/$campaignId/studio': typeof MakerMakerCampaignCampaignIdStudioRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -413,6 +422,7 @@ export interface FileRoutesById {
   '/_maker/maker/wizard': typeof MakerMakerWizardRoute
   '/_admin/admin/stores/new': typeof AdminAdminStoresNewRoute
   '/_admin/admin/stores/': typeof AdminAdminStoresIndexRoute
+  '/_maker/maker/campaign/$campaignId/studio': typeof MakerMakerCampaignCampaignIdStudioRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -458,6 +468,7 @@ export interface FileRouteTypes {
     | '/maker/wizard'
     | '/admin/stores/new'
     | '/admin/stores/'
+    | '/maker/campaign/$campaignId/studio'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -500,6 +511,7 @@ export interface FileRouteTypes {
     | '/maker/wizard'
     | '/admin/stores/new'
     | '/admin/stores'
+    | '/maker/campaign/$campaignId/studio'
   id:
     | '__root__'
     | '/'
@@ -547,6 +559,7 @@ export interface FileRouteTypes {
     | '/_maker/maker/wizard'
     | '/_admin/admin/stores/new'
     | '/_admin/admin/stores/'
+    | '/_maker/maker/campaign/$campaignId/studio'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -876,6 +889,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminStoresNewRouteImport
       parentRoute: typeof AdminAdminStoresRoute
     }
+    '/_maker/maker/campaign/$campaignId/studio': {
+      id: '/_maker/maker/campaign/$campaignId/studio'
+      path: '/maker/campaign/$campaignId/studio'
+      fullPath: '/maker/campaign/$campaignId/studio'
+      preLoaderRoute: typeof MakerMakerCampaignCampaignIdStudioRouteImport
+      parentRoute: typeof MakerRoute
+    }
   }
 }
 
@@ -982,6 +1002,7 @@ interface MakerRouteChildren {
   MakerMakerStudioRoute: typeof MakerMakerStudioRoute
   MakerMakerTemplatesRoute: typeof MakerMakerTemplatesRoute
   MakerMakerWizardRoute: typeof MakerMakerWizardRoute
+  MakerMakerCampaignCampaignIdStudioRoute: typeof MakerMakerCampaignCampaignIdStudioRoute
 }
 
 const MakerRouteChildren: MakerRouteChildren = {
@@ -995,6 +1016,8 @@ const MakerRouteChildren: MakerRouteChildren = {
   MakerMakerStudioRoute: MakerMakerStudioRoute,
   MakerMakerTemplatesRoute: MakerMakerTemplatesRoute,
   MakerMakerWizardRoute: MakerMakerWizardRoute,
+  MakerMakerCampaignCampaignIdStudioRoute:
+    MakerMakerCampaignCampaignIdStudioRoute,
 }
 
 const MakerRouteWithChildren = MakerRoute._addFileChildren(MakerRouteChildren)

@@ -4,7 +4,6 @@ import { useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useOrganizationOverviewStats } from "@/hooks/use-organization-overview";
 import { useStoresList } from "@/hooks/use-stores";
 import { StoreContext } from "@/lib/store-context";
@@ -103,7 +102,6 @@ export default function AdminDashboard() {
       <header className="shrink-0 border-b border-border/80 bg-sidebar/70 px-4 py-4 backdrop-blur-xl sm:px-6">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div className="flex min-w-0 items-start gap-2 sm:gap-3">
-            <SidebarTrigger className="mt-1 hidden shrink-0 text-foreground md:inline-flex" />
             <div className="min-w-0 space-y-1">
               <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">
                 Organization Overview

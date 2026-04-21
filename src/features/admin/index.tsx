@@ -1,7 +1,7 @@
 import { AlertCircle, Check, Loader2, Plus, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 
-import { PrototypeTabulator } from "@/components/ui/prototype-tabulator";
+import { DataTable } from "@/components/ui/data-table";
 import { buildGuardRailTabulatorColumns } from "./guard-rails-table-columns";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import {
@@ -146,7 +146,7 @@ export default function Admin() {
     [deleteMutation, updateMutation],
   );
 
-  const columns = useMemo(() => buildGuardRailTabulatorColumns(), []);
+  const columns = useMemo(() => buildGuardRailTabulatorColumns({ onAction: handleTableAction }), [handleTableAction]);
 
   return (
     <>
@@ -201,14 +201,15 @@ export default function Admin() {
 
           {!isLoading && !isError && (
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <PrototypeTabulator
-                className="guard-rails-tabulator-prototype min-h-0 flex-1 border-0"
+              <DataTable
+                className="rounded-none border-0 flex-1"
                 columns={columns}
                 data={filteredRules}
+                rowIdField="id"
                 layout="fitColumns"
                 pagination={false}
-                tableHeight="100%"
-                onCellClick={(e, row) => handleTableAction(e, row)}
+                showRowNumber={false}
+                headerFilters={false}
               />
             </div>
           )}

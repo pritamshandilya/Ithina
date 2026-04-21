@@ -12,8 +12,30 @@ import { useMemo, useRef, useState } from "react";
 import { useCampaignList } from "@/hooks/use-campaigns";
 import { cn } from "@/lib/utils";
 
+/** Mirrors wizard parent `schedule` — used to seed Step 5 from AI / staging toolbar. */
+export interface ScheduleStepInitialSchedule {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  autoApprove: boolean;
+}
+
 interface ScheduleStepProps {
   onNext: (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => void;
+  initialSchedule?: ScheduleStepInitialSchedule;
+}
+
+const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function parseYmd(ymd: string): { year: number; month: number; day: number } | null {
+  const m = ymd.trim().match(YMD);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]) - 1;
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return { year, month, day };
 }
 
 type SchedFilter = "All" | "Recurring" | "One-time";
@@ -53,7 +75,7 @@ function buildCalendarCells(
   return cells;
 }
 
-export default function ScheduleStep({ onNext }: ScheduleStepProps) {
+export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepProps) {
   const { data: campaigns = [], isLoading: schedulesLoading } = useCampaignList();
   const todayIso = useMemo(() => {
     const now = new Date();
@@ -62,13 +84,27 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
     const d = `${now.getDate()}`.padStart(2, "0");
     return `${y}-${m}-${d}`;
   }, []);
-  const [startDate, setStartDate] = useState(todayIso);
-  const [startTime, setStartTime] = useState("08:00");
-  const [endDate, setEndDate] = useState("");
-  const [autoApprove, setAutoApprove] = useState(false);
+  const [startDate, setStartDate] = useState(() => {
+    const s = initialSchedule?.startDate?.trim();
+    return s || todayIso;
+  });
+  const [startTime, setStartTime] = useState(() => {
+    const t = initialSchedule?.startTime?.trim();
+    return t || "08:00";
+  });
+  const [endDate, setEndDate] = useState(() => initialSchedule?.endDate?.trim() || "");
+  const [autoApprove, setAutoApprove] = useState(() => initialSchedule?.autoApprove ?? false);
   const [schedFilter, setSchedFilter] = useState<SchedFilter>("All");
-  const [selectedSchedDay, setSelectedSchedDay] = useState<number | null>(new Date().getDate());
+  const [selectedSchedDay, setSelectedSchedDay] = useState<number | null>(() => {
+    const s = initialSchedule?.startDate?.trim();
+    const p = s ? parseYmd(s) : null;
+    if (p) return p.day;
+    return new Date().getDate();
+  });
   const [displayMonth, setDisplayMonth] = useState(() => {
+    const s = initialSchedule?.startDate?.trim();
+    const p = s ? parseYmd(s) : null;
+    if (p) return new Date(p.year, p.month, 1);
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
@@ -89,7 +125,7 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
           date: validDate,
           day: validDate.getDate(),
           time: validDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          type: campaign.scheduledEndAt ? "recurring" : "one-time",
+          type: (campaign.scheduledEndAt ? "recurring" : "one-time") as DeploymentType,
         };
       })
       .sort((a, b) => a.date.getTime() - b.date.getTime());

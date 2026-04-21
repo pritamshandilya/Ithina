@@ -88,7 +88,7 @@ export function TeamSwitcher() {
                 isCollapsed && "justify-center rounded-xl p-0",
               )}
             >
-              <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl border border-accent/15 bg-accent/10 text-accent">
+              <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
                 <Building2 className="size-4" />
               </div>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">

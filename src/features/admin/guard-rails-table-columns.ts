@@ -1,4 +1,4 @@
-import type { PrototypeTabulatorColumn } from "@/components/ui/prototype-tabulator";
+import type { DataTableCell, DataTableColumn } from "@/components/ui/data-table";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 
 function categoryPillClass(category: GuardRailCategory) {
@@ -50,7 +50,11 @@ function trashIcon() {
   </svg>`;
 }
 
-export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<GuardRailRule>[] {
+export interface BuildGuardRailColumnsParams {
+  onAction: (e: MouseEvent, row: GuardRailRule) => void;
+}
+
+export function buildGuardRailTabulatorColumns({ onAction }: BuildGuardRailColumnsParams): DataTableColumn<GuardRailRule>[] {
   return [
     {
       title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Rule Name</div>`,
@@ -59,9 +63,8 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "left",
       width: 260,
       minWidth: 220,
-      cssClass: "gr-col-name",
-      formatter: (cell) => {
-        const row = cell.getData() as GuardRailRule;
+      formatter: (cell: DataTableCell<GuardRailRule>) => {
+        const row = cell.getData();
         const dot = row.active ? "bg-emerald-400" : "bg-slate-600";
         return `<div class="flex items-start gap-2.5 py-1">
           <span class="mt-1.5 inline-block size-1.5 shrink-0 rounded-full ${dot}" aria-hidden="true"></span>
@@ -79,9 +82,8 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "left",
       width: 132,
       minWidth: 120,
-      cssClass: "gr-col-mid",
-      formatter: (cell) => {
-        const row = cell.getData() as GuardRailRule;
+      formatter: (cell: DataTableCell<GuardRailRule>) => {
+        const row = cell.getData();
         return `<span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-mono font-semibold ${categoryPillClass(row.category)}">${row.category}</span>`;
       },
     },
@@ -92,9 +94,8 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "left",
       width: 96,
       minWidth: 88,
-      cssClass: "gr-col-mid",
-      formatter: (cell) => {
-        const row = cell.getData() as GuardRailRule;
+      formatter: (cell: DataTableCell<GuardRailRule>) => {
+        const row = cell.getData();
         return severityPill(row.severity);
       },
     },
@@ -105,9 +106,8 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "left",
       minWidth: 200,
       widthGrow: 1,
-      cssClass: "gr-col-desc",
-      formatter: (cell) => {
-        const row = cell.getData() as GuardRailRule;
+      formatter: (cell: DataTableCell<GuardRailRule>) => {
+        const row = cell.getData();
         return `<p class="min-w-0 py-0.5 text-sm leading-relaxed text-slate-200">${row.description}</p>`;
       },
     },
@@ -118,10 +118,12 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "left",
       width: 148,
       minWidth: 138,
-      cssClass: "gr-col-mid",
-      formatter: (cell) => {
-        const row = cell.getData() as GuardRailRule;
+      formatter: (cell: DataTableCell<GuardRailRule>) => {
+        const row = cell.getData();
         return statusToggle(row);
+      },
+      cellClick: (e: MouseEvent, cell: DataTableCell<GuardRailRule>) => {
+        onAction(e, cell.getData());
       },
     },
     {
@@ -132,12 +134,13 @@ export function buildGuardRailTabulatorColumns(): PrototypeTabulatorColumn<Guard
       hozAlign: "right",
       width: 100,
       minWidth: 96,
-      cssClass: "gr-col-actions",
-      formatter: () => {
-        return `<div class="flex items-center justify-end gap-1.5">
+      formatter: () =>
+        `<div class="flex items-center justify-end gap-1.5">
           <button type="button" data-action="edit" class="inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-ithina-purple/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit rule">${pencilIcon()}</button>
           <button type="button" data-action="delete" class="inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white" aria-label="Delete rule">${trashIcon()}</button>
-        </div>`;
+        </div>`,
+      cellClick: (e: MouseEvent, cell: DataTableCell<GuardRailRule>) => {
+        onAction(e, cell.getData());
       },
     },
   ];

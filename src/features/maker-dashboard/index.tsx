@@ -6,7 +6,10 @@ import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/compone
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCampaignList } from "@/hooks/use-campaigns";
 import { formatCampaignDateTime } from "@/lib/format-datetime";
+import { MOCK_ROOS_INSIGHTS } from "@/mocks/dashboard-roos-insights";
+import { buildCampaignHistoryRows } from "@/services/dashboard";
 import type { CampaignListItem } from "@/types/campaigns";
+import type { CampaignRow } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
 const MS_WEEK = 7 * 86400000;
@@ -51,73 +54,6 @@ function buildDashboardStatCards(campaigns: CampaignListItem[]) {
   ];
 }
 
-const INSIGHTS = [
-  {
-    id: "ins-1",
-    severity: "time-sensitive" as const,
-    label: "Time Sensitive",
-    barClass: "bg-amber-500/50",
-    badgeClass: "bg-amber-500/10 text-amber-500 border-amber-500/20",
-    hoverBorderClass: "hover:border-amber-500/50",
-    timestamp: "Just Now",
-    title: "12 Sushi Trays Expiring",
-    description:
-      "ROOS detects 12 SKUs in the Perishables category reaching expiration in 48 hours. Estimated waste value: $892.",
-    actionLabel: "Draft Clearance Campaign",
-    prompt: "Draft an urgent clearance campaign for the expiring Premium Sushi SKUs. Apply a 20% markdown.",
-  },
-  {
-    id: "ins-2",
-    severity: "velocity-drop" as const,
-    label: "Velocity Drop",
-    barClass: "bg-rose-500/50",
-    badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
-    hoverBorderClass: "hover:border-white/20",
-    timestamp: null,
-    title: "Beverage Category −8%",
-    description:
-      "Sales velocity for summer beverages has dropped 8% week-over-week. Inventory is backing up.",
-    actionLabel: "Draft Weekend Promo",
-    prompt: "Draft a weekend promotional campaign for the summer beverages category.",
-  },
-  {
-    id: "ins-3",
-    severity: "high-stock" as const,
-    label: "High Stock",
-    barClass: "bg-emerald-500/50",
-    badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    hoverBorderClass: "hover:border-white/20",
-    timestamp: null,
-    title: "Premium Electronics",
-    description:
-      "High stock levels detected on high-margin headphones. Suggestion: Bundle or Flash Sale.",
-    actionLabel: "Draft Flash Sale",
-    prompt: "Draft a flash sale campaign for the high-margin premium electronics range.",
-  },
-];
-
-type HistoryStatus = "live" | "pending" | "draft";
-
-interface CampaignRow {
-  id: string;
-  name: string;
-  campaignId: string;
-  initiator: string;
-  status: HistoryStatus;
-  statusLabel: string;
-  hardwareTargets: string;
-  lastUpdated: string;
-}
-
-const DEFAULT_HISTORY_ROWS: CampaignRow[] = [
-  { id: "r1", name: "Weekend Beverage Promo",    campaignId: "CMP-9941-A", initiator: "System (Auto)", status: "live",    statusLabel: "Live (100% Synced)",   hardwareTargets: "Chroma 42, LCD Banners",    lastUpdated: "Today, 08:45 AM" },
-  { id: "r2", name: "Electronics Flash Sale",     campaignId: "CMP-8810-B", initiator: "Sarah J.",      status: "pending", statusLabel: "Pending Approval",     hardwareTargets: "Chroma 29, Chroma 16",      lastUpdated: "Yesterday, 14:22 PM" },
-  { id: "r3", name: "Seasonal Apparel Markdowns", campaignId: "CMP-7705-C", initiator: "Marcus P.",     status: "draft",   statusLabel: "Draft",                hardwareTargets: "—",                         lastUpdated: "Oct 12, 11:05 AM" },
-  { id: "r4", name: "Dairy & Bakery Weekend",     campaignId: "CMP-9937-E", initiator: "Marcus T.",     status: "pending", statusLabel: "Pending Approval",     hardwareTargets: "ESL 2.9\"",                  lastUpdated: "Mar 14, 10:05 AM" },
-  { id: "r5", name: "Spring Produce Launch",      campaignId: "CMP-9938-D", initiator: "Auto-Scheduled",status: "live",    statusLabel: "Live (Scheduled)",     hardwareTargets: "ESL 4.2\", LCD 10\"",       lastUpdated: "Mar 15, 08:00 AM" },
-  { id: "r6", name: "BOGO Snacks Promotion",      campaignId: "CMP-9936-F", initiator: "Sarah J.",      status: "live",    statusLabel: "Live (100% Synced)",   hardwareTargets: "ESL 4.2\"",                  lastUpdated: "Mar 3, 09:30 AM" },
-];
-
 const ROUTES_BY_VARIANT = {
   maker: {
     live: "/maker/fleet",
@@ -138,11 +74,9 @@ export type MakerDashboardVariant = keyof typeof ROUTES_BY_VARIANT;
 const HISTORY_COLUMNS: IthColumnDef<CampaignRow>[] = [
   {
     key: "name",
-    label: "Campaign ID & Name",
+    label: "Campaign",
     sortable: true,
-    render: (row) => (
-      <IthPrimaryCell primary={row.name} secondary={`ID: ${row.campaignId}`} />
-    ),
+    render: (row) => <IthPrimaryCell primary={row.name} />,
   },
   {
     key: "initiator",
@@ -203,23 +137,7 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
 
   const statCards = useMemo(() => buildDashboardStatCards(campaigns), [campaigns]);
 
-  const historyRows = useMemo<CampaignRow[]>(() => {
-    if (campaigns.length === 0) return DEFAULT_HISTORY_ROWS;
-    return campaigns.map((c, idx) => {
-      const status: HistoryStatus =
-        c.status === "Draft" ? "draft" : c.approvalStatus === "pending" ? "pending" : "live";
-      return {
-        id: `hist-${c.id}-${idx}`,
-        name: c.name,
-        campaignId: c.id,
-        initiator: c.ownerName ?? c.initiator,
-        status,
-        statusLabel: status === "draft" ? "Draft" : status === "pending" ? "Pending Approval" : "Live (100% Synced)",
-        hardwareTargets: c.hardware.length ? c.hardware.join(", ") : "—",
-        lastUpdated: c.reviewedAt ?? c.date,
-      };
-    });
-  }, [campaigns]);
+  const historyRows = useMemo(() => buildCampaignHistoryRows(campaigns), [campaigns]);
 
   const filteredRows = useMemo(
     () =>
@@ -263,14 +181,14 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
             ))}
       </div>
 
-      {/* ── Proactive ROOS Insights ── */}
+      {/* ── Proactive ROOS Insights (mock — swap for API when ROOS backend is ready) ── */}
       <div className="shrink-0">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-white">
           <Zap className="size-4 text-ithina-purple" />
           Proactive ROOS Insights
         </h2>
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {INSIGHTS.map((insight) => (
+          {MOCK_ROOS_INSIGHTS.map((insight) => (
             <div
               key={insight.id}
               className={cn(
@@ -280,10 +198,17 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
             >
               <div className={cn("absolute left-0 top-0 h-1 w-full", insight.barClass)} />
               <div className="mb-3 flex items-start justify-between">
-                <span className={cn("rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest", insight.badgeClass)}>
+                <span
+                  className={cn(
+                    "rounded border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest",
+                    insight.badgeClass,
+                  )}
+                >
                   {insight.label}
                 </span>
-                {insight.timestamp && <span className="text-xs text-slate-500">{insight.timestamp}</span>}
+                {insight.timestamp ? (
+                  <span className="text-xs text-slate-500">{insight.timestamp}</span>
+                ) : null}
               </div>
               <h3 className="mb-2 text-base font-bold text-white">{insight.title}</h3>
               <p className="mb-5 text-xs leading-relaxed text-slate-400">{insight.description}</p>

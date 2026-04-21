@@ -1,62 +1,63 @@
 import { memo } from "react";
 
-import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
+import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
 import { formatCampaignDateTime } from "@/lib/format-datetime";
 import type { CampaignRow, CampaignStatus } from "@/types/dashboard";
 
-const STATUS_VARIANT: Record<CampaignStatus, "emerald" | "amber" | "slate"> = {
-  live:    "emerald",
-  pending: "amber",
-  draft:   "slate",
+const STATUS_CHIP: Record<CampaignStatus, string> = {
+  live:    `<span class="inline-flex items-center gap-1.5 rounded-full border border-chart-2/20 bg-chart-2/10 px-2.5 py-0.5 text-xs font-semibold text-chart-2"><span class="size-1.5 rounded-full bg-current animate-pulse"></span>`,
+  pending: `<span class="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400"><span class="size-1.5 rounded-full bg-current"></span>`,
+  draft:   `<span class="inline-flex items-center gap-1.5 rounded-full border border-border/30 bg-muted/10 px-2.5 py-0.5 text-xs font-semibold text-muted-foreground"><span class="size-1.5 rounded-full bg-current"></span>`,
 };
 
-const COLUMNS: IthColumnDef<CampaignRow>[] = [
+const COLUMNS: DataTableColumn<CampaignRow>[] = [
   {
-    key: "name",
-    label: "Campaign ID & Name",
-    sortable: true,
-    render: (row) => (
-      <IthPrimaryCell primary={row.name} secondary={`ID: ${row.campaignId}`} />
-    ),
+    title: "Campaign",
+    field: "name",
+    minWidth: 180,
+    headerHozAlign: "left",
+    hozAlign: "left",
+    formatter: (cell: DataTableCell<CampaignRow>) => {
+      const row = cell.getData();
+      return `<div class="text-left">
+        <p class="text-[13px] font-semibold leading-tight text-white">${row.name}</p>
+      </div>`;
+    },
   },
   {
-    key: "initiator",
-    label: "Initiator",
+    title: "Initiator",
     field: "initiator",
-    sortable: true,
+    formatter: (cell: DataTableCell<CampaignRow>) =>
+      `<span class="text-[13px] text-slate-300">${String(cell.getValue() ?? "")}</span>`,
   },
   {
-    key: "status",
-    label: "Status",
-    render: (row) => (
-      <IthBadge
-        label={row.statusLabel}
-        variant={STATUS_VARIANT[row.status]}
-        dot={row.status === "live"}
-        pulse={row.status === "live"}
-      />
-    ),
+    title: "Status",
+    field: "status",
+    width: 160,
+    formatter: (cell: DataTableCell<CampaignRow>) => {
+      const row = cell.getData();
+      const prefix = STATUS_CHIP[row.status] ?? STATUS_CHIP.draft;
+      return `${prefix}${row.statusLabel}</span>`;
+    },
   },
   {
-    key: "hardwareTargets",
-    label: "Hardware Targets",
-    render: (row) =>
-      row.status === "draft" ? (
-        <span className="font-mono text-xs italic text-slate-500">Not defined</span>
-      ) : (
-        <span className="text-xs text-slate-400">{row.hardwareTargets}</span>
-      ),
+    title: "Hardware Targets",
+    field: "hardwareTargets",
+    formatter: (cell: DataTableCell<CampaignRow>) => {
+      const row = cell.getData();
+      if (row.status === "draft") {
+        return `<span class="font-mono text-xs italic text-slate-500">Not defined</span>`;
+      }
+      return `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`;
+    },
   },
   {
-    key: "lastUpdated",
-    label: "Last Updated",
-    align: "right",
-    sortable: true,
-    render: (row) => (
-      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
-        {formatCampaignDateTime(row.lastUpdated)}
-      </span>
-    ),
+    title: "Last Updated",
+    field: "lastUpdated",
+    hozAlign: "right",
+    headerHozAlign: "right",
+    formatter: (cell: DataTableCell<CampaignRow>) =>
+      `<span class="whitespace-nowrap text-xs text-slate-400 tabular-nums">${formatCampaignDateTime(String(cell.getValue() ?? ""))}</span>`,
   },
 ];
 
@@ -70,19 +71,16 @@ function CampaignHistoryTable({ campaigns }: CampaignHistoryTableProps) {
       <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-4">
         <h3 className="text-sm font-semibold text-white">Campaign History</h3>
       </header>
-      <IthTable<CampaignRow>
+      <DataTable<CampaignRow>
         data={campaigns}
         columns={COLUMNS}
-        rowKey={(r) => r.id}
-        pagination={{
-          page: 1,
-          pageSize: 5,
-          total: campaigns.length,
-          onPageChange: () => undefined,
-          rowLabel: "campaigns",
-        }}
-        empty={{ message: "No campaigns found." }}
-        className="rounded-none border-0"
+        rowIdField="id"
+        pagination
+        pageSize={5}
+        pageSizeSelector={[5, 10]}
+        emptyMessage="No campaigns found."
+        headerFilters={false}
+        className="dashboard-history-table rounded-none border-0"
       />
     </div>
   );

@@ -62,7 +62,8 @@ export interface AiModifyPanelLiveConfig {
 }
 
 interface AiModifyPanelProps {
-  resetKey?: number;
+  /** When this changes (e.g. new campaign), chat/session resets. */
+  resetKey?: string | number;
   live?: AiModifyPanelLiveConfig;
 }
 
@@ -72,7 +73,7 @@ function AiModifyPanelLive({
   isRefining,
   onSend,
   lastAiResponse,
-}: { resetKey?: number } & AiModifyPanelLiveConfig) {
+}: { resetKey?: string | number } & AiModifyPanelLiveConfig) {
   const [sessions, setSessions] = useState<AiChatSession[]>(() => [createNewSession()]);
   const [activeId, setActiveId] = useState<string>(() => sessions[0].id);
   const [chatInput, setChatInput] = useState("");

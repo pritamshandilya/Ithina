@@ -33,7 +33,8 @@ import {
   updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
 import type { HardwareDeviceId } from "@/types/wizard";
-import { campaignKeys, useCampaignEvents, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
+import { useCampaignEvents } from "@/hooks/use-campaign-events";
+import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
 import { createCampaignFromWizard, generateCampaign } from "@/services/campaigns";
 import { mergeLayoutVariants } from "@/features/campaign-studio/types";
@@ -573,7 +574,7 @@ export default function Wizard() {
    * Step 2 — "Configure Design":
    *   1. POST /campaigns/generate  →  202 Accepted
    *   2. Open Campaign Studio modal immediately (generating overlay visible)
-   *   3. Poll /events until layout_generated fires, then reveal variant cards
+   *   3. Poll GET /api/v1/campaigns/{id}/events until layout_generated fires, then reveal variant cards
    */
   const handleNlConfigureDesign = useCallback(async () => {
     const hardwareTargetsForApi = buildHardwareTargetsForApi();
@@ -603,7 +604,7 @@ export default function Wizard() {
         ...(name ? { name } : {}),
       });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
-      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.listPrefix });
 
       // Open the modal in "generating" mode — event polling starts immediately.
       // Snapshot the IDs of any existing events so the effect only reacts to NEW ones.
@@ -1029,7 +1030,7 @@ export default function Wizard() {
             )}
 
             {wStep === 4 && wMode === "nl" && (
-              <ScheduleStep onNext={handleNlNextFromSchedule} />
+              <ScheduleStep initialSchedule={schedule} onNext={handleNlNextFromSchedule} />
             )}
 
             {wStep === 5 && wMode === "nl" && (

@@ -126,7 +126,7 @@ export const CHECKER_NAV_SECTIONS: NavSection[] = [
 /** Admin at organization scope (no store selected): matches POG sidebar — only these four. */
 export const ADMIN_ORG_NAV_SECTIONS: NavSection[] = [
   {
-    label: "Organization",
+    label: "",
     items: [
       {
         id: "admin-dashboard",
@@ -277,7 +277,7 @@ function flattenSections(sections: NavSection[], sectionLabel: string): NavItemF
       title: item.title,
       subtitle: item.subtitle,
       crumbSection: sectionLabel,
-      crumbParent: section.label,
+      crumbParent: section.label || "Organization",
     })),
   );
 }

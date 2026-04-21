@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
 import {
   getCampaignTimeline,
   normalizeCampaignEventsPayload,
@@ -31,13 +32,17 @@ export interface UseCampaignEventsOptions {
 }
 
 /**
- * Reusable campaign timeline polling for the Promo Assistant pipeline.
+ * Reusable campaign timeline polling for the Promo Assistant pipeline (HTTP: `getCampaignTimeline` →
+ * `GET /api/v1/campaigns/{id}/events`). There is no global `GET /events` endpoint.
  *
  * - `startPolling` / `stopPolling` — imperative control
  * - `refetchInterval` only while `isPolling` is true (saves traffic when idle)
  * - Auto-stop when `shouldStop` returns true (e.g. `campaign_published`)
  *
  * The query stays `enabled` whenever `campaignId` is set so cached events remain available after stop.
+ *
+ * **DevTools:** repeated XHR rows named `campaigns` may be this endpoint; verify the full URL ends with
+ * `/events`. Distinct from `GET /api/v1/campaigns` (list).
  */
 export function useCampaignEvents(
   campaignId: string,
@@ -73,8 +78,10 @@ export function useCampaignEvents(
 
   const stopPolling = useCallback(() => setIsPolling(false), []);
 
+  const storeId = useActiveStoreId();
+
   const query = useQuery({
-    queryKey: [...campaignKeys.timeline(campaignId), "eventsPoll"],
+    queryKey: [...campaignKeys.timeline(campaignId, storeId), "eventsPoll"],
     queryFn: () => getCampaignTimeline(campaignId),
     enabled: Boolean(campaignId),
     refetchInterval: isPolling && Boolean(campaignId) ? intervalMs : false,

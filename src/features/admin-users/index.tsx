@@ -1,7 +1,14 @@
-import { AlertCircle, Pencil, Search, Trash2, Users } from "lucide-react";
-import { useMemo, useState } from "react";
+import { AlertCircle, Search } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
+import { Button } from "@/components/ui/button";
+import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   useAdminOrganizationUsers,
@@ -10,47 +17,27 @@ import {
 } from "@/hooks/use-admin-users";
 import { toast } from "@/hooks/use-toast";
 import { formatRelativeTime } from "@/lib/format-relative-time";
-import { cn } from "@/lib/utils";
+import { ROLE_LABEL, roleBadgePogTableClass } from "@/lib/role-badge-styles";
 
 import { UserFormModal } from "./components/UserFormModal";
 import type { OrgUser, UserFormData, UserRole } from "./types";
 
-const ROLE_LABEL: Record<UserRole, string> = {
-  admin: "Admin",
-  maker: "Maker",
-  checker: "Checker",
-};
-
-const ROLE_BADGE_CLASS: Record<UserRole, string> = {
-  admin: "border-amber-400/30 bg-amber-400/10 text-amber-400",
-  maker: "border-sky-400/30 bg-sky-400/10 text-sky-400",
-  checker: "border-ithina-purple/30 bg-ithina-purple/10 text-ithina-purple",
-};
-
 type RoleFilter = "all" | UserRole;
 type StatusFilter = "all" | "active" | "inactive";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 function userInitials(u: OrgUser): string {
   const a = u.firstName.trim().charAt(0) || "";
   const b = u.lastName.trim().charAt(0) || "";
   return (a + b).toUpperCase() || "?";
 }
-
-function RoleBadge({ role }: { role: UserRole }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded border px-2 py-0.5 font-mono text-[9px] uppercase tracking-widest",
-        ROLE_BADGE_CLASS[role],
-      )}
-    >
-      {ROLE_LABEL[role]}
-    </span>
-  );
-}
-
-const filterInputClass =
-  "w-full min-w-0 rounded-md border border-ithina-border bg-ithina-bg px-2 py-1.5 text-xs text-white placeholder:text-slate-600 focus:border-ithina-purple focus:outline-none";
 
 export default function AdminUsersPage() {
   const { data: users = [], isLoading, isError, error } = useAdminOrganizationUsers();
@@ -61,12 +48,13 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [colUser, setColUser] = useState("");
-  const [colRole, setColRole] = useState("");
-  const [colStatus, setColStatus] = useState("");
-  const [colLogin, setColLogin] = useState("");
+
+  const setEditingRef = useRef(setEditingUser);
+  const deleteRef = useRef(deleteUser);
+  useEffect(() => {
+    setEditingRef.current = setEditingUser;
+    deleteRef.current = deleteUser;
+  }, [setEditingUser, deleteUser]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -79,300 +67,224 @@ export default function AdminUsersPage() {
         u.lastName.toLowerCase().includes(term) ||
         u.email.toLowerCase().includes(term) ||
         ROLE_LABEL[u.role].toLowerCase().includes(term);
-      const matchUser =
-        !colUser.trim() ||
-        `${u.firstName} ${u.lastName}`.toLowerCase().includes(colUser.trim().toLowerCase()) ||
-        u.email.toLowerCase().includes(colUser.trim().toLowerCase());
-      const matchRole =
-        !colRole.trim() || ROLE_LABEL[u.role].toLowerCase().includes(colRole.trim().toLowerCase());
-      const matchColStatus =
-        !colStatus.trim() ||
-        u.status.toLowerCase().includes(colStatus.trim().toLowerCase());
-      const loginStr = u.lastLoginAt ? formatRelativeTime(u.lastLoginAt) : "Never";
-      const matchLogin =
-        !colLogin.trim() || loginStr.toLowerCase().includes(colLogin.trim().toLowerCase());
-      return (
-        matchesRole &&
-        matchesStatus &&
-        matchesSearch &&
-        matchUser &&
-        matchRole &&
-        matchColStatus &&
-        matchLogin
-      );
+      return matchesRole && matchesStatus && matchesSearch;
     });
-  }, [users, search, roleFilter, statusFilter, colUser, colRole, colStatus, colLogin]);
+  }, [users, search, roleFilter, statusFilter]);
 
-  const columns = useMemo<IthColumnDef<OrgUser>[]>(
+  const columns = useMemo<DataTableColumn<OrgUser>[]>(
     () => [
       {
-        key: "no",
-        label: "No.",
-        width: "w-[52px]",
-        render: (_row, index) => (
-          <span className="font-mono text-xs text-slate-500">{(page - 1) * pageSize + index + 1}</span>
-        ),
+        title: "User",
+        field: "firstName",
+        minWidth: 220,
+        sorter: "string" as const,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const d = rowData as OrgUser;
+          const hay = `${d.firstName} ${d.lastName} ${d.email} ${ROLE_LABEL[d.role]}`.toLowerCase();
+          return hay.includes(term);
+        },
+        formatter: (cell: DataTableCell<OrgUser>) => {
+          const row = cell.getData();
+          const initials = escapeHtml(userInitials(row));
+          const name = escapeHtml(`${row.firstName} ${row.lastName}`);
+          const email = escapeHtml(row.email);
+          return `
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-full border border-primary/35 bg-primary/25 text-sm font-bold text-primary shadow-inner shadow-black/10">
+                ${initials}
+              </div>
+              <div class="text-left">
+                <p class="font-semibold leading-tight text-foreground">${name}</p>
+                <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span class="truncate">${email}</span>
+                </div>
+              </div>
+            </div>`;
+        },
       },
       {
-        key: "user",
-        label: "User",
-        sortable: true,
-        field: "email",
-        render: (row) => (
-          <div className="flex items-start gap-3">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ithina-border bg-ithina-panel text-[11px] font-bold text-slate-300">
-              {userInitials(row)}
-            </div>
-            <IthPrimaryCell
-              primary={`${row.firstName} ${row.lastName}`}
-              secondary={row.email}
-              secondaryMono={false}
-            />
-          </div>
-        ),
-      },
-      {
-        key: "role",
-        label: "Role",
-        sortable: true,
+        title: "Role",
         field: "role",
-        render: (row) => <RoleBadge role={row.role} />,
+        width: 150,
+        headerFilter: "list" as const,
+        headerFilterParams: {
+          values: { "": "All", admin: "Admin", maker: "Maker", checker: "Checker" },
+        },
+        formatter: (cell: DataTableCell<OrgUser>) => {
+          const role = String(cell.getValue() ?? "");
+          const label = ROLE_LABEL[role] ?? role;
+          return `<span class="${roleBadgePogTableClass(role)}">${escapeHtml(label)}</span>`;
+        },
       },
       {
-        key: "status",
-        label: "Status",
-        sortable: true,
+        title: "Status",
         field: "status",
-        render: (row) => (
-          <IthBadge
-            label={row.status === "active" ? "Active" : "Inactive"}
-            variant={row.status === "active" ? "emerald" : "slate"}
-            dot={row.status === "active"}
-            pulse={row.status === "active"}
-          />
-        ),
+        width: 120,
+        headerFilter: "list" as const,
+        headerFilterParams: {
+          values: { "": "All", active: "Active", inactive: "Inactive" },
+        },
+        formatter: (cell: DataTableCell<OrgUser>) => {
+          const active = cell.getValue() === "active";
+          const statusCls = active ? "bg-chart-2" : "bg-muted-foreground/30";
+          const textCls = active ? "text-chart-2" : "text-muted-foreground";
+          const label = active ? "Active" : "Inactive";
+          return `
+            <div class="flex items-center justify-center gap-1.5">
+              <div class="size-2 rounded-full ${statusCls}"></div>
+              <span class="text-xs font-semibold ${textCls}">${label}</span>
+            </div>`;
+        },
       },
       {
-        key: "lastLogin",
-        label: "Last login",
-        sortable: true,
+        title: "Last Login",
         field: "lastLoginAt",
-        render: (row) => (
-          <span className="text-[13px] text-slate-400">
-            {row.lastLoginAt ? formatRelativeTime(row.lastLoginAt) : "Never"}
-          </span>
-        ),
+        width: 180,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<OrgUser>) => {
+          const v = cell.getValue();
+          if (typeof v !== "string" || !v) {
+            return `<span class="text-sm text-muted-foreground">Never</span>`;
+          }
+          const text = escapeHtml(formatRelativeTime(String(v)));
+          return `<span class="text-sm text-muted-foreground">${text}</span>`;
+        },
       },
       {
-        key: "actions",
-        label: "Actions",
-        align: "right",
-        width: "min-w-[88px]",
-        render: (row) => (
-          <div className="flex items-center justify-end gap-1">
-            <button
-              type="button"
-              title="Edit user"
-              onClick={() => setEditingUser(row)}
-              className="rounded-lg border border-ithina-border p-2 text-slate-400 transition-colors hover:border-slate-600 hover:text-white"
-              aria-label={`Edit ${row.firstName}`}
-            >
-              <Pencil className="size-3.5" />
+        title: "Actions",
+        field: "actions",
+        headerSort: false,
+        headerFilter: false,
+        width: 100,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: () =>
+          `<div class="flex items-center justify-end gap-1.5">
+            <button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit user">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button
-              type="button"
-              title="Remove user"
-              disabled={deleteUser.isPending}
-              onClick={() => {
-                if (
-                  !confirm(
-                    `Remove ${row.firstName} ${row.lastName} from the organization? This cannot be undone.`,
-                  )
-                ) {
-                  return;
-                }
-                deleteUser.mutate(row.id, {
-                  onSuccess: () => {
-                    toast({ title: "User removed", description: `${row.email} was removed.` });
-                  },
-                  onError: (e) => {
-                    toast({
-                      title: "Could not remove user",
-                      description: (e as Error)?.message ?? "Please try again.",
-                      variant: "destructive",
-                    });
-                  },
-                });
-              }}
-              className="rounded-lg border border-rose-400/20 bg-rose-400/5 p-2 text-rose-400 transition-colors hover:bg-rose-400/15 disabled:cursor-not-allowed disabled:opacity-50"
-              aria-label={`Remove ${row.firstName}`}
-            >
-              <Trash2 className="size-3.5" />
+            <button type="button" data-action="delete" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white" aria-label="Delete user">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             </button>
-          </div>
-        ),
+          </div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<OrgUser>) => {
+          const t = (_e.target as HTMLElement).closest("button");
+          if (!t) return;
+          const row = cell.getData();
+          if (t.classList.contains("edit-btn")) {
+            setEditingRef.current(row);
+            return;
+          }
+          if (t.classList.contains("delete-btn")) {
+            if (!confirm(`Remove ${row.firstName} ${row.lastName} from the organization? This cannot be undone.`)) return;
+            deleteRef.current.mutate(row.id, {
+              onSuccess: () => toast({ title: "User removed", description: `${row.email} was removed.` }),
+              onError: (e) =>
+                toast({ title: "Could not remove user", description: (e as Error)?.message ?? "Please try again.", variant: "destructive" }),
+            });
+          }
+        },
       },
     ],
-    [page, pageSize, deleteUser.isPending],
-  );
-
-  const filterRow = useMemo(
-    () => [
-      <span key="fn" className="block h-8" aria-hidden />,
-      <input
-        key="fu"
-        type="text"
-        value={colUser}
-        onChange={(e) => {
-          setColUser(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Filter…"
-        className={filterInputClass}
-        aria-label="Filter users"
-      />,
-      <input
-        key="fr"
-        type="text"
-        value={colRole}
-        onChange={(e) => {
-          setColRole(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Filter…"
-        className={filterInputClass}
-        aria-label="Filter by role"
-      />,
-      <input
-        key="fs"
-        type="text"
-        value={colStatus}
-        onChange={(e) => {
-          setColStatus(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Filter…"
-        className={filterInputClass}
-        aria-label="Filter by status"
-      />,
-      <input
-        key="fl"
-        type="text"
-        value={colLogin}
-        onChange={(e) => {
-          setColLogin(e.target.value);
-          setPage(1);
-        }}
-        placeholder="Filter…"
-        className={filterInputClass}
-        aria-label="Filter by last login"
-      />,
-      <span key="fa" className="block h-8" aria-hidden />,
-    ],
-    [colUser, colRole, colStatus, colLogin],
+    [],
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div className="ithina-page flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="ithina-page-inner flex min-h-0 flex-1 flex-col gap-4 pb-10 pt-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-            <div className="relative min-h-[44px] flex-1">
-              <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
-                aria-hidden
-              />
-              <input
-                type="search"
-                value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                placeholder="Search by name, email, or role…"
-                className="h-full min-h-[44px] w-full rounded-xl border border-ithina-border bg-ithina-panel py-2.5 pl-10 pr-4 text-sm text-white placeholder:text-slate-500 focus:border-ithina-purple focus:outline-none"
-                aria-label="Search users"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2 lg:shrink-0">
-              <label className="flex min-w-[140px] flex-1 flex-col gap-1 sm:min-w-[160px]">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">
-                  Role filter
-                </span>
-                <select
-                  value={roleFilter}
-                  onChange={(e) => {
-                    setRoleFilter(e.target.value as RoleFilter);
-                    setPage(1);
-                  }}
-                  className="h-10 w-full cursor-pointer rounded-xl border border-ithina-border bg-ithina-panel px-3 text-sm text-white focus:border-ithina-purple focus:outline-none"
-                >
-                  <option value="all">All roles</option>
-                  <option value="admin">Admin</option>
-                  <option value="maker">Maker</option>
-                  <option value="checker">Checker</option>
-                </select>
-              </label>
-              <label className="flex min-w-[140px] flex-1 flex-col gap-1 sm:min-w-[160px]">
-                <span className="font-mono text-[9px] uppercase tracking-widest text-slate-600">
-                  Status filter
-                </span>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => {
-                    setStatusFilter(e.target.value as StatusFilter);
-                    setPage(1);
-                  }}
-                  className="h-10 w-full cursor-pointer rounded-xl border border-ithina-border bg-ithina-panel px-3 text-sm text-white focus:border-ithina-purple focus:outline-none"
-                >
-                  <option value="all">All statuses</option>
-                  <option value="active">Active</option>
-                  <option value="inactive">Inactive</option>
-                </select>
-              </label>
-            </div>
-          </div>
+    <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
+      <div className="ithina-page w-full flex flex-col">
+        <div className="mx-auto w-full max-w-screen-2xl space-y-6 px-4 pb-8 pt-4 lg:px-8">
+            {isLoading && (
+              <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-10 w-full rounded-md" />
+                ))}
+              </div>
+            )}
 
-          {isLoading && (
-            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
-              {Array.from({ length: 6 }).map((_, idx) => (
-                <Skeleton key={idx} className="h-10 w-full rounded-md" />
-              ))}
-            </div>
-          )}
+            {!isLoading && isError && (
+              <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+                <AlertCircle className="size-5 shrink-0" />
+                <span className="text-sm">{(error as Error)?.message ?? "Failed to load users"}</span>
+              </div>
+            )}
 
-          {!isLoading && isError && (
-            <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
-              <AlertCircle className="size-5 shrink-0" />
-              <span className="text-sm">{(error as Error)?.message ?? "Failed to load users"}</span>
-            </div>
-          )}
-
-          {!isLoading && !isError && (
-            <IthTable<OrgUser>
-              data={filtered}
-              columns={columns}
-              rowKey={(u) => u.id}
-              filterRow={filterRow}
-              rowHighlight={(u) => (u.status === "inactive" ? "rose" : null)}
-              pagination={{
-                page,
-                pageSize,
-                total: filtered.length,
-                onPageChange: setPage,
-                layout: "full",
-                onPageSizeChange: (n) => {
-                  setPageSize(n);
-                  setPage(1);
-                },
-                pageSizeOptions: [10, 25, 50],
-              }}
-              empty={{
-                icon: <Users className="size-5 text-slate-600" />,
-                message: "No users match your criteria.",
-              }}
-            />
-          )}
+            {!isLoading && !isError && (
+              <div className="space-y-6">
+                <div className="overflow-hidden rounded-xl border border-border bg-card p-4 shadow-sm backdrop-blur-sm">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="relative flex-1">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+                      <input
+                        type="search"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by name, email, or role..."
+                        className="h-10 w-full rounded-md border border-input bg-background/50 py-2 pl-10 pr-3 text-sm text-foreground placeholder:text-muted-foreground/50 transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/30"
+                        aria-label="Search users"
+                      />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-full border-border bg-background/50 px-4 text-xs font-semibold"
+                          >
+                            Role Filter
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => setRoleFilter("all")}>All roles</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setRoleFilter("admin")}>Admin</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setRoleFilter("maker")}>Maker</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setRoleFilter("checker")}>Checker</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="h-9 rounded-full border-border bg-background/50 px-4 text-xs font-semibold"
+                          >
+                            Status Filter
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onSelect={() => setStatusFilter("all")}>All statuses</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setStatusFilter("active")}>Active</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => setStatusFilter("inactive")}>Inactive</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm backdrop-blur-sm">
+                  <div className="pb-4">
+                    <DataTable<OrgUser>
+                      data={filtered}
+                      columns={columns}
+                      rowIdField="id"
+                      pagination
+                      pageSize={10}
+                      pageSizeSelector={[10, 20, 50]}
+                      emptyMessage="No users found matching your criteria"
+                      headerFilters
+                      fitContent
+                      className="rounded-none border-0"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
         </div>
       </div>
 

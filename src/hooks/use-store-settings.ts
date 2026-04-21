@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useSyncExternalStore } from "react";
 
 import type { StoreDimensionUnit } from "@/constants/dimensions";
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
 import { StoreContext } from "@/lib/store-context";
 import {
   assignStoreUser,
@@ -19,14 +19,6 @@ export const storeSettingsKeys = {
   assignable: (storeId: string | null) =>
     ["store-settings", "assignable", storeId] as const,
 };
-
-export function useActiveStoreId(): string | null {
-  return useSyncExternalStore(
-    StoreContext.subscribe,
-    () => StoreContext.getStoreId(),
-    () => null,
-  );
-}
 
 export function useStoreProfile() {
   const storeId = useActiveStoreId();
@@ -104,3 +96,5 @@ export function useRemoveStoreUser() {
     },
   });
 }
+
+export { useActiveStoreId } from "./use-active-store-id";

@@ -234,6 +234,11 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
 
 // ─── Core campaign API calls ─────────────────────────────────────────────────
 
+/**
+ * Lists all campaigns for the active store (`GET /api/v1/campaigns`).
+ * In DevTools, the Name column may show only `campaigns`; open the row and confirm the
+ * request URL has **no** trailing `/events` — that distinguishes this from {@link getCampaignTimeline}.
+ */
 export async function getCampaignList(): Promise<CampaignListItem[]> {
   const { data } = await promoApiClient.get<ApiCampaignResponse[]>(
     `${API_PREFIX}/campaigns`,
@@ -386,6 +391,14 @@ export function normalizeCampaignEventsPayload(
   return [];
 }
 
+/**
+ * Per-campaign timeline (`GET /api/v1/campaigns/{id}/events`). There is no app-wide `/events` route.
+ * Used for polling until terminal pipeline events (e.g. `campaign_published` after checker approval).
+ *
+ * **DevTools:** Chrome often labels both this and {@link getCampaignList} as `campaigns` in the Network
+ * **Name** column. Inspect **Request URL**: batch-render polling ends with `/campaigns/{uuid}/events`;
+ * the store-scoped list is exactly `/api/v1/campaigns` with no id segment.
+ */
 export async function getCampaignTimeline(
   campaignId: string,
 ): Promise<ApiCampaignEventResponse[]> {

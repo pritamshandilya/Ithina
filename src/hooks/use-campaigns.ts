@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
 
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 import { toast } from "@/hooks/use-toast";
@@ -44,9 +45,14 @@ export { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 export const campaignKeys = {
   all: ["campaigns"] as const,
-  list: ["campaigns", "list"] as const,
-  detail: (id: string) => ["campaigns", "detail", id] as const,
-  timeline: (id: string) => ["campaigns", "timeline", id] as const,
+  /** Invalidate every cached campaign list (all stores). */
+  listPrefix: ["campaigns", "list"] as const,
+  list: (storeScopeId: string | null) =>
+    ["campaigns", "list", storeScopeId ?? "__org__"] as const,
+  detail: (id: string, storeScopeId: string | null) =>
+    ["campaigns", "detail", id, storeScopeId ?? "__org__"] as const,
+  timeline: (id: string, storeScopeId: string | null) =>
+    ["campaigns", "timeline", id, storeScopeId ?? "__org__"] as const,
   filters: ["campaigns", "filters"] as const,
   statDefinitions: ["campaigns", "statDefinitions"] as const,
   statusStyles: ["campaigns", "statusStyles"] as const,
@@ -56,8 +62,9 @@ export const campaignKeys = {
 };
 
 export function useCampaignList() {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.list,
+    queryKey: campaignKeys.list(storeId),
     queryFn: getCampaignList,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -124,7 +131,7 @@ export function useCreateCampaign() {
   return useMutation({
     mutationFn: (form: CampaignCreateForm) => createCampaign(form),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -136,7 +143,7 @@ export function useUpdateCampaign() {
     mutationFn: ({ id, form }: { id: string; form: CampaignCreateForm }) =>
       updateCampaign(id, form),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -147,7 +154,7 @@ export function useDeleteCampaign() {
   return useMutation({
     mutationFn: (id: string) => deleteCampaign(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error: unknown) => {
@@ -174,7 +181,7 @@ export function useSubmitCampaign() {
       payload: ApiCampaignSubmitRequest;
     }) => submitCampaign(id, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
     },
@@ -192,7 +199,7 @@ export function useApproveCampaign() {
       payload: ApiCampaignApproveRequest;
     }) => approveCampaign(id, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
       qc.invalidateQueries({ queryKey: ["fleet"] });
@@ -205,7 +212,7 @@ export function useRejectCampaign() {
   return useMutation({
     mutationFn: (id: string) => rejectCampaign(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
     },
@@ -227,7 +234,7 @@ export function useGenerateCampaign() {
     mutationFn: (payload: ApiCampaignGenerateRequest) =>
       generateCampaign(payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -248,8 +255,9 @@ export function useChatCampaign() {
 
 /** Fetch a single campaign by id */
 export function useCampaign(id: string) {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.detail(id),
+    queryKey: campaignKeys.detail(id, storeId),
     queryFn: () => getCampaign(id),
     enabled: Boolean(id),
     staleTime: 15_000,
@@ -259,8 +267,9 @@ export function useCampaign(id: string) {
 
 /** Fetch the chronological event / chat timeline for a campaign */
 export function useCampaignTimeline(campaignId: string) {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.timeline(campaignId),
+    queryKey: campaignKeys.timeline(campaignId, storeId),
     queryFn: () => getCampaignTimeline(campaignId),
     enabled: Boolean(campaignId),
     staleTime: 10_000,
@@ -270,7 +279,7 @@ export function useCampaignTimeline(campaignId: string) {
 
 /**
  * Poll campaign events (legacy API). Prefer `useCampaignEvents` for start/stop/auto-stop.
- * `enabled` toggles polling without unmounting; timeline cache is shared via invalidation on `campaignKeys.timeline(id)`.
+ * `enabled` toggles polling without unmounting; timeline cache is scoped by store + campaign id.
  */
 export function useCampaignEventsPolling(
   campaignId: string,
@@ -310,7 +319,7 @@ export function usePostCampaignChat() {
       payload: ApiCampaignChatMessageRequest;
     }) => postCampaignChat(campaignId, payload),
     onSuccess: (_data, { campaignId }) => {
-      qc.invalidateQueries({ queryKey: campaignKeys.timeline(campaignId) });
+      qc.invalidateQueries({ queryKey: ["campaigns", "timeline", campaignId] });
     },
   });
 }

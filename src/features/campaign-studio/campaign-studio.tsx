@@ -21,12 +21,8 @@ import {
   studioHardwareIsLcd,
   type StudioTabId,
 } from "@/features/campaign-studio/campaign-studio-shared-ui";
-import {
-  useCampaign,
-  useCampaignEvents,
-  usePostCampaignChat,
-  useSubmitCampaign,
-} from "@/hooks/use-campaigns";
+import { useCampaignEvents } from "@/hooks/use-campaign-events";
+import { useCampaign, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { ApiCampaignEventResponse } from "@/types/api/campaigns";

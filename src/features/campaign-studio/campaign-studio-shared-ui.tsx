@@ -135,7 +135,7 @@ export function EslVariantCard({
 }) {
   const aspectClass = eslPreviewAspectClass(hardwareType);
   const { width: canvasWidth, height: canvasHeight } = eslCanvasDimensions(hardwareType);
-  const defaultPlaceholders: EslPlaceholders = { name: "", price: "", was: "" };
+  const defaultPlaceholders: EslPlaceholders = { name: "", price: "", was: "", offer_label: "" };
   const resolvedPlaceholders = placeholders ?? defaultPlaceholders;
 
   /** True when we have actual layout commands to render */

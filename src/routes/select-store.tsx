@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Building2, Loader2, Store as StoreIcon } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 
+import { PromoBrandingPanel } from "@/components/auth/promo-branding-panel";
 import ithinaLogo from "@/assets/ithina_logo.png";
 import { getDashboardUrlForRole, PromoAuthService } from "@/lib/auth/promo-auth";
 import { StoreContext } from "@/lib/store-context";
@@ -60,7 +61,7 @@ function SelectStorePage() {
             transition={{ duration: 0.3, ease: "easeOut" }}
             className="flex flex-col items-center gap-4 px-8 py-10 text-center"
           >
-            <Loader2 className="size-10 animate-spin text-purple-400" aria-hidden />
+            <Loader2 className="size-10 animate-spin text-primary" aria-hidden />
             <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-slate-500">
               Loading your stores…
             </p>
@@ -135,11 +136,11 @@ function SelectStorePage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.05 + index * 0.04 }}
                     onClick={() => handleSelect(store)}
-                    className="group flex w-full items-center justify-between rounded-xl border border-slate-700/80 bg-[#1a2332]/80 p-4 text-left transition-all duration-300 hover:border-purple-500/40 hover:bg-purple-500/5"
+                    className="group flex w-full items-center justify-between rounded-xl border border-border bg-card/80 p-4 text-left transition-all duration-300 hover:border-primary/40 hover:bg-primary/5"
                   >
                     <div className="flex min-w-0 items-center gap-4">
-                      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-slate-900/80 transition-all group-hover:border-purple-500/30 group-hover:bg-purple-500/10">
-                        <StoreIcon className="size-5 text-slate-400 group-hover:text-purple-300" aria-hidden />
+                      <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-border bg-secondary/80 transition-all group-hover:border-primary/30 group-hover:bg-primary/10">
+                        <StoreIcon className="size-5 text-muted-foreground group-hover:text-primary" aria-hidden />
                       </div>
                       <div className="min-w-0">
                         <h3 className="truncate text-base font-semibold text-white">{store.name}</h3>
@@ -148,8 +149,8 @@ function SelectStorePage() {
                         </p>
                       </div>
                     </div>
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-slate-900/60 opacity-0 transition-all group-hover:opacity-100">
-                      <ArrowRight className="size-4 text-purple-400" aria-hidden />
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-lg border border-border bg-secondary/60 opacity-0 transition-all group-hover:opacity-100">
+                      <ArrowRight className="size-4 text-primary" aria-hidden />
                     </div>
                   </motion.button>
                 ))}
@@ -174,50 +175,14 @@ function SelectStorePage() {
 
 function SelectStoreShell({ children, panelWidth }: { children: ReactNode; panelWidth: string }) {
   return (
-    <div className="relative flex min-h-screen w-full overflow-hidden bg-[#0f1419]">
-      <div className="relative hidden items-center justify-center overflow-hidden bg-gradient-to-br from-[#0f172a] via-[#1a1040] to-[#0f172a] lg:flex lg:w-1/2">
-        <div className="absolute left-1/3 top-1/4 h-96 w-96 rounded-full bg-[#9810fa]/20 blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/4 h-72 w-72 rounded-full bg-indigo-600/15 blur-[100px]" />
-
-        <div className="relative z-10 max-w-lg px-12 text-center">
-          <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="mx-auto mb-8 flex h-24 w-24 items-center justify-center overflow-hidden rounded-2xl bg-black shadow-2xl shadow-purple-900/50"
-          >
-            <img alt="Ithina" className="h-full w-full object-contain" src={ithinaLogo} />
-          </motion.div>
-          <motion.h1
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.3, duration: 0.5 }}
-            className="mb-4 text-4xl font-bold leading-tight text-white"
-          >
-            Promotions
-            <br />
-            Assistant
-          </motion.h1>
-          <motion.p
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="mb-8 text-lg text-slate-400"
-          >
-            AI-powered promotions and campaign orchestration for modern retail.
-          </motion.p>
-        </div>
-
-        <div className="absolute bottom-6 left-0 right-0 text-center text-[11px] text-slate-600">
-          Powered by Gemini AI
-        </div>
-      </div>
+    <div className="relative flex min-h-screen w-full overflow-hidden bg-background">
+      <PromoBrandingPanel />
 
       <motion.div
         initial={{ opacity: 0, x: 50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="relative z-10 flex w-full items-center justify-center bg-gradient-to-br from-[#0f1419] to-[#1a2332] p-8 lg:w-1/2"
+        className="relative z-10 flex w-full items-center justify-center bg-background p-8 lg:w-1/2"
       >
         <motion.div
           layout

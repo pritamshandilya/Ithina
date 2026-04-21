@@ -391,10 +391,11 @@ type BadgeVariant = "purple" | "emerald" | "amber" | "rose" | "slate";
 
 const BADGE_VARIANT: Record<BadgeVariant, string> = {
   purple:  "text-ithina-purple bg-ithina-purple/10 border-ithina-purple/20",
-  emerald: "text-emerald-400  bg-emerald-400/10   border-emerald-400/20",
+  /** POG success / admin users “Active”: chart-2 emerald (#34d399 family via theme) */
+  emerald: "text-chart-2 bg-chart-2/10 border-chart-2/20",
   amber:   "text-amber-400   bg-amber-400/10      border-amber-400/20",
   rose:    "text-rose-400    bg-rose-400/10       border-rose-400/20",
-  slate:   "text-slate-400   bg-white/5           border-white/10",
+  slate:   "text-muted-foreground bg-muted/10 border-border/30",
 };
 
 export interface IthBadgeProps {
@@ -403,21 +404,31 @@ export interface IthBadgeProps {
   dot?: boolean;
   pulse?: boolean;
   className?: string;
+  /**
+   * `mono` = compact uppercase table chips (default).
+   * `sans` = POG Users table style: text-xs font-semibold, title case, rounded-md pill.
+   */
+  typography?: "mono" | "sans";
 }
 
-export function IthBadge({ label, variant, dot, pulse, className }: IthBadgeProps) {
+export function IthBadge({ label, variant, dot, pulse, className, typography = "mono" }: IthBadgeProps) {
+  const sans = typography === "sans";
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded border px-2 py-0.5",
-        "font-mono text-[9px] uppercase tracking-widest",
+        "inline-flex items-center gap-1.5 border px-2 py-0.5",
+        sans ? "rounded-md font-sans text-xs font-semibold tracking-normal" : "rounded font-mono text-[9px] uppercase tracking-widest",
         BADGE_VARIANT[variant],
         className,
       )}
     >
       {dot && (
         <span
-          className={cn("inline-block size-1.5 shrink-0 rounded-full bg-current", pulse && "animate-pulse")}
+          className={cn(
+            "inline-block shrink-0 rounded-full bg-current",
+            sans ? "size-2" : "size-1.5",
+            pulse && "animate-pulse",
+          )}
           aria-hidden
         />
       )}

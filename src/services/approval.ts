@@ -62,8 +62,8 @@ export async function publishToFleet(): Promise<void> {
  * @param id               Campaign UUID — must be a non-empty truthy string.
  * @param scheduleType     "immediate" (default) or "scheduled".
  * @param selectedVariantId  When the caller already has the variant (e.g. from the
- *   React-Query timeline cache) pass it here to skip the extra GET /events round-trip.
- *   If omitted the function fetches the timeline itself.
+ *   React-Query timeline cache) pass it here to skip the extra `GET /api/v1/campaigns/{id}/events`
+ *   round-trip. If omitted the function fetches the timeline itself.
  */
 export async function approveInboxItem(
   id: string,

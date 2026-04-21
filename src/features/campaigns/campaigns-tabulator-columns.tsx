@@ -2,9 +2,20 @@
  * Campaign table column definitions — Tabulator DataTable.
  */
 
+import { Megaphone } from "lucide-react";
+import { renderToStaticMarkup } from "react-dom/server";
+
 import type { DataTableCell, DataTableColumn } from "@/components/ui/data-table";
 import { derivePipelineForRow } from "@/services/campaigns";
 import type { CampaignListItem, CampaignListStatus } from "@/types/campaigns";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 export type CampaignProtoStatus =
   | "active"
@@ -116,9 +127,21 @@ export function buildCampaignColumns({
       },
       formatter: (cell: DataTableCell<CampaignListItem>) => {
         const row = cell.getData();
-        return `<div class="text-left">
-          <p class="text-[13px] font-semibold leading-tight text-white">${row.name}</p>
-        </div>`;
+        const icon = renderToStaticMarkup(
+          <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
+        );
+        const name = escapeHtml(row.name);
+        const idShort = escapeHtml(row.id.length > 10 ? row.id.slice(0, 8) : row.id);
+        return `
+          <div class="flex items-center gap-3 text-left">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
+              ${icon}
+            </div>
+            <div class="min-w-0">
+              <p class="font-semibold leading-tight text-foreground">${name}</p>
+              <p class="text-[10px] uppercase tracking-widest text-muted-foreground opacity-70">ID: ${idShort}</p>
+            </div>
+          </div>`;
       },
     },
     {
@@ -216,7 +239,7 @@ export function buildCampaignColumns({
       field: "actions",
       headerSort: false,
       headerFilter: false,
-      width: 220,
+      width: 168,
       hozAlign: "right",
       headerHozAlign: "right",
       formatter: (cell: DataTableCell<CampaignListItem>) => {
@@ -226,24 +249,32 @@ export function buildCampaignColumns({
         const canDel = canDeleteCampaignByStatus(row.status);
 
         const editBtn = proto === "draft"
-          ? `<button data-action="edit" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[10px] font-semibold text-slate-300 transition-all hover:bg-white/[0.08] hover:text-white">
-              <svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit
+          ? `<button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit campaign">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>` : "";
 
         const pauseBtn = proto === "scheduled"
-          ? `<button data-action="pause" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition-all ${paused ? "border-amber-400/30 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20" : "border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.08] hover:text-white"}">
-              ${paused ? `<svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>Resume` : `<svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>Pause`}
+          ? `<button type="button" data-action="pause" class="inline-flex size-8 items-center justify-center rounded-md border transition-all ${
+            paused
+              ? "border-amber-400/35 bg-amber-400/10 text-amber-400 hover:border-amber-400/60 hover:bg-amber-400/20"
+              : "border-white/15 bg-white/[0.03] text-slate-400 hover:border-primary/40 hover:bg-white/[0.06] hover:text-white"
+          }" aria-label="${paused ? "Resume" : "Pause"} campaign">
+              ${
+                paused
+                  ? `<svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`
+                  : `<svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>`
+              }
             </button>` : "";
 
-        const historyBtn = `<button data-action="history" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white">
-          <svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
+        const historyBtn = `<button type="button" data-action="history" class="inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Campaign history">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </button>`;
 
         const deleteBtn = canDel
-          ? `<button data-action="delete" aria-label="Delete" class="inline-flex items-center justify-center rounded-lg border border-rose-400/20 px-2 py-1.5 text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"><svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
-          : `<button data-action="delete" title="Only Draft or Rejected campaigns can be deleted." class="inline-flex items-center justify-center rounded-lg border border-slate-600/40 px-2 py-1.5 text-slate-600 opacity-60"><svg class="size-3" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`;
+          ? `<button type="button" data-action="delete" aria-label="Delete campaign" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
+          : `<span title="Only Draft or Rejected campaigns can be deleted." class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md border border-slate-600/40 text-slate-600 opacity-50" aria-hidden="true"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>`;
 
-        return `<div class="flex flex-wrap items-center justify-end gap-1.5">${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
+        return `<div class="flex flex-nowrap items-center justify-end gap-1">${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
       },
       cellClick: (_e: MouseEvent, cell: DataTableCell<CampaignListItem>) => {
         const action = (_e.target as HTMLElement).closest("[data-action]") as HTMLElement | null;

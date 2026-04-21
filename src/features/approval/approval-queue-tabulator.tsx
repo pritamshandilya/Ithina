@@ -1,15 +1,15 @@
-/**
+﻿/**
  * ApprovalQueueTabulator — Three-tab approval queue using DataTable (Tabulator).
  * Tabs: Pending Approval · Approved · All
  */
 
-import { Check, Search, X } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { AlertCircle, Check, Megaphone, Search, X, Zap } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { useQueryClient } from "@tanstack/react-query";
 
-import LoadingSpinner from "@/components/shared/loading-spinner";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
 import {
   Dialog,
@@ -19,6 +19,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  ApprovalHistoryDialog,
+  type ApprovalHistoryTarget,
+} from "@/features/approval/components/approval-history-dialog";
 import { ApprovalPublishWatcher } from "@/features/approval/approval-publish-watcher";
 import { getSubmittedVariantId } from "@/features/campaign-studio/types";
 import type { ApiCampaignEventResponse } from "@/types/api/campaigns";
@@ -30,6 +34,14 @@ import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
 
 type TabId = "pending" | "approved" | "all";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
 
 interface ApprovedRow {
   id: string;
@@ -80,53 +92,39 @@ export default function ApprovalQueueTabulator() {
   const { data: campaigns = [] } = useCampaignList();
   const approveMutation = useApproveInboxItem();
   const rejectMutation = useRejectInboxItem();
-  const navigate = useNavigate();
   const qc = useQueryClient();
   const activeStoreId = useActiveStoreId();
 
   const [tab, setTab]       = useState<TabId>("pending");
   const [search, setSearch] = useState("");
+  const [historyTarget, setHistoryTarget] = useState<ApprovalHistoryTarget | null>(null);
   const [publishWatchIds, setPublishWatchIds] = useState<Set<string>>(() => new Set());
 
   /* Bulk selection via Tabulator's built-in isBulkEnabled */
   const [selectedPending, setSelectedPending] = useState<InboxItem[]>([]);
   const [, setSelectedAll] = useState<AllRow[]>([]);
 
-  /** Confirmation before calling reject API (single row or bulk). */
-  const [rejectTarget, setRejectTarget] = useState<
-    | null
-    | { type: "single"; id: string; title: string }
-    | { type: "bulk"; items: InboxItem[] }
-  >(null);
+  /** Confirmation before calling reject API (bulk from toolbar). */
+  const [rejectTarget, setRejectTarget] = useState<InboxItem[] | null>(null);
 
   const selectedPendingIds = useMemo(() => new Set(selectedPending.map((r) => r.id)), [selectedPending]);
 
-  /* Stable handler refs to avoid column re-creation on every render */
-  const approveRef   = useRef(approveMutation);
-  const navigateRef  = useRef(navigate);
-  approveRef.current  = approveMutation;
-  navigateRef.current = navigate;
-
-  const requestSingleReject = useCallback((row: InboxItem) => {
-    if (!row.id) return;
-    setRejectTarget({ type: "single", id: row.id, title: row.title });
+  const openHistory = useCallback((id: string, title: string) => {
+    if (!id) return;
+    setHistoryTarget({ id, title });
   }, []);
 
   const requestBulkReject = useCallback(() => {
     if (selectedPending.length === 0) return;
-    setRejectTarget({ type: "bulk", items: [...selectedPending] });
+    setRejectTarget([...selectedPending]);
   }, [selectedPending]);
 
   const handleConfirmReject = useCallback(() => {
-    if (!rejectTarget) return;
-    if (rejectTarget.type === "single") {
-      rejectMutation.mutate(rejectTarget.id);
-    } else {
-      for (const item of rejectTarget.items) {
-        if (item.id) rejectMutation.mutate(item.id);
-      }
-      setSelectedPending([]);
+    if (!rejectTarget?.length) return;
+    for (const item of rejectTarget) {
+      if (item.id) rejectMutation.mutate(item.id);
     }
+    setSelectedPending([]);
     setRejectTarget(null);
   }, [rejectMutation, rejectTarget]);
 
@@ -163,6 +161,34 @@ export default function ApprovalQueueTabulator() {
     setSelectedPending([]);
   }, [approveMutation, getCachedVariant, selectedPending]);
 
+  /** Same as row-level “Approve & Go Live” — with confirmation toast. */
+  const bulkApproveAndGoLive = useCallback(() => {
+    if (selectedPending.length === 0) return;
+    let ok = 0;
+    for (const item of selectedPending) {
+      if (!item.id) {
+        toast({ title: "Cannot approve", description: "Campaign ID is missing.", variant: "destructive" });
+        continue;
+      }
+      ok += 1;
+      approveMutation.mutate(
+        { id: item.id, scheduleType: item.scheduleType, selectedVariantId: getCachedVariant(item.id) },
+        {
+          onSuccess: () => {
+            setPublishWatchIds((prev) => new Set([...prev, item.id]));
+          },
+        },
+      );
+    }
+    if (ok > 0) {
+      toast({
+        title: "Approved & publishing",
+        description: "We’ll notify you when batch render completes for the selected campaign(s).",
+      });
+    }
+    setSelectedPending([]);
+  }, [approveMutation, getCachedVariant, selectedPending]);
+
   /* ── Approved tab ── */
   const filteredApproved = useMemo((): ApprovedRow[] => {
     const q = search.trim().toLowerCase();
@@ -193,6 +219,10 @@ export default function ApprovalQueueTabulator() {
       .filter((r) => !q || r.title.toLowerCase().includes(q) || r.initiator.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
   }, [campaigns, search]);
 
+  const historyIconOnly = `<button type="button" data-action="history" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" title="Approval history" aria-label="Approval history">
+    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </button>`;
+
   /* ── Pending columns ── */
   const pendingColumns = useMemo<DataTableColumn<InboxItem>[]>(
     () => [
@@ -204,16 +234,35 @@ export default function ApprovalQueueTabulator() {
         hozAlign: "left",
         formatter: (cell: DataTableCell<InboxItem>) => {
           const row = cell.getData();
+          const megaphone = renderToStaticMarkup(
+            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
+          );
+          const title = escapeHtml(row.title);
+          const sub = row.subtitle ? escapeHtml(row.subtitle) : "";
           const urgentBadge = row.urgent
             ? `<span class="rounded border border-rose-400/20 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-rose-400">Expires 48H</span>`
             : "";
-          return `<div>
-            <div class="flex flex-wrap items-center gap-2">
-              <p class="text-[13px] font-semibold leading-tight text-white">${row.title}</p>
-              ${urgentBadge}
-            </div>
-            ${row.subtitle ? `<p class="mt-0.5 font-mono text-[10px] text-slate-500">${row.subtitle}</p>` : ""}
-          </div>`;
+          const publishingBadge =
+            row.apiStatus === "publishing"
+              ? `<span class="inline-flex items-center gap-1 rounded border border-amber-400/25 bg-amber-400/[0.08] px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-400">
+                <svg class="size-2.5 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+                Publishing
+              </span>`
+              : "";
+          return `
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
+                ${megaphone}
+              </div>
+              <div class="min-w-0 text-left">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-[13px] font-semibold leading-tight text-foreground">${title}</p>
+                  ${publishingBadge}
+                  ${urgentBadge}
+                </div>
+                ${sub ? `<p class="mt-0.5 font-mono text-[10px] text-muted-foreground opacity-80">${sub}</p>` : ""}
+              </div>
+            </div>`;
         },
       },
       {
@@ -263,75 +312,27 @@ export default function ApprovalQueueTabulator() {
         },
       },
       {
-        title: "Actions",
+        title: "History",
         field: "actions",
         headerSort: false,
         headerFilter: false,
-        width: 320,
+        width: 80,
         hozAlign: "right",
         headerHozAlign: "right",
-        formatter: (cell: DataTableCell<InboxItem>) => {
-          const row = cell.getData();
-          if (row.apiStatus === "publishing") {
-            return `<div class="flex items-center justify-end gap-2">
-              <span class="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/25 bg-amber-400/[0.08] px-3 py-1.5 font-mono text-[10px] text-amber-400">
-                <svg class="size-3 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
-                Batch rendering…
-              </span>
-              <button data-action="history" class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white">
-                <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>View
-              </button>
-            </div>`;
-          }
-          return `<div class="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
-            <button data-action="approve" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-chart-2/25 bg-chart-2/10 px-2.5 py-1.5 text-[10px] font-semibold text-chart-2 transition-all hover:bg-chart-2/20 hover:text-white">
-              <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Approve
-            </button>
-            <button data-action="approve-live" class="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-purple-500/35 bg-purple-500/15 px-2.5 py-1.5 text-[10px] font-semibold text-purple-400 transition-all hover:bg-purple-500 hover:text-white">
-              <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>Approve &amp; Go Live
-            </button>
-            <button data-action="reject" class="inline-flex items-center gap-1 rounded-lg border border-rose-400/20 bg-transparent px-2.5 py-1.5 text-[10px] font-semibold text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white">
-              <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Reject
-            </button>
-            <button data-action="history" class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white">
-              <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
-            </button>
-          </div>`;
-        },
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
         cellClick: (_e: MouseEvent, cell: DataTableCell<InboxItem>) => {
           const action = (_e.target as HTMLElement).closest("[data-action]") as HTMLElement | null;
-          if (!action) return;
+          if (!action || action.dataset.action !== "history") return;
           const row = cell.getData();
           if (!row.id) {
-            toast({ title: "Cannot perform action", description: "Campaign ID is missing.", variant: "destructive" });
+            toast({ title: "Cannot open history", description: "Campaign ID is missing.", variant: "destructive" });
             return;
           }
-          const a = action.dataset.action;
-          if (a === "approve") {
-            approveRef.current.mutate(
-              { id: row.id, scheduleType: row.scheduleType, selectedVariantId: getCachedVariant(row.id) },
-              { onSuccess: () => setPublishWatchIds((prev) => new Set([...prev, row.id])) },
-            );
-          }
-          if (a === "approve-live") {
-            approveRef.current.mutate(
-              { id: row.id, scheduleType: row.scheduleType, selectedVariantId: getCachedVariant(row.id) },
-              {
-                onSuccess: () => {
-                  setPublishWatchIds((prev) => new Set([...prev, row.id]));
-                  toast({ title: "Approved & publishing", description: "We'll notify you when batch render completes." });
-                },
-              },
-            );
-          }
-          if (a === "reject") requestSingleReject(row);
-          if (a === "history") {
-            void navigateRef.current({ to: "/maker/campaign/$campaignId/studio", params: { campaignId: row.id } });
-          }
+          openHistory(row.id, row.title);
         },
       },
     ],
-    [getCachedVariant, requestSingleReject],
+    [openHistory],
   );
 
   /* ── Approved columns ── */
@@ -345,8 +346,15 @@ export default function ApprovalQueueTabulator() {
         hozAlign: "left",
         formatter: (cell: DataTableCell<ApprovedRow>) => {
           const row = cell.getData();
-          return `<div class="text-left">
-            <p class="text-[13px] font-semibold leading-tight text-white">${row.title}</p>
+          const megaphone = renderToStaticMarkup(
+            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
+          );
+          const title = escapeHtml(row.title);
+          return `<div class="flex items-center gap-3 text-left">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
+              ${megaphone}
+            </div>
+            <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
           </div>`;
         },
       },
@@ -395,20 +403,23 @@ export default function ApprovalQueueTabulator() {
         },
       },
       {
-        title: "Actions",
+        title: "History",
         field: "actions",
         headerSort: false,
         headerFilter: false,
-        width: 110,
+        width: 80,
         hozAlign: "right",
         headerHozAlign: "right",
-        formatter: () =>
-          `<button data-action="history" class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white">
-            <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
-          </button>`,
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<ApprovedRow>) => {
+          const t = (_e.target as HTMLElement).closest("[data-action]");
+          if (t?.getAttribute("data-action") !== "history") return;
+          const row = cell.getData();
+          openHistory(row.id, row.title);
+        },
       },
     ],
-    [],
+    [openHistory],
   );
 
   /* ── All columns ── */
@@ -422,8 +433,15 @@ export default function ApprovalQueueTabulator() {
         hozAlign: "left",
         formatter: (cell: DataTableCell<AllRow>) => {
           const row = cell.getData();
-          return `<div class="text-left">
-            <p class="text-[13px] font-semibold leading-tight text-white">${row.title}</p>
+          const megaphone = renderToStaticMarkup(
+            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
+          );
+          const title = escapeHtml(row.title);
+          return `<div class="flex items-center gap-3 text-left">
+            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
+              ${megaphone}
+            </div>
+            <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
           </div>`;
         },
       },
@@ -477,20 +495,23 @@ export default function ApprovalQueueTabulator() {
           `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
       },
       {
-        title: "Actions",
+        title: "History",
         field: "actions",
         headerSort: false,
         headerFilter: false,
-        width: 110,
+        width: 80,
         hozAlign: "right",
         headerHozAlign: "right",
-        formatter: () =>
-          `<button data-action="history" class="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white">
-            <svg class="size-3 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>History
-          </button>`,
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<AllRow>) => {
+          const t = (_e.target as HTMLElement).closest("[data-action]");
+          if (t?.getAttribute("data-action") !== "history") return;
+          const row = cell.getData();
+          openHistory(row.id, row.title);
+        },
       },
     ],
-    [],
+    [openHistory],
   );
 
   /* ── Tabs config ── */
@@ -502,151 +523,188 @@ export default function ApprovalQueueTabulator() {
 
   const pendingSelectedCount = selectedPendingIds.size;
 
-  if (isError) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-        <p className="text-sm font-semibold text-rose-400">Failed to load approval queue</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <LoadingSpinner label="Loading approval queue..." className="flex-1" />;
-  }
-
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden animate-[fadeIn_0.4s_ease-out]">
-      {/* ── Toolbar ── */}
-      <div className="flex shrink-0 items-center justify-between border-b border-ithina-border/40 px-7 pb-4 pt-5">
-        {/* Tab switcher */}
-        <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel p-0.5">
-          {tabItems.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
-                tab === t.id ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              {t.label}
-              {t.count != null && (
-                <span
+    <div className="flex w-full min-w-0 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
+      <div className="ithina-page w-full flex min-h-0 flex-col">
+        <div className="w-full space-y-3 px-4 pb-4 pt-2 lg:px-8">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
+              {tabItems.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
-                    tab === t.id ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400",
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    tab === t.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-slate-400 hover:text-foreground",
                   )}
                 >
-                  {t.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+                  {t.label}
+                  {t.count != null && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                        tab === t.id
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-amber-400/20 text-amber-400",
+                      )}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {tab === "pending" && (
-            <>
-              {pendingSelectedCount > 0 && (
-                <span className="rounded bg-ithina-purple/10 px-2 py-1 text-[10px] font-semibold text-ithina-purple">
-                  {pendingSelectedCount} selected
-                </span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {tab === "pending" && (
+                <>
+                  {pendingSelectedCount > 0 && (
+                    <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                      {pendingSelectedCount} selected
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={bulkApprove}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-bold shadow-sm transition-colors",
+                      pendingSelectedCount > 0
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "cursor-not-allowed border border-ithina-border/40 bg-transparent text-slate-600 opacity-50",
+                    )}
+                  >
+                    <Check className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={bulkApproveAndGoLive}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md border px-4 text-xs font-bold shadow-sm transition-colors",
+                      pendingSelectedCount > 0
+                        ? "border-ithina-purple/40 bg-ithina-purple/90 text-white hover:bg-ithina-purple"
+                        : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-50",
+                    )}
+                  >
+                    <Zap className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                    Approve &amp; go live
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={requestBulkReject}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md border px-4 text-xs font-bold transition-colors",
+                      pendingSelectedCount > 0
+                        ? "border-rose-500/40 text-rose-400 hover:border-rose-500 hover:bg-rose-500 hover:text-white"
+                        : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-50",
+                    )}
+                  >
+                    <X className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                    Reject
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                disabled={pendingSelectedCount === 0}
-                onClick={bulkApprove}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  pendingSelectedCount > 0
-                    ? "border-chart-2/25 bg-chart-2/10 text-chart-2 hover:bg-chart-2/20 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
-                )}
-              >
-                <Check className="size-3 shrink-0" strokeWidth={2} aria-hidden />
-                Approve All
-              </button>
-              <button
-                type="button"
-                disabled={pendingSelectedCount === 0}
-                onClick={requestBulkReject}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  pendingSelectedCount > 0
-                    ? "border-rose-400/20 text-rose-400 hover:bg-rose-500 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
-                )}
-              >
-                <X className="size-3 shrink-0" strokeWidth={2} aria-hidden />
-                Reject All
-              </button>
-            </>
-          )}
+            </div>
+          </div>
 
-          <div className="relative">
+          <div className="group relative">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500"
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
               aria-hidden
             />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               type="search"
-              placeholder="Search…"
+              placeholder="Search by campaign, submitter, or ID…"
               aria-label="Search approval queue"
-              className="w-44 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-8 pr-3 text-sm text-white transition-colors focus:border-ithina-purple focus:outline-none"
+              className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
             />
           </div>
+
+          {isLoading && (
+            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-full rounded-md" />
+              ))}
+            </div>
+          )}
+
+          {isError && (
+            <div
+              className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
+              role="alert"
+            >
+              <AlertCircle className="size-5 shrink-0" />
+              <span className="text-sm">Failed to load approval queue</span>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <div className="min-w-0">
+              {tab === "pending" && (
+                <DataTable<InboxItem>
+                  data={filteredPending}
+                  columns={pendingColumns}
+                  rowIdField="id"
+                  isBulkEnabled
+                  onSelectionChange={setSelectedPending}
+                  pagination
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  emptyMessage="No pending submissions."
+                  headerFilters={false}
+                  fitContent
+                />
+              )}
+
+              {tab === "approved" && (
+                <DataTable<ApprovedRow>
+                  data={filteredApproved}
+                  columns={approvedColumns}
+                  rowIdField="id"
+                  pagination
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  emptyMessage="No approved campaigns."
+                  headerFilters={false}
+                  fitContent
+                />
+              )}
+
+              {tab === "all" && (
+                <DataTable<AllRow>
+                  data={filteredAll}
+                  columns={allColumns}
+                  rowIdField="id"
+                  isBulkEnabled
+                  onSelectionChange={setSelectedAll}
+                  pagination
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  emptyMessage="No campaigns."
+                  headerFilters={false}
+                  fitContent
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {tab === "pending" && (
-          <DataTable<InboxItem>
-            data={filteredPending}
-            columns={pendingColumns}
-            rowIdField="id"
-            isBulkEnabled
-            onSelectionChange={setSelectedPending}
-            pagination
-            pageSize={10}
-            emptyMessage="No pending submissions."
-            headerFilters={false}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
-
-        {tab === "approved" && (
-          <DataTable<ApprovedRow>
-            data={filteredApproved}
-            columns={approvedColumns}
-            rowIdField="id"
-            pagination
-            pageSize={10}
-            emptyMessage="No approved campaigns."
-            headerFilters={false}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
-
-        {tab === "all" && (
-          <DataTable<AllRow>
-            data={filteredAll}
-            columns={allColumns}
-            rowIdField="id"
-            isBulkEnabled
-            onSelectionChange={setSelectedAll}
-            pagination
-            pageSize={10}
-            emptyMessage="No campaigns."
-            headerFilters={false}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
-      </div>
+      <ApprovalHistoryDialog
+        open={historyTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setHistoryTarget(null);
+        }}
+        target={historyTarget}
+      />
 
       <Dialog
         open={rejectTarget !== null}
@@ -656,21 +714,13 @@ export default function ApprovalQueueTabulator() {
       >
         <DialogContent showClose className="max-w-md">
           <DialogHeader>
-            <DialogTitle>
-              {rejectTarget?.type === "bulk" ? "Reject selected campaigns?" : "Reject this campaign?"}
-            </DialogTitle>
+            <DialogTitle>Reject selected campaigns?</DialogTitle>
             <DialogDescription className="text-left">
-              {rejectTarget?.type === "single" ? (
+              {rejectTarget && rejectTarget.length > 0 ? (
                 <>
                   Are you sure you want to reject{" "}
-                  <span className="font-semibold text-slate-200">{rejectTarget.title}</span>? This
-                  cannot be undone.
-                </>
-              ) : rejectTarget?.type === "bulk" ? (
-                <>
-                  Are you sure you want to reject{" "}
-                  <span className="font-semibold text-slate-200">{rejectTarget.items.length}</span>{" "}
-                  selected campaign{rejectTarget.items.length === 1 ? "" : "s"}? This cannot be undone.
+                  <span className="font-semibold text-slate-200">{rejectTarget.length}</span>{" "}
+                  selected campaign{rejectTarget.length === 1 ? "" : "s"}? This cannot be undone.
                 </>
               ) : null}
             </DialogDescription>

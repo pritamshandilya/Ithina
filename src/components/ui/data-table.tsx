@@ -7,7 +7,7 @@
  *   - Supports bulk selection, groupBy, dataTree, row numbers, resize/redraw observers
  */
 
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { TabulatorFull } from "tabulator-tables";
 
 import "tabulator-tables/dist/css/tabulator_simple.min.css";
@@ -121,14 +121,22 @@ type TabulatorGrid = TabulatorFull & {
 };
 
 /**
- * Module-level default so the value has a stable reference across renders.
- * Previously this was an inline default (`= [5, 10, 20, 50]`) which produced
- * a new array on every render and, since `pageSizeSelector` is in the main
- * `useEffect` deps, caused the Tabulator grid to be destroyed and rebuilt on
- * every parent re-render — including the one triggered by `onSelectionChange`
- * after a checkbox click, which wiped the selection.
+ * Default page-size options. Call sites often pass a fresh inline array
+ * (`pageSizeSelector={[5, 10, 20, 50]})`). That must not force a new Tabulator
+ * instance every render, or the grid is destroyed right after a checkbox
+ * `rowSelectionChanged` (React state shows “N selected” while new grid shows
+ * empty checkboxes). We normalize with `getPageSizeSelectorKey` + `useMemo`
+ * and depend on the key in the mount effect instead of the raw array
+ * reference.
  */
 const DEFAULT_PAGE_SIZE_SELECTOR: readonly number[] = [5, 10, 20, 50];
+
+/** Stable key for `useMemo` so inline `pageSizeSelector` arrays do not recreate the grid every render. */
+function getPageSizeSelectorKey(sel: number[] | true | undefined): string {
+  if (sel === true) return "true";
+  if (Array.isArray(sel) && sel.length > 0) return sel.join(",");
+  return "default";
+}
 
 export function DataTable<T extends object>({
   columns,
@@ -168,6 +176,15 @@ export function DataTable<T extends object>({
   const tableGenerationRef = useRef(0);
   const currentPageRef = useRef(1);
   const currentPageSizeRef = useRef(pageSize);
+
+  const pageSizeSelectorKey = getPageSizeSelectorKey(pageSizeSelector);
+  const stablePaginationSizeSelector = useMemo((): number[] => {
+    if (pageSizeSelector === true) return [...DEFAULT_PAGE_SIZE_SELECTOR];
+    if (Array.isArray(pageSizeSelector) && pageSizeSelector.length > 0) {
+      return [...pageSizeSelector];
+    }
+    return [...DEFAULT_PAGE_SIZE_SELECTOR];
+  }, [pageSizeSelectorKey]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -255,7 +272,7 @@ export function DataTable<T extends object>({
     if (pagination) {
       options.pagination = "local";
       options.paginationSize = pageSize;
-      options.paginationSizeSelector = pageSizeSelector;
+      options.paginationSizeSelector = stablePaginationSizeSelector;
       options.paginationCounter = "rows";
       options.pageLoaded = (page: number) => {
         currentPageRef.current = page;
@@ -364,7 +381,7 @@ export function DataTable<T extends object>({
     headerFilters,
     pagination,
     pageSize,
-    pageSizeSelector,
+    pageSizeSelectorKey,
     layout,
     movableColumns,
     resizableColumns,

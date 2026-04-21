@@ -10,12 +10,7 @@ import { toast } from "@/hooks/use-toast";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
 import { cn } from "@/lib/utils";
 
-const HIDE_FOR_PATHS = new Set<string>([
-  "/admin/dashboard",
-  "/admin/stores/new",
-  "/admin/settings",
-  "/maker/guard-rails",
-]);
+const HIDE_FOR_PATHS = new Set<string>(["/admin/dashboard", "/admin/stores/new"]);
 
 /**
  * POG-style strip: title + description from nav config, with global actions.
@@ -70,6 +65,7 @@ export default function RoutePageHeader() {
     (role === "maker" || role === "admin") && !isProfilePage && !isAdminOrganizationSettingsPage;
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
+  const isGuardRailsPage = location.pathname === "/admin/settings";
   return (
     <>
     <header className="shrink-0 border-b border-border/40 bg-ithina-bg py-2.5">
@@ -91,6 +87,17 @@ export default function RoutePageHeader() {
             >
               <Plus className="size-3.5" />
               Create Store
+            </button>
+          ) : isGuardRailsPage ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("promo:open-guard-rail-modal"))}
+              className={cn(
+                "inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90",
+              )}
+            >
+              <Plus className="size-3.5" />
+              Add Guard Rail
             </button>
           ) : isAdminUsersPage ? (
             <button

@@ -37,6 +37,7 @@ import { Route as MakerMakerCampaignsRouteImport } from './routes/_maker/maker/c
 import { Route as MakerMakerApprovalsRouteImport } from './routes/_maker/maker/approvals'
 import { Route as CheckerCheckerStoreSettingsRouteImport } from './routes/_checker/checker/store-settings'
 import { Route as CheckerCheckerProfileRouteImport } from './routes/_checker/checker/profile'
+import { Route as CheckerCheckerGuardRailsRouteImport } from './routes/_checker/checker/guard-rails'
 import { Route as CheckerCheckerFleetRouteImport } from './routes/_checker/checker/fleet'
 import { Route as CheckerCheckerDashboardRouteImport } from './routes/_checker/checker/dashboard'
 import { Route as CheckerCheckerCampaignsRouteImport } from './routes/_checker/checker/campaigns'
@@ -194,6 +195,12 @@ const CheckerCheckerProfileRoute = CheckerCheckerProfileRouteImport.update({
   path: '/checker/profile',
   getParentRoute: () => CheckerRoute,
 } as any)
+const CheckerCheckerGuardRailsRoute =
+  CheckerCheckerGuardRailsRouteImport.update({
+    id: '/checker/guard-rails',
+    path: '/checker/guard-rails',
+    getParentRoute: () => CheckerRoute,
+  } as any)
 const CheckerCheckerFleetRoute = CheckerCheckerFleetRouteImport.update({
   id: '/checker/fleet',
   path: '/checker/fleet',
@@ -316,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
   '/checker/dashboard': typeof CheckerCheckerDashboardRoute
   '/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/checker/guard-rails': typeof CheckerCheckerGuardRailsRoute
   '/checker/profile': typeof CheckerCheckerProfileRoute
   '/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
   '/maker/approvals': typeof MakerMakerApprovalsRoute
@@ -359,6 +367,7 @@ export interface FileRoutesByTo {
   '/checker/campaigns': typeof CheckerCheckerCampaignsRoute
   '/checker/dashboard': typeof CheckerCheckerDashboardRoute
   '/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/checker/guard-rails': typeof CheckerCheckerGuardRailsRoute
   '/checker/profile': typeof CheckerCheckerProfileRoute
   '/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
   '/maker/approvals': typeof MakerMakerApprovalsRoute
@@ -408,6 +417,7 @@ export interface FileRoutesById {
   '/_checker/checker/campaigns': typeof CheckerCheckerCampaignsRoute
   '/_checker/checker/dashboard': typeof CheckerCheckerDashboardRoute
   '/_checker/checker/fleet': typeof CheckerCheckerFleetRoute
+  '/_checker/checker/guard-rails': typeof CheckerCheckerGuardRailsRoute
   '/_checker/checker/profile': typeof CheckerCheckerProfileRoute
   '/_checker/checker/store-settings': typeof CheckerCheckerStoreSettingsRoute
   '/_maker/maker/approvals': typeof MakerMakerApprovalsRoute
@@ -454,6 +464,7 @@ export interface FileRouteTypes {
     | '/checker/campaigns'
     | '/checker/dashboard'
     | '/checker/fleet'
+    | '/checker/guard-rails'
     | '/checker/profile'
     | '/checker/store-settings'
     | '/maker/approvals'
@@ -497,6 +508,7 @@ export interface FileRouteTypes {
     | '/checker/campaigns'
     | '/checker/dashboard'
     | '/checker/fleet'
+    | '/checker/guard-rails'
     | '/checker/profile'
     | '/checker/store-settings'
     | '/maker/approvals'
@@ -545,6 +557,7 @@ export interface FileRouteTypes {
     | '/_checker/checker/campaigns'
     | '/_checker/checker/dashboard'
     | '/_checker/checker/fleet'
+    | '/_checker/checker/guard-rails'
     | '/_checker/checker/profile'
     | '/_checker/checker/store-settings'
     | '/_maker/maker/approvals'
@@ -770,6 +783,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckerCheckerProfileRouteImport
       parentRoute: typeof CheckerRoute
     }
+    '/_checker/checker/guard-rails': {
+      id: '/_checker/checker/guard-rails'
+      path: '/checker/guard-rails'
+      fullPath: '/checker/guard-rails'
+      preLoaderRoute: typeof CheckerCheckerGuardRailsRouteImport
+      parentRoute: typeof CheckerRoute
+    }
     '/_checker/checker/fleet': {
       id: '/_checker/checker/fleet'
       path: '/checker/fleet'
@@ -975,6 +995,7 @@ interface CheckerRouteChildren {
   CheckerCheckerCampaignsRoute: typeof CheckerCheckerCampaignsRoute
   CheckerCheckerDashboardRoute: typeof CheckerCheckerDashboardRoute
   CheckerCheckerFleetRoute: typeof CheckerCheckerFleetRoute
+  CheckerCheckerGuardRailsRoute: typeof CheckerCheckerGuardRailsRoute
   CheckerCheckerProfileRoute: typeof CheckerCheckerProfileRoute
   CheckerCheckerStoreSettingsRoute: typeof CheckerCheckerStoreSettingsRoute
 }
@@ -984,6 +1005,7 @@ const CheckerRouteChildren: CheckerRouteChildren = {
   CheckerCheckerCampaignsRoute: CheckerCheckerCampaignsRoute,
   CheckerCheckerDashboardRoute: CheckerCheckerDashboardRoute,
   CheckerCheckerFleetRoute: CheckerCheckerFleetRoute,
+  CheckerCheckerGuardRailsRoute: CheckerCheckerGuardRailsRoute,
   CheckerCheckerProfileRoute: CheckerCheckerProfileRoute,
   CheckerCheckerStoreSettingsRoute: CheckerCheckerStoreSettingsRoute,
 }

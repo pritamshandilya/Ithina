@@ -1,6 +1,14 @@
 import type { DataTableCell, DataTableColumn } from "@/components/ui/data-table";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function categoryPillClass(category: GuardRailCategory) {
   switch (category) {
     case "Pricing":
@@ -38,6 +46,24 @@ function statusToggle(row: GuardRailRule) {
   </button>`;
 }
 
+/** Read-only: same visual weight as the toggle, non-interactive. */
+function statusReadOnly(row: GuardRailRule) {
+  if (row.active) {
+    return `<div class="inline-flex items-center gap-2.5 py-0.5" role="status" aria-label="Active">
+      <span class="relative inline-flex h-[22px] w-[40px] shrink-0 items-center rounded-full border border-emerald-500/50 bg-emerald-500/20 p-0.5 opacity-90">
+        <span class="ml-auto size-[18px] rounded-full bg-emerald-400 shadow-sm ring-1 ring-emerald-300/40"></span>
+      </span>
+      <span class="text-xs font-semibold text-emerald-400">Active</span>
+    </div>`;
+  }
+  return `<div class="inline-flex items-center gap-2.5 py-0.5" role="status" aria-label="Off">
+    <span class="relative inline-flex h-[22px] w-[40px] shrink-0 items-center rounded-full border border-slate-600 bg-slate-800/80 p-0.5 opacity-90">
+      <span class="size-[18px] rounded-full bg-slate-500 shadow-sm ring-1 ring-black/20"></span>
+    </span>
+    <span class="text-xs font-semibold text-slate-500">Off</span>
+  </div>`;
+}
+
 function pencilIcon() {
   return `<svg class="size-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
@@ -52,45 +78,83 @@ function trashIcon() {
 
 export interface BuildGuardRailColumnsParams {
   onAction: (e: MouseEvent, row: GuardRailRule) => void;
+  readOnly?: boolean;
 }
 
-export function buildGuardRailTabulatorColumns({ onAction }: BuildGuardRailColumnsParams): DataTableColumn<GuardRailRule>[] {
-  return [
+export function buildGuardRailTabulatorColumns({
+  onAction,
+  readOnly = false,
+}: BuildGuardRailColumnsParams): DataTableColumn<GuardRailRule>[] {
+  const columns: DataTableColumn<GuardRailRule>[] = [
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Rule Name</div>`,
+      title: "Rule Name",
       field: "name",
       headerSort: false,
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const d = rowData as GuardRailRule;
+        return d.name.toLowerCase().includes(term) || d.id.toLowerCase().includes(term);
+      },
       hozAlign: "left",
       width: 260,
       minWidth: 220,
       formatter: (cell: DataTableCell<GuardRailRule>) => {
         const row = cell.getData();
         const dot = row.active ? "bg-emerald-400" : "bg-slate-600";
+        const name = escapeHtml(row.name);
+        const idEsc = escapeHtml(row.id);
         return `<div class="flex items-start gap-2.5 py-1">
           <span class="mt-1.5 inline-block size-1.5 shrink-0 rounded-full ${dot}" aria-hidden="true"></span>
           <div class="min-w-0">
-            <p class="text-sm font-semibold leading-tight text-white">${row.name}</p>
-            <p class="mt-0.5 font-mono text-[10px] text-slate-600">${row.id}</p>
+            <p class="text-sm font-semibold leading-tight text-white">${name}</p>
+            <p class="mt-0.5 font-mono text-[10px] text-slate-600">${idEsc}</p>
           </div>
         </div>`;
       },
     },
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Category</div>`,
+      title: "Category",
       field: "category",
       headerSort: false,
+      headerFilter: "list" as const,
+      headerFilterParams: {
+        values: {
+          "": "All",
+          Pricing: "Pricing",
+          Brand: "Brand",
+          Regulatory: "Regulatory",
+          Content: "Content",
+        },
+      },
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const v = value as string;
+        if (!v) return true;
+        return (rowData as GuardRailRule).category === v;
+      },
       hozAlign: "left",
       width: 132,
       minWidth: 120,
       formatter: (cell: DataTableCell<GuardRailRule>) => {
         const row = cell.getData();
-        return `<span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-mono font-semibold ${categoryPillClass(row.category)}">${row.category}</span>`;
+        const cat = escapeHtml(row.category);
+        return `<span class="inline-flex rounded-full border px-2.5 py-1 text-[10px] font-mono font-semibold ${categoryPillClass(row.category)}">${cat}</span>`;
       },
     },
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Severity</div>`,
+      title: "Severity",
       field: "severity",
       headerSort: false,
+      headerFilter: "list" as const,
+      headerFilterParams: {
+        values: { "": "All", Hard: "Hard", Soft: "Soft" },
+      },
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const v = value as string;
+        if (!v) return true;
+        return (rowData as GuardRailRule).severity === v;
+      },
       hozAlign: "left",
       width: 96,
       minWidth: 88,
@@ -100,36 +164,55 @@ export function buildGuardRailTabulatorColumns({ onAction }: BuildGuardRailColum
       },
     },
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Description</div>`,
+      title: "Description",
       field: "description",
       headerSort: false,
+      headerFilter: "input" as const,
       hozAlign: "left",
       minWidth: 200,
       widthGrow: 1,
       formatter: (cell: DataTableCell<GuardRailRule>) => {
         const row = cell.getData();
-        return `<p class="min-w-0 py-0.5 text-sm leading-relaxed text-slate-200">${row.description}</p>`;
+        const desc = escapeHtml(row.description);
+        return `<p class="min-w-0 py-0.5 text-sm leading-relaxed text-slate-200">${desc}</p>`;
       },
     },
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">Status</div>`,
+      title: "Status",
       field: "active",
       headerSort: false,
+      headerFilter: "list" as const,
+      headerFilterParams: {
+        values: { "": "All", true: "Active", false: "Off" },
+      },
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const v = value as string | boolean | undefined;
+        if (v === "" || v === undefined || v === null) return true;
+        const row = rowData as GuardRailRule;
+        if (v === true || v === "true") return row.active === true;
+        if (v === false || v === "false") return row.active === false;
+        return true;
+      },
       hozAlign: "left",
       width: 148,
       minWidth: 138,
       formatter: (cell: DataTableCell<GuardRailRule>) => {
         const row = cell.getData();
-        return statusToggle(row);
+        return readOnly ? statusReadOnly(row) : statusToggle(row);
       },
-      cellClick: (e: MouseEvent, cell: DataTableCell<GuardRailRule>) => {
-        onAction(e, cell.getData());
-      },
+      ...(readOnly
+        ? {}
+        : {
+            cellClick: (e: MouseEvent, cell: DataTableCell<GuardRailRule>) => {
+              onAction(e, cell.getData());
+            },
+          }),
     },
     {
-      title: `<div class="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono text-right">Actions</div>`,
+      title: "Actions",
       field: "_actions",
       headerSort: false,
+      headerFilter: false,
       headerHozAlign: "right",
       hozAlign: "right",
       width: 100,
@@ -144,4 +227,9 @@ export function buildGuardRailTabulatorColumns({ onAction }: BuildGuardRailColum
       },
     },
   ];
+
+  if (readOnly) {
+    return columns.filter((c) => c.field !== "_actions");
+  }
+  return columns;
 }

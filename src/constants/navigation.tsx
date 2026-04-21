@@ -72,6 +72,20 @@ export const MAKER_NAV_SECTIONS: NavSection[] = [
       },
     ],
   },
+  {
+    label: "Configuration",
+    items: [
+      {
+        id: "maker-guard-rails",
+        label: "Guard Rails",
+        icon: <Settings className="size-4" />,
+        path: "/maker/guard-rails",
+        title: "Guard Rails",
+        subtitle: "View compliance rules your campaigns must follow. Only admins can add or edit rules.",
+        requiredPermission: "dashboard:view",
+      },
+    ],
+  },
 ];
 
 export const CHECKER_NAV_SECTIONS: NavSection[] = [
@@ -118,6 +132,20 @@ export const CHECKER_NAV_SECTIONS: NavSection[] = [
         title: "Campaign Tracking",
         subtitle: "Campaign Workflow",
         requiredPermission: "fleet:view",
+      },
+    ],
+  },
+  {
+    label: "Configuration",
+    items: [
+      {
+        id: "checker-guard-rails",
+        label: "Guard Rails",
+        icon: <Settings className="size-4" />,
+        path: "/checker/guard-rails",
+        title: "Guard Rails",
+        subtitle: "View compliance rules campaigns must follow. Only admins can add or edit rules.",
+        requiredPermission: "dashboard:view",
       },
     ],
   },
@@ -231,8 +259,8 @@ export const ADMIN_STORE_NAV_SECTIONS: NavSection[] = [
         label: "Guard Rails",
         icon: <Settings className="size-4" />,
         path: "/admin/settings",
-        title: "System Guardrails",
-        subtitle: "Admin Config",
+        title: "Guard Rails",
+        subtitle: "Monitor and manage compliance rules for the selected store.",
         requiredPermission: "admin:settings",
       },
     ],

@@ -1,8 +1,8 @@
-import { Calendar, LayoutList, Pause, Search, Trash2 } from "lucide-react";
+import { AlertCircle, Calendar, LayoutList, Pause, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import LoadingSpinner from "@/components/shared/loading-spinner";
 import { DataTable } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
@@ -29,10 +29,10 @@ const EMPTY_FORM: CampaignCreateForm = {
   scheduled_date: "",
 };
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 export default function CampaignsTabulator() {
-  const { data: campaigns = [], isLoading, isError } = useCampaignList();
+  const { data: campaigns = [], isLoading, isError, error } = useCampaignList();
   const updateMutation = useUpdateCampaign();
   const deleteMutation = useDeleteCampaign();
   const { toast } = useToast();
@@ -193,20 +193,8 @@ export default function CampaignsTabulator() {
     [pausedById, openEdit, togglePause, confirmDelete],
   );
 
-  if (isError) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-        <p className="text-sm font-semibold text-rose-400">Failed to load campaigns</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <LoadingSpinner label="Loading campaigns..." className="flex-1" />;
-  }
-
   return (
-    <>
+    <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
       {modalMode && (
         <CampaignModal
           mode={modalMode === "create" ? "create" : "edit"}
@@ -225,141 +213,166 @@ export default function CampaignsTabulator() {
         />
       )}
 
-      <div className="flex h-full w-full flex-col overflow-hidden animate-[fadeIn_0.3s_ease-out]">
-        {/* ── Toolbar ── */}
-        <div className="flex shrink-0 flex-wrap items-center gap-3 border-b border-ithina-border/40 px-7 pb-4 pt-5">
-          {/* View tabs */}
-          <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel p-0.5">
-            <button
-              type="button"
-              onClick={() => setActiveTab("all")}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
-                activeTab === "all" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              <LayoutList className="size-3.5 shrink-0" aria-hidden />
-              All Campaigns
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab("scheduled")}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
-                activeTab === "scheduled" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              <Calendar className="size-3.5 shrink-0" aria-hidden />
-              Scheduled
-              <span
+      <div className="ithina-page w-full flex min-h-0 flex-col">
+        <div className="w-full space-y-3 px-4 pb-4 pt-2 lg:px-8">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
+              <button
+                type="button"
+                onClick={() => setActiveTab("all")}
                 className={cn(
-                  "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
-                  activeTab === "scheduled" ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400",
+                  "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                  activeTab === "all"
+                    ? "bg-ithina-purple text-white shadow-sm"
+                    : "text-slate-400 hover:text-white",
                 )}
               >
-                {scheduledCount}
-              </span>
-            </button>
-          </div>
-
-          {/* Status filters */}
-          {activeTab === "all" && (
-            <div className="flex flex-wrap gap-1">
-              {statusFilters.map((f) => (
-                <button
-                  key={f.id}
-                  type="button"
-                  onClick={() => setActiveFilter(f.id)}
+                <LayoutList className="size-3.5 shrink-0" aria-hidden />
+                All Campaigns
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("scheduled")}
+                className={cn(
+                  "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                  activeTab === "scheduled"
+                    ? "bg-ithina-purple text-white shadow-sm"
+                    : "text-slate-400 hover:text-white",
+                )}
+              >
+                <Calendar className="size-3.5 shrink-0" aria-hidden />
+                Scheduled
+                <span
                   className={cn(
-                    "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all",
-                    activeFilter === f.id
-                      ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
-                      : "border-ithina-border text-slate-500 hover:border-slate-500 hover:text-white",
+                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                    activeTab === "scheduled" ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400",
                   )}
                 >
-                  {f.label}
-                  <span className="ml-1 text-[9px] opacity-60">{f.count}</span>
+                  {scheduledCount}
+                </span>
+              </button>
+            </div>
+
+            {activeTab === "all" && (
+              <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                {statusFilters.map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setActiveFilter(f.id)}
+                    className={cn(
+                      "h-8 rounded-md border px-2.5 text-xs font-medium transition-all",
+                      activeFilter === f.id
+                        ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
+                        : "border-ithina-border/60 text-slate-500 hover:border-slate-500 hover:text-white",
+                    )}
+                  >
+                    {f.label}
+                    <span className="ml-1 text-[9px] tabular-nums opacity-60">{f.count}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {activeTab === "all" && (
+              <div className="ml-auto flex flex-wrap items-center gap-1.5">
+                {selectedIds.size > 0 && (
+                  <span className="mr-0.5 rounded bg-ithina-purple/10 px-2 py-1 text-[10px] font-semibold text-ithina-purple">
+                    {selectedIds.size} selected
+                  </span>
+                )}
+
+                <button
+                  type="button"
+                  disabled={selectedIds.size === 0}
+                  onClick={bulkPause}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-all",
+                    selectedIds.size > 0
+                      ? "border-amber-400/25 bg-amber-400/10 text-amber-300 hover:bg-amber-500 hover:text-white"
+                      : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
+                  )}
+                >
+                  <Pause className="size-3.5" aria-hidden />
+                  Pause
                 </button>
+
+                <button
+                  type="button"
+                  disabled={selectedIds.size === 0}
+                  onClick={bulkDelete}
+                  className={cn(
+                    "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-xs font-semibold transition-all",
+                    selectedIds.size > 0
+                      ? "border-rose-400/25 text-rose-300 hover:bg-rose-500 hover:text-white"
+                      : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
+                  )}
+                >
+                  <Trash2 className="size-3.5" aria-hidden />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
+
+          {activeTab === "all" && (
+            <div className="group relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or campaign ID…"
+                className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label="Search campaigns"
+              />
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-full rounded-md" />
               ))}
             </div>
           )}
 
-          <div className="flex-1" />
-
-          {/* Bulk actions + search */}
-          {activeTab === "all" && (
-            <div className="flex items-center gap-1.5">
-              {selectedIds.size > 0 && (
-                <span className="mr-1 rounded bg-ithina-purple/10 px-2 py-1 text-[10px] font-semibold text-ithina-purple">
-                  {selectedIds.size} selected
-                </span>
-              )}
-
-              <button
-                type="button"
-                disabled={selectedIds.size === 0}
-                onClick={bulkPause}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  selectedIds.size > 0
-                    ? "border-amber-400/25 bg-amber-400/10 text-amber-400 hover:bg-amber-500 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
-                )}
-              >
-                <Pause className="size-3" aria-hidden />
-                Pause
-              </button>
-
-              <button
-                type="button"
-                disabled={selectedIds.size === 0}
-                onClick={bulkDelete}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  selectedIds.size > 0
-                    ? "border-rose-400/20 text-rose-400 hover:bg-rose-500 hover:text-white"
-                    : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40",
-                )}
-              >
-                <Trash2 className="size-3" aria-hidden />
-                Delete
-              </button>
-
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" aria-hidden />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  type="search"
-                  placeholder="Search…"
-                  aria-label="Search campaigns"
-                  className="w-44 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-8 pr-3 text-sm text-white transition-colors focus:border-ithina-purple focus:outline-none"
-                />
-              </div>
+          {!isLoading && isError && (
+            <div
+              className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
+              role="alert"
+            >
+              <AlertCircle className="size-5 shrink-0" />
+              <span className="text-sm">
+                {(error as Error)?.message ?? "Failed to load campaigns"}
+              </span>
             </div>
           )}
-        </div>
 
-        {/* ── Content ── */}
-        {activeTab === "all" ? (
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <DataTable<CampaignListItem>
-              data={filteredCampaigns}
-              columns={columns}
-              rowIdField="id"
-              isBulkEnabled
-              onSelectionChange={setSelectedRows}
-              pagination
-              pageSize={PAGE_SIZE}
-              emptyMessage="No campaigns match your filter."
-              headerFilters
-              className="rounded-none border-0 flex-1"
-            />
-          </div>
-        ) : (
-          <CampaignsScheduledTab />
-        )}
+          {!isLoading && !isError && activeTab === "all" && (
+            <div className="min-w-0">
+              <DataTable<CampaignListItem>
+                data={filteredCampaigns}
+                columns={columns}
+                rowIdField="id"
+                isBulkEnabled
+                onSelectionChange={setSelectedRows}
+                pagination
+                pageSize={PAGE_SIZE}
+                pageSizeSelector={[5, 10, 15, 20, 50]}
+                emptyMessage="No campaigns match your filter."
+                headerFilters
+                fitContent
+              />
+            </div>
+          )}
+
+          {!isLoading && !isError && activeTab === "scheduled" && <CampaignsScheduledTab />}
+        </div>
       </div>
-    </>
+    </div>
   );
 }

@@ -1,9 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, StagedSku, WizardConstraints } from "@/types/wizard";
+import {
+  DEFAULT_LANGUAGE_CODE,
+  isLanguageCode,
+  type LanguageCode,
+} from "@/features/wizard/lib/promo-languages";
 
 type InputMode = "ai" | "csv";
 export type WizardMode = "nl" | "manual";
+
+const PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY = "promo_assistant_lang";
 
 interface CsvRow {
   sku: string;
@@ -26,6 +33,19 @@ interface WizardState {
   csvFileName: string;
   csvConfirmed: boolean;
   campaignNamed: boolean;
+  /** Language the Promo Assistant AI should reply in (prepended to outgoing prompts). */
+  promoAssistantLanguage: LanguageCode;
+}
+
+/** Read persisted language from localStorage (safe on SSR / missing window). */
+function readPersistedLanguage(): LanguageCode {
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE_CODE;
+  try {
+    const raw = window.localStorage.getItem(PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY);
+    return isLanguageCode(raw) ? raw : DEFAULT_LANGUAGE_CODE;
+  } catch {
+    return DEFAULT_LANGUAGE_CODE;
+  }
 }
 
 const initialState: WizardState = {
@@ -45,6 +65,7 @@ const initialState: WizardState = {
   csvFileName: "",
   csvConfirmed: false,
   campaignNamed: false,
+  promoAssistantLanguage: readPersistedLanguage(),
 };
 
 const wizardSlice = createSlice({
@@ -173,8 +194,11 @@ const wizardSlice = createSlice({
       state.gridData = [];
       state.campaignNamed = false;
     },
-    resetWizard() {
-      return initialState;
+    setPromoAssistantLanguage(state, action: PayloadAction<LanguageCode>) {
+      state.promoAssistantLanguage = action.payload;
+    },
+    resetWizard(state) {
+      return { ...initialState, promoAssistantLanguage: state.promoAssistantLanguage };
     },
   },
 });
@@ -201,7 +225,10 @@ export const {
   removeCsvRow,
   removeAllCsvViolations,
   resetPromoAssistantChat,
+  setPromoAssistantLanguage,
   resetWizard,
 } = wizardSlice.actions;
+
+export { PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY };
 
 export default wizardSlice.reducer;

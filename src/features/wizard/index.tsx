@@ -14,6 +14,7 @@ import {
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
   pushMessage as pushWizardMessage,
+  PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
   removeAllCsvViolations,
   mergeGridData,
   removeCsvRow,
@@ -26,12 +27,17 @@ import {
   setCsvRows,
   setHasSplit,
   setInputMode as setWizardInputMode,
+  setPromoAssistantLanguage,
   setShowGrid,
   setWMode,
   setWStep,
   toggleGridRowIncluded,
   updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
+import {
+  buildPromptWithLanguage,
+  type LanguageCode,
+} from "@/features/wizard/lib/promo-languages";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
 import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
@@ -119,6 +125,7 @@ export default function Wizard() {
     csvFileName,
     csvConfirmed,
     campaignNamed,
+    promoAssistantLanguage,
   } = useAppSelector((s) => s.wizard);
 
   const campaignName = useAppSelector((s) => s.campaign.name);
@@ -435,8 +442,11 @@ export default function Wizard() {
 
     try {
       const existingSessionId = pipelineSessionIdRef.current;
+      // Chat bubble keeps the raw typed text; only the wire payload is augmented
+      // with a language directive so the AI replies in the selected language.
+      const promptForApi = buildPromptWithLanguage(text, promoAssistantLanguage);
       const { aiReply, skus, sessionId, draftMeta, suggestions: newSuggestions } = await intentMutation.mutateAsync({
-        text,
+        text: promptForApi,
         constraints,
         ...(existingSessionId ? { sessionId: existingSessionId } : {}),
       });
@@ -543,6 +553,7 @@ export default function Wizard() {
     schedule.startTime,
     schedule.endDate,
     schedule.endTime,
+    promoAssistantLanguage,
   ]);
 
   const handleSuggestionClick = useCallback(
@@ -565,6 +576,25 @@ export default function Wizard() {
     setIsTyping(false);
     setError(null);
   }, [dispatch, intentMutation.isPending, hwConfirmMutation.isPending]);
+
+  const handlePromoLanguageChange = useCallback(
+    (code: LanguageCode) => {
+      dispatch(setPromoAssistantLanguage(code));
+    },
+    [dispatch],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
+        promoAssistantLanguage,
+      );
+    } catch {
+      // localStorage may be unavailable (private mode, quota); failing here is non-fatal.
+    }
+  }, [promoAssistantLanguage]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -956,6 +986,8 @@ export default function Wizard() {
                               hasSplit={true}
                               suggestions={suggestions}
                               onSuggestionClick={handleSuggestionClick}
+                              language={promoAssistantLanguage}
+                              onLanguageChange={handlePromoLanguageChange}
                             />
                           </div>
                           {showGrid ? (

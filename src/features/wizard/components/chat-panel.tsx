@@ -1,11 +1,24 @@
-import { ArrowRight, MessageCircle, RotateCcw } from "lucide-react";
+import { ArrowRight, Check, ChevronDown, Globe, MessageCircle, RotateCcw } from "lucide-react";
 import { memo, useEffect, useRef } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  DEFAULT_LANGUAGE_CODE,
+  PROMO_LANGUAGES,
+  getLanguageOption,
+  type LanguageCode,
+  type LanguageOption,
+} from "@/features/wizard/lib/promo-languages";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/wizard";
-
-const DEFAULT_INTENT_PLACEHOLDER = "Describe your promotion intent...";
 
 interface ChatPanelProps {
   messages: ChatMessage[];
@@ -20,6 +33,11 @@ interface ChatPanelProps {
   /** Quick-reply suggestion chips returned by the backend draft endpoint. */
   suggestions?: string[];
   onSuggestionClick?: (text: string) => void;
+  /** Selected Promo Assistant reply language. Defaults to English when not provided. */
+  language?: LanguageCode;
+  onLanguageChange?: (code: LanguageCode) => void;
+  /** Override the language options list. Defaults to `PROMO_LANGUAGES`. */
+  languages?: readonly LanguageOption[];
   children?: React.ReactNode;
 }
 
@@ -34,9 +52,14 @@ const ChatPanel = memo(function ChatPanel({
   hasSplit,
   suggestions,
   onSuggestionClick,
+  language = DEFAULT_LANGUAGE_CODE,
+  onLanguageChange,
+  languages = PROMO_LANGUAGES,
   children,
 }: ChatPanelProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const selectedLanguage = getLanguageOption(language);
+  const showLanguageSelector = Boolean(onLanguageChange);
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,6 +95,50 @@ const ChatPanel = memo(function ChatPanel({
             <MessageCircle className="size-3.5 text-ithina-purple" />
           </div>
           <h2 className="min-w-0 flex-1 text-sm font-semibold tracking-wide text-white">Promo Assistant</h2>
+          {showLanguageSelector && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`Reply language: ${selectedLanguage.nativeName}`}
+                  title={`Reply language: ${selectedLanguage.nativeName} (${selectedLanguage.englishName})`}
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg border border-ithina-border/80 bg-white/[0.03] px-2 py-1.5 text-[11px] font-medium text-slate-300 transition-colors hover:border-ithina-purple/40 hover:bg-ithina-purple/10 hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-ithina-purple/60 disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <Globe className="size-3.5" aria-hidden />
+                  <span className="max-w-[72px] truncate">{selectedLanguage.nativeName}</span>
+                  <ChevronDown className="size-3 opacity-70" aria-hidden />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={6} className="min-w-[220px]">
+                <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                  AI reply language
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {languages.map((lang) => {
+                  const active = lang.code === selectedLanguage.code;
+                  return (
+                    <DropdownMenuItem
+                      key={lang.code}
+                      onSelect={(event) => {
+                        event.preventDefault();
+                        if (!active) onLanguageChange?.(lang.code);
+                      }}
+                      className="flex items-center gap-2 text-[12px]"
+                    >
+                      <Check
+                        className={cn("size-3.5 shrink-0", active ? "text-ithina-purple" : "opacity-0")}
+                        aria-hidden
+                      />
+                      <span className="flex-1 truncate font-medium text-white">{lang.nativeName}</span>
+                      <span className="font-mono text-[10px] uppercase tracking-wide text-slate-500">
+                        {lang.code}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {onResetChat && (
             <button
               type="button"
@@ -113,7 +180,7 @@ const ChatPanel = memo(function ChatPanel({
               value={inputText}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyDown={handleIntentKeyDown}
-              placeholder={DEFAULT_INTENT_PLACEHOLDER}
+              placeholder={selectedLanguage.inputPlaceholder}
               aria-label="Promotion intent input"
               rows={2}
               className="chat-panel-intent-textarea min-h-[2.75rem] min-w-0 flex-1 resize-none bg-transparent py-2 pl-3 pr-2 text-sm leading-relaxed text-white placeholder:text-slate-500 focus:outline-none disabled:opacity-50"

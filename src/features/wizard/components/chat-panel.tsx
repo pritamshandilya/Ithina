@@ -16,7 +16,7 @@ import {
   getLanguageOption,
   type LanguageCode,
   type LanguageOption,
-} from "@/features/wizard/lib/promo-languages";
+} from "../lib/promo-languages";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/wizard";
 

@@ -37,7 +37,7 @@ import {
 import {
   buildPromptWithLanguage,
   type LanguageCode,
-} from "@/features/wizard/lib/promo-languages";
+} from "./lib/promo-languages";
 import type { HardwareDeviceId } from "@/types/wizard";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
 import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";

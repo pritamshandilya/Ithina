@@ -5,7 +5,7 @@ import {
   DEFAULT_LANGUAGE_CODE,
   isLanguageCode,
   type LanguageCode,
-} from "@/features/wizard/lib/promo-languages";
+} from "../../features/wizard/lib/promo-languages";
 
 type InputMode = "ai" | "csv";
 export type WizardMode = "nl" | "manual";

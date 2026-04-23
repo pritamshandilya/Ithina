@@ -25,60 +25,71 @@ export function PlanogramJsonOverview({
   className,
   embedded = false,
 }: PlanogramJsonOverviewProps) {
-  const planogram = payload?.planogram;
-  const fixture = planogram?.fixture;
-  const meta = payload?.metadata ?? planogram?.metadata;
-  const units = planogram?.storeConfig?.units ?? "mm";
   const titleBlock = (
     <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
       <CardTitle className="text-base">Planogram overview</CardTitle>
       <CardDescription>
-        Compact JSON summary. Detailed product/shelf view is available in the 2D preview.
+        Compact JSON summary. Detailed product and shelf view is available in the 2D preview.
       </CardDescription>
     </CardHeader>
   );
+
   const detailsBlock =
-    !planogram || !fixture ? null : (
+    !payload ? null : (
       <CardContent className={embedded ? "space-y-3 px-0 pb-0" : "space-y-3"}>
         <div className="rounded-lg border border-border bg-muted/20 px-3 py-3">
-          <p className="text-lg font-semibold text-foreground">{planogram.name}</p>
+          <p className="text-lg font-semibold text-foreground">{payload.name}</p>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            <span className="font-mono text-foreground">{planogram.id}</span>
-            <span className="mx-1.5">·</span>v{planogram.version}
+            v{payload.version ?? "—"}
             <span className="mx-1.5">·</span>
-            {planogram.status}
-            <span className="mx-1.5">·</span>
-            Created {planogram.createdDate}
+            {payload.status}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">{planogram.location}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{payload.description ?? "—"}</p>
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Dimensions
+              Fixture
             </p>
             <p className="text-sm font-semibold tabular-nums text-foreground">
-              {fixture.width}×{fixture.height}×{fixture.depth} {units}
+              {payload.fixture.width}×{payload.fixture.height}×{payload.fixture.depth}
             </p>
           </div>
           <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
             <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Fixture type
+              Shelves
             </p>
-            <p className="text-sm font-medium capitalize text-foreground">
-              {fixture.type?.replace(/_/g, " ") ?? "—"}
+            <p className="text-sm font-semibold tabular-nums text-foreground">
+              {payload.shelves.length}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              SKUs
+            </p>
+            <p className="text-sm font-semibold tabular-nums text-foreground">
+              {payload.shelves.reduce((sum, shelf) => sum + shelf.products.length, 0)}
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Total Units
+            </p>
+            <p className="text-sm font-semibold tabular-nums text-foreground">
+              {payload.shelves.reduce(
+                (sum, shelf) =>
+                  sum +
+                  shelf.products.reduce(
+                    (productSum, product) =>
+                      productSum + product.facings * product.depth_count,
+                    0,
+                  ),
+                0,
+              )}
             </p>
           </div>
         </div>
-
-        {meta ? (
-          <div className="rounded-lg border border-border bg-muted/15 px-3 py-2 text-xs text-muted-foreground">
-            Source: <span className="text-foreground">{meta.sourceSystem || "—"}</span>
-            <span className="mx-1.5">·</span>
-            Sync: <span className="text-foreground">{meta.syncStatus || "—"}</span>
-          </div>
-        ) : null}
       </CardContent>
     );
 
@@ -104,7 +115,7 @@ export function PlanogramJsonOverview({
     );
   }
 
-  if (!planogram || !fixture) {
+  if (!payload) {
     const empty = (
       <CardContent className={embedded ? "px-0 py-10" : "py-10"}>
         <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center">

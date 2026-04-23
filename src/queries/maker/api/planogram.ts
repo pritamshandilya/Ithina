@@ -20,99 +20,63 @@ function isUuid(value: string): boolean {
   return UUID_REGEX.test(value);
 }
 
-function normalizePlanogramStatus(rawStatus: string | undefined): PlanogramApiStatus {
-  const normalized = (rawStatus ?? "").toUpperCase();
-  if (normalized === "ACTIVE" || normalized === "ARCHIVED") {
-    return normalized;
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function isPlanogramPayload(value: unknown): value is PlanogramPayload {
+  return (
+    isRecord(value) &&
+    typeof value.name === "string" &&
+    typeof value.status === "string" &&
+    isRecord(value.fixture) &&
+    Array.isArray(value.shelves)
+  );
+}
+
+function getPlanogramResponseId(response: PlanogramResponse): string {
+  if ("id" in response && typeof response.id === "string" && response.id.trim()) {
+    return response.id;
   }
-  return "DRAFT";
+
+  const payload = toPlanogramPayload(response);
+  return `${payload.name}:${payload.version ?? "unversioned"}`;
 }
 
 function toPlanogramPayload(response: PlanogramResponse): PlanogramPayload {
-  const raw = response.planogram_data;
-  if (raw && typeof raw === "object" && "planogram" in raw) {
-    return raw as unknown as PlanogramPayload;
+  if (isPlanogramPayload(response)) {
+    return response;
   }
 
-  return {
-    planogram: {
-      id: response.id,
-      name: response.name,
-      version: response.version ?? "1.0",
-      createdDate: response.created_at,
-      location: response.description ?? "—",
-      status: response.status,
-      physicalLocation: {
-        storeId: response.store_id,
-        zone: "—",
-        aisle: "—",
-        bay: "—",
-        side: "—",
-        section: "—",
-        fixtureIndexInBay: 0,
-      },
-      fixture: {
-        fixtureId: "",
-        type: "unknown",
-        width: 0,
-        height: 0,
-        depth: 0,
-        shelves: [],
-      },
-    },
-    metadata: undefined,
-    stockingRules: undefined,
-  };
+  if (isPlanogramPayload(response.planogram_data)) {
+    return response.planogram_data;
+  }
+
+  throw new Error("Invalid planogram response payload.");
 }
 
 function toPlanogramSummary(response: PlanogramResponse): PlanogramSummary {
   const payload = toPlanogramPayload(response);
-  const fixture = payload.planogram.fixture;
-  const location = payload.planogram.physicalLocation;
-  const productCount = fixture.shelves.reduce(
+  const productCount = payload.shelves.reduce(
     (sum, shelf) => sum + shelf.products.length,
     0,
   );
 
   return {
-    id: response.id,
-    name: response.name,
-    shelfCount: fixture.shelves.length,
+    id: getPlanogramResponseId(response),
+    name: ("name" in response && typeof response.name === "string" ? response.name : null) ?? payload.name,
+    version: ("version" in response ? response.version : undefined) ?? payload.version,
+    description:
+      ("description" in response && typeof response.description === "string"
+        ? response.description
+        : null) ?? payload.description,
+    status: ("status" in response && typeof response.status === "string" ? response.status : null) ?? payload.status,
+    shelfCount: payload.shelves.length,
     productCount,
-    dimensions:
-      fixture.width || fixture.height || fixture.depth
-        ? `${fixture.width}×${fixture.height}×${fixture.depth}`
-        : undefined,
-    location: response.description ?? payload.planogram.location,
-    zone: location?.zone,
-    aisle: location?.aisle,
-    bay: location?.bay,
-    section: location?.section,
-    fixtureType: fixture.type,
-    fixtureId: fixture.fixtureId,
-    width: fixture.width,
-    height: fixture.height,
-    depth: fixture.depth,
-  };
-}
-
-function toCreatePayload(payload: PlanogramPayload): CreatePlanogramPayload {
-  return {
-    name: payload.planogram.name,
-    version: payload.planogram.version,
-    description: payload.planogram.location,
-    status: normalizePlanogramStatus(payload.planogram.status),
-    planogram_data: payload as unknown as Record<string, unknown>,
-  };
-}
-
-function toUpdatePayload(payload: PlanogramPayload): UpdatePlanogramPayload {
-  return {
-    name: payload.planogram.name,
-    version: payload.planogram.version,
-    description: payload.planogram.location,
-    status: normalizePlanogramStatus(payload.planogram.status),
-    planogram_data: payload as unknown as Record<string, unknown>,
+    dimensions: `${payload.fixture.width}×${payload.fixture.height}×${payload.fixture.depth}`,
+    width: payload.fixture.width,
+    height: payload.fixture.height,
+    depth: payload.fixture.depth,
   };
 }
 
@@ -141,41 +105,24 @@ export async function fetchPlanogramById(id: string): Promise<PlanogramPayload |
   }
 }
 
-/**
- * Save shelf arrangement – creates shelf linked to planogram with user's edits
- *
- * @param shelfName - Display name for the shelf
- * @param planogramId - Source planogram ID
- * @param arrangement - User's edited arrangement
- * @param storeId - Store to associate shelf with
- * @returns Promise<Shelf>
- */
 export async function saveShelfArrangement(
   shelfName: string,
   planogramId: string,
   arrangement: PlanogramArrangement,
-  _storeId: string
+  storeId: string,
 ): Promise<Shelf> {
   return mockAnalysisApiClient.saveShelfArrangement(
     shelfName,
     planogramId,
     arrangement,
-    _storeId,
+    storeId,
   );
 }
 
-/**
- * Assign a planogram to an existing shelf (for shelves created without a planogram).
- *
- * @param shelfId - Shelf to update
- * @param planogramId - Planogram to associate
- * @param arrangement - Arrangement from the planogram
- * @returns Promise<Shelf | null> - Updated shelf or null if not found
- */
 export async function assignPlanogramToShelf(
   shelfId: string,
   planogramId: string,
-  arrangement: PlanogramArrangement
+  arrangement: PlanogramArrangement,
 ): Promise<Shelf | null> {
   return mockAnalysisApiClient.assignPlanogramToShelf(
     shelfId,
@@ -188,16 +135,9 @@ export function getAssignPlanogramOverlays(): Map<string, { planogramId: string;
   return mockAnalysisApiClient.getAssignPlanogramOverlays();
 }
 
-/**
- * Update an existing shelf's arrangement (product order, removed items, product edits)
- *
- * @param shelfId - Shelf to update
- * @param arrangement - Updated arrangement
- * @returns Promise<Shelf | null> - Updated shelf or null if not found
- */
 export async function updateShelfArrangement(
   shelfId: string,
-  arrangement: PlanogramArrangement
+  arrangement: PlanogramArrangement,
 ): Promise<Shelf | null> {
   return mockAnalysisApiClient.updateShelfArrangement(shelfId, arrangement);
 }
@@ -205,7 +145,7 @@ export async function updateShelfArrangement(
 export async function createPlanogram(payload: PlanogramPayload): Promise<PlanogramPayload> {
   const response = await apiClient.post<PlanogramResponse>(
     "/planograms",
-    toCreatePayload(payload),
+    payload as CreatePlanogramPayload,
   );
   return toPlanogramPayload(response);
 }
@@ -217,7 +157,7 @@ export async function updatePlanogram(id: string, payload: PlanogramPayload): Pr
 
   const response = await apiClient.put<PlanogramResponse>(
     `/planograms/${id}`,
-    toUpdatePayload(payload),
+    payload as UpdatePlanogramPayload,
   );
   return toPlanogramPayload(response);
 }

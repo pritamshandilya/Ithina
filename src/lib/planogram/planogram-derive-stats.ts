@@ -6,15 +6,15 @@ export function derivePlanogramStats(
 ) {
   const allProducts = shelves.flatMap((shelf) => shelf.products);
   const uniqueSkus = new Set(
-    [...allProducts, ...removedItems].map((product) => product.sku),
+    [...allProducts, ...removedItems].map((product) => product.sku ?? product.barcode ?? product.name),
   ).size;
   const frontFacings = allProducts.reduce((sum, product) => sum + product.facings, 0);
   const totalUnits = allProducts.reduce(
-    (sum, product) => sum + product.facings * (product.depthCount || 1),
+    (sum, product) => sum + product.facings * (product.depth_count || 1),
     0,
   );
   const categorySet = new Set(
-    [...allProducts, ...removedItems].map((product) => product.category),
+    [...allProducts, ...removedItems].map((product) => product.category ?? "Uncategorized"),
   );
   return {
     shelves: shelves.length,

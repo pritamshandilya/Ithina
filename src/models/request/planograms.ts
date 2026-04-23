@@ -2,23 +2,13 @@
  * API Payload Types - Planograms
  *
  * Request bodies sent to planogram endpoints.
- * Matches backend PlanogramCreateRequest / PlanogramUpdateRequest DTOs.
+ * The backend accepts the raw planogram schema as-is.
  */
+
+import type { PlanogramPayload } from "@/types/planogram";
 
 export type PlanogramApiStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 
-export interface CreatePlanogramPayload {
-  name: string;
-  version?: string;
-  description?: string;
-  status?: PlanogramApiStatus;
-  planogram_data: Record<string, unknown>;
-}
+export type CreatePlanogramPayload = PlanogramPayload;
 
-export interface UpdatePlanogramPayload {
-  name?: string;
-  version?: string;
-  description?: string;
-  status?: PlanogramApiStatus;
-  planogram_data?: Record<string, unknown>;
-}
+export type UpdatePlanogramPayload = PlanogramPayload;

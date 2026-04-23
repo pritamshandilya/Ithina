@@ -258,13 +258,9 @@ export function MakerShelfPage() {
   const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
 
   const planogramMap = useMemo(() => {
-    const map = new Map<string, { aisle?: string; zone?: string; section?: string; fixtureType?: string; dimensions?: string }>();
+    const map = new Map<string, { dimensions?: string }>();
     (planogramList ?? []).forEach((p) => {
       map.set(p.id, {
-        aisle: p.aisle,
-        zone: p.zone,
-        section: p.section,
-        fixtureType: p.fixtureType,
         dimensions: p.dimensions,
       });
     });

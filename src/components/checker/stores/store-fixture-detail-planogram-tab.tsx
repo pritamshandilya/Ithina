@@ -5,7 +5,6 @@ import {
   ProductDetailsTable,
   RemovedItemsSidebar,
   ShelfRow,
-  StockingRulesSection,
 } from "@/components/planogram";
 import type { PlanogramEditHandlers } from "@/components/planogram/types";
 import { StatCard } from "@/components/shared";
@@ -13,6 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select } from "@/components/ui/select";
 import { derivePlanogramStats } from "@/lib/planogram/planogram-derive-stats";
+import {
+  getShelfDisplayLabel,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 import type {
   PlanogramFixture,
   PlanogramPayload,
@@ -68,19 +71,22 @@ export interface StoreFixtureDetailPlanogramTabProps {
   isMissingPlanogram: boolean;
   effectivePayload: PlanogramPayload | null | undefined;
   planogramFixture: PlanogramFixture | null | undefined;
-  highDemandSkus: string[];
   stats: ReturnType<typeof derivePlanogramStats>;
   shelvesToShow: PlanogramShelfDef[];
   baseShelves: PlanogramShelfDef[];
-  shelfCapacities: Record<number, number>;
   removedItems: PlanogramProduct[];
   selectedCategories: Set<string>;
   onToggleCategory: (category: string) => void;
   editHandlers: PlanogramEditHandlers;
-  onRestoreProduct: (shelfNumber: number, product: PlanogramProduct) => void;
-  onRemoveProduct: (shelfNumber: number, sku: string) => void;
-  onMoveProduct: (from: number | "removed", to: number, sku: string, targetSku?: string) => void;
-  dragRef: MutableRefObject<{ sku: string; fromShelf: number | "removed" } | null>;
+  onRestoreProduct: (shelfId: string, product: PlanogramProduct) => void;
+  onRemoveProduct: (shelfId: string, productId: string) => void;
+  onMoveProduct: (
+    from: string | "removed",
+    to: string,
+    productId: string,
+    targetProductId?: string,
+  ) => void;
+  dragRef: MutableRefObject<{ productId: string; fromShelf: string | "removed" } | null>;
   planogramOptions: { id: string; name: string }[];
   planogramId: string;
   onPlanogramIdChange: (value: string) => void;
@@ -92,11 +98,9 @@ export function StoreFixtureDetailPlanogramTab({
   isMissingPlanogram,
   effectivePayload,
   planogramFixture,
-  highDemandSkus,
   stats,
   shelvesToShow,
   baseShelves,
-  shelfCapacities,
   removedItems,
   selectedCategories,
   onToggleCategory,
@@ -111,7 +115,7 @@ export function StoreFixtureDetailPlanogramTab({
   onSaveAssociation,
   effectiveFixturePlanogramId,
 }: StoreFixtureDetailPlanogramTabProps) {
-  const hasAssociatedPlanogram = !!effectivePayload?.planogram?.fixture;
+  const hasAssociatedPlanogram = !!effectivePayload?.fixture;
 
   return (
     <div className="space-y-3">
@@ -133,7 +137,7 @@ export function StoreFixtureDetailPlanogramTab({
             <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
             <StatCard title="SKUs" value={stats.skus} className="stat-card" />
             <StatCard title="Front Facings" value={stats.frontFacings} className="stat-card" />
-            <StatCard title="Total Units (w/ depth)" value={stats.totalUnits} className="stat-card" />
+            <StatCard title="Total Units" value={stats.totalUnits} className="stat-card" />
             <StatCard title="Categories" value={stats.categories} className="stat-card" />
             <StatCard title="Removed" value={stats.removed} className="stat-card" />
           </div>
@@ -146,63 +150,71 @@ export function StoreFixtureDetailPlanogramTab({
           />
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
             <div className="min-w-0 flex-1 space-y-2">
-              {[...shelvesToShow]
-                .sort((a, b) => b.verticalPosition - a.verticalPosition)
-                .map((shelf) => (
-                  <ShelfRow
-                    key={shelf.shelfNumber}
-                    shelf={shelf}
-                    fixture={planogramFixture}
-                    highDemandSkus={highDemandSkus}
-                    editHandlers={{
-                      ...editHandlers,
-                      onReorderProducts:
-                        selectedCategories.size === 0
-                          ? editHandlers.onReorderProducts
-                          : undefined,
-                    }}
-                    dragHandlers={{
-                      onDragStart: (sku, fromShelf) => {
-                        dragRef.current = { sku, fromShelf };
-                      },
-                      onDropOnShelf: (toShelfNumber, targetSku) => {
-                        if (!dragRef.current) return;
-                        const { sku, fromShelf } = dragRef.current;
-                        dragRef.current = null;
-                        onMoveProduct(fromShelf, toShelfNumber, sku, targetSku);
-                      },
-                      onDropOnRemoved: () => {
-                        if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
-                        const { sku, fromShelf } = dragRef.current;
-                        dragRef.current = null;
-                        onRemoveProduct(fromShelf as number, sku);
-                      },
-                    }}
-                  />
-                ))}
+              {sortPlanogramShelves(shelvesToShow).map((shelf) => (
+                <ShelfRow
+                  key={shelf.id}
+                  shelf={shelf}
+                  allShelves={baseShelves}
+                  fixture={planogramFixture}
+                  editHandlers={{
+                    ...editHandlers,
+                    onReorderProducts:
+                      selectedCategories.size === 0
+                        ? editHandlers.onReorderProducts
+                        : undefined,
+                  }}
+                  dragHandlers={{
+                    onDragStart: (productId, fromShelf) => {
+                      dragRef.current = { productId, fromShelf };
+                    },
+                    onDropOnShelf: (toShelfId, targetProductId) => {
+                      if (!dragRef.current) return;
+                      const { productId, fromShelf } = dragRef.current;
+                      dragRef.current = null;
+                      onMoveProduct(fromShelf, toShelfId, productId, targetProductId);
+                    },
+                    onDropOnRemoved: () => {
+                      if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
+                      const { productId, fromShelf } = dragRef.current;
+                      dragRef.current = null;
+                      onRemoveProduct(fromShelf, productId);
+                    },
+                  }}
+                />
+              ))}
             </div>
             <RemovedItemsSidebar
               removedItems={removedItems}
               shelves={baseShelves}
-              shelfCapacities={shelfCapacities}
               onRestore={onRestoreProduct}
-              onRemoveFromShelf={(sku, shelfNumber) => onRemoveProduct(shelfNumber, sku)}
-              onMoveFromSidebar={(sku, toShelfNumber) => onMoveProduct("removed", toShelfNumber, sku)}
+              onRemoveFromShelf={onRemoveProduct}
+              onMoveFromSidebar={(productId, toShelfId) => onMoveProduct("removed", toShelfId, productId)}
             />
           </div>
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
+          <div className="grid gap-3">
             <div className="min-w-0 overflow-x-auto">
               <div className="min-w-275">
-                <ProductDetailsTable
-                  shelves={shelvesToShow}
-                  highDemandSkus={highDemandSkus}
-                  units={planogramFixture?.units}
-                />
+                <ProductDetailsTable shelves={shelvesToShow} />
               </div>
             </div>
-            <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-3">
-              <StockingRulesSection stockingRules={effectivePayload?.metadata?.stockingRules} />
-            </div>
+            {effectivePayload ? (
+              <div className="rounded-lg border border-border bg-card/80 p-3 text-sm text-muted-foreground">
+                {effectivePayload.name} · {effectivePayload.version ?? "—"} · {effectivePayload.status}
+                <div className="mt-1">
+                  {effectivePayload.description ?? "No description"}
+                </div>
+                {planogramFixture ? (
+                  <div className="mt-2">
+                    Fixture: {planogramFixture.width}×{planogramFixture.height}×{planogramFixture.depth}
+                  </div>
+                ) : null}
+                {baseShelves.length > 0 ? (
+                  <div className="mt-2">
+                    {getShelfDisplayLabel(baseShelves, baseShelves[0].id)} starts at {baseShelves[0].y_position}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </>
       )}

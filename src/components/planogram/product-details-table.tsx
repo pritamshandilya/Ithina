@@ -1,91 +1,82 @@
-/**
- * ProductDetailsTable – flattened product list with SKU, Product, Category, Shelf, etc.
- */
-
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { getCategoryColor } from "@/lib/constants/planogram";
+import {
+  getPlanogramProductId,
+  getShelfDisplayLabel,
+  sortPlanogramProducts,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 import type { PlanogramShelfDef } from "@/types/planogram";
 
 export interface ProductDetailsRow {
   id: string;
   sku: string;
+  barcode: string;
   product: string;
+  brand: string;
   category: string;
-  shelfNumber: number;
-  shelfName: string;
+  shelfId: string;
+  shelfLabel: string;
+  xPosition: number;
   facings: number;
   productWidth: number;
   productHeight: number;
   productDepth: number;
   depthCount: number;
-  stockedDepth: number;
   totalUnits: number;
-  currentStock: number;
-  optimalStock: number;
-  isHighDemand: boolean;
+  price: string;
+  velocity: string;
+  expirySensitive: string;
 }
 
-function flattenProducts(
-  shelves: PlanogramShelfDef[],
-  highDemandSkus: string[]
-): ProductDetailsRow[] {
+function flattenProducts(shelves: PlanogramShelfDef[]): ProductDetailsRow[] {
+  const sortedShelves = sortPlanogramShelves(shelves);
   const rows: ProductDetailsRow[] = [];
-  for (const shelf of shelves) {
-    for (const p of shelf.products) {
-      const totalUnits = p.facings * (p.depthCount || 1);
+
+  for (const shelf of sortedShelves) {
+    for (const [index, product] of sortPlanogramProducts(shelf.products).entries()) {
       rows.push({
-        id: `${shelf.shelfNumber}-${p.sku}`,
-        sku: p.sku,
-        product: p.name,
-        category: p.category,
-        shelfNumber: shelf.shelfNumber,
-        shelfName: shelf.name,
-        facings: p.facings,
-        productWidth: p.width,
-        productHeight: p.height,
-        productDepth: p.depth,
-        depthCount: p.depthCount,
-        stockedDepth: p.depth * (p.depthCount || 1),
-        totalUnits,
-        currentStock: p.currentStock,
-        optimalStock: p.optimalStock,
-        isHighDemand: highDemandSkus.includes(p.sku),
+        id: `${shelf.id}-${getPlanogramProductId(product, String(index))}`,
+        sku: product.sku ?? "—",
+        barcode: product.barcode ?? "—",
+        product: product.name,
+        brand: product.brand,
+        category: product.category ?? "Uncategorized",
+        shelfId: shelf.id,
+        shelfLabel: getShelfDisplayLabel(sortedShelves, shelf.id),
+        xPosition: product.x_position,
+        facings: product.facings,
+        productWidth: product.size.width,
+        productHeight: product.size.height,
+        productDepth: product.size.depth,
+        depthCount: product.depth_count,
+        totalUnits: product.facings * (product.depth_count || 1),
+        price: product.price != null ? String(product.price) : "—",
+        velocity: product.velocity != null ? String(product.velocity) : "—",
+        expirySensitive: product.expiry_sensitive ? "Yes" : "No",
       });
     }
   }
+
   return rows;
 }
 
 export interface ProductDetailsTableProps {
   shelves: PlanogramShelfDef[];
-  highDemandSkus: string[];
-  units?: string;
   className?: string;
 }
 
 export function ProductDetailsTable({
   shelves,
-  highDemandSkus,
-  units = "mm",
   className,
 }: ProductDetailsTableProps) {
-  const data = flattenProducts(shelves, highDemandSkus);
+  const data = flattenProducts(shelves);
 
   const columns: DataTableColumn<ProductDetailsRow>[] = [
-    {
-      title: "SKU",
-      field: "sku",
-      width: 120,
-      sorter: "string",
-      headerSort: true,
-    },
-    {
-      title: "Product",
-      field: "product",
-      minWidth: 180,
-      sorter: "string",
-      headerSort: true,
-    },
+    { title: "SKU", field: "sku", width: 120, sorter: "string", headerSort: true },
+    { title: "Barcode", field: "barcode", width: 140, sorter: "string", headerSort: true },
+    { title: "Product", field: "product", minWidth: 180, sorter: "string", headerSort: true },
+    { title: "Brand", field: "brand", width: 140, sorter: "string", headerSort: true },
     {
       title: "Category",
       field: "category",
@@ -104,107 +95,30 @@ export function ProductDetailsTable({
     },
     {
       title: "Shelf",
-      field: "shelfName",
-      width: 160,
+      field: "shelfLabel",
+      width: 180,
       sorter: "string",
       headerSort: true,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `<span class="text-muted-foreground">${row.shelfNumber}</span> · ${row.shelfName}`;
+        return `<span class="text-muted-foreground">${row.shelfLabel}</span> · ${row.shelfId}`;
       },
     },
+    { title: "X Position", field: "xPosition", width: 110, sorter: "number", headerSort: true },
+    { title: "Facings", field: "facings", width: 90, sorter: "number", headerSort: true },
+    { title: "Width", field: "productWidth", width: 90, sorter: "number", headerSort: true },
+    { title: "Height", field: "productHeight", width: 90, sorter: "number", headerSort: true },
+    { title: "Depth", field: "productDepth", width: 90, sorter: "number", headerSort: true },
+    { title: "Depth Count", field: "depthCount", width: 110, sorter: "number", headerSort: true },
+    { title: "Total Units", field: "totalUnits", width: 110, sorter: "number", headerSort: true },
+    { title: "Price", field: "price", width: 90, sorter: "string", headerSort: true },
+    { title: "Velocity", field: "velocity", width: 90, sorter: "string", headerSort: true },
     {
-      title: "Facings",
-      field: "facings",
-      width: 90,
-      sorter: "number",
-      headerSort: true,
-    },
-    {
-      title: "W",
-      field: "productWidth",
-      width: 80,
-      sorter: "number",
-      headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `<span class="tabular-nums">${row.productWidth} ${units}</span>`;
-      },
-    },
-    {
-      title: "H",
-      field: "productHeight",
-      width: 80,
-      sorter: "number",
-      headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `<span class="tabular-nums">${row.productHeight} ${units}</span>`;
-      },
-    },
-    {
-      title: "D",
-      field: "productDepth",
-      width: 80,
-      sorter: "number",
-      headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `<span class="tabular-nums">${row.productDepth} ${units}</span>`;
-      },
-    },
-    {
-      title: "Depth Count",
-      field: "depthCount",
-      width: 110,
-      sorter: "number",
-      headerSort: true,
-    },
-    {
-      title: "Stocked Depth",
-      field: "stockedDepth",
+      title: "Expiry Sensitive",
+      field: "expirySensitive",
       width: 130,
-      sorter: "number",
+      sorter: "string",
       headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `<span class="tabular-nums">${row.stockedDepth} ${units}</span>`;
-      },
-    },
-    {
-      title: "Total Units",
-      field: "totalUnits",
-      width: 110,
-      sorter: "number",
-      headerSort: true,
-    },
-    {
-      title: "Stock",
-      field: "currentStock",
-      width: 100,
-      sorter: "number",
-      headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        return `${row.currentStock}/${row.optimalStock}`;
-      },
-    },
-    {
-      title: "Demand",
-      field: "isHighDemand",
-      width: 100,
-      sorter: "boolean",
-      headerSort: true,
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => ProductDetailsRow }).getData();
-        if (!row.isHighDemand) return "—";
-        return `
-          <span class="inline-flex items-center gap-1 rounded bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-600 dark:text-amber-400" title="High demand">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-            HIGH
-          </span>
-        `;
-      },
     },
   ];
 
@@ -216,7 +130,7 @@ export function ProductDetailsTable({
         data={data}
         rowIdField="id"
         emptyMessage="No products"
-        initialSort={{ field: "shelfNumber", dir: "asc" }}
+        initialSort={{ field: "shelfLabel", dir: "asc" }}
         pageSize={10}
         layout="fitData"
       />

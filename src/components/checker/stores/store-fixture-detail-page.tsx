@@ -148,8 +148,6 @@ export function StoreFixtureDetailPage({
     });
   }, [fixture, fixtureComplianceOverrides, fixturePlanogramOverrides, selectedStore?.default_compliance_rule_set_id]);
 
-  const planogram = resolvedPlanogramPayload?.planogram;
-  const metadata = resolvedPlanogramPayload?.metadata;
   const planogramOptions = planogramList.map((item) => ({ id: item.id, name: item.name }));
   const isMissingPlanogram = !!preview && !resolvedPlanogramPayload;
 
@@ -300,7 +298,7 @@ export function StoreFixtureDetailPage({
                     {preview?.shelf.shelfName ?? fixture?.type ?? "Fixture details"}
                   </h1>
                   <p className="text-sm text-muted-foreground">
-                    {fixture?.type ?? "Fixture"} · v{planogram?.version ?? "1.0"} · {metadata?.location ?? "—"}
+                    {fixture?.type ?? "Fixture"} · v{resolvedPlanogramPayload?.version ?? "—"} · {resolvedPlanogramPayload?.description ?? "—"}
                   </p>
                 </>
               )}
@@ -351,11 +349,9 @@ export function StoreFixtureDetailPage({
               isMissingPlanogram={isMissingPlanogram}
               effectivePayload={planogramEditor.effectivePayload}
               planogramFixture={planogramEditor.planogramFixture}
-              highDemandSkus={planogramEditor.highDemandSkus}
               stats={planogramEditor.stats}
               shelvesToShow={planogramEditor.shelvesToShow}
               baseShelves={planogramEditor.baseShelves}
-              shelfCapacities={planogramEditor.shelfCapacities}
               removedItems={planogramEditor.removedItems}
               selectedCategories={planogramEditor.selectedCategories}
               onToggleCategory={planogramEditor.onToggleCategory}

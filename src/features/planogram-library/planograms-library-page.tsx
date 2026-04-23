@@ -59,58 +59,6 @@ const PLANOGRAM_LIBRARY_COLUMNS: DataTableColumn<PlanogramTableRow>[] = [
   //   },
   // },
   {
-    title: "Zone",
-    field: "zone",
-    minWidth: 100,
-    widthGrow: 1,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: "input",
-    formatter: (cell) => {
-      const row = getCellRow(cell);
-      return `<span class="text-sm text-foreground">${escapeAttr(row.zone ?? "—")}</span>`;
-    },
-  },
-  {
-    title: "Section",
-    field: "section",
-    minWidth: 160,
-    widthGrow: 3,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: "input",
-    hozAlign: "left",
-    headerHozAlign: "left",
-    formatter: (cell) => {
-      const row = getCellRow(cell);
-      return `<span class="text-sm text-foreground">${escapeAttr(row.section ?? "—")}</span>`;
-    },
-  },
-  {
-    title: "Aisle",
-    field: "aisle",
-    minWidth: 72,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: "input",
-    formatter: (cell) => {
-      const row = getCellRow(cell);
-      return `<span class="tabular-nums text-sm text-foreground">${escapeAttr(row.aisle ?? "—")}</span>`;
-    },
-  },
-  {
-    title: "Bay",
-    field: "bay",
-    minWidth: 72,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: "input",
-    formatter: (cell) => {
-      const row = getCellRow(cell);
-      return `<span class="tabular-nums text-sm text-foreground">${escapeAttr(row.bay ?? "—")}</span>`;
-    },
-  },
-  {
     title: "Shelves",
     field: "shelfCount",
     minWidth: 88,
@@ -135,19 +83,15 @@ const PLANOGRAM_LIBRARY_COLUMNS: DataTableColumn<PlanogramTableRow>[] = [
     },
   },
   {
-    title: "Fixture",
-    field: "fixtureType",
-    minWidth: 140,
-    widthGrow: 2,
+    title: "Status",
+    field: "status",
+    minWidth: 100,
     sorter: "string",
     headerSort: true,
     headerFilter: "input",
-    hozAlign: "left",
-    headerHozAlign: "left",
     formatter: (cell) => {
       const row = getCellRow(cell);
-      const t = row.fixtureType?.replace(/_/g, " ") ?? "—";
-      return `<span class="text-sm capitalize text-foreground">${escapeAttr(t)}</span>`;
+      return `<span class="text-sm text-foreground">${escapeAttr(row.status)}</span>`;
     },
   },
   {
@@ -192,11 +136,7 @@ export function PlanogramsLibraryPage() {
       (r) =>
         r.name.toLowerCase().includes(q) ||
         r.id.toLowerCase().includes(q) ||
-        (r.zone ?? "").toLowerCase().includes(q) ||
-        (r.section ?? "").toLowerCase().includes(q) ||
-        (r.aisle ?? "").toLowerCase().includes(q) ||
-        (r.bay ?? "").toLowerCase().includes(q) ||
-        (r.fixtureType ?? "").toLowerCase().includes(q) ||
+        (r.status ?? "").toLowerCase().includes(q) ||
         (r.dimensions ?? "").toLowerCase().includes(q)
         // r.catalogKind.toLowerCase().includes(q),
     );

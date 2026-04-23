@@ -117,7 +117,7 @@ export function PlanogramsNewPage() {
     }
     try {
       await saveMutation.mutateAsync(preview);
-      toast({ title: "Planogram saved", description: `${preview.planogram.name} is now in your library.` });
+      toast({ title: "Planogram saved", description: `${preview.name} is now in your library.` });
       void navigate({ to: href.list as never });
     } catch (e) {
       toast({
@@ -189,7 +189,7 @@ export function PlanogramsNewPage() {
                     id="planogram-json-paste"
                     value={rawJson}
                     onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setRawJson(e.target.value)}
-                    placeholder='{ "planogram": { "id": "...", "fixture": { "shelves": [...] } } }'
+                    placeholder='{ "name": "...", "fixture": { "width": 1200, "height": 2000, "depth": 400 }, "shelves": [...] }'
                     className="min-h-[220px] font-mono text-xs"
                     spellCheck={false}
                   />

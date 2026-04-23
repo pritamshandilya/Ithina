@@ -1,8 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useToast } from "@/hooks/use-toast";
-import { applyArrangementToFixtureShelves } from "@/lib/planogram/planogram-arrangement";
 import { derivePlanogramStats } from "@/lib/planogram/planogram-derive-stats";
+import {
+  applyArrangementToPlanogram,
+  getPlanogramProductId,
+  getShelfUsedWidth,
+  normalizePlanogramShelves,
+  normalizeShelfProductPositions,
+} from "@/lib/planogram/planogram-schema";
 import type { PlanogramShelfPreview } from "@/queries/maker/hooks/usePlanogramShelfPreview";
 import { useUpdateShelfArrangement } from "@/queries/maker";
 import type { PlanogramArrangement, PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
@@ -28,23 +34,21 @@ export function useStoreFixtureDetailPlanogramEditor({
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
     () => new Set(),
   );
-  const dragRef = useRef<{ sku: string; fromShelf: number | "removed" } | null>(null);
+  const dragRef = useRef<{ productId: string; fromShelf: string | "removed" } | null>(null);
 
   useEffect(() => {
     if (!preview) return;
     const payload = resolvedPlanogramPayload;
-    if (!payload?.planogram?.fixture?.shelves) {
+    if (!payload) {
       setLocalShelves([]);
       setRemovedItems([]);
       setHasChanges(false);
       setSelectedCategories(new Set());
       return;
     }
+
     const arrangement = preview.shelf.arrangement as PlanogramArrangement | undefined;
-    const { shelves, removed } = applyArrangementToFixtureShelves(
-      payload.planogram.fixture.shelves,
-      arrangement,
-    );
+    const { shelves, removed } = applyArrangementToPlanogram(payload, arrangement);
     setLocalShelves(shelves);
     setRemovedItems(removed);
     setHasChanges(false);
@@ -52,24 +56,11 @@ export function useStoreFixtureDetailPlanogramEditor({
   }, [preview, resolvedPlanogramPayload]);
 
   const effectivePayload = resolvedPlanogramPayload;
-  const planogram = effectivePayload?.planogram;
-  const planogramFixture = planogram?.fixture;
-  const highDemandSkus =
-    effectivePayload?.metadata?.stockingRules?.highDemandProducts ?? [];
-
-  const shelfCapacities = useMemo(() => {
-    const originalShelves = effectivePayload?.planogram?.fixture?.shelves ?? [];
-    return Object.fromEntries(
-      originalShelves.map((shelf) => [
-        shelf.shelfNumber,
-        shelf.products.reduce((sum, product) => sum + product.facings, 0),
-      ]),
-    );
-  }, [effectivePayload?.planogram?.fixture?.shelves]);
+  const planogramFixture = effectivePayload?.fixture;
 
   const baseShelves = useMemo(
-    () => (localShelves.length > 0 ? localShelves : (planogramFixture?.shelves ?? [])),
-    [localShelves, planogramFixture?.shelves],
+    () => (localShelves.length > 0 ? localShelves : normalizePlanogramShelves(effectivePayload?.shelves ?? [])),
+    [effectivePayload?.shelves, localShelves],
   );
 
   const stats = useMemo(
@@ -83,7 +74,7 @@ export function useStoreFixtureDetailPlanogramEditor({
       .map((shelf) => ({
         ...shelf,
         products: shelf.products.filter((product) =>
-          selectedCategories.has(product.category),
+          selectedCategories.has(product.category ?? "Uncategorized"),
         ),
       }))
       .filter((shelf) => shelf.products.length > 0);
@@ -94,9 +85,7 @@ export function useStoreFixtureDetailPlanogramEditor({
       setSelectedCategories((previous) => {
         const next = new Set(previous);
         if (previous.size === 0) {
-          for (const item of stats.categoryList) {
-            next.add(item);
-          }
+          stats.categoryList.forEach((item) => next.add(item));
           next.delete(category);
           return next;
         }
@@ -108,32 +97,14 @@ export function useStoreFixtureDetailPlanogramEditor({
     [stats.categoryList],
   );
 
-  const onEditName = useCallback((shelfNumber: number, sku: string, newName: string) => {
-    setLocalShelves((previous) =>
-      previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? {
-              ...shelf,
-              products: shelf.products.map((product) =>
-                product.sku === sku ? { ...product, name: newName } : product,
-              ),
-            }
-          : shelf,
-      ),
-    );
-    setHasChanges(true);
-  }, []);
-
-  const onEditCategory = useCallback(
-    (shelfNumber: number, sku: string, newCategory: string) => {
+  const mutateShelfProducts = useCallback(
+    (targetShelfId: string, updater: (products: PlanogramProduct[]) => PlanogramProduct[]) => {
       setLocalShelves((previous) =>
         previous.map((shelf) =>
-          shelf.shelfNumber === shelfNumber
+          shelf.id === targetShelfId
             ? {
                 ...shelf,
-                products: shelf.products.map((product) =>
-                  product.sku === sku ? { ...product, category: newCategory } : product,
-                ),
+                products: normalizeShelfProductPositions(updater(shelf.products)),
               }
             : shelf,
         ),
@@ -142,131 +113,175 @@ export function useStoreFixtureDetailPlanogramEditor({
     },
     [],
   );
+
+  const onEditName = useCallback((targetShelfId: string, productId: string, newName: string) => {
+    mutateShelfProducts(targetShelfId, (products) =>
+      products.map((product, index) =>
+        getPlanogramProductId(product, `${targetShelfId}:${index}`) === productId
+          ? { ...product, name: newName }
+          : product,
+      ),
+    );
+  }, [mutateShelfProducts]);
+
+  const onEditCategory = useCallback((targetShelfId: string, productId: string, newCategory: string) => {
+    mutateShelfProducts(targetShelfId, (products) =>
+      products.map((product, index) =>
+        getPlanogramProductId(product, `${targetShelfId}:${index}`) === productId
+          ? { ...product, category: newCategory }
+          : product,
+      ),
+    );
+  }, [mutateShelfProducts]);
 
   const onEditFacingsDepth = useCallback(
     (
-      shelfNumber: number,
-      sku: string,
+      targetShelfId: string,
+      productId: string,
       updates: { facings?: number; depthCount?: number },
     ) => {
-      setLocalShelves((previous) =>
-        previous.map((shelf) =>
-          shelf.shelfNumber === shelfNumber
+      mutateShelfProducts(targetShelfId, (products) =>
+        products.map((product, index) =>
+          getPlanogramProductId(product, `${targetShelfId}:${index}`) === productId
             ? {
-                ...shelf,
-                products: shelf.products.map((product) =>
-                  product.sku === sku
-                    ? {
-                        ...product,
-                        facings: updates.facings ?? product.facings,
-                        depthCount: updates.depthCount ?? product.depthCount,
-                      }
-                    : product,
-                ),
+                ...product,
+                facings: updates.facings ?? product.facings,
+                depth_count: updates.depthCount ?? product.depth_count,
               }
-            : shelf,
+            : product,
         ),
       );
-      setHasChanges(true);
     },
-    [],
+    [mutateShelfProducts],
   );
 
   const onRemoveProduct = useCallback(
-    (shelfNumber: number, sku: string) => {
+    (targetShelfId: string, productId: string) => {
       const product = localShelves
-        .find((shelf) => shelf.shelfNumber === shelfNumber)
-        ?.products.find((item) => item.sku === sku);
+        .find((shelf) => shelf.id === targetShelfId)
+        ?.products.find(
+          (item, index) =>
+            getPlanogramProductId(item, `${targetShelfId}:${index}`) === productId,
+        );
       if (!product) return;
-      setLocalShelves((previous) =>
-        previous.map((shelf) =>
-          shelf.shelfNumber === shelfNumber
-            ? { ...shelf, products: shelf.products.filter((item) => item.sku !== sku) }
-            : shelf,
+
+      mutateShelfProducts(targetShelfId, (products) =>
+        products.filter(
+          (item, index) =>
+            getPlanogramProductId(item, `${targetShelfId}:${index}`) !== productId,
         ),
       );
-      setRemovedItems((previous) => [...previous, product]);
-      setHasChanges(true);
+      setRemovedItems((previous) => [...previous, { ...product, size: { ...product.size } }]);
     },
-    [localShelves],
+    [localShelves, mutateShelfProducts],
   );
 
-  const onRestoreProduct = useCallback((shelfNumber: number, product: PlanogramProduct) => {
-    setLocalShelves((previous) =>
-      previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? { ...shelf, products: [...shelf.products, { ...product }] }
-          : shelf,
-      ),
+  const onRestoreProduct = useCallback((targetShelfId: string, product: PlanogramProduct) => {
+    mutateShelfProducts(targetShelfId, (products) => [...products, { ...product, size: { ...product.size } }]);
+    setRemovedItems((previous) =>
+      previous.filter((item, index) => getPlanogramProductId(item, `removed:${index}`) !== getPlanogramProductId(product, "restored")),
     );
-    setRemovedItems((previous) => previous.filter((item) => item.sku !== product.sku));
-    setHasChanges(true);
-  }, []);
+  }, [mutateShelfProducts]);
 
-  const onReorderProducts = useCallback((shelfNumber: number, productIds: string[]) => {
-    setLocalShelves((previous) =>
-      previous.map((shelf) => {
-        if (shelf.shelfNumber !== shelfNumber) return shelf;
-        const bySku = new Map(shelf.products.map((product) => [product.sku, product]));
-        return {
-          ...shelf,
-          products: productIds
-            .map((id) => bySku.get(id))
-            .filter((product): product is PlanogramProduct => product != null),
-        };
-      }),
-    );
-    setHasChanges(true);
-  }, []);
+  const onReorderProducts = useCallback((targetShelfId: string, productIds: string[]) => {
+    mutateShelfProducts(targetShelfId, (products) => {
+      const byId = new Map(
+        products.map((product, index) => [
+          getPlanogramProductId(product, `${targetShelfId}:${index}`),
+          product,
+        ]),
+      );
+      return productIds
+        .map((id) => byId.get(id))
+        .filter((product): product is PlanogramProduct => product != null);
+    });
+  }, [mutateShelfProducts]);
 
   const onMoveProduct = useCallback(
-    (from: number | "removed", to: number, sku: string, targetSku?: string) => {
+    (from: string | "removed", to: string, productId: string, targetProductId?: string) => {
       const sourceProduct =
         from === "removed"
-          ? removedItems.find((item) => item.sku === sku)
+          ? removedItems.find(
+              (item, index) =>
+                getPlanogramProductId(item, `removed:${index}`) === productId,
+            )
           : localShelves
-              .find((shelf) => shelf.shelfNumber === from)
-              ?.products.find((item) => item.sku === sku);
+              .find((shelf) => shelf.id === from)
+              ?.products.find(
+                (item, index) =>
+                  getPlanogramProductId(item, `${from}:${index}`) === productId,
+              );
       if (!sourceProduct) return;
-      const targetShelf = localShelves.find((shelf) => shelf.shelfNumber === to);
-      if (from !== to && targetShelf) {
-        const currentFacings = targetShelf.products.reduce((sum, item) => sum + item.facings, 0);
-        const capacity = shelfCapacities[to] ?? 0;
-        if (currentFacings + sourceProduct.facings > capacity) {
-          toast({
-            title: "Shelf full",
-            description: `${targetShelf.name} does not have enough space.`,
-            variant: "destructive",
-          });
-          return;
-        }
+
+      const targetShelf = localShelves.find((shelf) => shelf.id === to);
+      if (!targetShelf) return;
+
+      const incomingWidth = sourceProduct.size.width * sourceProduct.facings;
+      const currentWidth = getShelfUsedWidth(targetShelf) - (from === to ? incomingWidth : 0);
+
+      if (currentWidth + incomingWidth > targetShelf.width) {
+        toast({
+          title: "Shelf full",
+          description: `${targetShelf.id} does not have enough space.`,
+          variant: "destructive",
+        });
+        return;
       }
+
       setLocalShelves((previous) => {
         let nextShelves = [...previous];
         if (from !== "removed") {
           nextShelves = nextShelves.map((shelf) =>
-            shelf.shelfNumber === from
-              ? { ...shelf, products: shelf.products.filter((item) => item.sku !== sku) }
+            shelf.id === from
+              ? {
+                  ...shelf,
+                  products: normalizeShelfProductPositions(
+                    shelf.products.filter(
+                      (item, index) =>
+                        getPlanogramProductId(item, `${from}:${index}`) !== productId,
+                    ),
+                  ),
+                }
               : shelf,
           );
         }
+
         return nextShelves.map((shelf) => {
-          if (shelf.shelfNumber !== to) return shelf;
-          const targetIndex = targetSku
-            ? shelf.products.findIndex((item) => item.sku === targetSku)
+          if (shelf.id !== to) return shelf;
+          const nextProducts =
+            from === to
+              ? shelf.products.filter(
+                  (item, index) =>
+                    getPlanogramProductId(item, `${to}:${index}`) !== productId,
+                )
+              : [...shelf.products];
+          const insertionIndex = targetProductId
+            ? nextProducts.findIndex(
+                (item, index) =>
+                  getPlanogramProductId(item, `${to}:${index}`) === targetProductId,
+              )
             : -1;
-          const nextProducts = [...shelf.products];
-          if (targetIndex >= 0) nextProducts.splice(targetIndex, 0, sourceProduct);
-          else nextProducts.push(sourceProduct);
-          return { ...shelf, products: nextProducts };
+          const productToInsert = { ...sourceProduct, size: { ...sourceProduct.size } };
+          if (insertionIndex >= 0) nextProducts.splice(insertionIndex, 0, productToInsert);
+          else nextProducts.push(productToInsert);
+          return {
+            ...shelf,
+            products: normalizeShelfProductPositions(nextProducts),
+          };
         });
       });
+
       if (from === "removed") {
-        setRemovedItems((previous) => previous.filter((item) => item.sku !== sku));
+        setRemovedItems((previous) =>
+          previous.filter(
+            (item, index) =>
+              getPlanogramProductId(item, `removed:${index}`) !== productId,
+          ),
+        );
       }
       setHasChanges(true);
     },
-    [localShelves, removedItems, shelfCapacities, toast],
+    [localShelves, removedItems, toast],
   );
 
   const handleSaveArrangement = useCallback(async () => {
@@ -274,14 +289,20 @@ export function useStoreFixtureDetailPlanogramEditor({
     if (!preview || !payload || !hasChanges) return;
     setIsSavingArrangement(true);
     try {
-      const originalShelves = payload.planogram.fixture.shelves;
+      const originalShelves = normalizePlanogramShelves(payload.shelves);
       const productEdits: NonNullable<PlanogramArrangement["productEdits"]> = {};
+
       for (const shelf of localShelves) {
-        for (const product of shelf.products) {
+        for (const [index, product] of shelf.products.entries()) {
+          const productId = getPlanogramProductId(product, `${shelf.id}:${index}`);
           const original = originalShelves
-            .flatMap((item) => item.products)
-            .find((item) => item.sku === product.sku);
+            .find((item) => item.id === shelf.id)
+            ?.products.find(
+              (candidate, candidateIndex) =>
+                getPlanogramProductId(candidate, `${shelf.id}:${candidateIndex}`) === productId,
+            );
           if (!original) continue;
+
           const edits: {
             name?: string;
             category?: string;
@@ -289,20 +310,25 @@ export function useStoreFixtureDetailPlanogramEditor({
             depthCount?: number;
           } = {};
           if (product.name !== original.name) edits.name = product.name;
-          if (product.category !== original.category) edits.category = product.category;
+          if ((product.category ?? "") !== (original.category ?? "")) edits.category = product.category ?? "";
           if (product.facings !== original.facings) edits.facings = product.facings;
-          if (product.depthCount !== original.depthCount) edits.depthCount = product.depthCount;
-          if (Object.keys(edits).length > 0) productEdits[product.sku] = edits;
+          if (product.depth_count !== original.depth_count) edits.depthCount = product.depth_count;
+          if (Object.keys(edits).length > 0) productEdits[productId] = edits;
         }
       }
+
       await updateShelfArrangementMutation.mutateAsync({
         shelfId,
         arrangement: {
           shelfOrder: localShelves.map((shelf) => ({
-            shelfId: `shelf-${shelf.shelfNumber}`,
-            productIds: shelf.products.map((product) => product.sku),
+            shelfId: shelf.id,
+            productIds: shelf.products.map((product, index) =>
+              getPlanogramProductId(product, `${shelf.id}:${index}`),
+            ),
           })),
-          removedProductIds: removedItems.map((product) => product.sku),
+          removedProductIds: removedItems.map((product, index) =>
+            getPlanogramProductId(product, `removed:${index}`),
+          ),
           productEdits: Object.keys(productEdits).length > 0 ? productEdits : undefined,
         },
       });
@@ -323,8 +349,6 @@ export function useStoreFixtureDetailPlanogramEditor({
     isMissingPlanogram: !!preview && !effectivePayload,
     effectivePayload,
     planogramFixture,
-    highDemandSkus,
-    shelfCapacities,
     baseShelves,
     stats,
     shelvesToShow,

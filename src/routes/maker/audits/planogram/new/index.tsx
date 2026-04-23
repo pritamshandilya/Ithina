@@ -24,6 +24,11 @@ import {
 } from "@/queries/maker";
 import { groupShelvesByFixture } from "@/lib/fixtures/analysis";
 import type { PlanogramArrangement } from "@/types/planogram";
+import {
+  getPlanogramProductId,
+  getShelfDisplayLabel,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -90,9 +95,11 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
       const arrangement: PlanogramArrangement = {
         planogramId: selectedPlanogramId,
         shelfOrder:
-          planogramPayload?.planogram.fixture.shelves.map((s) => ({
-            shelfId: `shelf-${s.shelfNumber}`,
-            productIds: s.products.map((p) => p.sku),
+          planogramPayload?.shelves.map((shelf) => ({
+            shelfId: shelf.id,
+            productIds: shelf.products.map((product, index) =>
+              getPlanogramProductId(product, `${shelf.id}:${index}`),
+            ),
           })) ?? [],
       };
 
@@ -135,9 +142,8 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
     toast,
   ]);
 
-  const planogram = planogramPayload?.planogram;
-  const metadata = planogramPayload?.metadata;
-  const fixture = planogram?.fixture;
+  const fixture = planogramPayload?.fixture;
+  const sortedShelves = sortPlanogramShelves(planogramPayload?.shelves ?? []);
 
   return (
     <MainLayout>
@@ -181,7 +187,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                         <option value="">Select a planogram...</option>
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves · {p.productCount} SKUs)
+                            {p.name} ({p.shelfCount} shelves · {p.productCount} SKUs)
                           </option>
                         ))}
                       </Select>
@@ -268,16 +274,15 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                     <Skeleton className="h-20 w-full" />
                     <Skeleton className="h-24 w-full" />
                   </div>
-                ) : planogram && fixture ? (
+                ) : planogramPayload && fixture ? (
                   <div className="space-y-3">
-                    {/* Summary stats */}
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                           Shelves
                         </p>
                         <p className="text-lg font-semibold tabular-nums text-foreground">
-                          {fixture.shelves.length}
+                          {sortedShelves.length}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -285,8 +290,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                           SKUs
                         </p>
                         <p className="text-lg font-semibold tabular-nums text-foreground">
-                          {metadata?.totalSKUs ??
-                            fixture.shelves.reduce((s, sh) => s + sh.products.length, 0)}
+                          {sortedShelves.reduce((sum, shelf) => sum + shelf.products.length, 0)}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
@@ -294,63 +298,69 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                           Dimensions
                         </p>
                         <p className="text-sm font-semibold tabular-nums text-foreground">
-                          {fixture.width}×{fixture.height}×{fixture.depth}{" "}
-                          {planogram.storeConfig?.units ?? "mm"}
+                          {fixture.width}×{fixture.height}×{fixture.depth}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Fixture type
-                        </p>
-                        <p className="text-sm font-medium text-foreground capitalize">
-                          {fixture.type?.replace(/_/g, " ") ?? "—"}
-                        </p>
-                      </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Zone
+                          Status
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {planogram.physicalLocation?.zone ?? "—"}
+                          {planogramPayload.status}
                         </p>
                       </div>
                       <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Aisle · Bay
+                          Version
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {planogram.physicalLocation?.aisle ?? "—"} ·{" "}
-                          {planogram.physicalLocation?.bay ?? "—"}
+                          {planogramPayload.version ?? "—"}
+                        </p>
+                      </div>
+                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                          Total Units
+                        </p>
+                        <p className="text-sm font-medium text-foreground">
+                          {sortedShelves.reduce(
+                            (sum, shelf) =>
+                              sum +
+                              shelf.products.reduce(
+                                (productSum, product) =>
+                                  productSum + product.facings * product.depth_count,
+                                0,
+                              ),
+                            0,
+                          )}
                         </p>
                       </div>
                       <div className="col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:col-span-3">
                         <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                          Section
+                          Description
                         </p>
                         <p className="text-sm font-medium text-foreground">
-                          {planogram.physicalLocation?.section ?? planogram.location ?? "—"}
+                          {planogramPayload.description ?? "—"}
                         </p>
                       </div>
                     </div>
 
-                    {/* Shelf breakdown */}
                     <div>
                       <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                         Shelf breakdown
                       </h3>
                       <ul className="space-y-2">
-                        {fixture.shelves.map((shelf) => {
+                        {sortedShelves.map((shelf) => {
                           const productCount = shelf.products.reduce(
-                            (n, p) => n + p.facings * p.depthCount,
-                            0
+                            (n, p) => n + p.facings * p.depth_count,
+                            0,
                           );
                           return (
                             <li
-                              key={shelf.shelfNumber}
+                              key={shelf.id}
                               className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2 text-sm"
                             >
                               <span className="font-medium text-foreground">
-                                {shelf.name}
+                                {getShelfDisplayLabel(sortedShelves, shelf.id)} · {shelf.id}
                               </span>
                               <span className="tabular-nums text-muted-foreground">
                                 {shelf.products.length} items · {productCount} units

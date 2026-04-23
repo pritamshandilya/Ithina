@@ -1,18 +1,23 @@
 import { PackageX, Plus } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { getCategoryFill, getCategoryAccent } from "@/lib/constants/planogram";
 import { getProductSVG } from "./product-svg-utils";
 import { IconButton } from "@/components/ui/icon-button";
 import type { PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
+import {
+  getPlanogramProductId,
+  getShelfDisplayLabel,
+  getShelfUsedWidth,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 
 export interface RemovedItemsSidebarProps {
   removedItems?: PlanogramProduct[];
   shelves?: PlanogramShelfDef[];
-  shelfCapacities?: Record<number, number>;
-  onRestore?: (shelfNumber: number, product: PlanogramProduct) => void;
-  onRemoveFromShelf?: (sku: string, shelfNumber: number) => void;
-  onMoveFromSidebar?: (sku: string, toShelfNumber: number) => void;
+  onRestore?: (shelfId: string, product: PlanogramProduct) => void;
+  onRemoveFromShelf?: (productId: string, shelfId: string) => void;
+  onMoveFromSidebar?: (productId: string, toShelfId: string) => void;
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   className?: string;
@@ -20,92 +25,77 @@ export interface RemovedItemsSidebarProps {
 
 interface RemovedItemRowProps {
   item: PlanogramProduct;
+  itemId: string;
   shelves: PlanogramShelfDef[];
-  shelfCapacities: Record<number, number>;
-  onRestore?: (shelfNumber: number, product: PlanogramProduct) => void;
-  onMoveFromSidebar?: (sku: string, toShelfNumber: number) => void;
-  onDragStart?: (e: React.DragEvent, sku: string) => void;
+  onRestore?: (shelfId: string, product: PlanogramProduct) => void;
+  onMoveFromSidebar?: (productId: string, toShelfId: string) => void;
+  onDragStart?: (e: React.DragEvent, productId: string) => void;
 }
 
 function RemovedItemRow({
   item,
+  itemId,
   shelves,
-  shelfCapacities,
   onRestore,
   onMoveFromSidebar,
   onDragStart,
 }: RemovedItemRowProps) {
-  const [selectedShelf, setSelectedShelf] = useState<number | "">("");
-  const sortedShelves = [...shelves].sort(
-    (a, b) => b.verticalPosition - a.verticalPosition
-  );
+  const [selectedShelfId, setSelectedShelfId] = useState("");
+  const sortedShelves = useMemo(() => sortPlanogramShelves(shelves), [shelves]);
 
-  const currentFacings = (shelfNumber: number) =>
-    shelves
-      .find((s) => s.shelfNumber === shelfNumber)
-      ?.products.reduce((sum, p) => sum + p.facings, 0) ?? 0;
-  const capacity = (shelfNumber: number) =>
-    shelfCapacities[shelfNumber] ?? currentFacings(shelfNumber) + item.facings;
-  const isFull = (shelfNumber: number) =>
-    currentFacings(shelfNumber) + item.facings > capacity(shelfNumber);
-
-  const handleRestore = () => {
-    if (selectedShelf === "") return;
-    const shelfNum = Number(selectedShelf);
-    if (isFull(shelfNum)) return;
-
-    if (onMoveFromSidebar) {
-      onMoveFromSidebar(item.sku, shelfNum);
-    } else if (onRestore) {
-      onRestore(shelfNum, item);
-    }
-
-    setSelectedShelf("");
+  const isFull = (shelfId: string) => {
+    const shelf = shelves.find((entry) => entry.id === shelfId);
+    if (!shelf) return true;
+    return getShelfUsedWidth(shelf) + item.size.width * item.facings > shelf.width;
   };
 
-  const fill = getCategoryFill(item.category);
-  const accent = getCategoryAccent(item.category);
-  const ProductSVG = getProductSVG(item.category);
+  const handleRestore = () => {
+    if (!selectedShelfId || isFull(selectedShelfId)) return;
+
+    if (onMoveFromSidebar) {
+      onMoveFromSidebar(itemId, selectedShelfId);
+    } else if (onRestore) {
+      onRestore(selectedShelfId, item);
+    }
+
+    setSelectedShelfId("");
+  };
+
+  const fill = getCategoryFill(item.category ?? "");
+  const accent = getCategoryAccent(item.category ?? "");
+  const ProductSVG = getProductSVG(item.category ?? "");
 
   return (
     <li
-      className="rounded border border-border bg-muted/30 px-2 py-1.5 text-xs cursor-grab active:cursor-grabbing"
+      className="cursor-grab rounded border border-border bg-muted/30 px-2 py-1.5 text-xs active:cursor-grabbing"
       draggable
-      onDragStart={(e) => onDragStart?.(e, item.sku)}
+      onDragStart={(e) => onDragStart?.(e, itemId)}
     >
       <div className="flex items-start gap-2">
         <div className="h-8 w-6 shrink-0">
           <ProductSVG fill={fill} accent={accent} />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-foreground truncate" title={item.name}>
+          <p className="truncate font-medium text-foreground" title={item.name}>
             {item.name}
           </p>
-          <p className="text-muted-foreground truncate">
-            {item.category} · {item.sku}
+          <p className="truncate text-muted-foreground">
+            {item.category ?? "Uncategorized"} · {item.sku ?? item.barcode ?? "No ID"}
           </p>
           {(onRestore || onMoveFromSidebar) && (
             <div className="mt-2 flex items-center gap-1">
               <select
-                value={selectedShelf}
-                onChange={(e) =>
-                  setSelectedShelf(
-                    e.target.value === "" ? "" : Number(e.target.value)
-                  )
-                }
-                className="h-6 flex-1 min-w-0 rounded border border-input bg-background px-1.5 text-[10px] font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+                value={selectedShelfId}
+                onChange={(e) => setSelectedShelfId(e.target.value)}
+                className="h-6 min-w-0 flex-1 rounded border border-input bg-background px-1.5 text-[10px] font-medium focus:outline-none focus:ring-2 focus:ring-ring"
                 aria-label="Select shelf to restore to"
               >
                 <option value="">Select shelf…</option>
-                {sortedShelves.map((s) => {
-                  const full = isFull(s.shelfNumber);
+                {sortedShelves.map((shelf) => {
+                  const full = isFull(shelf.id);
                   return (
-                    <option
-                      key={s.shelfNumber}
-                      value={s.shelfNumber}
-                      disabled={full}
-                    >
-                      Shelf {s.shelfNumber}: {s.name}
+                    <option key={shelf.id} value={shelf.id} disabled={full}>
+                      {getShelfDisplayLabel(sortedShelves, shelf.id)} ({shelf.id})
                       {full ? " (full)" : ""}
                     </option>
                   );
@@ -114,7 +104,7 @@ function RemovedItemRow({
               <IconButton
                 type="button"
                 onClick={handleRestore}
-                disabled={selectedShelf === "" || isFull(Number(selectedShelf))}
+                disabled={!selectedShelfId || isFull(selectedShelfId)}
                 variant="success"
                 size="icon-sm"
                 title="Add back to shelf"
@@ -132,7 +122,6 @@ function RemovedItemRow({
 export function RemovedItemsSidebar({
   removedItems = [],
   shelves = [],
-  shelfCapacities = {},
   onRestore,
   onRemoveFromShelf,
   onMoveFromSidebar,
@@ -149,17 +138,17 @@ export function RemovedItemsSidebar({
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    const sku = e.dataTransfer.getData("application/planogram-product-sku");
-    const fromShelfNumRaw = e.dataTransfer.getData("application/from-shelf-number");
+    const productId = e.dataTransfer.getData("application/planogram-product-id");
+    const fromShelfId = e.dataTransfer.getData("application/from-shelf-id");
 
-    if (sku && fromShelfNumRaw !== "removed" && onRemoveFromShelf) {
-      onRemoveFromShelf(sku, Number(fromShelfNumRaw));
+    if (productId && fromShelfId !== "removed" && onRemoveFromShelf) {
+      onRemoveFromShelf(productId, fromShelfId);
     }
   };
 
-  const handleDragStart = (e: React.DragEvent, sku: string) => {
-    e.dataTransfer.setData("application/planogram-product-sku", sku);
-    e.dataTransfer.setData("application/from-shelf-number", "removed");
+  const handleDragStart = (e: React.DragEvent, productId: string) => {
+    e.dataTransfer.setData("application/planogram-product-id", productId);
+    e.dataTransfer.setData("application/from-shelf-id", "removed");
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -169,7 +158,7 @@ export function RemovedItemsSidebar({
         "flex flex-col rounded-lg border border-border bg-card/80 transition-all",
         collapsed ? "w-12" : "w-64 min-w-0 shrink-0",
         !collapsed && "min-h-50",
-        className
+        className,
       )}
       role="region"
       aria-label="Removed items"
@@ -179,7 +168,7 @@ export function RemovedItemsSidebar({
       <header
         className={cn(
           "flex items-center gap-2 border-b border-border px-3 py-2",
-          onToggleCollapse && "cursor-pointer hover:bg-muted/50"
+          onToggleCollapse && "cursor-pointer hover:bg-muted/50",
         )}
         onClick={onToggleCollapse}
       >
@@ -197,15 +186,15 @@ export function RemovedItemsSidebar({
       </header>
 
       {!collapsed && (
-        <div className="flex-1 min-h-0 overflow-auto p-3">
+        <div className="min-h-0 flex-1 overflow-auto p-3">
           {hasItems ? (
             <ul className="space-y-2">
-              {removedItems.map((item) => (
+              {removedItems.map((item, index) => (
                 <RemovedItemRow
-                  key={item.sku}
+                  key={getPlanogramProductId(item, `removed:${index}`)}
                   item={item}
+                  itemId={getPlanogramProductId(item, `removed:${index}`)}
                   shelves={shelves}
-                  shelfCapacities={shelfCapacities}
                   onRestore={onRestore}
                   onMoveFromSidebar={onMoveFromSidebar}
                   onDragStart={handleDragStart}

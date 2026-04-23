@@ -68,11 +68,8 @@ export function useCreatePlanogram() {
 
   return useMutation({
     mutationFn: (payload: PlanogramPayload) => createPlanogram(payload),
-    onSuccess: async (saved) => {
+    onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: planogramListKeys.all });
-      await queryClient.invalidateQueries({
-        queryKey: planogramKeys.detail(saved.planogram.id),
-      });
     },
   });
 }

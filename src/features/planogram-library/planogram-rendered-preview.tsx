@@ -5,12 +5,18 @@ import {
   ProductDetailsTable,
   RemovedItemsSidebar,
   ShelfRow,
-  StockingRulesSection,
 } from "@/components/planogram";
 import type { PlanogramEditHandlers } from "@/components/planogram/types";
 import { StatCard } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { derivePlanogramStats } from "@/lib/planogram/planogram-derive-stats";
+import {
+  getPlanogramProductId,
+  getShelfUsedWidth,
+  normalizePlanogramShelves,
+  normalizeShelfProductPositions,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 import type { PlanogramPayload, PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
 
 interface PlanogramRenderedPreviewProps {
@@ -19,43 +25,21 @@ interface PlanogramRenderedPreviewProps {
   embedded?: boolean;
 }
 
-function cloneShelves(shelves: PlanogramShelfDef[]): PlanogramShelfDef[] {
-  return shelves.map((shelf) => ({
-    ...shelf,
-    products: shelf.products.map((product) => ({ ...product })),
-  }));
-}
-
 export function PlanogramRenderedPreview({
   payload,
   isLoading = false,
   embedded = false,
 }: PlanogramRenderedPreviewProps) {
-  const fixture = payload?.planogram?.fixture;
-  const highDemandSkus = payload?.metadata?.stockingRules?.highDemandProducts ?? [];
-  const stockingRules = payload?.metadata?.stockingRules;
-
   const [shelves, setShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const dragRef = useRef<{ sku: string; fromShelf: number | "removed" } | null>(null);
+  const dragRef = useRef<{ productId: string; fromShelf: string | "removed" } | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setShelves(cloneShelves(fixture?.shelves ?? []));
+    setShelves(payload ? normalizePlanogramShelves(payload.shelves) : []);
     setRemovedItems([]);
     setSelectedCategories(new Set());
-  }, [fixture]);
-
-  const shelfCapacities = useMemo(() => {
-    const source = fixture?.shelves ?? [];
-    return Object.fromEntries(
-      source.map((shelf) => [
-        shelf.shelfNumber,
-        shelf.products.reduce((sum, product) => sum + product.facings, 0),
-      ]),
-    );
-  }, [fixture?.shelves]);
+  }, [payload]);
 
   const stats = useMemo(() => derivePlanogramStats(shelves, removedItems), [shelves, removedItems]);
 
@@ -64,7 +48,9 @@ export function PlanogramRenderedPreview({
     return shelves
       .map((shelf) => ({
         ...shelf,
-        products: shelf.products.filter((product) => selectedCategories.has(product.category)),
+        products: shelf.products.filter((product) =>
+          selectedCategories.has(product.category ?? "Uncategorized"),
+        ),
       }))
       .filter((shelf) => shelf.products.length > 0);
   }, [selectedCategories, shelves]);
@@ -74,9 +60,7 @@ export function PlanogramRenderedPreview({
       setSelectedCategories((previous) => {
         const next = new Set(previous);
         if (previous.size === 0) {
-          for (const item of stats.categoryList) {
-            next.add(item);
-          }
+          stats.categoryList.forEach((item) => next.add(item));
           next.delete(category);
           return next;
         }
@@ -88,53 +72,12 @@ export function PlanogramRenderedPreview({
     [stats.categoryList],
   );
 
-  const onEditName = useCallback((shelfNumber: number, sku: string, newName: string) => {
-    setShelves((previous) =>
-      previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? {
-              ...shelf,
-              products: shelf.products.map((product) =>
-                product.sku === sku ? { ...product, name: newName } : product,
-              ),
-            }
-          : shelf,
-      ),
-    );
-  }, []);
-
-  const onEditCategory = useCallback((shelfNumber: number, sku: string, newCategory: string) => {
-    setShelves((previous) =>
-      previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? {
-              ...shelf,
-              products: shelf.products.map((product) =>
-                product.sku === sku ? { ...product, category: newCategory } : product,
-              ),
-            }
-          : shelf,
-      ),
-    );
-  }, []);
-
-  const onEditFacingsDepth = useCallback(
-    (shelfNumber: number, sku: string, updates: { facings?: number; depthCount?: number }) => {
+  const mutateShelfProducts = useCallback(
+    (shelfId: string, updater: (products: PlanogramProduct[]) => PlanogramProduct[]) => {
       setShelves((previous) =>
         previous.map((shelf) =>
-          shelf.shelfNumber === shelfNumber
-            ? {
-                ...shelf,
-                products: shelf.products.map((product) =>
-                  product.sku === sku
-                    ? {
-                        ...product,
-                        facings: updates.facings ?? product.facings,
-                        depthCount: updates.depthCount ?? product.depthCount,
-                      }
-                    : product,
-                ),
-              }
+          shelf.id === shelfId
+            ? { ...shelf, products: normalizeShelfProductPositions(updater(shelf.products)) }
             : shelf,
         ),
       );
@@ -142,82 +85,171 @@ export function PlanogramRenderedPreview({
     [],
   );
 
-  const onRemoveProduct = useCallback((shelfNumber: number, sku: string) => {
+  const onEditName = useCallback((shelfId: string, productId: string, newName: string) => {
+    mutateShelfProducts(shelfId, (products) =>
+      products.map((product, index) =>
+        getPlanogramProductId(product, `${shelfId}:${index}`) === productId
+          ? { ...product, name: newName }
+          : product,
+      ),
+    );
+  }, [mutateShelfProducts]);
+
+  const onEditCategory = useCallback((shelfId: string, productId: string, newCategory: string) => {
+    mutateShelfProducts(shelfId, (products) =>
+      products.map((product, index) =>
+        getPlanogramProductId(product, `${shelfId}:${index}`) === productId
+          ? { ...product, category: newCategory }
+          : product,
+      ),
+    );
+  }, [mutateShelfProducts]);
+
+  const onEditFacingsDepth = useCallback(
+    (shelfId: string, productId: string, updates: { facings?: number; depthCount?: number }) => {
+      mutateShelfProducts(shelfId, (products) =>
+        products.map((product, index) =>
+          getPlanogramProductId(product, `${shelfId}:${index}`) === productId
+            ? {
+                ...product,
+                facings: updates.facings ?? product.facings,
+                depth_count: updates.depthCount ?? product.depth_count,
+              }
+            : product,
+        ),
+      );
+    },
+    [mutateShelfProducts],
+  );
+
+  const onRemoveProduct = useCallback((shelfId: string, productId: string) => {
     setShelves((previous) => {
-      const sourceShelf = previous.find((shelf) => shelf.shelfNumber === shelfNumber);
-      const product = sourceShelf?.products.find((item) => item.sku === sku);
+      const sourceShelf = previous.find((shelf) => shelf.id === shelfId);
+      const product = sourceShelf?.products.find(
+        (item, index) => getPlanogramProductId(item, `${shelfId}:${index}`) === productId,
+      );
       if (!product) return previous;
-      setRemovedItems((items) => [...items, { ...product }]);
+      setRemovedItems((items) => [...items, { ...product, size: { ...product.size } }]);
       return previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? { ...shelf, products: shelf.products.filter((item) => item.sku !== sku) }
+        shelf.id === shelfId
+          ? {
+              ...shelf,
+              products: normalizeShelfProductPositions(
+                shelf.products.filter(
+                  (item, index) =>
+                    getPlanogramProductId(item, `${shelfId}:${index}`) !== productId,
+                ),
+              ),
+            }
           : shelf,
       );
     });
   }, []);
 
-  const onRestoreProduct = useCallback((shelfNumber: number, product: PlanogramProduct) => {
-    setShelves((previous) =>
-      previous.map((shelf) =>
-        shelf.shelfNumber === shelfNumber
-          ? { ...shelf, products: [...shelf.products, { ...product }] }
-          : shelf,
-      ),
+  const onRestoreProduct = useCallback((shelfId: string, product: PlanogramProduct) => {
+    mutateShelfProducts(shelfId, (products) => [...products, { ...product, size: { ...product.size } }]);
+    setRemovedItems((previous) =>
+      previous.filter((item, index) => getPlanogramProductId(item, `removed:${index}`) !== getPlanogramProductId(product, "restored")),
     );
-    setRemovedItems((previous) => previous.filter((item) => item.sku !== product.sku));
-  }, []);
+  }, [mutateShelfProducts]);
 
   const onMoveProduct = useCallback(
-    (from: number | "removed", to: number, sku: string, targetSku?: string) => {
+    (from: string | "removed", to: string, productId: string, targetProductId?: string) => {
       const sourceProduct =
         from === "removed"
-          ? removedItems.find((item) => item.sku === sku)
-          : shelves.find((shelf) => shelf.shelfNumber === from)?.products.find((item) => item.sku === sku);
+          ? removedItems.find(
+              (item, index) =>
+                getPlanogramProductId(item, `removed:${index}`) === productId,
+            )
+          : shelves
+              .find((shelf) => shelf.id === from)
+              ?.products.find(
+                (item, index) =>
+                  getPlanogramProductId(item, `${from}:${index}`) === productId,
+              );
       if (!sourceProduct) return;
+
+      const targetShelf = shelves.find((shelf) => shelf.id === to);
+      if (!targetShelf) return;
+
+      const incomingWidth = sourceProduct.size.width * sourceProduct.facings;
+      const currentWidth =
+        getShelfUsedWidth(targetShelf) -
+        (from === to ? incomingWidth : 0);
+
+      if (currentWidth + incomingWidth > targetShelf.width) {
+        return;
+      }
 
       setShelves((previous) => {
         let next = [...previous];
         if (from !== "removed") {
           next = next.map((shelf) =>
-            shelf.shelfNumber === from
-              ? { ...shelf, products: shelf.products.filter((item) => item.sku !== sku) }
+            shelf.id === from
+              ? {
+                  ...shelf,
+                  products: normalizeShelfProductPositions(
+                    shelf.products.filter(
+                      (item, index) =>
+                        getPlanogramProductId(item, `${from}:${index}`) !== productId,
+                    ),
+                  ),
+                }
               : shelf,
           );
         }
 
         return next.map((shelf) => {
-          if (shelf.shelfNumber !== to) return shelf;
-          const insertionIndex = targetSku
-            ? shelf.products.findIndex((item) => item.sku === targetSku)
+          if (shelf.id !== to) return shelf;
+          const nextProducts =
+            from === to
+              ? shelf.products.filter(
+                  (item, index) =>
+                    getPlanogramProductId(item, `${to}:${index}`) !== productId,
+                )
+              : [...shelf.products];
+          const insertionIndex = targetProductId
+            ? nextProducts.findIndex(
+                (item, index) =>
+                  getPlanogramProductId(item, `${to}:${index}`) === targetProductId,
+              )
             : -1;
-          const nextProducts = [...shelf.products];
-          if (insertionIndex >= 0) nextProducts.splice(insertionIndex, 0, { ...sourceProduct });
-          else nextProducts.push({ ...sourceProduct });
-          return { ...shelf, products: nextProducts };
+          const productToInsert = { ...sourceProduct, size: { ...sourceProduct.size } };
+          if (insertionIndex >= 0) nextProducts.splice(insertionIndex, 0, productToInsert);
+          else nextProducts.push(productToInsert);
+
+          return {
+            ...shelf,
+            products: normalizeShelfProductPositions(nextProducts),
+          };
         });
       });
 
       if (from === "removed") {
-        setRemovedItems((previous) => previous.filter((item) => item.sku !== sku));
+        setRemovedItems((previous) =>
+          previous.filter(
+            (item, index) =>
+              getPlanogramProductId(item, `removed:${index}`) !== productId,
+          ),
+        );
       }
     },
     [removedItems, shelves],
   );
 
-  const onReorderProducts = useCallback((shelfNumber: number, productIds: string[]) => {
-    setShelves((previous) =>
-      previous.map((shelf) => {
-        if (shelf.shelfNumber !== shelfNumber) return shelf;
-        const bySku = new Map(shelf.products.map((product) => [product.sku, product]));
-        return {
-          ...shelf,
-          products: productIds
-            .map((id) => bySku.get(id))
-            .filter((product): product is PlanogramProduct => product != null),
-        };
-      }),
-    );
-  }, []);
+  const onReorderProducts = useCallback((shelfId: string, productIds: string[]) => {
+    mutateShelfProducts(shelfId, (products) => {
+      const byId = new Map(
+        products.map((product, index) => [
+          getPlanogramProductId(product, `${shelfId}:${index}`),
+          product,
+        ]),
+      );
+      return productIds
+        .map((id) => byId.get(id))
+        .filter((product): product is PlanogramProduct => product != null);
+    });
+  }, [mutateShelfProducts]);
 
   const editHandlers: PlanogramEditHandlers = {
     onEditName,
@@ -228,83 +260,73 @@ export function PlanogramRenderedPreview({
     onReorderProducts: selectedCategories.size === 0 ? onReorderProducts : undefined,
   };
 
-  if (isLoading) {
-    return null;
-  }
-
-  if (!fixture) {
+  if (isLoading || !payload) {
     return null;
   }
 
   const content = (
     <CardContent className={embedded ? "space-y-3 px-0 pb-0 pt-0" : "space-y-3"}>
-        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
-          <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
-          <StatCard title="SKUs" value={stats.skus} className="stat-card" />
-          <StatCard title="Front Facings" value={stats.frontFacings} className="stat-card" />
-          <StatCard title="Total Units (w/ depth)" value={stats.totalUnits} className="stat-card" />
-          <StatCard title="Categories" value={stats.categories} className="stat-card" />
-          <StatCard title="Removed" value={stats.removed} className="stat-card" />
-        </div>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+        <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
+        <StatCard title="SKUs" value={stats.skus} className="stat-card" />
+        <StatCard title="Front Facings" value={stats.frontFacings} className="stat-card" />
+        <StatCard title="Total Units" value={stats.totalUnits} className="stat-card" />
+        <StatCard title="Categories" value={stats.categories} className="stat-card" />
+        <StatCard title="Removed" value={stats.removed} className="stat-card" />
+      </div>
 
-        <CategoryFilterTags
-          categories={stats.categoryList}
-          selected={selectedCategories.size === 0 ? new Set(stats.categoryList) : selectedCategories}
-          onToggle={onToggleCategory}
+      <CategoryFilterTags
+        categories={stats.categoryList}
+        selected={selectedCategories.size === 0 ? new Set(stats.categoryList) : selectedCategories}
+        onToggle={onToggleCategory}
+      />
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1 space-y-2">
+          {sortPlanogramShelves(shelvesToShow).map((shelf) => (
+            <ShelfRow
+              key={shelf.id}
+              shelf={shelf}
+              allShelves={shelves}
+              fixture={payload.fixture}
+              editHandlers={editHandlers}
+              dragHandlers={{
+                onDragStart: (productId, fromShelf) => {
+                  dragRef.current = { productId, fromShelf };
+                },
+                onDropOnShelf: (toShelfId, targetProductId) => {
+                  if (!dragRef.current) return;
+                  const { productId, fromShelf } = dragRef.current;
+                  dragRef.current = null;
+                  onMoveProduct(fromShelf, toShelfId, productId, targetProductId);
+                },
+                onDropOnRemoved: () => {
+                  if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
+                  const { productId, fromShelf } = dragRef.current;
+                  dragRef.current = null;
+                  onRemoveProduct(fromShelf, productId);
+                },
+              }}
+            />
+          ))}
+        </div>
+        <RemovedItemsSidebar
+          removedItems={removedItems}
+          shelves={shelves}
+          onRestore={onRestoreProduct}
+          onRemoveFromShelf={onRemoveProduct}
+          onMoveFromSidebar={(productId, toShelfId) => onMoveProduct("removed", toShelfId, productId)}
         />
+      </div>
 
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-start">
-          <div className="min-w-0 flex-1 space-y-2">
-            {[...shelvesToShow]
-              .sort((a, b) => b.verticalPosition - a.verticalPosition)
-              .map((shelf) => (
-                <ShelfRow
-                  key={shelf.shelfNumber}
-                  shelf={shelf}
-                  fixture={fixture}
-                  highDemandSkus={highDemandSkus}
-                  editHandlers={editHandlers}
-                  dragHandlers={{
-                    onDragStart: (sku, fromShelf) => {
-                      dragRef.current = { sku, fromShelf };
-                    },
-                    onDropOnShelf: (toShelfNumber, targetSku) => {
-                      if (!dragRef.current) return;
-                      const { sku, fromShelf } = dragRef.current;
-                      dragRef.current = null;
-                      onMoveProduct(fromShelf, toShelfNumber, sku, targetSku);
-                    },
-                    onDropOnRemoved: () => {
-                      if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
-                      const { sku, fromShelf } = dragRef.current;
-                      dragRef.current = null;
-                      onRemoveProduct(fromShelf as number, sku);
-                    },
-                  }}
-                />
-              ))}
-          </div>
-          <RemovedItemsSidebar
-            removedItems={removedItems}
-            shelves={shelves}
-            shelfCapacities={shelfCapacities}
-            onRestore={onRestoreProduct}
-            onRemoveFromShelf={(sku, shelfNumber) => onRemoveProduct(shelfNumber, sku)}
-            onMoveFromSidebar={(sku, toShelfNumber) => onMoveProduct("removed", toShelfNumber, sku)}
-          />
-        </div>
-
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(240px,280px)]">
-          <div className="min-w-0 overflow-x-auto">
-            <div className="min-w-275">
-              <ProductDetailsTable shelves={shelvesToShow} highDemandSkus={highDemandSkus} units={fixture.units} />
-            </div>
-          </div>
-          <div className="min-w-0 overflow-hidden rounded-lg border border-border bg-card/80 p-3">
-            <StockingRulesSection stockingRules={stockingRules} />
+      <div className="grid gap-3">
+        <div className="min-w-0 overflow-x-auto">
+          <div className="min-w-275">
+            <ProductDetailsTable shelves={shelvesToShow} />
           </div>
         </div>
-      </CardContent>
+      </div>
+    </CardContent>
   );
 
   if (embedded) {

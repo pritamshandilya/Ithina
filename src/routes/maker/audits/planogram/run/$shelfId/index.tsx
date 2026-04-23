@@ -37,10 +37,9 @@ function NewPlanogramAnalysisPage() {
         serverPlanogramId:
           fixture?.planogram_id ??
           preview?.shelf.planogramId ??
-          preview?.planogramPayload?.planogram.id ??
           null,
       })
-    : (preview?.shelf.planogramId ?? preview?.planogramPayload?.planogram.id ?? null);
+    : (preview?.shelf.planogramId ?? null);
   const { data: associatedPlanogramPayload } = usePlanogramById(effectivePlanogramId);
   const analysisPlanogramPayload =
     associatedPlanogramPayload ?? preview?.planogramPayload ?? null;
@@ -50,7 +49,7 @@ function NewPlanogramAnalysisPage() {
       title="New Planogram Based Analysis"
       backTo={backTo}
       shelfName={preview?.shelf.shelfName}
-      planogramName={analysisPlanogramPayload?.planogram?.name}
+      planogramName={analysisPlanogramPayload?.name}
       planogramPayload={analysisPlanogramPayload}
       fixedFixtureId={fixtureId ?? undefined}
       fixedPlanogramId={effectivePlanogramId ?? undefined}

@@ -14,6 +14,7 @@ import MainLayout from "@/components/layouts/main";
 import { useToast } from "@/hooks/use-toast";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
+import { getPlanogramProductId } from "@/lib/planogram/planogram-schema";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
 import {
@@ -301,9 +302,11 @@ export function AddPlanogramPage({ searchOverride }: AddPlanogramPageProps) {
         const arrangement: PlanogramArrangement = {
           planogramId: selectedPlanogramId,
           shelfOrder:
-            planogramPayload?.planogram.fixture.shelves.map((s) => ({
-              shelfId: `shelf-${s.shelfNumber}`,
-              productIds: s.products.map((p) => p.sku),
+            planogramPayload?.shelves.map((shelf) => ({
+              shelfId: shelf.id,
+              productIds: shelf.products.map((product, index) =>
+                getPlanogramProductId(product, `${shelf.id}:${index}`),
+              ),
             })) ?? [],
         };
         await assignPlanogramMutation.mutateAsync({

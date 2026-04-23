@@ -1,201 +1,143 @@
+import type { PlanogramApiStatus } from "@/models/request/planograms";
 import type {
-  PlanogramDefinition,
-  PlanogramFixture,
-  PlanogramMetadata,
+  PlanogramDimensions,
   PlanogramPayload,
-  PlanogramPhysicalLocation,
   PlanogramProduct,
   PlanogramShelfDef,
-  StockingRules,
 } from "@/types/planogram";
 
-const DEFAULT_STOCKING: StockingRules = {
-  highDemandProducts: [],
-  restockThreshold: 0,
-  notes: "",
-};
+const LEGACY_KEYS = new Set([
+  "planogram",
+  "physicalLocation",
+  "storeConfig",
+  "metadata",
+  "stockingRules",
+  "fixtureId",
+  "shelfNumber",
+  "verticalPosition",
+  "xPosition",
+  "depthCount",
+  "currentStock",
+  "optimalStock",
+  "planogramRole",
+  "isOnPromotion",
+]);
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function ensurePhysicalLocation(raw: unknown): PlanogramPhysicalLocation {
-  const loc = isRecord(raw) ? raw : {};
+function assert(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
+}
+
+function assertNoLegacyKeys(value: unknown): void {
+  if (Array.isArray(value)) {
+    value.forEach(assertNoLegacyKeys);
+    return;
+  }
+
+  if (!isRecord(value)) return;
+
+  for (const key of Object.keys(value)) {
+    if (LEGACY_KEYS.has(key)) {
+      throw new Error(`Legacy planogram field \`${key}\` is not supported.`);
+    }
+    assertNoLegacyKeys(value[key]);
+  }
+}
+
+function parseStatus(value: unknown): PlanogramApiStatus {
+  assert(typeof value === "string", "Planogram status is required.");
+  assert(
+    value === "DRAFT" || value === "ACTIVE" || value === "ARCHIVED",
+    "Planogram status must be one of DRAFT, ACTIVE, or ARCHIVED.",
+  );
+  return value;
+}
+
+function parseRequiredNumber(
+  value: unknown,
+  path: string,
+  minimum = 0,
+): number {
+  assert(
+    typeof value === "number" && Number.isFinite(value),
+    `${path} must be a number.`,
+  );
+  assert(value >= minimum, `${path} must be >= ${minimum}.`);
+  return value;
+}
+
+function parseOptionalNumber(
+  value: unknown,
+  path: string,
+  minimum = 0,
+): number | undefined {
+  if (value == null) return undefined;
+  return parseRequiredNumber(value, path, minimum);
+}
+
+function parseDimensions(
+  value: unknown,
+  path: string,
+): PlanogramDimensions {
+  assert(isRecord(value), `${path} must be an object.`);
   return {
-    storeId: typeof loc.storeId === "string" ? loc.storeId : "",
-    zone: typeof loc.zone === "string" ? loc.zone : "—",
-    aisle: typeof loc.aisle === "string" ? loc.aisle : "—",
-    bay: typeof loc.bay === "string" ? loc.bay : "—",
-    side: typeof loc.side === "string" ? loc.side : "—",
-    section: typeof loc.section === "string" ? loc.section : "—",
-    fixtureIndexInBay:
-      typeof loc.fixtureIndexInBay === "number" && Number.isFinite(loc.fixtureIndexInBay)
-        ? loc.fixtureIndexInBay
-        : 0,
+    width: parseRequiredNumber(value.width, `${path}.width`, 1),
+    height: parseRequiredNumber(value.height, `${path}.height`, 1),
+    depth: parseRequiredNumber(value.depth, `${path}.depth`, 1),
   };
 }
 
-function ensureStockingRules(raw: unknown): StockingRules {
-  if (!isRecord(raw)) return { ...DEFAULT_STOCKING };
+function parseProduct(value: unknown, path: string): PlanogramProduct {
+  assert(isRecord(value), `${path} must be an object.`);
+  assert(typeof value.name === "string" && value.name.trim(), `${path}.name is required.`);
+  assert(typeof value.brand === "string" && value.brand.trim(), `${path}.brand is required.`);
+
   return {
-    highDemandProducts: Array.isArray(raw.highDemandProducts)
-      ? raw.highDemandProducts.filter((x): x is string => typeof x === "string")
-      : [],
-    restockThreshold:
-      typeof raw.restockThreshold === "number" && Number.isFinite(raw.restockThreshold)
-        ? raw.restockThreshold
-        : 0,
-    notes: typeof raw.notes === "string" ? raw.notes : "",
+    ...(typeof value.sku === "string" && value.sku.trim()
+      ? { sku: value.sku }
+      : {}),
+    ...(typeof value.barcode === "string" && value.barcode.trim()
+      ? { barcode: value.barcode }
+      : {}),
+    name: value.name,
+    brand: value.brand,
+    ...(typeof value.category === "string" && value.category.trim()
+      ? { category: value.category }
+      : {}),
+    ...(parseOptionalNumber(value.price, `${path}.price`, 0) != null
+      ? { price: parseOptionalNumber(value.price, `${path}.price`, 0) }
+      : {}),
+    size: parseDimensions(value.size, `${path}.size`),
+    x_position: parseRequiredNumber(value.x_position, `${path}.x_position`, 0),
+    facings: parseRequiredNumber(value.facings, `${path}.facings`, 1),
+    depth_count: parseRequiredNumber(value.depth_count, `${path}.depth_count`, 1),
+    ...(parseOptionalNumber(value.velocity, `${path}.velocity`, 0) != null
+      ? { velocity: parseOptionalNumber(value.velocity, `${path}.velocity`, 0) }
+      : {}),
+    expiry_sensitive:
+      typeof value.expiry_sensitive === "boolean" ? value.expiry_sensitive : false,
   };
 }
 
-function ensureMetadata(raw: unknown): PlanogramMetadata | undefined {
-  if (!isRecord(raw)) return undefined;
-  const stocking = ensureStockingRules(raw.stockingRules);
+function parseShelf(value: unknown, path: string): PlanogramShelfDef {
+  assert(isRecord(value), `${path} must be an object.`);
+  assert(typeof value.id === "string" && value.id.trim(), `${path}.id is required.`);
+  assert(Array.isArray(value.products), `${path}.products must be an array.`);
+
   return {
-    createdBy: typeof raw.createdBy === "string" ? raw.createdBy : "—",
-    updatedBy: typeof raw.updatedBy === "string" ? raw.updatedBy : "—",
-    sourceSystem: typeof raw.sourceSystem === "string" ? raw.sourceSystem : "import",
-    tags: Array.isArray(raw.tags)
-      ? raw.tags.filter((t): t is string => typeof t === "string")
-      : [],
-    auditTrailId: typeof raw.auditTrailId === "string" ? raw.auditTrailId : "",
-    syncStatus: typeof raw.syncStatus === "string" ? raw.syncStatus : "local",
-    stockingRules: stocking,
-    location: typeof raw.location === "string" ? raw.location : undefined,
-    lastUpdated: typeof raw.lastUpdated === "string" ? raw.lastUpdated : undefined,
-    status: typeof raw.status === "string" ? raw.status : undefined,
-    totalSKUs: typeof raw.totalSKUs === "number" ? raw.totalSKUs : undefined,
-    totalProducts: typeof raw.totalProducts === "number" ? raw.totalProducts : undefined,
+    id: value.id,
+    y_position: parseRequiredNumber(value.y_position, `${path}.y_position`, 0),
+    height: parseRequiredNumber(value.height, `${path}.height`, 1),
+    width: parseRequiredNumber(value.width, `${path}.width`, 1),
+    products: value.products.map((product, index) =>
+      parseProduct(product, `${path}.products[${index}]`),
+    ),
   };
 }
 
-function normalizeProduct(raw: unknown, index: number): PlanogramProduct {
-  const p = isRecord(raw) ? raw : {};
-  const facings = typeof p.facings === "number" && p.facings >= 0 ? p.facings : 0;
-  const depthCount = typeof p.depthCount === "number" && p.depthCount >= 0 ? p.depthCount : 1;
-  const optimalFromFacing = facings * depthCount;
-  const optimalStock =
-    typeof p.optimalStock === "number" && Number.isFinite(p.optimalStock)
-      ? p.optimalStock
-      : optimalFromFacing;
-  return {
-    sku: typeof p.sku === "string" && p.sku ? p.sku : `SKU-${index + 1}`,
-    brand: typeof p.brand === "string" ? p.brand : "—",
-    name: typeof p.name === "string" ? p.name : "—",
-    category: typeof p.category === "string" ? p.category : "—",
-    xPosition: typeof p.xPosition === "number" && Number.isFinite(p.xPosition) ? p.xPosition : 0,
-    facings,
-    depthCount,
-    width: typeof p.width === "number" && Number.isFinite(p.width) ? p.width : 0,
-    height: typeof p.height === "number" && Number.isFinite(p.height) ? p.height : 0,
-    depth: typeof p.depth === "number" && Number.isFinite(p.depth) ? p.depth : 0,
-    optimalStock,
-    currentStock:
-      typeof p.currentStock === "number" && Number.isFinite(p.currentStock)
-        ? p.currentStock
-        : optimalStock,
-    backroomStock:
-      p.backroomStock === null || p.backroomStock === undefined
-        ? null
-        : typeof p.backroomStock === "number"
-          ? p.backroomStock
-          : null,
-    price:
-      p.price === null || p.price === undefined
-        ? null
-        : typeof p.price === "number"
-          ? p.price
-          : null,
-    salesVelocityPerDay:
-      p.salesVelocityPerDay === null || p.salesVelocityPerDay === undefined
-        ? null
-        : typeof p.salesVelocityPerDay === "number"
-          ? p.salesVelocityPerDay
-          : null,
-    margin:
-      p.margin === null || p.margin === undefined
-        ? null
-        : typeof p.margin === "number"
-          ? p.margin
-          : null,
-    expirySensitive: Boolean(p.expirySensitive),
-    planogramRole:
-      p.planogramRole === null || p.planogramRole === undefined
-        ? null
-        : typeof p.planogramRole === "string"
-          ? p.planogramRole
-          : null,
-    isOnPromotion: Boolean(p.isOnPromotion),
-  };
-}
-
-function normalizeShelf(raw: unknown, index: number): PlanogramShelfDef {
-  const s = isRecord(raw) ? raw : {};
-  const productsRaw = Array.isArray(s.products) ? s.products : [];
-  const shelfNumber =
-    typeof s.shelfNumber === "number" && Number.isFinite(s.shelfNumber)
-      ? s.shelfNumber
-      : index + 1;
-  return {
-    shelfId: typeof s.shelfId === "string" && s.shelfId ? s.shelfId : `SHELF-${shelfNumber}`,
-    shelfNumber,
-    name: typeof s.name === "string" ? s.name : `Shelf ${shelfNumber}`,
-    verticalPosition:
-      typeof s.verticalPosition === "number" && Number.isFinite(s.verticalPosition)
-        ? s.verticalPosition
-        : 0,
-    height: typeof s.height === "number" && Number.isFinite(s.height) ? s.height : 0,
-    width: typeof s.width === "number" && Number.isFinite(s.width) ? s.width : undefined,
-    depth: typeof s.depth === "number" && Number.isFinite(s.depth) ? s.depth : undefined,
-    products: productsRaw.map((pr, i) => normalizeProduct(pr, i)),
-  };
-}
-
-function normalizeFixture(raw: unknown): PlanogramFixture {
-  const f = isRecord(raw) ? raw : {};
-  const shelvesRaw = Array.isArray(f.shelves) ? f.shelves : [];
-  return {
-    fixtureId: typeof f.fixtureId === "string" && f.fixtureId ? f.fixtureId : "FIXTURE-IMPORT",
-    type: typeof f.type === "string" ? f.type : "unknown",
-    width: typeof f.width === "number" && Number.isFinite(f.width) ? f.width : 0,
-    height: typeof f.height === "number" && Number.isFinite(f.height) ? f.height : 0,
-    depth: typeof f.depth === "number" && Number.isFinite(f.depth) ? f.depth : 0,
-    units: typeof f.units === "string" ? f.units : undefined,
-    shelfCount:
-      typeof f.shelfCount === "number" && Number.isFinite(f.shelfCount)
-        ? f.shelfCount
-        : shelvesRaw.length,
-    shelves: shelvesRaw.map((sh, i) => normalizeShelf(sh, i)),
-  };
-}
-
-function normalizeDefinition(raw: unknown): PlanogramDefinition {
-  const d = isRecord(raw) ? raw : {};
-  const metaOnDef = ensureMetadata(d.metadata);
-  return {
-    id: typeof d.id === "string" && d.id ? d.id : `PLN-${Date.now()}`,
-    name: typeof d.name === "string" ? d.name : "Imported planogram",
-    version: typeof d.version === "string" ? d.version : "1.0",
-    createdDate: typeof d.createdDate === "string" ? d.createdDate : new Date().toISOString().slice(0, 10),
-    location: typeof d.location === "string" ? d.location : "—",
-    status: typeof d.status === "string" ? d.status : "draft",
-    storeConfig: isRecord(d.storeConfig)
-      ? {
-          units: typeof d.storeConfig.units === "string" ? d.storeConfig.units : "mm",
-          currency: typeof d.storeConfig.currency === "string" ? d.storeConfig.currency : "EUR",
-        }
-      : undefined,
-    physicalLocation: ensurePhysicalLocation(d.physicalLocation),
-    metadata: metaOnDef,
-    fixture: normalizeFixture(d.fixture),
-  };
-}
-
-/**
- * Parse and normalize arbitrary JSON into a PlanogramPayload the app can render.
- * Accepts either `{ planogram: { ... } }` or a bare planogram definition object.
- */
 export function parsePlanogramJsonText(text: string): PlanogramPayload {
   let parsed: unknown;
   try {
@@ -204,61 +146,28 @@ export function parsePlanogramJsonText(text: string): PlanogramPayload {
     throw new Error("The file is not valid JSON.");
   }
 
-  if (!isRecord(parsed)) {
-    throw new Error("Planogram JSON must be an object.");
-  }
+  assert(isRecord(parsed), "Planogram JSON must be an object.");
+  assertNoLegacyKeys(parsed);
+  assert(Array.isArray(parsed.shelves), "Planogram shelves must be an array.");
 
-  const inner: unknown = parsed.planogram !== undefined ? parsed.planogram : parsed;
-  if (!isRecord(inner)) {
-    throw new Error("Missing planogram object.");
-  }
-
-  const planogram = normalizeDefinition(inner);
-
-  if (!planogram.fixture.shelves.length) {
-    throw new Error("Planogram must include at least one shelf with a fixture.");
-  }
-
-  const defMeta = planogram.metadata;
-  const topMeta = ensureMetadata(parsed.metadata);
-  const mergedMeta: PlanogramMetadata = {
-    createdBy: topMeta?.createdBy ?? defMeta?.createdBy ?? "—",
-    updatedBy: topMeta?.updatedBy ?? defMeta?.updatedBy ?? "—",
-    sourceSystem: topMeta?.sourceSystem ?? defMeta?.sourceSystem ?? "import",
-    tags: (topMeta?.tags?.length ? topMeta.tags : defMeta?.tags) ?? [],
-    auditTrailId: topMeta?.auditTrailId ?? defMeta?.auditTrailId ?? "",
-    syncStatus: topMeta?.syncStatus ?? defMeta?.syncStatus ?? "local",
-    location: topMeta?.location ?? defMeta?.location,
-    lastUpdated: topMeta?.lastUpdated ?? defMeta?.lastUpdated,
-    status: topMeta?.status ?? defMeta?.status,
-    totalSKUs: topMeta?.totalSKUs ?? defMeta?.totalSKUs,
-    totalProducts: topMeta?.totalProducts ?? defMeta?.totalProducts,
-    stockingRules: ensureStockingRules(
-      parsed.stockingRules ?? topMeta?.stockingRules ?? defMeta?.stockingRules,
+  return {
+    name:
+      typeof parsed.name === "string" && parsed.name.trim()
+        ? parsed.name
+        : (() => {
+            throw new Error("Planogram name is required.");
+          })(),
+    ...(typeof parsed.description === "string"
+      ? { description: parsed.description }
+      : {}),
+    version:
+      typeof parsed.version === "string" || parsed.version === null
+        ? parsed.version
+        : null,
+    status: parseStatus(parsed.status),
+    fixture: parseDimensions(parsed.fixture, "fixture"),
+    shelves: parsed.shelves.map((shelf, index) =>
+      parseShelf(shelf, `shelves[${index}]`),
     ),
   };
-
-  const stockingRules = mergedMeta.stockingRules;
-
-  const payload: PlanogramPayload = {
-    planogram: {
-      ...planogram,
-      metadata: mergedMeta,
-    },
-    metadata: mergedMeta,
-    stockingRules,
-  };
-
-  const skuCount = planogram.fixture.shelves.reduce((n, sh) => n + sh.products.length, 0);
-  const unitCount = planogram.fixture.shelves.reduce(
-    (n, sh) => n + sh.products.reduce((m, p) => m + p.facings * p.depthCount, 0),
-    0,
-  );
-
-  if (payload.metadata) {
-    payload.metadata.totalSKUs = payload.metadata.totalSKUs ?? skuCount;
-    payload.metadata.totalProducts = payload.metadata.totalProducts ?? unitCount;
-  }
-
-  return payload;
 }

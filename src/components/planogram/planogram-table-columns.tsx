@@ -10,7 +10,7 @@ import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { Button } from "@/components/ui/button";
-import { FilePenLine, FileText, LayoutGrid, Plus, ScanLine, Trash2 } from "lucide-react";
+import { FilePenLine, FileText, LayoutGrid, Plus, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -350,7 +350,6 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
     variant,
     onClose,
     onView,
-    onRunAdhoc,
     onRunPlanogram,
     onViewComplianceRule,
     onAssociatePlanogram,

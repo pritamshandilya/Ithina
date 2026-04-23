@@ -1,5 +1,11 @@
 import type { PlanogramPayload } from "@/types/planogram";
 import type { ImageComparisonData, PlanogramSlot } from "./image-comparison-types";
+import {
+  getPlanogramProductId,
+  getShelfDisplayLabel,
+  sortPlanogramProducts,
+  sortPlanogramShelves,
+} from "@/lib/planogram/planogram-schema";
 
 const SHAPE_BY_CATEGORY: Record<string, PlanogramSlot["shape"]> = {
   beverages: "bottle",
@@ -27,13 +33,15 @@ function shortName(name: string): string {
 export function mapPlanogramPayloadToImageComparisonData(
   payload: PlanogramPayload,
 ): ImageComparisonData {
-  const shelves = payload.planogram.fixture.shelves.map((shelf, shelfIndex) => {
-    const slots = shelf.products.map((product, productIndex) => {
+  const sortedShelves = sortPlanogramShelves(payload.shelves);
+
+  const shelves = sortedShelves.map((shelf, shelfIndex) => {
+    const slots = sortPlanogramProducts(shelf.products).map((product, productIndex) => {
       const expectedFacings = Number.isFinite(product.facings) ? product.facings : 0;
-      const depth = Number.isFinite(product.depthCount) ? product.depthCount : 1;
+      const depth = Number.isFinite(product.depth_count) ? product.depth_count : 1;
       const totalExpectedUnits = expectedFacings * depth;
       return {
-        id: `${shelf.shelfId}-${product.sku}-${productIndex}`,
+        id: `${shelf.id}-${getPlanogramProductId(product, String(productIndex))}-${productIndex}`,
         productName: product.name,
         shortName: shortName(product.name),
         expectedFacings,
@@ -42,14 +50,14 @@ export function mapPlanogramPayloadToImageComparisonData(
         totalExpectedUnits,
         totalDetectedUnits: totalExpectedUnits,
         status: "matched" as const,
-        shape: getShape(product.category),
+        shape: getShape(product.category ?? ""),
         color: COLOR_BY_INDEX[(productIndex + shelfIndex) % COLOR_BY_INDEX.length],
       };
     });
 
     return {
-      shelfName: `Shelf ${shelf.shelfNumber}`,
-      shelfLabel: shelf.name,
+      shelfName: getShelfDisplayLabel(sortedShelves, shelf.id),
+      shelfLabel: shelf.id,
       units: slots.reduce((sum, slot) => sum + slot.totalExpectedUnits, 0),
       slots,
     };

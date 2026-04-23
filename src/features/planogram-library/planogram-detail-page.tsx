@@ -72,7 +72,7 @@ export function PlanogramDetailPage() {
     }
     try {
       await saveMutation.mutateAsync({ id: planogramId, payload: next });
-      toast({ title: "Planogram updated", description: next.planogram.name });
+      toast({ title: "Planogram updated", description: next.name });
       setDraftPreview(null);
       setEditor(JSON.stringify(next, null, 2));
     } catch (e) {
@@ -111,7 +111,7 @@ export function PlanogramDetailPage() {
     <MainLayout
       pageHeader={
         <PageHeader
-          title={data?.planogram.name ?? "Planogram"}
+          title={data?.name ?? "Planogram"}
           description="View the full structure below, then update JSON and save when you are ready."
         />
       }

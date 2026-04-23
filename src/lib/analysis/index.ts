@@ -7,9 +7,14 @@ export type { PipelineStepDef } from "./constants";
 export { MOCK_SKU_ENRICHMENT_ITEMS } from "./mock-sku-data";
 export { MOCK_ANALYSIS_RESULT } from "./mock-analysis-result";
 export { MOCK_REPORT_SNIPPET } from "./mock-report-snippets";
+export {
+  mapAnalysisResultToReportSnippet,
+  getAnnotatedImagePreview,
+} from "./report-mapper";
 export { MOCK_ALL_ITEMS_REPORT } from "./mock-all-items-report";
 export { MOCK_ALL_ISSUES_REPORT } from "./mock-all-issues-report";
 export { MOCK_IMAGE_COMPARISON } from "./mock-image-comparison";
+export { mapPlanogramPayloadToImageComparisonData } from "./image-comparison-mapper";
 export type { AnalysisResult, AnalysisIssue } from "./analysis-result-types";
 export type {
   ReportSnippet,

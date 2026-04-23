@@ -19,7 +19,10 @@ export interface FixtureDraftState {
   zone: string;
 }
 
-export type FixtureFormDraft = FixtureDraftState & { planogramId: string };
+export type FixtureFormDraft = FixtureDraftState & {
+  planogramId: string;
+  complianceRuleSetId: string;
+};
 
 export interface StoreFixtureDetailFixtureTabCardProps {
   fixtureDraft: FixtureFormDraft;

@@ -7,12 +7,18 @@
 
 import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
 import { Button } from "@/components/ui/button";
-import { MOCK_REPORT_SNIPPET } from "@/lib/analysis";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  getAnnotatedImagePreview,
+  mapAnalysisResultToReportSnippet,
+  type ReportSnippet,
+} from "@/lib/analysis";
+import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
 import { useHistoricalAnalyses } from "@/queries/maker";
 import { getRelativePath } from "@/lib/utils";
 
@@ -32,16 +38,65 @@ function HistoricalAnalysisDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { analysisId } = Route.useParams();
-  const { backTo: backToSearch } = Route.useSearch();
+  const { type, backTo: backToSearch } = Route.useSearch();
   const backTo = getRelativePath(backToSearch ?? "/maker/historical-analysis");
   const { data: analyses } = useHistoricalAnalyses();
+  const detailQuery = new URLSearchParams();
+  if (type) detailQuery.set("type", type);
+  if (backToSearch) detailQuery.set("backTo", backToSearch);
+  const detailBackTo = `${getRelativePath(location.pathname)}${
+    detailQuery.toString() ? `?${detailQuery.toString()}` : ""
+  }`;
 
   const analysis = useMemo(() => {
     return analyses.find((a) => a.id === analysisId) ?? null;
   }, [analyses, analysisId]);
 
-  const imageUrl = analysis?.imageUrl ?? placeholderShelf;
-  const report = MOCK_REPORT_SNIPPET;
+  const [report, setReport] = useState<ReportSnippet | null>(null);
+  const [imageUrl, setImageUrl] = useState(analysis?.imageUrl ?? placeholderShelf);
+  const [planogramId, setPlanogramId] = useState<string | null>(null);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [reportLoadError, setReportLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!analysis || analysis.type !== "adhoc") {
+      setIsReportLoading(false);
+      setReportLoadError(null);
+      setReport(null);
+      setImageUrl(analysis?.imageUrl ?? placeholderShelf);
+      setPlanogramId(null);
+      return;
+    }
+
+    let isMounted = true;
+    const loadAnalysisResult = async () => {
+      setIsReportLoading(true);
+      setReportLoadError(null);
+      try {
+        const job = await fetchAnalysisJob(analysis.id);
+        if (!isMounted) return;
+        setReport(mapAnalysisResultToReportSnippet(job.result));
+        setPlanogramId(job.planogram_id);
+        const annotated = getAnnotatedImagePreview(job.result, job.image_mime_type);
+        setImageUrl(annotated ?? analysis.imageUrl ?? placeholderShelf);
+      } catch {
+        if (!isMounted) return;
+        setReport(null);
+        setReportLoadError("Unable to load this historical report.");
+        setImageUrl(analysis.imageUrl ?? placeholderShelf);
+        setPlanogramId(null);
+      } finally {
+        if (isMounted) {
+          setIsReportLoading(false);
+        }
+      }
+    };
+
+    void loadAnalysisResult();
+    return () => {
+      isMounted = false;
+    };
+  }, [analysis]);
 
   if (!analysis) {
     return (
@@ -56,9 +111,13 @@ function HistoricalAnalysisDetailPage() {
     );
   }
 
-  const subtitle = analysis.planogramName
-    ? `Planogram "${analysis.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
-    : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`;
+  const subtitle = report
+    ? analysis.planogramName
+      ? `Planogram "${analysis.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
+      : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
+    : analysis.planogramName
+      ? `Planogram "${analysis.planogramName}" • report details unavailable`
+      : "Report details unavailable";
 
   return (
     <MainLayout>
@@ -82,17 +141,60 @@ function HistoricalAnalysisDetailPage() {
           </header>
 
           <div className="flex-1 min-h-0 overflow-auto">
-            <ReportSnippetsView
-              imagePreview={imageUrl}
-              report={report}
-              isHistorical
-              viewFullReportTo="/maker/reports/view"
-              viewFullReportState={{
-                imageUrl,
-                analysisId,
-                backTo: `${getRelativePath(location.pathname)}${location.search}`,
-              }}
-            />
+            {isReportLoading ? (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <Skeleton className="h-8 w-64" />
+                  <Skeleton className="h-9 w-36" />
+                </div>
+                <div className="grid gap-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr]">
+                  <section className="rounded-xl border border-border bg-card/80 p-4">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="mt-4 h-[320px] w-full" />
+                    <div className="mt-4 flex gap-2">
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-20" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  </section>
+                  <section className="rounded-xl border border-border bg-card/80 p-4">
+                    <div className="flex flex-wrap gap-2">
+                      <Skeleton className="h-14 w-20" />
+                      <Skeleton className="h-14 w-20" />
+                      <Skeleton className="h-14 w-20" />
+                      <Skeleton className="h-14 w-20" />
+                    </div>
+                    <Skeleton className="mt-4 h-24 w-full" />
+                    <Skeleton className="mt-3 h-20 w-full" />
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Skeleton className="h-7 w-24" />
+                      <Skeleton className="h-7 w-24" />
+                      <Skeleton className="h-7 w-24" />
+                    </div>
+                  </section>
+                </div>
+              </div>
+            ) : report ? (
+              <ReportSnippetsView
+                imagePreview={imageUrl}
+                report={report}
+                isHistorical
+                viewFullReportTo="/maker/reports/view"
+                viewFullReportState={{
+                  imageUrl,
+                  analysisId,
+                  backTo: detailBackTo,
+                  report,
+                  planogramId: planogramId ?? undefined,
+                }}
+              />
+            ) : (
+              <div className="flex h-full min-h-0 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+                <p className="text-sm">
+                  {reportLoadError ?? "Detailed report is unavailable for this historical analysis."}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

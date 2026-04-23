@@ -13,6 +13,7 @@ import type {
   DetectionOverlayStatus,
 } from "@/lib/analysis/image-comparison-types";
 import { Fragment } from "react";
+import type { PlanogramPayload } from "@/types/planogram";
 import {
   Tooltip,
   TooltipContent,
@@ -20,6 +21,7 @@ import {
 } from "@/components/ui/tooltip";
 import { PlanogramExpectedPanel } from "./PlanogramExpectedPanel";
 import { cn } from "@/lib/utils";
+import { mapPlanogramPayloadToImageComparisonData } from "@/lib/analysis";
 
 const DETECTION_LEGEND: { color: string; label: string }[] = [
   { color: "bg-chart-2", label: "Compliant" },
@@ -92,6 +94,8 @@ function RealShelfWithOverlays({
 export interface ImageComparisonTabProps {
   /** Report data – defaults to mock */
   data?: ImageComparisonData;
+  /** Associated planogram payload for expected panel */
+  planogramPayload?: PlanogramPayload | null;
   /** Captured shelf image URL – from analysis flow */
   imageUrl?: string | null;
   className?: string;
@@ -99,9 +103,14 @@ export interface ImageComparisonTabProps {
 
 export function ImageComparisonTab({
   data = MOCK_IMAGE_COMPARISON,
+  planogramPayload = null,
   imageUrl = null,
   className,
 }: ImageComparisonTabProps) {
+  const comparisonData = planogramPayload
+    ? mapPlanogramPayloadToImageComparisonData(planogramPayload)
+    : data;
+
   return (
     <div className={cn("w-full min-w-0 space-y-4", className)}>
       <p className="text-sm text-muted-foreground">
@@ -111,7 +120,7 @@ export function ImageComparisonTab({
 
       <div className="grid lg:grid-cols-2 gap-4 h-[calc(100vh-14rem)] min-h-[480px] overflow-hidden">
         {/* Left: Planogram (Expected) */}
-        <PlanogramExpectedPanel data={data} className="min-h-0" />
+        <PlanogramExpectedPanel data={comparisonData} className="min-h-0" />
 
         {/* Right: Real Shelf (Captured) */}
         <section className="rounded-xl border border-border bg-card/60 overflow-hidden flex flex-col min-h-0">
@@ -125,7 +134,7 @@ export function ImageComparisonTab({
             {imageUrl ? (
               <RealShelfWithOverlays
                 imageUrl={imageUrl}
-                overlays={data.detectionOverlays}
+                overlays={comparisonData.detectionOverlays}
               />
             ) : (
               <div className="h-full min-h-[360px] flex flex-col items-center justify-center gap-4 p-6 text-center">

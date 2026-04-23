@@ -149,6 +149,7 @@ export function ReportSnippetsView({
             state={
               (viewFullReportState ?? {
                 imageUrl: imagePreview ?? undefined,
+                report,
               }) as Record<string, unknown>
             }
           >

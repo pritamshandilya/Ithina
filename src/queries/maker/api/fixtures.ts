@@ -19,6 +19,8 @@ export interface FixtureResponse {
   id: string;
   store_id: string;
   type: string;
+  code?: string;
+  planogram_id?: string | null;
   dimensions: {
     width: number;
     height: number;

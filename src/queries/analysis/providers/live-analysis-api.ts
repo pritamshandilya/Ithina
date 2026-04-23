@@ -2,6 +2,7 @@ import type { AdhocAnalysis } from "@/types/maker";
 import type { PlanogramArrangement, PlanogramPayload, PlanogramSummary } from "@/types/planogram";
 import type { Shelf } from "@/types/maker";
 import { mockAnalysisApiClient } from "./mock-analysis-api";
+import { fetchAdhocAnalysesForStore } from "@/queries/maker/api/analysis";
 
 import type { AnalysisApiClient, FetchAdhocAnalysesParams } from "../types";
 
@@ -14,7 +15,7 @@ export const liveAnalysisApiClient: AnalysisApiClient = {
   async fetchAdhocAnalyses({
     storeId,
   }: FetchAdhocAnalysesParams): Promise<AdhocAnalysis[]> {
-    return mockAnalysisApiClient.fetchAdhocAnalyses({ storeId });
+    return fetchAdhocAnalysesForStore(storeId);
   },
   async fetchPlanogramList(storeId?: string): Promise<PlanogramSummary[]> {
     void storeId;

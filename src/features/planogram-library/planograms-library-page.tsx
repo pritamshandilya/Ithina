@@ -45,21 +45,6 @@ const PLANOGRAM_LIBRARY_COLUMNS: DataTableColumn<PlanogramTableRow>[] = [
       return `<div class="min-w-0 py-0.5 text-left"><span class="font-medium text-foreground">${escapeAttr(row.name)}</span></div>`;
     },
   },
-  {
-    title: "Planogram ID",
-    field: "id",
-    minWidth: 160,
-    widthGrow: 2,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: "input",
-    hozAlign: "left",
-    headerHozAlign: "left",
-    formatter: (cell) => {
-      const row = getCellRow(cell);
-      return `<span class="font-mono text-xs text-foreground">${escapeAttr(row.id)}</span>`;
-    },
-  },
   // {
   //   title: "Catalog",
   //   field: "catalogKind",

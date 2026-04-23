@@ -12,21 +12,31 @@ import { useCallback, useRef, useState } from "react";
 import {
   ArrowLeft,
   Camera,
-  Check,
   ImageIcon,
-  Loader2,
   Upload,
 } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
-import { PlanogramExpectedPanel } from "@/components/shared/compliance-report";
+import { AnalysisProcessingOverlay } from "@/components/maker/analysis-processing-overlay";
+import { Modal } from "@/components/ui/modal";
+import { PlanogramRenderedPreview } from "@/features/planogram-library/planogram-rendered-preview";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import type { ImageComparisonData } from "@/lib/analysis/image-comparison-types";
-import { MOCK_REPORT_SNIPPET, SIMPLE_PROGRESS_STEPS } from "@/lib/analysis";
-import { useAnalysisPipeline } from "@/hooks/maker";
+import {
+  type ReportSnippet,
+  getAnnotatedImagePreview,
+  mapAnalysisResultToReportSnippet,
+} from "@/lib/analysis";
 import { cn } from "@/lib/utils";
+import { getEffectiveFixturePlanogramId } from "@/lib/fixtures/fixture-planogram-association";
+import {
+  runFixtureAnalysis,
+} from "@/queries/maker/api/analysis";
+import { useStoreFixtures } from "@/queries/maker";
+import { useStore } from "@/providers/store";
+import { useToast } from "@/hooks/use-toast";
+import type { PlanogramPayload } from "@/types/planogram";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_SIZE_MB = 10;
@@ -45,8 +55,8 @@ export interface AnalysisFlowPageProps {
   taskContext?: string;
   /** Optional expected layout preview – React node or null (legacy) */
   expectedLayoutPreview?: React.ReactNode;
-  /** Planogram expected data – planogram-based only. When provided, shows PlanogramExpectedPanel on the right. Not used in adhoc flow (upload stays full width). */
-  planogramExpectedData?: ImageComparisonData;
+  /** Full planogram payload shown as expected layout (planogram flow). */
+  planogramPayload?: PlanogramPayload | null;
   /** Whether to show a fixture selection dropdown */
   showShelfSelection?: boolean;
   /** Currently selected fixture id */
@@ -57,36 +67,42 @@ export interface AnalysisFlowPageProps {
   shelves?: Array<{ id: string; shelfName: string }>;
   /** Lock fixture selection (e.g. preselected from fixture actions) */
   isShelfSelectionLocked?: boolean;
+  /** Force fixture for analysis submit (planogram flow). */
+  fixedFixtureId?: string;
+  /** Force planogram for analysis submit (planogram flow). */
+  fixedPlanogramId?: string;
+  /** Optional override for compliance rule set id. */
+  complianceRuleSetId?: string | null;
 }
 
 export function AnalysisFlowPage({
   title,
   backTo,
-  expectedLayoutPreview,
-  planogramExpectedData,
+  planogramPayload,
   showShelfSelection,
   selectedShelfId,
   onShelfSelect,
   shelves,
   isShelfSelectionLocked = false,
+  fixedFixtureId,
+  fixedPlanogramId,
+  complianceRuleSetId,
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { selectedStore } = useStore();
+  const { toast } = useToast();
+  const { data: fixtures = [] } = useStoreFixtures();
 
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [highlightedIssueIndex, setHighlightedIssueIndex] = useState<number | null>(null);
-
-  const {
-    isAnalyzing,
-    currentStepIndex,
-    analysisComplete,
-    progressPercent,
-    startAnalysis,
-    resetAnalysis,
-  } = useAnalysisPipeline({
-    stepIntervalMs: 1500,
-  });
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisComplete, setAnalysisComplete] = useState(false);
+  const [progressPercent, setProgressPercent] = useState(0);
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [report, setReport] = useState<ReportSnippet | null>(null);
+  const [analysisPlanogramId, setAnalysisPlanogramId] = useState<string | null>(null);
 
   const triggerFileInput = useCallback(() => {
     fileInputRef.current?.click();
@@ -97,10 +113,15 @@ export function AnalysisFlowPage({
     setImagePreview(null);
     setUploadError(null);
     setHighlightedIssueIndex(null);
-    resetAnalysis();
+    setIsAnalyzing(false);
+    setAnalysisComplete(false);
+    setProgressPercent(0);
+    setProgressMessage(null);
+    setReport(null);
+    setAnalysisPlanogramId(null);
     // Open file picker so user can immediately select a new image
     requestAnimationFrame(() => fileInputRef.current?.click());
-  }, [resetAnalysis]);
+  }, []);
 
   const processFile = useCallback((file: File) => {
     setUploadError(null);
@@ -140,12 +161,116 @@ export function AnalysisFlowPage({
 
   const handleDragOver = useCallback((e: React.DragEvent) => e.preventDefault(), []);
 
-  const handleRunAnalysis = () => startAnalysis();
+  const handleRunAnalysis = useCallback(async () => {
+    if (!imageFile) {
+      setUploadError("Please upload an image before running analysis.");
+      return;
+    }
 
-  const simpleStepIndex =
-    currentStepIndex >= 0
-      ? Math.min(Math.floor(currentStepIndex / 2), SIMPLE_PROGRESS_STEPS.length - 1)
-      : 0;
+    const fixtureId = fixedFixtureId ?? selectedShelfId;
+    if (!fixtureId) {
+      setUploadError("Please select a fixture.");
+      return;
+    }
+
+    const fixture = fixtures.find((item) => item.id === fixtureId);
+    const planogramId =
+      fixedPlanogramId ??
+      (fixture
+        ? getEffectiveFixturePlanogramId({
+            storeId: selectedStore?.id,
+            fixtureId: fixture.id,
+            serverPlanogramId: fixture.planogram_id,
+          })
+        : null);
+    const ruleSetId =
+      complianceRuleSetId ?? selectedStore?.default_compliance_rule_set_id ?? null;
+
+    if (!planogramId) {
+      setUploadError("No planogram is linked to this fixture.");
+      return;
+    }
+    if (!ruleSetId) {
+      setUploadError("No compliance rule set is configured for this store.");
+      return;
+    }
+
+    try {
+      setAnalysisPlanogramId(planogramId);
+      setUploadError(null);
+      setIsAnalyzing(true);
+      setAnalysisComplete(false);
+      setProgressPercent(5);
+      setProgressMessage("Analysis started");
+
+      const currentJob = await runFixtureAnalysis(
+        {
+        fixtureId,
+        image: imageFile,
+        planogramId,
+        complianceRuleSetId: ruleSetId,
+        },
+        {
+          onProgress: (update) => {
+            if (update.progressMessage) {
+              setProgressMessage(update.progressMessage);
+            }
+            if (typeof update.progressPercent === "number") {
+              setProgressPercent(
+                Math.max(0, Math.min(100, Math.round(update.progressPercent))),
+              );
+            }
+          },
+        },
+      );
+
+      setProgressMessage(currentJob.progress_message ?? null);
+      if (typeof currentJob.progress_pct === "number") {
+        setProgressPercent(Math.max(0, Math.min(100, Math.round(currentJob.progress_pct))));
+      }
+
+      if (currentJob.status === "FAILED") {
+        throw new Error(currentJob.error_message ?? "Analysis job failed.");
+      }
+
+      const mappedResult = mapAnalysisResultToReportSnippet(currentJob.result);
+      setReport(mappedResult);
+      const annotatedImagePreview = getAnnotatedImagePreview(
+        currentJob.result,
+        currentJob.image_mime_type,
+      );
+      if (annotatedImagePreview) {
+        setImagePreview(annotatedImagePreview);
+      }
+      setProgressPercent(100);
+      setAnalysisComplete(true);
+      toast({
+        title: "Analysis completed",
+        description: "Latest analysis result has been loaded.",
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to run analysis.";
+      setUploadError(message);
+      toast({
+        title: "Analysis failed",
+        description: message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  }, [
+    imageFile,
+    fixedFixtureId,
+    selectedShelfId,
+    fixtures,
+    fixedPlanogramId,
+    complianceRuleSetId,
+    selectedStore?.id,
+    selectedStore?.default_compliance_rule_set_id,
+    toast,
+  ]);
 
   const state = !imageFile
     ? "before"
@@ -154,6 +279,7 @@ export function AnalysisFlowPage({
       : isAnalyzing
         ? "processing"
         : "ready";
+  const hasResults = state === "results" && report !== null;
 
   return (
     <MainLayout>
@@ -195,22 +321,24 @@ export function AnalysisFlowPage({
             )}
           </header>
 
-          {state === "results" ? (
+          {hasResults ? (
             <ReportSnippetsView
               imagePreview={imagePreview}
-              report={MOCK_REPORT_SNIPPET}
+              report={report}
               onReplaceImage={handleReplaceImage}
               highlightedIssueIndex={highlightedIssueIndex}
               onIssueClick={setHighlightedIssueIndex}
+              viewFullReportState={{
+                imageUrl: imagePreview ?? undefined,
+                report,
+                planogramId: analysisPlanogramId ?? undefined,
+                backTo,
+              }}
             />
           ) : (
             <div
               className={cn(
-                "grid min-h-0 flex-1 gap-4",
-                /* Planogram-based only: two columns (upload left, planogram right). Adhoc: single column, full width. */
-                (planogramExpectedData ?? expectedLayoutPreview)
-                  ? "lg:grid-cols-2 lg:min-h-0"
-                  : "lg:grid-cols-1"
+                "grid min-h-0 flex-1 gap-4 lg:grid-cols-1"
               )}
             >
               {/* Fixture View (left) */}
@@ -255,37 +383,6 @@ export function AnalysisFlowPage({
                     <div className="flex-1 min-h-0 w-full overflow-hidden bg-muted/50 flex items-center justify-center">
                       <img src={imagePreview} alt="Fixture preview" className="max-h-full max-w-full object-contain" />
                     </div>
-                    {state === "processing" && (
-                      <div className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center gap-4">
-                        <Loader2 className="size-12 animate-spin text-white" aria-hidden />
-                        <div className="space-y-2 text-center">
-                          {SIMPLE_PROGRESS_STEPS.map((label, idx) => (
-                            <p
-                              key={label}
-                              className={cn(
-                                "text-sm font-medium",
-                                idx <= simpleStepIndex ? "text-white" : "text-white/60"
-                              )}
-                            >
-                              {idx < simpleStepIndex ? (
-                                <Check className="inline size-4 mr-2" aria-hidden />
-                              ) : idx === simpleStepIndex ? (
-                                <Loader2 className="inline size-4 mr-2 animate-spin" aria-hidden />
-                              ) : (
-                                <span className="inline-block w-3 h-3 mr-2" aria-hidden />
-                              )}
-                              {label}
-                            </p>
-                          ))}
-                        </div>
-                        <div className="w-48 h-1.5 rounded-full bg-white/30 overflow-hidden">
-                          <div
-                            className="h-full bg-chart-2 rounded-full transition-all duration-300"
-                            style={{ width: `${progressPercent}%` }}
-                          />
-                        </div>
-                      </div>
-                    )}
                     {(state === "before" || state === "ready") && (
                       <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                         <Button variant="secondary" size="sm" onClick={triggerFileInput}>
@@ -320,29 +417,45 @@ export function AnalysisFlowPage({
                 )}
               </section>
 
-              {/* Right panel: Planogram (Expected) – same as Image Comparison tab */}
-              {planogramExpectedData && (
-                <PlanogramExpectedPanel
-                  data={planogramExpectedData}
-                  variant="preview"
-                  className="min-h-0"
-                />
+              {/* Expected planogram view shown below upload panel. */}
+              {planogramPayload && (
+                <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm">
+                  <div className="shrink-0 border-b border-border px-3 py-2">
+                    <h2 className="text-sm font-semibold text-foreground">
+                      Associated Planogram
+                    </h2>
+                  </div>
+                  <div className="min-h-0 flex-1 overflow-auto p-3">
+                    <PlanogramRenderedPreview payload={planogramPayload} embedded />
+                  </div>
+                </section>
               )}
               {/* Legacy: custom expected layout preview */}
-              {!planogramExpectedData && expectedLayoutPreview && (
+              {/* {!planogramPayload && expectedLayoutPreview && (
                 <section className="overflow-hidden rounded-xl border border-border bg-card/80 shadow-sm">
                   <div className="border-b border-border px-3 py-2">
                     <h2 className="text-sm font-semibold text-foreground">
-                      Expected Layout
+                      Legacy Expected Layout
                     </h2>
                   </div>
                   <div className="min-h-[280px] overflow-auto p-4">
                     {expectedLayoutPreview}
                   </div>
                 </section>
-              )}
+              )} */}
             </div>
           )}
+          <Modal
+            isOpen={state === "processing"}
+            onClose={() => undefined}
+            className="max-w-3xl"
+            overlayClassName="bg-black/55 backdrop-blur-[2px]"
+          >
+            <AnalysisProcessingOverlay
+              progressPercent={progressPercent}
+              progressMessage={progressMessage}
+            />
+          </Modal>
         </div>
       </div>
     </MainLayout>

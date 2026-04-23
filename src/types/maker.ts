@@ -219,6 +219,10 @@ export interface PlanogramShelfRow extends Shelf {
   lastRun?: Date;
   /** Product count from last analysis */
   productsCount?: number;
+  /** Shelves on the same fixture (maker planogram table) */
+  fixtureShelvesCount?: number;
+  /** Fixture code from fixtures API (maker planogram table) */
+  fixtureCode?: string;
   /** Issue count from last analysis */
   issuesCount?: number;
   /** From planogram physicalLocation */

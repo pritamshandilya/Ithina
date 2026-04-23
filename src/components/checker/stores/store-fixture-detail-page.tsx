@@ -13,6 +13,7 @@ import { getFixturePlanogramAssociationsStorageKey } from "@/lib/fixtures/fixtur
 import { useStore as useGlobalStore } from "@/providers/store";
 import {
   useCreateShelf,
+  useComplianceRuleSets,
   usePlanogramById,
   usePlanogramList,
   usePlanogramShelfPreview,
@@ -24,6 +25,7 @@ import { fetchStoreFixtures, updateStoreFixture } from "@/queries/checker/api/fi
 
 import { StoreFixtureDetailFixtureTabCard } from "./store-fixture-detail-fixture-tab-card";
 import type { FixtureFormDraft } from "./store-fixture-detail-fixture-tab-card";
+import { StoreFixtureDetailComplianceTab } from "./store-fixture-detail-compliance-tab";
 import { StoreFixtureDetailPlanogramTab } from "./store-fixture-detail-planogram-tab";
 import { StoreFixtureDetailShelvesTab } from "./store-fixture-detail-shelves-tab";
 import { AddShelfFormModal } from "./add-shelf-form-modal";
@@ -37,12 +39,13 @@ export interface StoreFixtureDetailPageProps {
   fallbackPath: string;
 }
 
-type DetailTabId = "fixture" | "shelf" | "planogram";
+type DetailTabId = "fixture" | "shelf" | "planogram" | "compliance";
 
 const DETAIL_TABS: { id: DetailTabId; label: string }[] = [
   { id: "fixture", label: "Fixture Details" },
   { id: "shelf", label: "Shelves" },
   { id: "planogram", label: "Planogram" },
+  { id: "compliance", label: "Compliance" },
 ];
 
 export function StoreFixtureDetailPage({
@@ -64,6 +67,7 @@ export function StoreFixtureDetailPage({
   const selectedFixtureId = preview?.shelf?.fixtureId ?? routeState.fixtureId;
   const { data: shelfRows = [] } = useShelves(selectedFixtureId);
   const { data: planogramList = [] } = usePlanogramList();
+  const { data: ruleSets = [] } = useComplianceRuleSets();
   const { data: fixtures = [] } = useQuery({
     queryKey: ["maker", "fixtures", "list", effectiveStoreId ?? "no-store"],
     queryFn: fetchStoreFixtures,
@@ -86,6 +90,9 @@ export function StoreFixtureDetailPage({
   const [fixturePlanogramOverrides, setFixturePlanogramOverrides] = useState<
     Record<string, string | null>
   >({});
+  const [fixtureComplianceOverrides, setFixtureComplianceOverrides] = useState<
+    Record<string, string | null>
+  >({});
   const [fixtureDraft, setFixtureDraft] = useState<FixtureFormDraft>({
     type: "",
     code: "",
@@ -97,6 +104,7 @@ export function StoreFixtureDetailPage({
     section: "",
     zone: "",
     planogramId: "",
+    complianceRuleSetId: "",
   });
   const fixtureAssociationStorageKey = getFixturePlanogramAssociationsStorageKey(effectiveStoreId);
 
@@ -133,8 +141,12 @@ export function StoreFixtureDetailPage({
       section: fixture.physical_location.section,
       zone: fixture.physical_location.zone,
       planogramId: fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? "",
+      complianceRuleSetId:
+        fixtureComplianceOverrides[fixture.id] ??
+        selectedStore?.default_compliance_rule_set_id ??
+        "",
     });
-  }, [fixture, fixturePlanogramOverrides]);
+  }, [fixture, fixtureComplianceOverrides, fixturePlanogramOverrides, selectedStore?.default_compliance_rule_set_id]);
 
   const planogram = resolvedPlanogramPayload?.planogram;
   const metadata = resolvedPlanogramPayload?.metadata;
@@ -193,6 +205,19 @@ export function StoreFixtureDetailPage({
       variant: "success",
     });
   }, [fixture, fixtureDraft.planogramId, toast]);
+
+  const handleSaveComplianceAssociation = useCallback(() => {
+    if (!fixture) return;
+    setFixtureComplianceOverrides((previous) => ({
+      ...previous,
+      [fixture.id]: fixtureDraft.complianceRuleSetId || null,
+    }));
+    toast({
+      title: "Compliance rule set saved",
+      description: "This association is currently stored on frontend only.",
+      variant: "success",
+    });
+  }, [fixture, fixtureDraft.complianceRuleSetId, toast]);
 
   const handleInlineShelfUpdate = useCallback(
     async (
@@ -346,6 +371,17 @@ export function StoreFixtureDetailPage({
               }
               onSaveAssociation={handleSavePlanogramAssociation}
               effectiveFixturePlanogramId={effectiveFixturePlanogramId}
+            />
+          )}
+
+          {activeTab === "compliance" && !isLoading && (
+            <StoreFixtureDetailComplianceTab
+              ruleSets={ruleSets}
+              selectedRuleSetId={fixtureDraft.complianceRuleSetId}
+              onRuleSetChange={(value) =>
+                setFixtureDraft((prev) => ({ ...prev, complianceRuleSetId: value }))
+              }
+              onSaveRuleSet={handleSaveComplianceAssociation}
             />
           )}
         </div>

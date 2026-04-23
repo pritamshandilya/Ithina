@@ -4,9 +4,6 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import type { StoreFixtureModalValues } from "@/components/common/store-fixture-modal";
 import {
-  renderComplianceSelectCell
-} from "@/components/planogram/planogram-table-columns";
-import {
   type DataTableColumn,
 } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -563,6 +560,10 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         field: "shelfCode",
         minWidth: 150,
         sorter: "string",
+        formatter: (cell: unknown) => {
+          const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+          return `<span class="p-1">${row.shelfCode ?? "—"}</span>`;
+        },
       },
       {
         title: "Type",
@@ -616,7 +617,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         sorter: "string",
         formatter: (cell: unknown) => {
           const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-          return renderComplianceSelectCell(row, ruleSets);
+          return `<span class="text-sm font-medium text-foreground">${row.complianceRuleSet ?? "Default Rules"}</span>`;
         },
       },
       {

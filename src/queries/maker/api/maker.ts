@@ -6,7 +6,6 @@ import {
   getAssignPlanogramOverlays,
   getCreatedPlanogramShelves,
 } from "@/queries/maker/api/planogram";
-import { mockAnalysisApiClient } from "@/queries/analysis/providers/mock-analysis-api";
 import {
   generateMakerDashboardStats,
   generateMockAudits,
@@ -17,6 +16,7 @@ import {
 } from "@/lib/api/mock-data";
 import { apiClient, ApiError } from "@/queries/shared";
 import { getShelf, mapShelfResponseToShelf } from "./shelves";
+import { fetchAdhocAnalysesForStore } from "./analysis";
 import type { Store } from "@/types/checker";
 import type {
   AdhocAnalysis,
@@ -384,5 +384,5 @@ export async function deleteDraft(auditId: string): Promise<void> {
 export async function fetchAdhocAnalyses(
   storeId?: string,
 ): Promise<AdhocAnalysis[]> {
-  return mockAnalysisApiClient.fetchAdhocAnalyses({ storeId });
+  return fetchAdhocAnalysesForStore(storeId);
 }

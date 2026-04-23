@@ -19,12 +19,15 @@ import { ImageComparisonTab } from "./ImageComparisonTab";
 import type { ReportSnippet } from "@/lib/analysis";
 import type { ReportTabId } from "./ComplianceReportTabs";
 import { cn } from "@/lib/utils";
+import type { PlanogramPayload } from "@/types/planogram";
 
 export interface ComplianceReportFullProps {
   /** Report data */
   report: ReportSnippet;
   /** Captured shelf image URL – from analysis flow */
   imageUrl?: string | null;
+  /** Planogram associated with analyzed fixture */
+  planogramPayload?: PlanogramPayload | null;
   /** Back navigation target */
   backTo?: string;
   /** Callback when Export PDF is clicked */
@@ -38,6 +41,7 @@ export interface ComplianceReportFullProps {
 export function ComplianceReportFull({
   report,
   imageUrl = null,
+  planogramPayload = null,
   backTo,
   onExportPdf,
   isExportingPdf = false,
@@ -98,7 +102,10 @@ export function ComplianceReportFull({
           )}
 
           {activeTab === "image-comparison" && (
-            <ImageComparisonTab imageUrl={imageUrl} />
+            <ImageComparisonTab
+              imageUrl={imageUrl}
+              planogramPayload={planogramPayload}
+            />
           )}
 
           {activeTab === "issues" && <AllIssuesTab />}

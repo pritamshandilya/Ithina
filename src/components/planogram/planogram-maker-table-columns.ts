@@ -1,16 +1,9 @@
 import type { DataTableColumn } from "@/components/ui/data-table";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { formatPlanogramShelfDimensionDisplay } from "@/lib/planogram/format-planogram-shelf-dimensions";
 
-import {
-  renderCategorizeSelectCell,
-  renderComplianceSelectCell,
-} from "./planogram-table-columns";
-
 export interface CreateMakerPlanogramTableColumnsOptions {
   onOpenMenu: (row: PlanogramShelfRow, triggerEl: HTMLElement) => void;
-  ruleSets: ComplianceRuleSetSummary[];
 }
 
 /**
@@ -19,14 +12,23 @@ export interface CreateMakerPlanogramTableColumnsOptions {
  */
 export function createMakerPlanogramTableColumns({
   onOpenMenu,
-  ruleSets,
 }: CreateMakerPlanogramTableColumnsOptions): DataTableColumn<PlanogramShelfRow>[] {
   return [
     {
-      title: "Fixture",
+      title: "Code",
+      field: "fixtureCode",
+      minWidth: 100,
+      sorter: "string",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
+        return `<span class="p-1">${row.fixtureCode ?? "—"}</span>`;
+      },
+    },
+    {
+      title: "Type",
       field: "fixtureType",
-      minWidth: 190,
-      width: 210,
+      minWidth: 200,
+      width: 250,
       widthGrow: 1,
       sorter: "string",
       formatter: (cell: unknown) => {
@@ -36,23 +38,16 @@ export function createMakerPlanogramTableColumns({
       },
     },
     {
-      title: "Code",
-      field: "shelfCode",
-      minWidth: 140,
-      width: 155,
-      sorter: "string",
-    },
-    {
       title: "Section",
       field: "section",
-      minWidth: 130,
-      width: 140,
+      minWidth: 150,
+      maxWidth: 200,
       sorter: "string",
     },
     {
       title: "Aisle",
       field: "aisleCode",
-      width: 96,
+      minWidth: 100,
       sorter: "string",
     },
     {
@@ -65,8 +60,7 @@ export function createMakerPlanogramTableColumns({
     {
       title: "Dimension",
       field: "dimensions",
-      minWidth: 160,
-      width: 190,
+      minWidth: 230,
       sorter: "string",
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
@@ -77,40 +71,29 @@ export function createMakerPlanogramTableColumns({
     {
       title: "Compliance",
       field: "complianceRuleSet",
-      minWidth: 170,
-      width: 180,
+      minWidth: 250,
       sorter: "string",
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        return renderComplianceSelectCell(row, ruleSets);
+        return `<span class="text-sm font-medium text-foreground">${row.complianceRuleSet ?? "Default Rules"}</span>`;
       },
     },
     {
-      title: "Categorize By",
-      field: "categorizeBy",
-      minWidth: 130,
-      width: 145,
-      sorter: "string",
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        return renderCategorizeSelectCell(row);
-      },
-    },
-    {
-      title: "Products",
-      field: "productsCount",
-      width: 92,
+      title: "Shelves",
+      field: "fixtureShelvesCount",
+      minWidth: 100,
       sorter: "number",
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => PlanogramShelfRow }).getData();
-        return `<span class="text-sm tabular-nums font-medium text-foreground">${row.productsCount ?? 0}</span>`;
+        return `<span class="text-sm tabular-nums font-medium text-foreground">${row.fixtureShelvesCount ?? 0}</span>`;
       },
     },
     {
       title: "Action",
       field: "id",
-      width: 78,
+      minWidth: 60,
       headerSort: false,
+      frozen: true,
       hozAlign: "center",
       formatter: () => `
           <button type="button" data-action="open-menu" title="Actions" class="rounded-md px-2 py-1 text-muted-foreground hover:bg-muted hover:text-foreground" aria-label="Open actions menu">

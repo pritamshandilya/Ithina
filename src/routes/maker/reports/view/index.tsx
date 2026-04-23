@@ -2,7 +2,7 @@
  * Full Compliance Report View
  *
  * Displayed when user clicks "View Full Report" from analysis results.
- * Uses MOCK_REPORT_SNIPPET for now; will be wired to dynamic data later.
+ * Uses mapped report payload from navigation state when available.
  */
 
 import { createFileRoute, useLocation } from "@tanstack/react-router";
@@ -11,6 +11,7 @@ import MainLayout from "@/components/layouts/main";
 import { useToast } from "@/hooks/use-toast";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
 import {
+  type ReportSnippet,
   MOCK_REPORT_SNIPPET,
   MOCK_ALL_ITEMS_REPORT,
   MOCK_ALL_ISSUES_REPORT,
@@ -18,6 +19,7 @@ import {
 } from "@/lib/analysis";
 import { exportReportToPdf } from "@/lib/reports/pdf-export";
 import { getRelativePath } from "@/lib/utils";
+import { usePlanogramById } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/reports/view/")({
   component: FullReportPage,
@@ -29,9 +31,19 @@ export const Route = createFileRoute("/maker/reports/view/")({
 function FullReportPage() {
   const location = useLocation();
   const { toast } = useToast();
-  const state = location.state as { imageUrl?: string; backTo?: string } | undefined;
+  const state = location.state as
+    | {
+        imageUrl?: string;
+        backTo?: string;
+        report?: ReportSnippet;
+        planogramId?: string;
+      }
+    | undefined;
   const imageUrl = state?.imageUrl;
+  const report = state?.report ?? MOCK_REPORT_SNIPPET;
   const backTo = getRelativePath(state?.backTo ?? "/maker/audits/planogram");
+  const planogramId = state?.planogramId ?? null;
+  const { data: planogramPayload } = usePlanogramById(planogramId);
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExportPdf = async () => {
@@ -40,7 +52,7 @@ function FullReportPage() {
     try {
       await exportReportToPdf({
         data: {
-          report: MOCK_REPORT_SNIPPET,
+          report,
           imageUrl: imageUrl ?? null,
           allItems: MOCK_ALL_ITEMS_REPORT,
           allIssues: MOCK_ALL_ISSUES_REPORT,
@@ -68,8 +80,9 @@ function FullReportPage() {
       <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
           <ComplianceReportFull
-            report={MOCK_REPORT_SNIPPET}
+            report={report}
             imageUrl={imageUrl}
+            planogramPayload={planogramPayload ?? null}
             backTo={backTo}
             onExportPdf={handleExportPdf}
             isExportingPdf={isExporting}

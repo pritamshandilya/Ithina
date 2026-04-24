@@ -21,7 +21,6 @@ import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { useStore } from "@/providers/store";
 import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
-import { getEffectiveFixturePlanogramId } from "@/lib/fixtures/fixture-planogram-association";
 import { getShelfFixtureId } from "@/lib/fixtures/analysis";
 
 const MAKER_PLANOGRAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 75, 100] as const;
@@ -136,7 +135,6 @@ export function PlanogramMakerPage() {
   }, [shelves]);
 
   const planogramRows = useMemo(() => {
-    const storeId = selectedStore?.id ?? null;
     return storeFixtures.map((fixture) => {
       const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
       const representativeShelf = fixtureShelves
@@ -158,11 +156,7 @@ export function PlanogramMakerPage() {
         dimensions: `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
       };
 
-      const fixturePlanogramId = getEffectiveFixturePlanogramId({
-        storeId,
-        fixtureId: fixture.id,
-        serverPlanogramId: fixture.planogram_id,
-      });
+      const fixturePlanogramId = fixture.planogram_id ?? null;
 
       const baseRow = toPlanogramRow(
         representativeShelf ?? fallbackShelf,
@@ -189,7 +183,6 @@ export function PlanogramMakerPage() {
   }, [
     storeFixtures,
     shelvesByFixtureId,
-    selectedStore?.id,
     planogramMap,
     defaultRuleSetName,
   ]);

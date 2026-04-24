@@ -1,4 +1,6 @@
 import type { MutableRefObject } from "react";
+import { useState } from "react";
+import { Pencil, Plus } from "lucide-react";
 
 import {
   CategoryFilterTags,
@@ -10,6 +12,8 @@ import type { PlanogramEditHandlers } from "@/components/planogram/types";
 import { StatCard } from "@/components/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { derivePlanogramStats } from "@/lib/planogram/planogram-derive-stats";
 import {
@@ -23,47 +27,60 @@ import type {
   PlanogramShelfDef,
 } from "@/types/planogram";
 
-interface PlanogramAssociationBlockProps {
+interface PlanogramAssociationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   planogramOptions: { id: string; name: string }[];
   planogramId: string;
   onPlanogramIdChange: (value: string) => void;
   onSaveAssociation: () => void;
-  effectiveFixturePlanogramId: string;
 }
 
-function PlanogramAssociationBlock({
+function PlanogramAssociationModal({
+  isOpen,
+  onClose,
   planogramOptions,
   planogramId,
   onPlanogramIdChange,
   onSaveAssociation,
-  effectiveFixturePlanogramId,
-}: PlanogramAssociationBlockProps) {
+}: PlanogramAssociationModalProps) {
+  const handleSave = () => {
+    onSaveAssociation();
+    onClose();
+  };
+
   return (
-    <Card className="border-border bg-card/80">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">Planogram Association</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <Select value={planogramId} onChange={(e) => onPlanogramIdChange(e.target.value)}>
-          <option value="">No planogram</option>
-          {planogramOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.name}
-            </option>
-          ))}
-        </Select>
-        <Button type="button" variant="outline" className="w-full" onClick={onSaveAssociation}>
-          Save Planogram Association
-        </Button>
-        <p className="text-xs text-muted-foreground">
-          Current association:{" "}
-          {effectiveFixturePlanogramId
-            ? (planogramOptions.find((option) => option.id === effectiveFixturePlanogramId)?.name ??
-              effectiveFixturePlanogramId)
-            : "None"}
+    <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg" showCloseButton>
+      <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
+        <h3 className="text-foreground text-lg font-semibold">Associate Planogram</h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Select a planogram to assign to this fixture.
         </p>
-      </CardContent>
-    </Card>
+        <div className="mt-4 space-y-2">
+          <Label htmlFor="fixture-planogram-association">Planogram</Label>
+          <Select
+            id="fixture-planogram-association"
+            value={planogramId}
+            onChange={(e) => onPlanogramIdChange(e.target.value)}
+          >
+            <option value="">None</option>
+            {planogramOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -115,22 +132,75 @@ export function StoreFixtureDetailPlanogramTab({
   onSaveAssociation,
   effectiveFixturePlanogramId,
 }: StoreFixtureDetailPlanogramTabProps) {
-  const hasAssociatedPlanogram = !!effectivePayload?.fixture;
+  const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false);
+  const hasAssociatedPlanogram = !!effectiveFixturePlanogramId;
+  const associatedPlanogramName =
+    planogramOptions.find((option) => option.id === effectiveFixturePlanogramId)?.name ??
+    effectivePayload?.name ??
+    effectiveFixturePlanogramId;
 
   return (
     <div className="space-y-3">
-      <PlanogramAssociationBlock
+      {!hasAssociatedPlanogram ? (
+        <Card className="border-border bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">Planogram Association</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              No planogram is associated with this fixture.
+            </p>
+            <Button
+              type="button"
+              variant="success"
+              className="items-center gap-1.5"
+              onClick={() => setIsAssociationModalOpen(true)}
+            >
+              <Plus className="size-4" aria-hidden />
+              Associate Planogram
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border bg-card/80">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm">Associated Planogram</CardTitle>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="items-center gap-1.5"
+                onClick={() => setIsAssociationModalOpen(true)}
+              >
+                <Pencil className="size-4" aria-hidden />
+                Edit
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-sm text-foreground">{associatedPlanogramName}</div>
+            {effectivePayload ? (
+              <>
+                <div className="text-sm text-muted-foreground">
+                  {effectivePayload.version ?? "—"} · {effectivePayload.status}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {effectivePayload.description ?? "No description"}
+                </div>
+              </>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+      <PlanogramAssociationModal
+        isOpen={isAssociationModalOpen}
+        onClose={() => setIsAssociationModalOpen(false)}
         planogramOptions={planogramOptions}
         planogramId={planogramId}
         onPlanogramIdChange={onPlanogramIdChange}
         onSaveAssociation={onSaveAssociation}
-        effectiveFixturePlanogramId={effectiveFixturePlanogramId}
       />
-      {!hasAssociatedPlanogram && (
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm text-muted-foreground">
-          No planogram is associated with this fixture.
-        </div>
-      )}
       {hasAssociatedPlanogram && !isMissingPlanogram && (
         <>
           <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
@@ -197,24 +267,18 @@ export function StoreFixtureDetailPlanogramTab({
                 <ProductDetailsTable shelves={shelvesToShow} />
               </div>
             </div>
-            {effectivePayload ? (
-              <div className="rounded-lg border border-border bg-card/80 p-3 text-sm text-muted-foreground">
-                {effectivePayload.name} · {effectivePayload.version ?? "—"} · {effectivePayload.status}
-                <div className="mt-1">
-                  {effectivePayload.description ?? "No description"}
+            <div className="rounded-lg border border-border bg-card/80 p-3 text-sm text-muted-foreground">
+              {planogramFixture ? (
+                <div>
+                  Fixture: {planogramFixture.width}×{planogramFixture.height}×{planogramFixture.depth}
                 </div>
-                {planogramFixture ? (
-                  <div className="mt-2">
-                    Fixture: {planogramFixture.width}×{planogramFixture.height}×{planogramFixture.depth}
-                  </div>
-                ) : null}
-                {baseShelves.length > 0 ? (
-                  <div className="mt-2">
-                    {getShelfDisplayLabel(baseShelves, baseShelves[0].id)} starts at {baseShelves[0].y_position}
-                  </div>
-                ) : null}
-              </div>
-            ) : null}
+              ) : null}
+              {baseShelves.length > 0 ? (
+                <div className={planogramFixture ? "mt-2" : undefined}>
+                  {getShelfDisplayLabel(baseShelves, baseShelves[0].id)} starts at {baseShelves[0].y_position}
+                </div>
+              ) : null}
+            </div>
           </div>
         </>
       )}

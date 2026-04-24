@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
-import { getFixturePlanogramAssociationsStorageKey } from "@/lib/fixtures/fixture-planogram-storage";
 import { useStore as useGlobalStore } from "@/providers/store";
 import {
   useCreateShelf,
@@ -21,7 +20,12 @@ import {
   useUpdateShelf,
 } from "@/queries/maker";
 import { useShelfTemplates } from "@/queries/checker";
-import { fetchStoreFixtures, updateStoreFixture } from "@/queries/checker/api/fixtures";
+import {
+  assignPlanogramToFixture,
+  clearPlanogramFromFixture,
+  fetchStoreFixtures,
+  updateStoreFixture,
+} from "@/queries/checker/api/fixtures";
 
 import { StoreFixtureDetailFixtureTabCard } from "./store-fixture-detail-fixture-tab-card";
 import type { FixtureFormDraft } from "./store-fixture-detail-fixture-tab-card";
@@ -29,7 +33,6 @@ import { StoreFixtureDetailComplianceTab } from "./store-fixture-detail-complian
 import { StoreFixtureDetailPlanogramTab } from "./store-fixture-detail-planogram-tab";
 import { StoreFixtureDetailShelvesTab } from "./store-fixture-detail-shelves-tab";
 import { AddShelfFormModal } from "./add-shelf-form-modal";
-import { usePersistedFixturePlanogramOverrides } from "./use-persisted-fixture-planogram-overrides";
 import { useStoreFixtureDetailPlanogramEditor } from "./use-store-fixture-detail-planogram-editor";
 
 export interface StoreFixtureDetailPageProps {
@@ -87,9 +90,6 @@ export function StoreFixtureDetailPage({
   const [isFixtureSaving, setIsFixtureSaving] = useState(false);
   const [isAddShelfModalOpen, setIsAddShelfModalOpen] = useState(false);
   const [isCreatingShelf, setIsCreatingShelf] = useState(false);
-  const [fixturePlanogramOverrides, setFixturePlanogramOverrides] = useState<
-    Record<string, string | null>
-  >({});
   const [fixtureComplianceOverrides, setFixtureComplianceOverrides] = useState<
     Record<string, string | null>
   >({});
@@ -106,16 +106,9 @@ export function StoreFixtureDetailPage({
     planogramId: "",
     complianceRuleSetId: "",
   });
-  const fixtureAssociationStorageKey = getFixturePlanogramAssociationsStorageKey(effectiveStoreId);
-
-  usePersistedFixturePlanogramOverrides({
-    storageKey: fixtureAssociationStorageKey,
-    overrides: fixturePlanogramOverrides,
-    setOverrides: setFixturePlanogramOverrides,
-  });
 
   const effectiveFixturePlanogramId = fixture
-    ? (fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? "")
+    ? (fixture.planogram_id ?? "")
     : "";
   const { data: associatedPlanogramPayload } = usePlanogramById(
     preview?.planogramPayload ? null : (effectiveFixturePlanogramId || null),
@@ -140,13 +133,13 @@ export function StoreFixtureDetailPage({
       aisle: fixture.physical_location.aisle,
       section: fixture.physical_location.section,
       zone: fixture.physical_location.zone,
-      planogramId: fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? "",
+      planogramId: fixture.planogram_id ?? "",
       complianceRuleSetId:
         fixtureComplianceOverrides[fixture.id] ??
         selectedStore?.default_compliance_rule_set_id ??
         "",
     });
-  }, [fixture, fixtureComplianceOverrides, fixturePlanogramOverrides, selectedStore?.default_compliance_rule_set_id]);
+  }, [fixture, fixtureComplianceOverrides, selectedStore?.default_compliance_rule_set_id]);
 
   const planogramOptions = planogramList.map((item) => ({ id: item.id, name: item.name }));
   const isMissingPlanogram = !!preview && !resolvedPlanogramPayload;
@@ -191,18 +184,32 @@ export function StoreFixtureDetailPage({
     }
   }, [effectiveStoreId, fixture, fixtureDraft, queryClient, toast]);
 
-  const handleSavePlanogramAssociation = useCallback(() => {
-    if (!fixture) return;
-    setFixturePlanogramOverrides((previous) => ({
-      ...previous,
-      [fixture.id]: fixtureDraft.planogramId || null,
-    }));
-    toast({
-      title: "Planogram association saved",
-      description: "This association is currently stored on frontend only.",
-      variant: "success",
-    });
-  }, [fixture, fixtureDraft.planogramId, toast]);
+  const handleSavePlanogramAssociation = useCallback(async () => {
+    if (!fixture || !effectiveStoreId) return;
+    try {
+      if (fixtureDraft.planogramId) {
+        await assignPlanogramToFixture(
+          effectiveStoreId,
+          fixture.id,
+          fixtureDraft.planogramId,
+        );
+      } else {
+        await clearPlanogramFromFixture(effectiveStoreId, fixture.id);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["maker", "fixtures", "list"] });
+      toast({
+        title: "Planogram association saved",
+        description: "Fixture planogram assignment was updated.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save planogram association",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [effectiveStoreId, fixture, fixtureDraft.planogramId, queryClient, toast]);
 
   const handleSaveComplianceAssociation = useCallback(() => {
     if (!fixture) return;

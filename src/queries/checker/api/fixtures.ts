@@ -6,6 +6,7 @@ export interface StoreFixtureApiModel {
   type: string;
   code?: string;
   planogram_id?: string | null;
+  current_planogram_assignment?: FixtureCurrentPlanogramAssignmentApiModel | null;
   dimensions: {
     width: number;
     height: number;
@@ -19,6 +20,28 @@ export interface StoreFixtureApiModel {
   };
   created_at: string;
   updated_at: string;
+}
+
+export interface FixtureCurrentPlanogramAssignmentApiModel {
+  assignment_id: string;
+  planogram_id: string | null;
+  planogram_name: string | null;
+  planogram_status: string | null;
+  assigned_at: string;
+  assigned_by: string | null;
+}
+
+export interface FixturePlanogramAssignmentHistoryApiModel {
+  id: string;
+  fixture_id: string;
+  planogram_id: string | null;
+  planogram_name: string | null;
+  planogram_status: string | null;
+  assigned_at: string;
+  assigned_by: string | null;
+  cleared_at: string | null;
+  cleared_by: string | null;
+  is_current: boolean;
 }
 
 export interface CreateStoreFixturePayload {
@@ -55,17 +78,35 @@ export interface UpdateStoreFixturePayload {
   };
 }
 
+interface AssignFixturePlanogramPayload {
+  planogram_id: string;
+}
+
+function normalizeFixture(
+  fixture: StoreFixtureApiModel,
+): StoreFixtureApiModel {
+  return {
+    ...fixture,
+    planogram_id:
+      fixture.current_planogram_assignment?.planogram_id ??
+      fixture.planogram_id ??
+      null,
+  };
+}
+
 export async function fetchStoreFixtures(): Promise<StoreFixtureApiModel[]> {
-  return apiClient.get<StoreFixtureApiModel[]>("/fixtures");
+  const fixtures = await apiClient.get<StoreFixtureApiModel[]>("/fixtures");
+  return fixtures.map(normalizeFixture);
 }
 
 export async function createStoreFixture(
   storeId: string,
   payload: CreateStoreFixturePayload,
 ): Promise<StoreFixtureApiModel> {
-  return apiClient.post<StoreFixtureApiModel>("/fixtures", payload, {
+  const fixture = await apiClient.post<StoreFixtureApiModel>("/fixtures", payload, {
     headers: { "X-Store-Id": storeId },
   });
+  return normalizeFixture(fixture);
 }
 
 export async function updateStoreFixture(
@@ -73,9 +114,10 @@ export async function updateStoreFixture(
   fixtureId: string,
   payload: UpdateStoreFixturePayload,
 ): Promise<StoreFixtureApiModel> {
-  return apiClient.put<StoreFixtureApiModel>(`/fixtures/${fixtureId}`, payload, {
+  const fixture = await apiClient.put<StoreFixtureApiModel>(`/fixtures/${fixtureId}`, payload, {
     headers: { "X-Store-Id": storeId },
   });
+  return normalizeFixture(fixture);
 }
 
 export async function deleteStoreFixture(
@@ -85,4 +127,40 @@ export async function deleteStoreFixture(
   return apiClient.delete(`/fixtures/${fixtureId}`, {
     headers: { "X-Store-Id": storeId },
   });
+}
+
+export async function assignPlanogramToFixture(
+  storeId: string,
+  fixtureId: string,
+  planogramId: string,
+): Promise<FixtureCurrentPlanogramAssignmentApiModel> {
+  return apiClient.post<FixtureCurrentPlanogramAssignmentApiModel>(
+    `/fixtures/${fixtureId}/planogram-assignment`,
+    { planogram_id: planogramId } satisfies AssignFixturePlanogramPayload,
+    {
+      headers: { "X-Store-Id": storeId },
+    },
+  );
+}
+
+export async function clearPlanogramFromFixture(
+  storeId: string,
+  fixtureId: string,
+): Promise<void> {
+  return apiClient.delete(`/fixtures/${fixtureId}/planogram-assignment`, {
+    headers: { "X-Store-Id": storeId },
+  });
+}
+
+export async function fetchFixturePlanogramAssignmentHistory(
+  storeId: string,
+  fixtureId: string,
+): Promise<FixturePlanogramAssignmentHistoryApiModel[]> {
+  return apiClient.get<FixturePlanogramAssignmentHistoryApiModel[]>(
+    `/fixtures/${fixtureId}/planogram-assignments`,
+    undefined,
+    {
+      headers: { "X-Store-Id": storeId },
+    },
+  );
 }

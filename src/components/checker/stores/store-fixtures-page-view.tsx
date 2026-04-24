@@ -297,7 +297,7 @@ export function StoreFixturesPageView({
               Associate Planogram
             </h3>
             <p className="text-muted-foreground mt-1 text-sm">
-              This association is currently stored on frontend only.
+              Select a planogram to assign to this fixture.
             </p>
             <div className="mt-4 space-y-2">
               <Label htmlFor="fixture-planogram-association">Planogram</Label>

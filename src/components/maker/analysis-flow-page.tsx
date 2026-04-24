@@ -29,7 +29,6 @@ import {
   mapAnalysisResultToReportSnippet,
 } from "@/lib/analysis";
 import { cn } from "@/lib/utils";
-import { getEffectiveFixturePlanogramId } from "@/lib/fixtures/fixture-planogram-association";
 import {
   runFixtureAnalysis,
 } from "@/queries/maker/api/analysis";
@@ -176,13 +175,7 @@ export function AnalysisFlowPage({
     const fixture = fixtures.find((item) => item.id === fixtureId);
     const planogramId =
       fixedPlanogramId ??
-      (fixture
-        ? getEffectiveFixturePlanogramId({
-            storeId: selectedStore?.id,
-            fixtureId: fixture.id,
-            serverPlanogramId: fixture.planogram_id,
-          })
-        : null);
+      (fixture?.planogram_id ?? null);
     const ruleSetId =
       complianceRuleSetId ?? selectedStore?.default_compliance_rule_set_id ?? null;
 
@@ -267,7 +260,6 @@ export function AnalysisFlowPage({
     fixtures,
     fixedPlanogramId,
     complianceRuleSetId,
-    selectedStore?.id,
     selectedStore?.default_compliance_rule_set_id,
     toast,
   ]);

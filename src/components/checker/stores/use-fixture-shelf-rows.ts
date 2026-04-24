@@ -10,7 +10,6 @@ interface UseFixtureShelfRowsParams {
   ruleSets: ComplianceRuleSetSummary[];
   searchQuery: string;
   planogramNameById: Map<string, string>;
-  fixturePlanogramOverrides: Record<string, string | null>;
   fixtureComplianceOverrides: Record<string, string>;
   fixtureCategorizeOverrides: Record<string, string>;
 }
@@ -21,7 +20,6 @@ export function useFixtureShelfRows({
   ruleSets,
   searchQuery,
   planogramNameById,
-  fixturePlanogramOverrides,
   fixtureComplianceOverrides,
   fixtureCategorizeOverrides,
 }: UseFixtureShelfRowsParams) {
@@ -72,13 +70,10 @@ export function useFixtureShelfRows({
   const effectivePlanogramByFixtureId = useMemo(() => {
     const map = new Map<string, string | null>();
     filteredFixtures.forEach((fixture) => {
-      map.set(
-        fixture.id,
-        fixturePlanogramOverrides[fixture.id] ?? fixture.planogram_id ?? null,
-      );
+      map.set(fixture.id, fixture.planogram_id ?? null);
     });
     return map;
-  }, [filteredFixtures, fixturePlanogramOverrides]);
+  }, [filteredFixtures]);
 
   const fixtureShelfRows = useMemo(() => {
     return filteredFixtures.flatMap((fixture) => {

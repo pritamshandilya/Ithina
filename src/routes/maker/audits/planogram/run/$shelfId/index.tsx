@@ -7,8 +7,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
 import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
-import { getEffectiveFixturePlanogramId } from "@/lib/fixtures/fixture-planogram-association";
-import { useStore } from "@/providers/store";
 import { usePlanogramById, usePlanogramShelfPreview, useStoreFixtures } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
@@ -24,21 +22,15 @@ export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
 function NewPlanogramAnalysisPage() {
   const { shelfId } = Route.useParams();
   const { from } = Route.useSearch();
-  const { selectedStore } = useStore();
   const { data: preview } = usePlanogramShelfPreview(shelfId);
   const { data: fixtures = [] } = useStoreFixtures();
   const backTo = from ?? "/maker/audits/planogram";
   const fixtureId = preview?.shelf.fixtureId ?? null;
   const fixture = fixtures.find((item) => item.id === fixtureId) ?? null;
   const effectivePlanogramId = fixtureId
-    ? getEffectiveFixturePlanogramId({
-        storeId: selectedStore?.id,
-        fixtureId,
-        serverPlanogramId:
-          fixture?.planogram_id ??
-          preview?.shelf.planogramId ??
-          null,
-      })
+    ? (fixture?.planogram_id ??
+      preview?.shelf.planogramId ??
+      null)
     : (preview?.shelf.planogramId ?? null);
   const { data: associatedPlanogramPayload } = usePlanogramById(effectivePlanogramId);
   const analysisPlanogramPayload =

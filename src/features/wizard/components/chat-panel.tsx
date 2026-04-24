@@ -20,6 +20,76 @@ import {
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/wizard";
 
+const SUGGESTIONS_INLINE = 3;
+
+const chipBtnClass =
+  "min-h-[3rem] rounded-lg border border-ithina-purple/25 bg-white/[0.04] px-2.5 py-2 text-left text-[13px] font-medium leading-snug text-slate-100 transition-all line-clamp-3 hover:border-ithina-purple/45 hover:bg-ithina-purple/10";
+
+/**
+ * Show up to three quick replies in a tight grid; overflow goes into a dropdown (no scrollbar).
+ */
+function SuggestionChips({
+  chips,
+  onPick,
+}: {
+  chips: string[];
+  onPick: (text: string) => void;
+}) {
+  const first = chips.slice(0, SUGGESTIONS_INLINE);
+  const rest = chips.slice(SUGGESTIONS_INLINE);
+  const gridCols =
+    first.length === 1 ? "grid-cols-1" : first.length === 2 ? "grid-cols-2" : "grid-cols-3";
+
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label="Quick reply suggestions">
+      <div className={cn("grid gap-1.5", gridCols)}>
+        {first.map((chip, i) => (
+          <button
+            key={`inline-${i}-${chip.slice(0, 48)}`}
+            type="button"
+            onClick={() => onPick(chip)}
+            title={chip}
+            className={chipBtnClass}
+          >
+            {chip}
+          </button>
+        ))}
+      </div>
+      {rest.length > 0 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-ithina-purple/35 bg-white/[0.02] py-2 text-[13px] font-medium text-ithina-purple/90 transition-colors hover:border-ithina-purple/55 hover:bg-ithina-purple/10 hover:text-ithina-purple"
+            >
+              <ChevronDown className="size-3.5 opacity-80" aria-hidden />
+              {rest.length} more {rest.length === 1 ? "suggestion" : "suggestions"}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            sideOffset={4}
+            className="max-w-[min(20rem,calc(100vw-2rem))] max-h-60 overflow-y-auto p-1"
+          >
+            <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              More quick replies
+            </DropdownMenuLabel>
+            {rest.map((chip, i) => (
+              <DropdownMenuItem
+                key={`more-${i}-${chip.slice(0, 48)}`}
+                onSelect={() => onPick(chip)}
+                className="whitespace-normal text-[13px] leading-snug"
+              >
+                {chip}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+    </div>
+  );
+}
+
 interface ChatPanelProps {
   messages: ChatMessage[];
   isTyping: boolean;
@@ -159,20 +229,9 @@ const ChatPanel = memo(function ChatPanel({
       )}
 
       <div className={cn("shrink-0 bg-ithina-bg/40", hasSplit ? "mt-auto border-t border-ithina-border/50 p-4" : "p-4")}>
-        <form onSubmit={handleFormSubmit} className="flex flex-col gap-3">
+        <form onSubmit={handleFormSubmit} className="flex flex-col gap-2">
           {suggestions && suggestions.length > 0 && !isTyping && !inputDisabled && (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {suggestions.map((chip) => (
-                <button
-                  key={chip}
-                  type="button"
-                  onClick={() => onSuggestionClick?.(chip)}
-                  className="rounded-xl border border-ithina-purple/25 bg-white/[0.04] px-3 py-2.5 text-left text-[12px] font-medium leading-snug text-slate-100 transition-all hover:border-ithina-purple/45 hover:bg-ithina-purple/10"
-                >
-                  {chip}
-                </button>
-              ))}
-            </div>
+            <SuggestionChips chips={suggestions} onPick={(c) => onSuggestionClick?.(c)} />
           )}
           <div className="group flex min-w-0 items-center gap-2 rounded-xl border border-ithina-border/60 bg-ithina-bg px-2 py-2 shadow-inner transition-all duration-300 focus-within:border-ithina-purple/40 focus-within:shadow-[0_0_20px_rgba(168,85,247,0.08)]">
             <textarea

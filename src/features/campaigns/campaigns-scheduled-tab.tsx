@@ -1,14 +1,23 @@
 import { useMemo, useState } from "react";
 
-import { useCampaignList, useUpdateCampaign, useDeleteCampaign } from "@/hooks/use-campaigns";
+import {
+  useCampaignList,
+  useCampaignLayoutPreviewUrl,
+  useUpdateCampaign,
+  useDeleteCampaign,
+} from "@/hooks/use-campaigns";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { absoluteCampaignAssetUrl, defaultPromoApiBase } from "@/features/wizard/lib/preview-layout";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
 
+import CampaignDetailModal from "./components/campaign-detail-modal";
 import CampaignModal from "./components/campaign-modal";
 
 type ScheduledItem = {
   id: number;
   campaignId?: string;
+  /** Hardware slugs from the campaign (for matching layout row to ESL/LCD) */
+  hardware?: string[];
   name: string;
   type: "recurring" | "one-time";
   date: string;
@@ -21,58 +30,109 @@ type ScheduledItem = {
   approvalRequired: boolean;
 };
 
+function MockCreativeThumb({
+  isLcd,
+  compact,
+}: {
+  isLcd: boolean;
+  compact: boolean;
+}) {
+  return (
+    <div
+      className={
+        isLcd
+          ? `${compact ? "h-12 w-16" : "h-64 max-h-[min(50vh,360px)] w-full max-w-sm"} flex shrink-0 items-center justify-center overflow-hidden rounded border border-slate-500 bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]`
+          : `${compact ? "h-12 w-16" : "h-64 max-h-[min(50vh,360px)] w-full max-w-sm"} flex shrink-0 items-center justify-center overflow-hidden rounded border border-slate-400 bg-slate-200`
+      }
+    >
+      {isLcd ? (
+        <div className="flex h-full w-full flex-col">
+          <div className="bg-amber-500 py-0.5 text-center">
+            <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-black">FLASH</span>
+          </div>
+          <div className="flex flex-1 items-end px-1 pb-1">
+            <span className="text-[10px] font-black text-white">$10.39</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex h-full w-full flex-col">
+          <div className="bg-[#cc0000] py-0.5 text-center">
+            <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-white">EXPIRING</span>
+          </div>
+          <div className="flex flex-1 items-end px-1 pb-1">
+            <span className="text-[10px] font-black text-[#111]">$10.39</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ScheduledCreativePreview({
   name,
   targets,
+  campaignId,
+  hardware,
   compact = true,
 }: {
   name: string;
   targets: string;
+  campaignId?: string;
+  hardware?: string[];
   compact?: boolean;
 }) {
+  const { imageUrl, isLoading } = useCampaignLayoutPreviewUrl(campaignId, {
+    hardwareOrder: hardware ?? [],
+  });
+  const apiBase = defaultPromoApiBase();
+  const fullSrc = imageUrl ? absoluteCampaignAssetUrl(imageUrl, apiBase) : null;
   const isLcd = targets.toLowerCase().includes("lcd");
-  return (
-    <div
-      className={
-        compact
-          ? "hidden w-[260px] items-center gap-3 rounded-xl border border-ithina-border/70 bg-ithina-bg/50 px-3 py-2 lg:flex"
-          : "flex w-full items-center gap-4 rounded-xl border border-ithina-border/70 bg-ithina-bg/50 p-4"
-      }
-    >
-      <div
-        className={
-          isLcd
-            ? `${compact ? "h-12 w-16" : "h-24 w-32"} shrink-0 overflow-hidden rounded border border-slate-500 bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]`
-            : `${compact ? "h-12 w-16" : "h-24 w-32"} shrink-0 overflow-hidden rounded border border-slate-400 bg-[#F0F0F0]`
-        }
-      >
-        {isLcd ? (
-          <div className="flex h-full flex-col">
-            <div className="bg-amber-500 py-0.5 text-center">
-              <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-black">
-                FLASH
-              </span>
-            </div>
-            <div className="flex flex-1 items-end px-1 pb-1">
-              <span className="text-[10px] font-black text-white">$10.39</span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full flex-col">
-            <div className="bg-[#cc0000] py-0.5 text-center">
-              <span className="font-mono text-[7px] font-bold uppercase tracking-wide text-white">
-                EXPIRING
-              </span>
-            </div>
-            <div className="flex flex-1 items-end px-1 pb-1">
-              <span className="text-[10px] font-black text-[#111]">$10.39</span>
-            </div>
-          </div>
-        )}
+  const useReal = Boolean(campaignId && fullSrc);
+
+  if (!compact) {
+    return (
+      <div className="flex w-full flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-2xl items-center justify-center overflow-hidden rounded-2xl border border-ithina-border/60 bg-slate-950/50 p-3 shadow-inner sm:p-5 min-h-48">
+          {campaignId && isLoading ? (
+            <div
+              className="flex h-64 w-full max-w-lg animate-pulse items-center justify-center rounded-lg bg-slate-800/60 sm:h-80"
+              aria-hidden
+            />
+          ) : useReal ? (
+            <img
+              src={fullSrc!}
+              alt={`${name} — layout preview`}
+              className="max-h-[min(58vh,560px)] w-full object-contain"
+            />
+          ) : (
+            <MockCreativeThumb isLcd={isLcd} compact={false} />
+          )}
+        </div>
+        <div className="text-center sm:text-left">
+          <p className="text-lg font-semibold leading-tight text-white sm:text-xl">{name}</p>
+          <p className="mt-1.5 font-mono text-sm text-slate-400">{targets}</p>
+          {!useReal && !isLoading && campaignId ? (
+            <p className="mt-2 text-sm text-amber-200/90">No layout image in this campaign yet. Finish design in Campaign Studio to see the preview here.</p>
+          ) : null}
+        </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="hidden w-[260px] items-center gap-3 rounded-xl border border-ithina-border/70 bg-ithina-bg/50 px-3 py-2 lg:flex">
+      {campaignId && isLoading ? (
+        <div className="h-12 w-16 shrink-0 animate-pulse rounded border border-ithina-border/60 bg-slate-800/80" />
+      ) : useReal ? (
+        <div className="h-12 w-16 shrink-0 overflow-hidden rounded border border-ithina-border/50 bg-ithina-bg">
+          <img src={fullSrc!} alt="" className="size-full object-contain" />
+        </div>
+      ) : (
+        <MockCreativeThumb isLcd={isLcd} compact />
+      )}
       <div className="min-w-0">
-        <p className={`${compact ? "text-xs" : "text-sm"} truncate font-semibold text-white`}>{name}</p>
-        <p className={`${compact ? "text-[10px]" : "text-xs"} mt-0.5 truncate font-mono text-slate-500`}>{targets}</p>
+        <p className="truncate text-xs font-semibold text-white">{name}</p>
+        <p className="mt-0.5 truncate font-mono text-[10px] text-slate-500">{targets}</p>
         <span className="mt-1 inline-flex rounded border border-ithina-purple/25 bg-ithina-purple/10 px-1.5 py-0.5 font-mono text-[9px] text-ithina-purple">
           Preview
         </span>
@@ -133,6 +193,7 @@ export default function CampaignsScheduledTab() {
   const [editing, setEditing] = useState<{ campaign: CampaignListItem; form: CampaignCreateForm } | null>(null);
   const [cancelTarget, setCancelTarget] = useState<ScheduledItem | null>(null);
   const [previewTarget, setPreviewTarget] = useState<ScheduledItem | null>(null);
+  const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
   const today = useMemo(() => new Date(), []);
   const [viewDate, setViewDate] = useState<Date>(new Date(today.getFullYear(), today.getMonth(), 1));
   const [selectedCalDay, setSelectedCalDay] = useState<number | null>(today.getDate());
@@ -153,6 +214,7 @@ export default function CampaignsScheduledTab() {
         return {
           id: 10_000 + idx,
           campaignId: c.id,
+          hardware: c.hardware,
           name: c.name,
           type: "one-time",
           date: dt
@@ -237,6 +299,10 @@ export default function CampaignsScheduledTab() {
 
   return (
     <>
+      {detailCampaignId && (
+        <CampaignDetailModal campaignId={detailCampaignId} onClose={() => setDetailCampaignId(null)} />
+      )}
+
       {cancelTarget && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-2xl border border-ithina-border bg-ithina-panel p-6 shadow-modal">
@@ -293,19 +359,37 @@ export default function CampaignsScheduledTab() {
       )}
 
       {previewTarget && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-xl rounded-2xl border border-ithina-border bg-ithina-panel p-6 shadow-modal">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-white">Campaign Preview</h2>
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm">
+          <div
+            className="flex max-h-[min(92vh,900px)] w-full max-w-4xl flex-col overflow-y-auto rounded-2xl border border-ithina-border bg-ithina-panel shadow-modal"
+            role="dialog"
+            aria-labelledby="schedule-preview-title"
+            aria-modal="true"
+          >
+            <div className="flex shrink-0 items-center justify-between border-b border-ithina-border/50 px-5 py-4 sm:px-6">
+              <div>
+                <h2 id="schedule-preview-title" className="text-lg font-semibold text-white sm:text-xl">
+                  Layout preview
+                </h2>
+                <p className="mt-0.5 text-sm text-slate-500">Creative as it will appear for this campaign</p>
+              </div>
               <button
                 type="button"
                 onClick={() => setPreviewTarget(null)}
-                className="rounded-md border border-ithina-border px-2 py-1 text-xs text-slate-400 hover:text-white"
+                className="shrink-0 rounded-lg border border-ithina-border bg-ithina-bg/80 px-3 py-1.5 text-sm text-slate-300 transition-colors hover:border-ithina-purple/40 hover:text-white"
               >
                 Close
               </button>
             </div>
-            <ScheduledCreativePreview name={previewTarget.name} targets={previewTarget.targets} compact={false} />
+            <div className="p-5 sm:p-6">
+              <ScheduledCreativePreview
+                name={previewTarget.name}
+                targets={previewTarget.targets}
+                campaignId={previewTarget.campaignId}
+                hardware={previewTarget.hardware}
+                compact={false}
+              />
+            </div>
           </div>
         </div>
       )}
@@ -446,12 +530,26 @@ export default function CampaignsScheduledTab() {
                       </div>
                     </div>
                   </div>
-                  <ScheduledCreativePreview name={item.name} targets={item.targets} />
+                  <ScheduledCreativePreview
+                    name={item.name}
+                    targets={item.targets}
+                    campaignId={item.campaignId}
+                    hardware={item.hardware}
+                  />
 
                   <div className="min-w-[120px] text-right">
                     <p className="whitespace-nowrap text-xs font-semibold text-white">{item.date}</p>
                     <p className="mt-1 whitespace-nowrap font-mono text-[10px] text-slate-500">{item.time}</p>
-                    <div className="mt-3 flex items-center justify-end gap-2">
+                    <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+                      {item.campaignId && (
+                        <button
+                          type="button"
+                          onClick={() => setDetailCampaignId(item.campaignId!)}
+                          className="inline-flex h-5 min-w-[40px] items-center justify-center rounded-md border border-sky-400/25 bg-sky-400/10 px-1.5 text-[10px] font-semibold text-sky-300 transition-colors hover:border-sky-400/40 hover:bg-sky-400/20"
+                        >
+                          View
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => setPreviewTarget(item)}

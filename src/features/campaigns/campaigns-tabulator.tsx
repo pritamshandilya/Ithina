@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import type { CampaignCreateForm, CampaignListItem } from "@/types/campaigns";
 import { useCampaignList, useDeleteCampaign, useUpdateCampaign } from "@/hooks/use-campaigns";
 
+import CampaignDetailModal from "./components/campaign-detail-modal";
 import CampaignHistoryModal from "./components/campaign-history-modal";
 import CampaignModal from "./components/campaign-modal";
 import CampaignsScheduledTab from "./campaigns-scheduled-tab";
@@ -29,7 +30,7 @@ const EMPTY_FORM: CampaignCreateForm = {
   scheduled_date: "",
 };
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 15;
 
 export default function CampaignsTabulator() {
   const { data: campaigns = [], isLoading, isError, error } = useCampaignList();
@@ -57,6 +58,7 @@ export default function CampaignsTabulator() {
   const [modalForm, setModalForm] = useState<CampaignCreateForm>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [historyCampaign, setHistoryCampaign] = useState<CampaignListItem | null>(null);
+  const [detailCampaignId, setDetailCampaignId] = useState<string | null>(null);
 
   // Stable refs so column formatters (recreated on pausedById change) don't capture stale closures.
   const pausedByIdRef = useRef(pausedById);
@@ -108,6 +110,10 @@ export default function CampaignsTabulator() {
     setModalMode(null);
     setEditingId(null);
     setModalForm(EMPTY_FORM);
+  }, []);
+
+  const openCampaignDetail = useCallback((c: CampaignListItem) => {
+    setDetailCampaignId(c.id);
   }, []);
 
   const openEdit = useCallback((c: CampaignListItem) => {
@@ -185,16 +191,24 @@ export default function CampaignsTabulator() {
     () =>
       buildCampaignColumns({
         pausedById,
+        onView: openCampaignDetail,
         onEdit: openEdit,
         onPause: togglePause,
         onHistory: setHistoryCampaign,
         onDelete: confirmDelete,
       }),
-    [pausedById, openEdit, togglePause, confirmDelete],
+    [pausedById, openCampaignDetail, openEdit, togglePause, confirmDelete],
   );
 
   return (
-    <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg">
+      {detailCampaignId && (
+        <CampaignDetailModal
+          campaignId={detailCampaignId}
+          onClose={() => setDetailCampaignId(null)}
+        />
+      )}
+
       {modalMode && (
         <CampaignModal
           mode={modalMode === "create" ? "create" : "edit"}
@@ -213,9 +227,9 @@ export default function CampaignsTabulator() {
         />
       )}
 
-      <div className="ithina-page w-full flex min-h-0 flex-col">
-        <div className="w-full space-y-3 px-4 pb-4 pt-2 lg:px-8">
-          <div className="flex flex-wrap items-center gap-3">
+      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
             <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
               <button
                 type="button"
@@ -316,7 +330,7 @@ export default function CampaignsTabulator() {
           </div>
 
           {activeTab === "all" && (
-            <div className="group relative">
+            <div className="group relative shrink-0">
               <Search
                 className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
                 aria-hidden
@@ -325,7 +339,7 @@ export default function CampaignsTabulator() {
                 type="search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by name or campaign ID…"
+                placeholder="Search by name…"
                 className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
                 aria-label="Search campaigns"
               />
@@ -333,7 +347,7 @@ export default function CampaignsTabulator() {
           )}
 
           {isLoading && (
-            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+            <div className="shrink-0 space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className="h-10 w-full rounded-md" />
               ))}
@@ -342,7 +356,7 @@ export default function CampaignsTabulator() {
 
           {!isLoading && isError && (
             <div
-              className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
+              className="flex shrink-0 items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
               role="alert"
             >
               <AlertCircle className="size-5 shrink-0" />
@@ -353,24 +367,29 @@ export default function CampaignsTabulator() {
           )}
 
           {!isLoading && !isError && activeTab === "all" && (
-            <div className="min-w-0">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               <DataTable<CampaignListItem>
                 data={filteredCampaigns}
                 columns={columns}
                 rowIdField="id"
                 isBulkEnabled
                 onSelectionChange={setSelectedRows}
+                onRowClick={openCampaignDetail}
                 pagination
                 pageSize={PAGE_SIZE}
                 pageSizeSelector={[5, 10, 15, 20, 50]}
                 emptyMessage="No campaigns match your filter."
                 headerFilters
-                fitContent
+                className="min-h-0 flex-1"
               />
             </div>
           )}
 
-          {!isLoading && !isError && activeTab === "scheduled" && <CampaignsScheduledTab />}
+          {!isLoading && !isError && activeTab === "scheduled" && (
+            <div className="min-h-0 min-w-0 flex-1">
+              <CampaignsScheduledTab />
+            </div>
+          )}
         </div>
       </div>
     </div>

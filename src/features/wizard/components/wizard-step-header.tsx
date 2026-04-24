@@ -13,9 +13,19 @@ interface WizardStepHeaderProps {
   onBack: () => void;
   /** Primary action after the step pills (e.g. NL step 1 Next). */
   trailingSlot?: ReactNode;
+  /** Navigate to a step; only called for steps at or before the current step. */
+  onStepClick?: (step: number) => void;
 }
 
-function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack, trailingSlot }: WizardStepHeaderProps) {
+function WizardStepHeader({
+  mode,
+  inputMode = "ai",
+  currentStep,
+  steps,
+  onBack,
+  trailingSlot,
+  onStepClick,
+}: WizardStepHeaderProps) {
   const isNl = mode === "nl";
   const isCsvNl = isNl && inputMode === "csv";
 
@@ -64,42 +74,83 @@ function WizardStepHeader({ mode, inputMode = "ai", currentStep, steps, onBack, 
           const stepNum = i + 1;
           const isActive = currentStep === stepNum;
           const isCompleted = currentStep > stepNum;
+          const isClickable = Boolean(onStepClick) && stepNum <= currentStep;
 
           return (
             <div key={i} className="flex shrink-0 items-center">
-              <div
-                className={cn(
-                  "flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-all",
-                  isActive ? "border border-ithina-purple/30 bg-ithina-purple/15" : "border border-transparent",
-                )}
-              >
+              {isClickable ? (
+                <button
+                  type="button"
+                  onClick={() => onStepClick?.(stepNum)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-left transition-all",
+                    isActive
+                      ? "border border-ithina-purple/30 bg-ithina-purple/15"
+                      : "border border-transparent hover:border-ithina-border/60 hover:bg-white/[0.04]",
+                  )}
+                >
+                  <div
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all",
+                      isCompleted
+                        ? "border-ithina-purple bg-ithina-purple text-white"
+                        : isActive
+                          ? "border-ithina-purple text-ithina-purple"
+                          : "border-ithina-border text-slate-600",
+                    )}
+                  >
+                    {isCompleted ? (
+                      <svg className="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      stepNum
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium transition-colors",
+                      isActive ? "text-white" : isCompleted ? "text-ithina-purple" : "text-slate-600",
+                    )}
+                  >
+                    {label}
+                  </span>
+                </button>
+              ) : (
                 <div
                   className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all",
-                    isCompleted
-                      ? "border-ithina-purple bg-ithina-purple text-white"
-                      : isActive
-                      ? "border-ithina-purple text-ithina-purple"
-                      : "border-ithina-border text-slate-600",
+                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-all",
+                    isActive ? "border border-ithina-purple/30 bg-ithina-purple/15" : "border border-transparent",
                   )}
                 >
-                  {isCompleted ? (
-                    <svg className="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
-                  ) : (
-                    stepNum
-                  )}
+                  <div
+                    className={cn(
+                      "flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all",
+                      isCompleted
+                        ? "border-ithina-purple bg-ithina-purple text-white"
+                        : isActive
+                          ? "border-ithina-purple text-ithina-purple"
+                          : "border-ithina-border text-slate-600",
+                    )}
+                  >
+                    {isCompleted ? (
+                      <svg className="size-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      stepNum
+                    )}
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium transition-colors",
+                      isActive ? "text-white" : isCompleted ? "text-ithina-purple" : "text-slate-600",
+                    )}
+                  >
+                    {label}
+                  </span>
                 </div>
-                <span
-                  className={cn(
-                    "text-[11px] font-medium transition-colors",
-                    isActive ? "text-white" : isCompleted ? "text-ithina-purple" : "text-slate-600",
-                  )}
-                >
-                  {label}
-                </span>
-              </div>
+              )}
               {i < steps.length - 1 && (
                 <div
                   className={cn(

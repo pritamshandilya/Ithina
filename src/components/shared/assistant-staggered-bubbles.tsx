@@ -30,12 +30,20 @@ function TypingDots() {
 
 const CHIP_PREVIEW_COUNT = 5;
 
-function ChipList({ intro, items }: { intro: string; items: string[] }) {
+function ChipList({
+  intro,
+  items,
+  closing,
+}: {
+  intro: string;
+  items: string[];
+  closing?: string;
+}) {
   const [expanded, setExpanded] = useState(false);
   const normalizedItems = useMemo(
     () =>
       items
-        .map((item) => item.replace(/\*\*/g, "").trim())
+        .map((item) => item.replace(/\*\*/g, "").replace(/`([^`]+)`/g, "$1").trim())
         .filter(Boolean),
     [items],
   );
@@ -44,39 +52,47 @@ function ChipList({ intro, items }: { intro: string; items: string[] }) {
 
   return (
     <div className="min-w-0">
-      {intro && <p className="mb-2 text-[13px] leading-snug text-slate-200">{intro}</p>}
-      <div className="rounded-xl border border-ithina-purple/20 bg-ithina-purple/[0.06] px-3 py-2.5">
-        <div className="flex flex-wrap gap-2">
-          {visible.map((item) => (
-            <span
-              key={item}
-              className="inline-flex max-w-full items-center rounded-full border border-ithina-purple/40 bg-ithina-purple/[0.12] px-3 py-1.5 text-[12px] font-medium leading-tight text-ithina-purple/90 break-words"
-            >
-              {item}
-            </span>
-          ))}
-          {remaining > 0 && !expanded && (
-            <button
-              type="button"
-              onClick={() => setExpanded(true)}
-              className="inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/45 bg-ithina-purple/[0.06] px-3 py-1.5 text-[12px] font-medium text-ithina-purple/80 transition-colors hover:border-ithina-purple/70 hover:bg-ithina-purple/10 hover:text-ithina-purple"
-            >
-              + {remaining} more
-              <ChevronDown className="size-3 shrink-0 opacity-80" />
-            </button>
-          )}
+      {intro.trim() ? (
+        <div className="mb-2.5 min-w-0 text-[13px] leading-snug text-slate-200 [&_p]:mb-1 [&_p:last-child]:mb-0">
+          <ChatMarkdown content={intro} />
         </div>
-        {expanded && remaining > 0 && (
+      ) : null}
+      {/* Chips sit in the same surface as the outer assistant bubble—no second bordered frame. */}
+      <div className="flex flex-wrap gap-2">
+        {visible.map((item, idx) => (
+          <span
+            key={`${idx}-${item}`}
+            className="inline-flex max-w-full items-center rounded-full border border-ithina-purple/35 bg-ithina-purple/[0.1] px-3 py-1.5 text-[12px] font-medium leading-tight break-words text-ithina-purple/95"
+          >
+            {item}
+          </span>
+        ))}
+        {remaining > 0 && !expanded && (
           <button
             type="button"
-            onClick={() => setExpanded(false)}
-            className="mt-2 inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/45 bg-transparent px-3 py-1.5 text-[11px] text-ithina-purple/75 transition-colors hover:border-ithina-purple/60 hover:text-ithina-purple"
+            onClick={() => setExpanded(true)}
+            className="inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/40 bg-white/[0.04] px-3 py-1.5 text-[12px] font-medium text-ithina-purple/85 transition-colors hover:border-ithina-purple/60 hover:bg-ithina-purple/10 hover:text-ithina-purple"
           >
-            Show less
-            <ChevronUp className="size-3" />
+            + {remaining} more
+            <ChevronDown className="size-3 shrink-0 opacity-80" />
           </button>
         )}
       </div>
+      {expanded && remaining > 0 && (
+        <button
+          type="button"
+          onClick={() => setExpanded(false)}
+          className="mt-2 inline-flex items-center gap-1 rounded-full border border-dashed border-ithina-purple/40 bg-transparent px-3 py-1.5 text-[11px] text-ithina-purple/80 transition-colors hover:border-ithina-purple/55 hover:text-ithina-purple"
+        >
+          Show less
+          <ChevronUp className="size-3" />
+        </button>
+      )}
+      {closing?.trim() ? (
+        <div className="mt-2.5 min-w-0 text-[13px] leading-snug text-slate-300 [&_p]:mb-1 [&_p:last-child]:mb-0">
+          <ChatMarkdown content={closing} />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -252,7 +268,7 @@ function ChunkBubble({
       )}
 
       {chunk.kind === "chip-list" && (
-        <ChipList intro={chunk.intro} items={chunk.items} />
+        <ChipList intro={chunk.intro} items={chunk.items} closing={chunk.closing} />
       )}
 
       {chunk.kind === "summary-card" && (

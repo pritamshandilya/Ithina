@@ -173,6 +173,12 @@ export function DataTable<T extends object>({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorGrid | null>(null);
+  /** Latest row-click handler; avoids remounting Tabulator when the parent passes an inline `onRowClick`. */
+  const onRowClickRef = useRef(onRowClick);
+  onRowClickRef.current = onRowClick;
+  /** Same for bulk selection: inline handlers must not remount the grid. */
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  onSelectionChangeRef.current = onSelectionChange;
   const tableGenerationRef = useRef(0);
   const currentPageRef = useRef(1);
   const currentPageSizeRef = useRef(pageSize);
@@ -301,10 +307,12 @@ export function DataTable<T extends object>({
     const effectiveRowFormatter = rowFormatter
       ? (row: { getData: () => T; getElement: () => HTMLElement }) => {
           rowFormatter(row);
-          if (onRowClick) row.getElement().classList.add("cursor-pointer");
+          if (onRowClickRef.current) row.getElement().classList.add("cursor-pointer");
         }
       : onRowClick
-        ? (row: { getElement: () => HTMLElement }) => row.getElement().classList.add("cursor-pointer")
+        ? (row: { getElement: () => HTMLElement }) => {
+            if (onRowClickRef.current) row.getElement().classList.add("cursor-pointer");
+          }
         : undefined;
     if (effectiveRowFormatter) options.rowFormatter = effectiveRowFormatter;
 
@@ -345,22 +353,24 @@ export function DataTable<T extends object>({
     table.on("columnResized", scheduleRedraw);
     if (movableColumns) table.on("columnMoved", scheduleRedraw);
 
-    if (onRowClick) {
-      (table as never as {
-        on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void;
-      }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
-        const ev = e as { target?: EventTarget };
-        const target = ev?.target as HTMLElement | null;
-        if (target?.closest?.("button, select, [data-action], a[href]")) return;
-        onRowClick(row.getData(), e);
-      });
-    }
+    (table as never as {
+      on: (event: string, callback: (e: unknown, row: { getData: () => T }) => void) => void;
+    }).on("rowClick", (e: unknown, row: { getData: () => T }) => {
+      const onClick = onRowClickRef.current;
+      if (!onClick) return;
+      const raw = (e as { target?: EventTarget }).target;
+      // `event.target` can be a `Text` node (clicks on button labels); it has no `closest()`.
+      const from =
+        raw instanceof Element ? raw : raw instanceof Text ? raw.parentElement : null;
+      if (from?.closest?.("button, select, [data-action], a[href]")) return;
+      onClick(row.getData(), e);
+    });
 
-    if (isBulkEnabled && onSelectionChange) {
+    if (isBulkEnabled) {
       (table as never as {
         on: (event: string, callback: (rows: T[]) => void) => void;
       }).on("rowSelectionChanged", (rows: T[]) => {
-        onSelectionChange(rows);
+        onSelectionChangeRef.current?.(rows);
       });
     }
 
@@ -374,7 +384,6 @@ export function DataTable<T extends object>({
     };
   }, [
     columns,
-    onRowClick,
     rowIdField,
     initialSort,
     emptyMessage,
@@ -390,7 +399,6 @@ export function DataTable<T extends object>({
     rowFormatter,
     showRowNumber,
     isBulkEnabled,
-    onSelectionChange,
     groupBy,
     groupHeader,
     groupStartOpen,

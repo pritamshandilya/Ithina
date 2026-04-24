@@ -36,6 +36,10 @@ export interface CampaignListItem {
   scheduledTime?: string;
   /** Full SKU detail rows from the API response (used for ESL preview placeholder substitution). */
   rawSkus?: import("@/types/api/campaigns").ApiCampaignSKU[];
+  /** From API `source_type` (e.g. nl, manual). */
+  sourceType?: string;
+  /** Original campaign intent prompt when from NL path. */
+  aiPrompt?: string | null;
 }
 
 export interface CampaignStatCard {

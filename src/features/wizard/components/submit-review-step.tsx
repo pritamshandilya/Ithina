@@ -11,6 +11,8 @@ export interface SubmitDisplayTag {
 interface SubmitReviewStepProps {
   onSubmit: () => void;
   isSubmitting?: boolean;
+  /** When false, hides the bottom submit bar (primary in WizardStepHeader). */
+  showFooterSubmit?: boolean;
   dataSourceLabel: string;
   skuCount: number;
   scheduleDateLabel?: string;
@@ -25,6 +27,7 @@ interface SubmitReviewStepProps {
 export default function SubmitReviewStep({
   onSubmit,
   isSubmitting = false,
+  showFooterSubmit = true,
   dataSourceLabel,
   skuCount,
   scheduleDateLabel = "Immediate",
@@ -108,6 +111,7 @@ export default function SubmitReviewStep({
           </div>
         </div>
 
+        {showFooterSubmit && (
         <div className="flex gap-3">
           <button
             type="button"
@@ -123,6 +127,7 @@ export default function SubmitReviewStep({
             {isSubmitting ? "Submitting…" : "Send for Approval"}
           </button>
         </div>
+        )}
 
         <p className="text-center text-[10px] text-slate-600">
           Draft cleared on submit · campaign moves to Approval Queue

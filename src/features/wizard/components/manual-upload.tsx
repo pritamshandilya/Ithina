@@ -25,6 +25,8 @@ interface ManualUploadProps {
   uploadedFiles: Partial<Record<HardwareDeviceId, string>>;
   onFileUploaded: (deviceId: HardwareDeviceId, fileName: string) => void;
   onConfirm: () => void;
+  /** When false, bottom primary is omitted (use WizardStepHeader). */
+  showFooterConfirm?: boolean;
 }
 
 function ManualUpload({
@@ -34,6 +36,7 @@ function ManualUpload({
   uploadedFiles,
   onFileUploaded,
   onConfirm,
+  showFooterConfirm = true,
 }: ManualUploadProps) {
   const fileInputRefs = useRef<Partial<Record<HardwareDeviceId, HTMLInputElement>>>({});
 
@@ -170,14 +173,16 @@ function ManualUpload({
             </div>
           </div>
 
-          <button
-            onClick={onConfirm}
-            disabled={uploadedCount === 0}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ithina-purple py-3.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <Check className="size-4" />
-            Confirm & Proceed to Studio
-          </button>
+          {showFooterConfirm && (
+            <button
+              onClick={onConfirm}
+              disabled={uploadedCount === 0}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-ithina-purple py-3.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Check className="size-4" />
+              Confirm & Proceed to Studio
+            </button>
+          )}
         </div>
       </div>
     </div>

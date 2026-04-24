@@ -118,6 +118,38 @@ export function getSubmittedVariantId(
   );
 }
 
+const norm = (s: string) => s.trim().toLowerCase();
+
+/**
+ * Single thumbnail for schedule/list UIs: submitted variant (A/B/…) when
+ * available, else first variant with a URL; matches campaign hardware when possible.
+ */
+export function getScheduledPreviewImageUrl(
+  variants: LayoutVariant[],
+  selectedVariantId: string | null,
+  hardwareOrder: string[],
+): string | undefined {
+  if (variants.length === 0) return undefined;
+  const letter = (selectedVariantId || "A").trim();
+  const byVariant = variants.filter(
+    (v) => v.variant_id && norm(String(v.variant_id)) === norm(letter),
+  );
+  const pool = byVariant.length > 0 ? byVariant : variants;
+  for (const hw of hardwareOrder) {
+    if (!hw?.trim()) continue;
+    const nhw = norm(hw);
+    const m = pool.find(
+      (v) =>
+        Boolean(v.image_url?.trim()) &&
+        (norm(v.hardware_type || "") === nhw ||
+          norm(v.hardware_type || "").includes(nhw) ||
+          nhw.includes(norm(v.hardware_type || ""))),
+    );
+    if (m?.image_url) return m.image_url;
+  }
+  return pool.find((v) => v.image_url?.trim())?.image_url;
+}
+
 export function hasEventType(
   events: ApiCampaignEventResponse[] | unknown,
   type: string,

@@ -1,6 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+
+import {
+  extractVariantsFromEvents,
+  getScheduledPreviewImageUrl,
+  getSubmittedVariantId,
+} from "@/features/campaign-studio/types";
 
 import { useActiveStoreId } from "@/hooks/use-active-store-id";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
@@ -275,6 +281,32 @@ export function useCampaignTimeline(campaignId: string) {
     staleTime: 10_000,
     gcTime: 5 * 60_000,
   });
+}
+
+/**
+ * Layout image the user selected in the studio, derived from the campaign
+ * timeline (layout events + `submitted_for_approval` variant id). Reuses the
+ * same query cache as {@link useCampaignTimeline}.
+ */
+export function useCampaignLayoutPreviewUrl(
+  campaignId: string | undefined,
+  options?: { hardwareOrder?: string[] },
+) {
+  const id = campaignId ?? "";
+  const { data: events, isLoading } = useCampaignTimeline(id);
+  const hardwareOrder = options?.hardwareOrder ?? [];
+  const hardwareKey = hardwareOrder.join("\0");
+  const imageUrl = useMemo(() => {
+    if (!campaignId || !events) return undefined;
+    const variants = extractVariantsFromEvents(events);
+    return getScheduledPreviewImageUrl(
+      variants,
+      getSubmittedVariantId(events),
+      hardwareOrder,
+    );
+  }, [campaignId, events, hardwareKey]);
+
+  return { imageUrl, isLoading: Boolean(campaignId) && isLoading };
 }
 
 /**

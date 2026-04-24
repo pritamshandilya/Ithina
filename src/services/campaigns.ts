@@ -229,6 +229,8 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
     scheduledEndAt: api.scheduled_end ?? undefined,
     scheduledTime: api.scheduled_time ?? undefined,
     rawSkus: api.skus,
+    sourceType: api.source_type,
+    aiPrompt: api.ai_prompt,
   };
 }
 

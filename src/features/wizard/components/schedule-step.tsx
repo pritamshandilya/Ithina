@@ -7,8 +7,9 @@ import {
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import CampaignDetailModal from "@/features/campaigns/components/campaign-detail-modal";
 import { useCampaignList } from "@/hooks/use-campaigns";
 import { cn } from "@/lib/utils";
 
@@ -24,6 +25,15 @@ export interface ScheduleStepInitialSchedule {
 interface ScheduleStepProps {
   onNext: (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => void;
   initialSchedule?: ScheduleStepInitialSchedule;
+  /** When false, hides the form footer primary (lives in WizardStepHeader). */
+  showFooterReview?: boolean;
+  /** Keeps parent in sync for header primary action. */
+  onScheduleFieldsChange?: (payload: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    autoApprove: boolean;
+  }) => void;
 }
 
 const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -75,7 +85,12 @@ function buildCalendarCells(
   return cells;
 }
 
-export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepProps) {
+export default function ScheduleStep({
+  onNext,
+  initialSchedule,
+  showFooterReview = true,
+  onScheduleFieldsChange,
+}: ScheduleStepProps) {
   const { data: campaigns = [], isLoading: schedulesLoading } = useCampaignList();
   const todayIso = useMemo(() => {
     const now = new Date();
@@ -108,6 +123,16 @@ export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepPr
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
+  const [viewCampaignId, setViewCampaignId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onScheduleFieldsChange?.({
+      startDate,
+      startTime,
+      endDate,
+      autoApprove,
+    });
+  }, [startDate, startTime, endDate, autoApprove, onScheduleFieldsChange]);
 
   const startDateRef = useRef<HTMLInputElement | null>(null);
   const endDateRef = useRef<HTMLInputElement | null>(null);
@@ -176,6 +201,10 @@ export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepPr
   };
 
   return (
+    <>
+    {viewCampaignId && (
+      <CampaignDetailModal campaignId={viewCampaignId} onClose={() => setViewCampaignId(null)} />
+    )}
     <div className="flex min-h-0 flex-1 animate-[fadeIn_0.3s_ease-out] overflow-hidden">
       <div className="flex h-full min-h-0 w-full overflow-hidden">
         {/* Left: schedule form — index_3.1.html ~1977–2018 */}
@@ -263,14 +292,16 @@ export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepPr
               </div>
             </label>
           </div>
-          <button
-            type="button"
-            onClick={() => onNext({ startDate, startTime, endDate, autoApprove })}
-            className="flex items-center gap-2 self-start rounded-xl bg-ithina-purple px-7 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
-          >
-            Review &amp; Submit
-            <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
-          </button>
+          {showFooterReview && (
+            <button
+              type="button"
+              onClick={() => onNext({ startDate, startTime, endDate, autoApprove })}
+              className="flex items-center gap-2 self-start rounded-xl bg-ithina-purple px-7 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
+            >
+              Review &amp; Submit
+              <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
+            </button>
+          )}
         </div>
 
         {/* Centre: calendar — w-60, index_3.1.html ~2020–2065 */}
@@ -439,13 +470,15 @@ export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepPr
               </div>
             ) : (
               filteredScheduled.map((s) => (
-                <button
+                <div
                   key={s.id}
-                  type="button"
-                  onClick={() => setSelectedSchedDay(s.day)}
-                  className="group cursor-pointer rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-left transition-colors hover:border-ithina-purple/30"
+                  className="group flex flex-col gap-3 rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-left sm:flex-row sm:items-start sm:justify-between"
                 >
-                  <div className="flex items-start justify-between gap-4">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSchedDay(s.day)}
+                    className="min-w-0 flex-1 text-left transition-colors hover:text-white"
+                  >
                     <div className="flex items-start gap-3">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ithina-purple/10">
                         <Calendar className="size-3.5 text-ithina-purple" strokeWidth={1.5} aria-hidden />
@@ -462,19 +495,27 @@ export default function ScheduleStep({ onNext, initialSchedule }: ScheduleStepPr
                         </p>
                       </div>
                     </div>
-                    <div className="shrink-0 text-right">
-                      <span className="inline-flex items-center gap-1 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] text-emerald-400">
-                        <Check className="size-2.5" strokeWidth={2} aria-hidden />
-                        Approved
-                      </span>
-                    </div>
+                  </button>
+                  <div className="flex shrink-0 items-center justify-end gap-2 sm:flex-col sm:items-end">
+                    <span className="inline-flex items-center gap-1 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] text-emerald-400">
+                      <Check className="size-2.5" strokeWidth={2} aria-hidden />
+                      Approved
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setViewCampaignId(s.id)}
+                      className="rounded-md border border-sky-400/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-300 transition-colors hover:border-sky-400/50 hover:bg-sky-400/20"
+                    >
+                      View
+                    </button>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>
         </div>
       </div>
     </div>
+    </>
   );
 }

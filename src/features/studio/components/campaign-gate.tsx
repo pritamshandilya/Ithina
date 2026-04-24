@@ -30,7 +30,7 @@ function CampaignGate({ showPicker, recentCampaigns, onShowPicker, onHidePicker,
         </div>
         <div className="flex w-full max-w-2xl gap-5">
           <button
-            onClick={() => navigate({ to: "/wizard" })}
+            onClick={() => navigate({ to: "/maker/wizard" })}
             className="group relative flex-1 rounded-2xl border-2 border-ithina-border bg-ithina-panel p-7 text-left transition-all hover:-translate-y-0.5 hover:border-ithina-purple/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.12)]"
           >
             <div className="mb-4 flex size-12 items-center justify-center rounded-xl bg-ithina-purple shadow-[0_0_20px_rgba(168,85,247,0.4)] transition-transform group-hover:scale-110">

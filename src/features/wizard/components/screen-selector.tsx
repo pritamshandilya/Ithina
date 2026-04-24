@@ -39,6 +39,8 @@ interface ScreenSelectorProps {
   eslPreviewPlaceholders?: EslPlaceholders;
   imageCacheBuster?: number;
   apiBaseUrl?: string;
+  /** When false, bottom primary is omitted (lives in WizardStepHeader). */
+  showFooterPrimary?: boolean;
 }
 
 const previewStyles: Record<HardwareDeviceId, string> = {
@@ -72,6 +74,7 @@ function ScreenSelector({
   eslPreviewPlaceholders,
   imageCacheBuster = 0,
   apiBaseUrl = defaultPromoApiBase(),
+  showFooterPrimary = true,
 }: ScreenSelectorProps) {
   const { data: devices = [] } = useHardwareDevices();
 
@@ -143,6 +146,7 @@ function ScreenSelector({
           imageCacheBuster={imageCacheBuster}
           apiBaseUrl={apiBaseUrl}
           onNext={onNext}
+          showFooterNext={showFooterPrimary}
         />
       ) : (
       <div className="flex flex-1 flex-col items-center gap-6 p-8">
@@ -201,28 +205,30 @@ function ScreenSelector({
           })}
         </div>
 
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-slate-500">
-            {selectedDevices.length} screen{selectedDevices.length !== 1 ? "s" : ""} selected
-          </span>
-          <button
-            onClick={onNext}
-            disabled={selectedDevices.length === 0}
-            className={cn(
-              "flex items-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white",
-              "shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all",
-              "disabled:cursor-not-allowed disabled:opacity-40",
-              "bg-ithina-purple hover:bg-ithina-purple-hover",
-            )}
-          >
-            {nextLabel}
-            {!isNl && (
-              <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            )}
-          </button>
-        </div>
+        {showFooterPrimary && (
+          <div className="flex items-center gap-4">
+            <span className="text-xs text-slate-500">
+              {selectedDevices.length} screen{selectedDevices.length !== 1 ? "s" : ""} selected
+            </span>
+            <button
+              onClick={onNext}
+              disabled={selectedDevices.length === 0}
+              className={cn(
+                "flex items-center gap-2 rounded-xl px-7 py-3 text-sm font-bold text-white",
+                "shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all",
+                "disabled:cursor-not-allowed disabled:opacity-40",
+                "bg-ithina-purple hover:bg-ithina-purple-hover",
+              )}
+            >
+              {nextLabel}
+              {!isNl && (
+                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              )}
+            </button>
+          </div>
+        )}
       </div>
       )}
 

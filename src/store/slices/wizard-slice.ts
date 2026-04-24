@@ -194,6 +194,10 @@ const wizardSlice = createSlice({
       state.gridData = [];
       state.campaignNamed = false;
     },
+    /** Clears chat bubbles only (keeps grid) when navigating between wizard steps. */
+    clearChatMessagesForStepChange(state) {
+      state.messages = [];
+    },
     setPromoAssistantLanguage(state, action: PayloadAction<LanguageCode>) {
       state.promoAssistantLanguage = action.payload;
     },
@@ -225,6 +229,7 @@ export const {
   removeCsvRow,
   removeAllCsvViolations,
   resetPromoAssistantChat,
+  clearChatMessagesForStepChange,
   setPromoAssistantLanguage,
   resetWizard,
 } = wizardSlice.actions;

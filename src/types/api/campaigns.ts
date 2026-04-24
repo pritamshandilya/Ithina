@@ -116,6 +116,8 @@ export interface ApiCampaignGenerateRequest {
 export interface ApiCampaignSubmitRequest {
   selected_variant_id: string;
   schedule_type?: string;
+  /** Shown in review step; sent so the server saves the final title (not in DB until submit). */
+  name?: string | null;
 }
 
 // ─── Approve (Checker confirms variant + triggers batch render) ─────────────

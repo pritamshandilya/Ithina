@@ -618,7 +618,7 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
 }
 
 .data-table-wrapper .tabulator-row {
-  min-height: 2.2rem;
+  min-height: 2.5rem;
   background-color: var(--tabulator-bg) !important;
   color: var(--tabulator-fg);
   /* tabulator_simple.min.css sets .tabulator-row { border-bottom: 1px solid #ddd } */
@@ -638,15 +638,22 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
 }
 
 .data-table-wrapper .tabulator-row.tabulator-selected {
-  background-color: color-mix(in oklch, var(--accent) 18%, var(--card)) !important;
+  background-color: color-mix(in oklch, var(--primary) 24%, var(--card)) !important;
+  color: var(--card-foreground);
+}
+
+.data-table-wrapper .tabulator-row.tabulator-selected .tabulator-cell {
+  color: var(--card-foreground) !important;
+  font-weight: 500;
 }
 
 .data-table-wrapper .tabulator-cell {
   background-color: inherit !important;
   border-right: 1px solid color-mix(in srgb, var(--tabulator-border) 50%, transparent) !important;
   border-bottom: none !important;
-  padding: 0.7rem 0.85rem;
-  font-size: 0.8125rem;
+  padding: 0.75rem 0.9rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
   color: var(--tabulator-fg);
   text-align: center;
   vertical-align: middle;
@@ -660,6 +667,14 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
+}
+
+/* Campaigns list: pipeline stages use larger type; allow wrap so steps stay visible. */
+.data-table-wrapper .tabulator-cell[tabulator-field="pipeline"] {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  vertical-align: top;
 }
 
 .data-table-wrapper .tabulator-cell.tabulator-frozen {

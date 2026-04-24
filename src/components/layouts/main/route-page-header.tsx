@@ -8,6 +8,7 @@ import type { UserFormData } from "@/features/admin-users/types";
 import { useCreateAdminUser } from "@/hooks/use-admin-users";
 import { toast } from "@/hooks/use-toast";
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { wizardEntryPathFromPathname } from "@/lib/wizard-route";
 import { cn } from "@/lib/utils";
 
 const HIDE_FOR_PATHS = new Set<string>(["/admin/dashboard", "/admin/stores/new"]);
@@ -114,7 +115,7 @@ export default function RoutePageHeader() {
           ) : showNewCampaign ? (
             <button
               type="button"
-              onClick={() => navigate({ to: "/wizard" })}
+              onClick={() => navigate({ to: wizardEntryPathFromPathname(location.pathname) })}
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90",
               )}

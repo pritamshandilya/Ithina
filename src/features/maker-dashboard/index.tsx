@@ -1,15 +1,11 @@
-import { ArrowRight, Search, Zap } from "lucide-react";
-import { useMemo, useState } from "react";
+import { ArrowRight, Zap } from "lucide-react";
+import { useMemo } from "react";
 import { useNavigate } from "@tanstack/react-router";
 
-import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useCampaignList } from "@/hooks/use-campaigns";
-import { formatCampaignDateTime } from "@/lib/format-datetime";
 import { MOCK_ROOS_INSIGHTS } from "@/mocks/dashboard-roos-insights";
-import { buildCampaignHistoryRows } from "@/services/dashboard";
 import type { CampaignListItem } from "@/types/campaigns";
-import type { CampaignRow } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
 const MS_WEEK = 7 * 86400000;
@@ -71,57 +67,6 @@ const ROUTES_BY_VARIANT = {
 
 export type MakerDashboardVariant = keyof typeof ROUTES_BY_VARIANT;
 
-const HISTORY_COLUMNS: IthColumnDef<CampaignRow>[] = [
-  {
-    key: "name",
-    label: "Campaign",
-    sortable: true,
-    render: (row) => <IthPrimaryCell primary={row.name} />,
-  },
-  {
-    key: "initiator",
-    label: "Initiator",
-    field: "initiator",
-    sortable: true,
-  },
-  {
-    key: "status",
-    label: "Status",
-    render: (row) => {
-      const variants = { live: "emerald", pending: "amber", draft: "slate" } as const;
-      return (
-        <IthBadge
-          label={row.statusLabel}
-          variant={variants[row.status]}
-          dot={row.status === "live"}
-          pulse={row.status === "live"}
-        />
-      );
-    },
-  },
-  {
-    key: "hardwareTargets",
-    label: "Hardware Targets",
-    render: (row) =>
-      row.status === "draft" ? (
-        <span className="font-mono text-xs italic text-slate-500">Not defined</span>
-      ) : (
-        <span className="text-xs text-slate-400">{row.hardwareTargets}</span>
-      ),
-  },
-  {
-    key: "lastUpdated",
-    label: "Last Updated",
-    align: "right",
-    sortable: true,
-    render: (row) => (
-      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
-        {formatCampaignDateTime(row.lastUpdated)}
-      </span>
-    ),
-  },
-];
-
 type Props = {
   /** Use `admin` when shown under `/admin/store-dashboard` so links stay in admin + `/wizard`. */
   variant?: MakerDashboardVariant;
@@ -131,24 +76,8 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
   const navigate = useNavigate();
   const routes = ROUTES_BY_VARIANT[variant];
   const { data: campaigns = [], isPending: campaignsPending } = useCampaignList();
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
 
   const statCards = useMemo(() => buildDashboardStatCards(campaigns), [campaigns]);
-
-  const historyRows = useMemo(() => buildCampaignHistoryRows(campaigns), [campaigns]);
-
-  const filteredRows = useMemo(
-    () =>
-      historyRows.filter(
-        (r) =>
-          !search ||
-          r.name.toLowerCase().includes(search.toLowerCase()) ||
-          r.campaignId.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [historyRows, search],
-  );
 
   return (
     <div className="flex w-full flex-1 flex-col gap-6 overflow-y-auto p-6 lg:p-8 animate-[fadeIn_0.3s_ease-out]">
@@ -223,44 +152,6 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
             </div>
           ))}
         </div>
-      </div>
-
-      {/* ── Campaign History ── */}
-      <div className="flex min-h-[420px] flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel lg:min-h-[520px]">
-        <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-4">
-          <h3 className="text-sm font-semibold text-white">Campaign History</h3>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-              placeholder="Search campaigns..."
-              aria-label="Search campaign history"
-              className="w-48 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-9 pr-3 text-xs text-white transition-colors focus:border-ithina-purple focus:outline-none"
-            />
-          </div>
-        </header>
-
-        <IthTable<CampaignRow>
-          data={filteredRows}
-          columns={HISTORY_COLUMNS}
-          rowKey={(r) => r.id}
-          onRowClick={(row) => navigate({ to: routes[row.status] as never })}
-          rowHighlight={(row) => {
-            if (row.status === "live")    return "emerald";
-            if (row.status === "pending") return "amber";
-            return null;
-          }}
-          pagination={{
-            page,
-            pageSize: PAGE_SIZE,
-            total: filteredRows.length,
-            onPageChange: setPage,
-            rowLabel: "campaigns",
-          }}
-          className="rounded-none border-0"
-        />
       </div>
     </div>
   );

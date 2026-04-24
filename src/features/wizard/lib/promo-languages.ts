@@ -105,10 +105,17 @@ export function isLanguageCode(value: string | null | undefined): value is Langu
 /**
  * Prefixes the user’s NL intent so the draft / intent service replies in the chosen language.
  * The exact phrasing is opaque to users (only their `text` appears in the chat bubble).
+ *
+ * We **always** include a language line (including for English). Previously, English had no
+ * prefix, so after a non-English turn the LangGraph thread still contained prior messages in
+ * the old language and the model kept replying in that language even when the UI said English.
  */
 export function buildPromptWithLanguage(text: string, code: LanguageCode): string {
   const trimmed = text.trim();
   const { englishName } = getLanguageOption(code);
-  if (code === DEFAULT_LANGUAGE_CODE) return trimmed;
-  return `[Reply in ${englishName} only; keep product names and SKUs as given.]\n\n${trimmed}`;
+  return (
+    `[Reply in ${englishName} only for this turn—` +
+    `use this language for all of your text including SUGGESTIONS, and ignore the language of earlier messages. ` +
+    `Keep product names and SKUs as given.]\n\n${trimmed}`
+  );
 }

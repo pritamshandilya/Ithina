@@ -1,5 +1,5 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ArrowRight, Loader2, Shield } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -56,12 +56,13 @@ import type { WizardEntryInput, WizardMode } from "./components/mode-chooser";
 import ScreenSelector from "./components/screen-selector";
 import ManualUpload from "./components/manual-upload";
 import WizardStepHeader from "./components/wizard-step-header";
-import GuardRailsStep from "./components/guard-rails-step";
+import GuardRailsStep, { type GuardRailsWizardHeaderApi } from "./components/guard-rails-step";
 import ScheduleStep from "./components/schedule-step";
 import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
 import CampaignStudioModal, { type AppliedDesignSelection } from "./components/campaign-studio-modal";
 import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
 import { defaultPromoApiBase } from "./lib/preview-layout";
+import { isNlScreensStepComplete } from "./lib/nl-screens-readiness";
 import { toast } from "@/hooks/use-toast";
 
 interface CsvRow {
@@ -144,6 +145,8 @@ export default function Wizard() {
   const [isRefining, setIsRefining] = useState(false);
   /** Bumped on each layout_refined to cache-bust identical image URLs */
   const [imageCacheBuster, setImageCacheBuster] = useState(0);
+  const [guardRailsCanProceed, setGuardRailsCanProceed] = useState(false);
+  const [guardRailsHeaderApi, setGuardRailsHeaderApi] = useState<GuardRailsWizardHeaderApi | null>(null);
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
@@ -229,6 +232,21 @@ export default function Wizard() {
     }
     expectingChatLayoutEventRef.current = false;
   }, [studioEvents, stopStudioPolling]);
+
+  const prevWStepForChatRef = useRef(wStep);
+  useEffect(() => {
+    if (prevWStepForChatRef.current === wStep) return;
+    prevWStepForChatRef.current = wStep;
+    // Keep Redux `messages` when changing steps (e.g. products ↔ design). Clearing caused an
+    // empty/black chat when returning to Select products. Reset only local composer state.
+    setIsTyping(false);
+    setInputText("");
+    setSuggestions([]);
+    setError(null);
+    if (wStep !== 2) {
+      stopStudioPolling();
+    }
+  }, [wStep, stopStudioPolling]);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -330,6 +348,16 @@ export default function Wizard() {
       dispatch(setWStep(wStep - 1));
     }
   }, [wStep, dispatch]);
+
+  const handleWizardStepClick = useCallback(
+    (step: number) => {
+      if (step === wStep) return;
+      if (step > wStep) return;
+      if (step < 1) return;
+      dispatch(setWStep(step));
+    },
+    [wStep, dispatch],
+  );
 
   const handleToggleDevice = useCallback((id: HardwareDeviceId) => {
     setSelectedDevices((prev) =>
@@ -675,6 +703,71 @@ export default function Wizard() {
     [dispatch],
   );
 
+  const handleScheduleFieldsChange = useCallback(
+    (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => {
+      setSchedule((prev) => ({
+        ...prev,
+        startDate: payload.startDate,
+        startTime: payload.startTime,
+        endDate: payload.endDate,
+        endTime: payload.startTime,
+        autoApprove: payload.autoApprove,
+      }));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (wStep !== 3) {
+      setGuardRailsCanProceed(false);
+      setGuardRailsHeaderApi(null);
+    }
+  }, [wStep]);
+
+  /**
+   * When coming back to Select Products (e.g. from Guard Rails), local schedule state can be
+   * out of sync with the chat summary card. Pull missing start/end from the last assistant
+   * summary enrichment so datetime fields and Next gating match what the user already saw.
+   */
+  const prevWStepForProductSyncRef = useRef(wStep);
+  useEffect(() => {
+    if (wMode !== "nl") {
+      prevWStepForProductSyncRef.current = wStep;
+      return;
+    }
+    const from = prevWStepForProductSyncRef.current;
+    const enteredStep1 = from !== 1 && wStep === 1;
+    prevWStepForProductSyncRef.current = wStep;
+    if (!enteredStep1) return;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role !== "ai" || !m.summaryEnrichment) continue;
+      const e = m.summaryEnrichment;
+      setSchedule((prev) => {
+        const next = { ...prev };
+        if (e.scheduleStartIso) {
+          const local = isoToDatetimeLocalValue(e.scheduleStartIso);
+          const p = datetimeLocalValueToParts(local);
+          if (p && !next.startDate?.trim()) {
+            next.startDate = p.date;
+            next.startTime = p.time;
+          }
+        }
+        if (e.scheduleEndIso) {
+          const local = isoToDatetimeLocalValue(e.scheduleEndIso);
+          const p = datetimeLocalValueToParts(local);
+          if (p && !next.endDate?.trim()) {
+            next.endDate = p.date;
+            next.endTime = p.time;
+          }
+        }
+        return next;
+      });
+      break;
+    }
+  }, [wStep, wMode, messages]);
+
   // ── Step 5: Send for Approval ─────────────────────────────────────
   const handleNlSubmit = useCallback(() => {
     if (!campaignIdFromStore) {
@@ -682,16 +775,23 @@ export default function Wizard() {
       return;
     }
     const scheduleType = schedule.startDate?.trim() ? "scheduled" : "immediate";
+    const nameForSubmit =
+      import.meta.env.VITE_SUBMIT_NAME_ON_CAMPAIGN === "true"
+        ? campaignName?.trim()
+        : undefined;
     submitMutation.mutate(
       {
         id: campaignIdFromStore,
         payload: {
           selected_variant_id: selectedVariant,
           schedule_type: scheduleType,
+          ...(nameForSubmit ? { name: nameForSubmit } : {}),
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
+          // Ensure list is fresh before leave so the new row appears on All Campaigns.
+          await queryClient.refetchQueries({ queryKey: campaignKeys.listPrefix });
           toast({
             title: "Sent for Approval",
             description: `Variant ${selectedVariant} is now pending review by the approver.`,
@@ -711,9 +811,11 @@ export default function Wizard() {
     );
   }, [
     campaignIdFromStore,
+    campaignName,
     selectedVariant,
     schedule.startDate,
     submitMutation,
+    queryClient,
     dispatch,
     navigate,
   ]);
@@ -849,10 +951,175 @@ export default function Wizard() {
     [selectedVariant, stopStudioPolling],
   );
 
-  // ── Proceed button visibility for NL step 1 ────────────────────────
-  const canProceedNl =
-    (inputMode === "ai" && (gridData.length === 0 || includedGridSkuCount > 0)) ||
-    (inputMode === "csv" && csvConfirmed);
+  // ── NL step 1: Next is enabled when staging is ready (end date is finalized on Schedule step) ──
+  const nlStep1NextEnabled = useMemo(() => {
+    if (inputMode === "csv") {
+      return csvConfirmed && csvRows.length > 0;
+    }
+    return (
+      includedGridSkuCount > 0 &&
+      campaignName.trim().length > 0 &&
+      Boolean(schedule.startDate?.trim())
+    );
+  }, [
+    inputMode,
+    csvConfirmed,
+    csvRows.length,
+    includedGridSkuCount,
+    campaignName,
+    schedule.startDate,
+  ]);
+
+  const nlStep1NextTitle = !nlStep1NextEnabled
+    ? inputMode === "csv"
+      ? "Confirm your CSV and stage at least one row before continuing."
+      : "Add at least one product, a campaign name, and a campaign start date before continuing."
+    : "Continue to Select Screens & Design";
+
+  const headerPrimaryClass =
+    "flex shrink-0 items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50";
+
+  const nlScreensReady = isNlScreensStepComplete(
+    selectedDevices,
+    sizeByDevice,
+    designConfigured,
+  );
+
+  const manualHeaderUploadsReady =
+    selectedDevices.length > 0 && selectedDevices.every((d) => Boolean(uploadedFiles[d]));
+
+  const wizardHeaderTrailing: ReactNode = (() => {
+    if (wMode === "nl") {
+      if (wStep === 1) {
+        return (
+          <button
+            type="button"
+            onClick={() => dispatch(setWStep(2))}
+            disabled={hwConfirmMutation.isPending || !nlStep1NextEnabled}
+            title={nlStep1NextTitle}
+            className={headerPrimaryClass}
+          >
+            Next: Select Screens & Design
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 2) {
+        return (
+          <button
+            type="button"
+            onClick={handleNlNextFromScreens}
+            disabled={!nlScreensReady || designGeneratePending}
+            className={headerPrimaryClass}
+          >
+            Next: Guard Rails
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 3) {
+        if (guardRailsCanProceed) {
+          return (
+            <button type="button" onClick={handleNlNextFromGuardRails} className={headerPrimaryClass}>
+              Proceed to Scheduling
+              <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+            </button>
+          );
+        }
+        if (guardRailsHeaderApi?.mode === "running") {
+          return (
+            <div
+              className="flex shrink-0 items-center gap-2 rounded-lg border border-ithina-border/60 bg-ithina-bg/50 px-3 py-2 text-xs font-medium text-slate-300"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="size-3.5 shrink-0 animate-spin text-ithina-purple" aria-hidden />
+              Validating…
+            </div>
+          );
+        }
+        if (guardRailsHeaderApi?.mode === "check") {
+          const checkTitle = guardRailsHeaderApi.checkDisabled
+            ? "Select at least one guard rail to validate."
+            : "Run compliance checks on the selected rules.";
+          return (
+            <button
+              type="button"
+              onClick={guardRailsHeaderApi.onCheckValidate}
+              disabled={guardRailsHeaderApi.checkDisabled}
+              title={checkTitle}
+              className={headerPrimaryClass}
+            >
+              <Shield className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+              Check &amp; Validate
+            </button>
+          );
+        }
+        return null;
+      }
+      if (wStep === 4) {
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              handleNlNextFromSchedule({
+                startDate: schedule.startDate,
+                startTime: schedule.startTime,
+                endDate: schedule.endDate,
+                autoApprove: schedule.autoApprove,
+              })
+            }
+            className={headerPrimaryClass}
+          >
+            Review &amp; Submit
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 5) {
+        return (
+          <button
+            type="button"
+            onClick={handleNlSubmit}
+            disabled={submitMutation.isPending}
+            className={headerPrimaryClass}
+          >
+            {submitMutation.isPending ? "Submitting…" : "Send for Approval"}
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+    }
+    if (wMode === "manual") {
+      if (wStep === 1) {
+        return (
+          <button
+            type="button"
+            onClick={() => dispatch(setWStep(2))}
+            disabled={selectedDevices.length === 0}
+            className={headerPrimaryClass}
+          >
+            Next: Upload Banners
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 2) {
+        return (
+          <button
+            type="button"
+            onClick={() => void handleManualConfirm()}
+            disabled={!manualHeaderUploadsReady}
+            className={headerPrimaryClass}
+          >
+            Confirm &amp; Proceed to Studio
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+    }
+    return null;
+  })();
 
   return (
     <>
@@ -880,19 +1147,8 @@ export default function Wizard() {
               currentStep={wStep}
               steps={wSteps}
               onBack={handleBack}
-              trailingSlot={
-                wStep === 1 && wMode === "nl" && canProceedNl ? (
-                  <button
-                    type="button"
-                    onClick={() => dispatch(setWStep(2))}
-                    disabled={hwConfirmMutation.isPending}
-                    className="flex shrink-0 items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next: Select Screens & Design
-                    <ArrowRight className="size-3.5 shrink-0" aria-hidden />
-                  </button>
-                ) : null
-              }
+              onStepClick={handleWizardStepClick}
+              trailingSlot={wizardHeaderTrailing}
             />
 
             {/* ── NL Step 1: Intent & Data Staging ── */}
@@ -1046,6 +1302,7 @@ export default function Wizard() {
                 sizeByDevice={sizeByDevice}
                 onToggleSize={handleToggleDeviceSize}
                 onNext={handleNlNextFromScreens}
+                showFooterPrimary={false}
                 storeNumber={constraints.store}
                 onConfigureDesign={handleNlConfigureDesign}
                 isGeneratingLayouts={designGeneratePending}
@@ -1058,17 +1315,28 @@ export default function Wizard() {
             )}
 
             {wStep === 3 && wMode === "nl" && (
-              <GuardRailsStep onNext={handleNlNextFromGuardRails} />
+              <GuardRailsStep
+                onNext={handleNlNextFromGuardRails}
+                onProceedAvailableChange={setGuardRailsCanProceed}
+                onWizardHeaderActionChange={setGuardRailsHeaderApi}
+                hideFooterProceed
+              />
             )}
 
             {wStep === 4 && wMode === "nl" && (
-              <ScheduleStep initialSchedule={schedule} onNext={handleNlNextFromSchedule} />
+              <ScheduleStep
+                initialSchedule={schedule}
+                onNext={handleNlNextFromSchedule}
+                onScheduleFieldsChange={handleScheduleFieldsChange}
+                showFooterReview={false}
+              />
             )}
 
             {wStep === 5 && wMode === "nl" && (
               <SubmitReviewStep
                 onSubmit={handleNlSubmit}
                 isSubmitting={submitMutation.isPending}
+                showFooterSubmit={false}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={inputMode === "csv" ? csvRows.length : includedGridSkuCount}
                 scheduleDateLabel={formatWizardScheduleDate(schedule.startDate) || "Immediate"}
@@ -1106,6 +1374,7 @@ export default function Wizard() {
                 sizeByDevice={sizeByDevice}
                 onToggleSize={handleToggleDeviceSize}
                 onNext={() => dispatch(setWStep(2))}
+                showFooterPrimary={false}
               />
             )}
 
@@ -1118,6 +1387,7 @@ export default function Wizard() {
                 uploadedFiles={uploadedFiles}
                 onFileUploaded={(id, name) => setUploadedFiles((prev) => ({ ...prev, [id]: name }))}
                 onConfirm={handleManualConfirm}
+                showFooterConfirm={false}
               />
             )}
           </div>

@@ -5,6 +5,19 @@ import remarkGfm from "remark-gfm";
 
 import { cn } from "@/lib/utils";
 
+/** Inline inventory / promo status tokens from assistant markdown — maps to pill colors. */
+const STATUS_BADGE_COLORS: Record<string, string> = {
+  NORMAL: "bg-slate-700/60 text-slate-300",
+  "EXPIRING SOON": "bg-amber-900/40 text-amber-300",
+  EXPIRING: "bg-amber-900/40 text-amber-300",
+  OVERSTOCK: "bg-blue-900/40 text-blue-300",
+  "LOW STOCK": "bg-orange-900/40 text-orange-300",
+  NEW: "bg-emerald-900/40 text-emerald-300",
+  CLEARANCE: "bg-rose-900/40 text-rose-300",
+  DAMAGED: "bg-red-900/40 text-red-300",
+  RECALLED: "bg-red-900/50 text-red-300",
+};
+
 /**
  * APIs sometimes emit Unicode bullets (`•`) instead of Markdown list markers.
  * CommonMark ignores `•`, so lines collapse into one paragraph; normalize to `-`.
@@ -22,18 +35,28 @@ function normalizeChatMarkdownSource(source: string): string {
 
   s = s.replace(/\u26A0\uFE0F?(?=[A-Za-z*]|-\d)/g, (m) => `${m} `);
 
+  // "1) item" is not valid GFM — normalize to "1. item"
+  s = s.replace(/^(\s*)(\d+)\)\s+(.+)$/gm, (_line, sp: string, n: string, rest: string) => `${sp}${n}. ${rest}`);
+
+  // Standalone "•" mid-line (some models emit without newline)
+  s = s.replace(/([.!?\u201d\u2019])\s*\u2022\s+/g, "$1\n- ");
+
   return s;
 }
 
 const chatMarkdownComponents: Partial<Components> = {
   p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
   ul: ({ children }) => (
-    <ul className="my-2 list-disc space-y-1 break-words pl-4">{children}</ul>
+    <ul className="my-2 list-outside list-disc space-y-1.5 break-words pl-5 marker:text-ithina-purple/70">
+      {children}
+    </ul>
   ),
   ol: ({ children }) => (
-    <ol className="my-2 list-decimal space-y-1 break-words pl-4">{children}</ol>
+    <ol className="my-2 list-outside list-decimal space-y-1.5 break-words pl-5 marker:font-mono marker:text-slate-400">
+      {children}
+    </ol>
   ),
-  li: ({ children }) => <li className="leading-[1.45]">{children}</li>,
+  li: ({ children }) => <li className="leading-[1.5]">{children}</li>,
   strong: ({ children }) => <strong className="font-semibold text-slate-100">{children}</strong>,
   em: ({ children }) => <em className="italic">{children}</em>,
   a: ({ href, children }) => (
@@ -81,14 +104,22 @@ const chatMarkdownComponents: Partial<Components> = {
   ),
   code: ({ className, children, ...props }) => {
     const inline = !className;
-    return inline ? (
-      <code
-        className="rounded bg-white/10 px-1 py-px font-mono text-[0.85em] text-slate-100"
-        {...props}
-      >
-        {children}
-      </code>
-    ) : (
+    if (inline) {
+      const text = String(children).trim().toUpperCase();
+      const statusClass = STATUS_BADGE_COLORS[text];
+      return (
+        <code
+          className={cn(
+            "rounded px-1.5 py-px font-mono text-[0.82em] font-medium",
+            statusClass ?? "bg-white/10 text-slate-100",
+          )}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    }
+    return (
       <code className={cn("block whitespace-pre font-mono", className)} {...props}>
         {children}
       </code>

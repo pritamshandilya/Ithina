@@ -2,6 +2,7 @@ import { Bell, Plus, Shield } from "lucide-react";
 import { useNavigate } from "@tanstack/react-router";
 
 import { PromoAuthService } from "@/lib/auth/promo-auth";
+import { wizardEntryPathForRole } from "@/lib/wizard-route";
 
 export default function Header() {
   const navigate = useNavigate();
@@ -55,7 +56,7 @@ export default function Header() {
         {/* New Campaign — makers and admins */}
         {(role === "maker" || role === "admin") && (
           <button
-            onClick={() => navigate({ to: "/wizard" })}
+            onClick={() => navigate({ to: wizardEntryPathForRole(role) })}
             className="flex items-center gap-1.5 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_14px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
           >
             <Plus className="size-3.5" />

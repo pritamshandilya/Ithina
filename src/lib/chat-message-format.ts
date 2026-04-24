@@ -87,7 +87,7 @@ export interface OptionItem {
 export type AssistantMessageChunk =
   | { kind: "markdown"; source: string }
   | { kind: "html"; html: string }
-  | { kind: "chip-list"; intro: string; items: string[] }
+  | { kind: "chip-list"; intro: string; items: string[]; closing?: string }
   | { kind: "summary-card"; card: SummaryCard; question?: string; note?: string }
   | { kind: "option-grid"; intro: string; options: OptionItem[] };
 
@@ -294,7 +294,7 @@ const PROMO_OPTION_MAP: Array<{ test: RegExp; icon: string; label: string; sub: 
   { test: /buy\s*\d\s*get\s*\d\s*free|bogo/i, icon: "🎁", label: "Buy 2 Get 1 Free", sub: "BOGO offer" },
   {
     test: /\bdiscount\b|percentage\s+off|\bpercent\b|%\s*(?:off|discount)/i,
-    icon: "%",
+    icon: "💸",
     label: "% Discount",
     sub: "10–50% off",
   },
@@ -660,9 +660,52 @@ function partitionSummaryMarkdownTail(
 const CATEGORY_INTRO_RE =
   /categor(?:y|ies)|full\s+list\s+of\s+categories|list\s+of\s+categories|available\s+in\s+your\s+store|pick\s+a\s+categor/i;
 
-function tryBuildChipList(intro: string, items: string[]): AssistantMessageChunk | null {
-  if (items.length < 3) return null;
-  return { kind: "chip-list", intro, items };
+/** True when list lines look like SKU/product rows (prices, stock, backtick badges, strikethrough). */
+function looksLikeProductList(items: string[]): boolean {
+  const productSignals = /\$[\d.,]+|~~|Stock:|→|`[^`\n]+`|⚠|✓|\bSKU\b|\bmargin\b/i;
+  const hits = items.filter((i) => productSignals.test(i));
+  return hits.length >= Math.ceil(items.length * 0.5);
+}
+
+/** One chip per category name; comma-separated substrings in a single bullet become multiple chips. */
+function expandCategoryChipItems(rawItems: string[]): string[] {
+  const out: string[] = [];
+  for (const line of rawItems) {
+    const cleaned = line
+      .replace(/\*\*/g, "")
+      .replace(/`([^`]+)`/g, "$1")
+      .replace(/^[\s-•*]+/, "")
+      .trim();
+    if (!cleaned) continue;
+    if (/[，,]/.test(cleaned) && cleaned.length < 200) {
+      for (const p of cleaned.split(/[，,]\s*/)) {
+        const t = p.trim();
+        if (t) out.push(t);
+      }
+    } else {
+      out.push(cleaned);
+    }
+  }
+  return out;
+}
+
+function tryBuildChipList(
+  intro: string,
+  items: string[],
+  closing?: string,
+  expandCommas = false,
+): AssistantMessageChunk | null {
+  let list = items;
+  if (expandCommas) {
+    list = expandCategoryChipItems(items);
+  }
+  if (list.length < 3) return null;
+  return {
+    kind: "chip-list",
+    intro,
+    items: list,
+    ...(closing?.trim() ? { closing: closing.trim() } : {}),
+  };
 }
 
 /**
@@ -688,6 +731,7 @@ function extractCategoryListParts(text: string): {
 
   const items = extractMarkdownListItems(text);
   if (items.length < 3) return null;
+  if (looksLikeProductList(items)) return null;
 
   const intro = lines.slice(0, firstBullet).join("\n").trim();
   const closingRaw = lines.slice(lastBullet + 1).join("\n").trim();
@@ -760,13 +804,10 @@ export function getAssistantMessageChunks(
   if (/\n/.test(trimmed)) {
     const categoryParts = extractCategoryListParts(trimmed);
     if (categoryParts) {
-      const chip = tryBuildChipList("", categoryParts.items);
+      const intro = categoryParts.intro.trim() || "";
+      const chip = tryBuildChipList(intro, categoryParts.items, categoryParts.closing, true);
       if (chip) {
-        const out: AssistantMessageChunk[] = [];
-        if (categoryParts.intro.trim()) out.push(markdownChunk(categoryParts.intro.trim()));
-        out.push(chip);
-        if (categoryParts.closing?.trim()) out.push(markdownChunk(categoryParts.closing.trim()));
-        return out;
+        return [chip];
       }
     }
   }
@@ -865,18 +906,19 @@ export function getAssistantMessageChunks(
     const intro = introMatch ? introMatch[1].replace(/<[^>]+>/g, "").trim() : "";
 
     if (CATEGORY_INTRO_RE.test(intro) || items.length >= 5) {
-      const listChip = intro.trim() ? tryBuildChipList("", items) : tryBuildChipList("Pick a category:", items);
+      const afterMatch = trimmed.match(/<\/(?:ul|ol)>\s*([\s\S]*)$/i);
+      const afterText = afterMatch?.[1]
+        ?.replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, "")
+        .trim();
+      const listChip = tryBuildChipList(
+        intro.trim() || "Pick a category:",
+        items,
+        afterText,
+        true,
+      );
       if (listChip) {
-        const afterMatch = trimmed.match(/<\/(?:ul|ol)>\s*([\s\S]*)$/i);
-        const afterText = afterMatch?.[1]
-          ?.replace(/<br\s*\/?>/gi, "\n")
-          .replace(/<[^>]+>/g, "")
-          .trim();
-        const out: AssistantMessageChunk[] = [];
-        if (intro.trim()) out.push(markdownChunk(intro.trim()));
-        out.push(listChip);
-        if (afterText) out.push(markdownChunk(afterText));
-        return out;
+        return [listChip];
       }
     }
 

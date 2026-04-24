@@ -46,6 +46,8 @@ export interface NlHardwareStepProps {
   imageCacheBuster?: number;
   apiBaseUrl?: string;
   onNext: () => void;
+  /** When false, hides the bottom "Next: Guard Rails" bar (primary lives in WizardStepHeader). */
+  showFooterNext?: boolean;
 }
 
 const EMPTY_ESL_PLACEHOLDERS: EslPlaceholders = {
@@ -73,6 +75,7 @@ function NlHardwareStep({
   imageCacheBuster = 0,
   apiBaseUrl,
   onNext,
+  showFooterNext = true,
 }: NlHardwareStepProps) {
   const [eslDropOpen, setEslDropOpen] = useState(false);
   const [lcdDropOpen, setLcdDropOpen] = useState(false);
@@ -313,7 +316,7 @@ function NlHardwareStep({
           )}
         </div>
 
-        {hasAnySizeSelection && (
+        {hasAnySizeSelection && showFooterNext && (
           <div className="mt-auto border-t border-ithina-border/40 pt-4">
             {!designReadyToProgress && (
               <div className="mb-2 flex items-center gap-1.5 text-[10px] text-amber-400">

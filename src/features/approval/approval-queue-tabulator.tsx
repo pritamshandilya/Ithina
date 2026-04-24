@@ -3,9 +3,8 @@
  * Tabs: Pending Approval · Approved · All
  */
 
-import { AlertCircle, Check, Megaphone, Search, X, Zap } from "lucide-react";
+import { AlertCircle, Check, Search, X, Zap } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Button } from "@/components/ui/button";
@@ -35,12 +34,21 @@ import type { InboxItem } from "@/types/approval";
 
 type TabId = "pending" | "approved" | "all";
 
+const APPROVAL_TABLE_PAGE_SIZE = 15;
+
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** Tabulator header filter: case-insensitive substring in joined fields (same idea as All Campaigns). */
+function headerTextIncludes(value: unknown, rowData: object, pick: (row: object) => string): boolean {
+  const term = String(value ?? "").trim().toLowerCase();
+  if (!term) return true;
+  return pick(rowData).toLowerCase().includes(term);
 }
 
 interface ApprovedRow {
@@ -232,11 +240,14 @@ export default function ApprovalQueueTabulator() {
         minWidth: 220,
         headerHozAlign: "left",
         hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as InboxItem;
+            return [row.title, row.subtitle ?? "", row.id].join(" ");
+          }),
         formatter: (cell: DataTableCell<InboxItem>) => {
           const row = cell.getData();
-          const megaphone = renderToStaticMarkup(
-            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
-          );
           const title = escapeHtml(row.title);
           const sub = row.subtitle ? escapeHtml(row.subtitle) : "";
           const urgentBadge = row.urgent
@@ -250,18 +261,13 @@ export default function ApprovalQueueTabulator() {
               </span>`
               : "";
           return `
-            <div class="flex items-center gap-3">
-              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
-                ${megaphone}
+            <div class="min-w-0 text-left">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="text-[13px] font-semibold leading-tight text-foreground">${title}</p>
+                ${publishingBadge}
+                ${urgentBadge}
               </div>
-              <div class="min-w-0 text-left">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="text-[13px] font-semibold leading-tight text-foreground">${title}</p>
-                  ${publishingBadge}
-                  ${urgentBadge}
-                </div>
-                ${sub ? `<p class="mt-0.5 font-mono text-[10px] text-muted-foreground opacity-80">${sub}</p>` : ""}
-              </div>
+              ${sub ? `<p class="mt-0.5 font-mono text-[10px] text-muted-foreground opacity-80">${sub}</p>` : ""}
             </div>`;
         },
       },
@@ -269,6 +275,7 @@ export default function ApprovalQueueTabulator() {
         title: "Submitted By",
         field: "initiator",
         width: 140,
+        headerFilter: "input" as const,
         formatter: (cell: DataTableCell<InboxItem>) =>
           `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -277,6 +284,12 @@ export default function ApprovalQueueTabulator() {
         field: "skus",
         width: 72,
         sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as InboxItem).skus).toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<InboxItem>) =>
           `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -284,7 +297,9 @@ export default function ApprovalQueueTabulator() {
         title: "Hardware",
         field: "hardwareTargets",
         width: 180,
-        headerFilter: false,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => (r as InboxItem).hardwareTargets?.join(" ") ?? ""),
         formatter: (cell: DataTableCell<InboxItem>) => {
           const row = cell.getData();
           return `<div class="flex flex-wrap gap-1">${hardwarePillsHtml(row.hardwareTargets ?? [])}</div>`;
@@ -294,7 +309,14 @@ export default function ApprovalQueueTabulator() {
         title: "Guard Rails",
         field: "metaVariant",
         width: 140,
-        headerFilter: false,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const row = rowData as InboxItem;
+          const label = row.guardRailsLabel ?? (row.metaVariant === "success" ? "All Pass" : row.meta);
+          return [label, row.meta, row.metaVariant].join(" ").toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<InboxItem>) => {
           const row = cell.getData();
           const label = row.guardRailsLabel ?? (row.metaVariant === "success" ? "All Pass" : row.meta);
@@ -306,6 +328,13 @@ export default function ApprovalQueueTabulator() {
         title: "Submitted",
         field: "submittedAt",
         width: 160,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const row = rowData as InboxItem;
+          return `${row.submittedAt ?? ""} ${row.meta ?? ""}`.toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<InboxItem>) => {
           const row = cell.getData();
           return `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${row.submittedAt ?? row.meta ?? ""}</span>`;
@@ -344,16 +373,16 @@ export default function ApprovalQueueTabulator() {
         minWidth: 180,
         headerHozAlign: "left",
         hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as ApprovedRow;
+            return [row.title, row.id].join(" ");
+          }),
         formatter: (cell: DataTableCell<ApprovedRow>) => {
           const row = cell.getData();
-          const megaphone = renderToStaticMarkup(
-            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
-          );
           const title = escapeHtml(row.title);
-          return `<div class="flex items-center gap-3 text-left">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
-              ${megaphone}
-            </div>
+          return `<div class="text-left">
             <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
           </div>`;
         },
@@ -362,6 +391,7 @@ export default function ApprovalQueueTabulator() {
         title: "Approved By",
         field: "approvedBy",
         width: 150,
+        headerFilter: "input" as const,
         formatter: (cell: DataTableCell<ApprovedRow>) =>
           `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -370,6 +400,12 @@ export default function ApprovalQueueTabulator() {
         field: "skus",
         width: 72,
         sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as ApprovedRow).skus).toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<ApprovedRow>) =>
           `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -377,7 +413,9 @@ export default function ApprovalQueueTabulator() {
         title: "Hardware",
         field: "hardware",
         width: 180,
-        headerFilter: false,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => (r as ApprovedRow).hardware?.join(" ") ?? ""),
         formatter: (cell: DataTableCell<ApprovedRow>) => {
           const row = cell.getData();
           return `<div class="flex flex-wrap gap-1">${hardwarePillsHtml(row.hardware)}</div>`;
@@ -387,6 +425,7 @@ export default function ApprovalQueueTabulator() {
         title: "Approved",
         field: "approvedAt",
         width: 160,
+        headerFilter: "input" as const,
         formatter: (cell: DataTableCell<ApprovedRow>) =>
           `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -394,6 +433,13 @@ export default function ApprovalQueueTabulator() {
         title: "Status",
         field: "status",
         width: 130,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const s = String((rowData as ApprovedRow).status).toLowerCase();
+          return s.includes(term) || (term === "deploy" && s === "deployed");
+        },
         formatter: (cell: DataTableCell<ApprovedRow>) => {
           const deployed = cell.getValue() === "Deployed";
           if (deployed) {
@@ -431,16 +477,16 @@ export default function ApprovalQueueTabulator() {
         minWidth: 180,
         headerHozAlign: "left",
         hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as AllRow;
+            return [row.title, row.id].join(" ");
+          }),
         formatter: (cell: DataTableCell<AllRow>) => {
           const row = cell.getData();
-          const megaphone = renderToStaticMarkup(
-            <Megaphone className="size-5 text-primary" strokeWidth={2} aria-hidden />,
-          );
           const title = escapeHtml(row.title);
-          return `<div class="flex items-center gap-3 text-left">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
-              ${megaphone}
-            </div>
+          return `<div class="text-left">
             <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
           </div>`;
         },
@@ -449,6 +495,7 @@ export default function ApprovalQueueTabulator() {
         title: "Initiator",
         field: "initiator",
         width: 150,
+        headerFilter: "input" as const,
         formatter: (cell: DataTableCell<AllRow>) =>
           `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -457,6 +504,12 @@ export default function ApprovalQueueTabulator() {
         field: "skus",
         width: 72,
         sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as AllRow).skus).toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<AllRow>) =>
           `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -464,6 +517,12 @@ export default function ApprovalQueueTabulator() {
         title: "Approval Status",
         field: "approvalStatus",
         width: 140,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as AllRow).approvalStatus).toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<AllRow>) => {
           const v = String(cell.getValue() ?? "");
           const map: Record<string, string> = {
@@ -480,7 +539,14 @@ export default function ApprovalQueueTabulator() {
         title: "Guard Rails",
         field: "guardRails",
         width: 130,
-        headerFilter: false,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const v = String((rowData as AllRow).guardRails);
+          const label = v === "Pass" ? "All Pass" : v;
+          return `${v} ${label}`.toLowerCase().includes(term);
+        },
         formatter: (cell: DataTableCell<AllRow>) => {
           const v = String(cell.getValue() ?? "");
           const label = v === "Pass" ? "All Pass" : v;
@@ -491,6 +557,7 @@ export default function ApprovalQueueTabulator() {
         title: "Date",
         field: "date",
         width: 160,
+        headerFilter: "input" as const,
         formatter: (cell: DataTableCell<AllRow>) =>
           `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
       },
@@ -524,10 +591,10 @@ export default function ApprovalQueueTabulator() {
   const pendingSelectedCount = selectedPendingIds.size;
 
   return (
-    <div className="flex w-full min-w-0 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
-      <div className="ithina-page w-full flex min-h-0 flex-col">
-        <div className="w-full space-y-3 px-4 pb-4 pt-2 lg:px-8">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
+      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
               {tabItems.map((t) => (
                 <button
@@ -613,7 +680,7 @@ export default function ApprovalQueueTabulator() {
             </div>
           </div>
 
-          <div className="group relative">
+          <div className="group relative shrink-0">
             <Search
               className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
               aria-hidden
@@ -629,7 +696,7 @@ export default function ApprovalQueueTabulator() {
           </div>
 
           {isLoading && (
-            <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+            <div className="shrink-0 space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className="h-10 w-full rounded-md" />
               ))}
@@ -638,7 +705,7 @@ export default function ApprovalQueueTabulator() {
 
           {isError && (
             <div
-              className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
+              className="flex shrink-0 items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
               role="alert"
             >
               <AlertCircle className="size-5 shrink-0" />
@@ -647,7 +714,7 @@ export default function ApprovalQueueTabulator() {
           )}
 
           {!isLoading && !isError && (
-            <div className="min-w-0">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
               {tab === "pending" && (
                 <DataTable<InboxItem>
                   data={filteredPending}
@@ -656,11 +723,10 @@ export default function ApprovalQueueTabulator() {
                   isBulkEnabled
                   onSelectionChange={setSelectedPending}
                   pagination
-                  pageSize={10}
-                  pageSizeSelector={[5, 10, 20, 50]}
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
                   emptyMessage="No pending submissions."
-                  headerFilters={false}
-                  fitContent
+                  className="min-h-0 flex-1"
                 />
               )}
 
@@ -670,11 +736,10 @@ export default function ApprovalQueueTabulator() {
                   columns={approvedColumns}
                   rowIdField="id"
                   pagination
-                  pageSize={10}
-                  pageSizeSelector={[5, 10, 20, 50]}
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
                   emptyMessage="No approved campaigns."
-                  headerFilters={false}
-                  fitContent
+                  className="min-h-0 flex-1"
                 />
               )}
 
@@ -686,11 +751,10 @@ export default function ApprovalQueueTabulator() {
                   isBulkEnabled
                   onSelectionChange={setSelectedAll}
                   pagination
-                  pageSize={10}
-                  pageSizeSelector={[5, 10, 20, 50]}
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
                   emptyMessage="No campaigns."
-                  headerFilters={false}
-                  fitContent
+                  className="min-h-0 flex-1"
                 />
               )}
             </div>

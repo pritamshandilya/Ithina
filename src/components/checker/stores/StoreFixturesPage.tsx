@@ -480,15 +480,30 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
   );
 
   const handleRunFixtureAdhocAnalysis = useCallback(
-    (_row: PlanogramShelfRow) => {
-      toast({
-        title: "Adhoc analysis",
-        description: "Adhoc analysis flow for fixtures will be available soon.",
-        variant: "warning",
+    (row: PlanogramShelfRow) => {
+      const fixtureId = row.fixtureId;
+      if (!fixtureId) {
+        toast({
+          title: "Fixture missing",
+          description: "Cannot start adhoc analysis without fixture context.",
+          variant: "warning",
+        });
+        setActionsMenu(null);
+        return;
+      }
+      const adhocPath =
+        isAdminPath && resolvedAdminStoreId
+          ? `/admin/${resolvedAdminStoreId}/audits/adhoc/new`
+          : location.pathname.startsWith("/maker/")
+            ? "/maker/audits/adhoc/new"
+            : "/checker/audits/adhoc/new";
+      navigate({
+        to: adhocPath as never,
+        search: { fixtureId, from: location.pathname } as never,
       });
       setActionsMenu(null);
     },
-    [toast],
+    [isAdminPath, location.pathname, navigate, resolvedAdminStoreId, toast],
   );
 
   const fixtureRowIdToFixtureId = useMemo(() => {

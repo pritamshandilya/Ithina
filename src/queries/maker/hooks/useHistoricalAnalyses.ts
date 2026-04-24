@@ -25,7 +25,7 @@ export function useHistoricalAnalyses(): {
   const data = useMemo(() => {
     const adhocRows: HistoricalAnalysisRow[] = adhocAnalyses.map((a) => ({
       id: a.id,
-      type: "adhoc",
+      type: a.analysisType as "adhoc" | "planogram",
       name: a.name,
       storeName: a.storeName,
       runDate: a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt),

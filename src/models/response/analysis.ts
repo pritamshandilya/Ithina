@@ -4,10 +4,13 @@ export type AnalysisJobStatus =
   | "COMPLETED"
   | "FAILED";
 
+export type AnalysisType = "PLANOGRAM" | "ADHOC";
+
 export interface AnalysisJobResponse {
   id: string;
   store_id: string;
   fixture_id: string;
+  analysis_type: AnalysisType;
   planogram_id: string | null;
   compliance_rule_set_id: string | null;
   status: AnalysisJobStatus;

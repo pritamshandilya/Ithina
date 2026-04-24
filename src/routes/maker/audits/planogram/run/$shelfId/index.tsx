@@ -40,6 +40,7 @@ function NewPlanogramAnalysisPage() {
     <AnalysisFlowPage
       title="New Planogram Based Analysis"
       backTo={backTo}
+      analysisType="PLANOGRAM"
       shelfName={preview?.shelf.shelfName}
       planogramName={analysisPlanogramPayload?.name}
       planogramPayload={analysisPlanogramPayload}

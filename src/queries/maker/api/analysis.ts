@@ -1,4 +1,8 @@
-import type { AnalysisJobResponse, AnalysisJobStatus } from "@/models/response/analysis";
+import type {
+  AnalysisJobResponse,
+  AnalysisJobStatus,
+  AnalysisType,
+} from "@/models/response/analysis";
 import type { AdhocAnalysis } from "@/types/maker";
 import { apiClient } from "@/queries/shared";
 import { fetchStoreFixtures } from "./fixtures";
@@ -6,7 +10,7 @@ import { fetchStoreFixtures } from "./fixtures";
 interface SubmitFixtureAnalysisParams {
   fixtureId: string;
   image: File;
-  planogramId: string;
+  analysisType: AnalysisType;
   complianceRuleSetId: string;
 }
 
@@ -47,10 +51,10 @@ export function isTerminalAnalysisStatus(status: AnalysisJobStatus): boolean {
 export async function submitFixtureAnalysis(
   params: SubmitFixtureAnalysisParams,
 ): Promise<AnalysisJobResponse> {
-  const { fixtureId, image, planogramId, complianceRuleSetId } = params;
+  const { fixtureId, image, analysisType, complianceRuleSetId } = params;
   const formData = new FormData();
   formData.append("image", image);
-  formData.append("planogram_id", planogramId);
+  formData.append("analysis_type", analysisType);
   formData.append("compliance_rule_set_id", complianceRuleSetId);
 
   return apiClient.post<AnalysisJobResponse>(
@@ -248,6 +252,8 @@ export async function fetchAdhocAnalysesForStore(
         complianceScore,
         errorMessage: job.error_message ?? undefined,
         fixtureId: job.fixture_id,
+        planogramId: job.planogram_id ?? undefined,
+        analysisType: job.analysis_type === "ADHOC" ? "adhoc" : "planogram",
         fixtureName,
         zone: fixture?.physical_location?.zone,
         section: fixture?.physical_location?.section,

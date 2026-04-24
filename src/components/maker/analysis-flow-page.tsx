@@ -36,6 +36,7 @@ import { useStoreFixtures } from "@/queries/maker";
 import { useStore } from "@/providers/store";
 import { useToast } from "@/hooks/use-toast";
 import type { PlanogramPayload } from "@/types/planogram";
+import type { AnalysisType } from "@/models/response/analysis";
 
 const ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp"];
 const MAX_SIZE_MB = 10;
@@ -46,7 +47,7 @@ export interface AnalysisFlowPageProps {
   title: string;
   /** Route to navigate back to */
   backTo: string;
-  /** Fixture/Shelf name (planogram flow) */
+  /** Fixture name (planogram flow) */
   shelfName?: string;
   /** Planogram name (planogram flow) */
   planogramName?: string;
@@ -60,7 +61,7 @@ export interface AnalysisFlowPageProps {
   showShelfSelection?: boolean;
   /** Currently selected fixture id */
   selectedShelfId?: string;
-  /** Callback when shelf changes */
+  /** Callback when fixture changes */
   onShelfSelect?: (id: string) => void;
   /** Available fixtures for selection */
   shelves?: Array<{ id: string; shelfName: string }>;
@@ -72,6 +73,8 @@ export interface AnalysisFlowPageProps {
   fixedPlanogramId?: string;
   /** Optional override for compliance rule set id. */
   complianceRuleSetId?: string | null;
+  /** Backend analysis mode to execute. */
+  analysisType?: AnalysisType;
 }
 
 export function AnalysisFlowPage({
@@ -86,6 +89,7 @@ export function AnalysisFlowPage({
   fixedFixtureId,
   fixedPlanogramId,
   complianceRuleSetId,
+  analysisType = "ADHOC",
 }: AnalysisFlowPageProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { selectedStore } = useStore();
@@ -179,10 +183,6 @@ export function AnalysisFlowPage({
     const ruleSetId =
       complianceRuleSetId ?? selectedStore?.default_compliance_rule_set_id ?? null;
 
-    if (!planogramId) {
-      setUploadError("No planogram is linked to this fixture.");
-      return;
-    }
     if (!ruleSetId) {
       setUploadError("No compliance rule set is configured for this store.");
       return;
@@ -198,10 +198,10 @@ export function AnalysisFlowPage({
 
       const currentJob = await runFixtureAnalysis(
         {
-        fixtureId,
-        image: imageFile,
-        planogramId,
-        complianceRuleSetId: ruleSetId,
+          fixtureId,
+          image: imageFile,
+          analysisType,
+          complianceRuleSetId: ruleSetId,
         },
         {
           onProgress: (update) => {
@@ -242,8 +242,7 @@ export function AnalysisFlowPage({
         description: "Latest analysis result has been loaded.",
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to run analysis.";
+      const message = error instanceof Error ? error.message : "Failed to run analysis.";
       setUploadError(message);
       toast({
         title: "Analysis failed",
@@ -260,6 +259,7 @@ export function AnalysisFlowPage({
     fixtures,
     fixedPlanogramId,
     complianceRuleSetId,
+    analysisType,
     selectedStore?.default_compliance_rule_set_id,
     toast,
   ]);
@@ -302,7 +302,7 @@ export function AnalysisFlowPage({
                   aria-label="Select fixture"
                   disabled={isShelfSelectionLocked}
                 >
-                  <option value="">No fixture selected (Adhoc)</option>
+                  <option value="">No fixture selected</option>
                   {shelves?.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.shelfName}

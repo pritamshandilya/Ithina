@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import { getFixtureComplianceAssociationsStorageKey } from "@/lib/fixtures/fixture-compliance-storage";
 import { useStore as useGlobalStore } from "@/providers/store";
 import {
   useCreateShelf,
@@ -33,6 +34,7 @@ import { StoreFixtureDetailComplianceTab } from "./store-fixture-detail-complian
 import { StoreFixtureDetailPlanogramTab } from "./store-fixture-detail-planogram-tab";
 import { StoreFixtureDetailShelvesTab } from "./store-fixture-detail-shelves-tab";
 import { AddShelfFormModal } from "./add-shelf-form-modal";
+import { usePersistedFixturePlanogramOverrides } from "./use-persisted-fixture-planogram-overrides";
 import { useStoreFixtureDetailPlanogramEditor } from "./use-store-fixture-detail-planogram-editor";
 
 export interface StoreFixtureDetailPageProps {
@@ -105,6 +107,13 @@ export function StoreFixtureDetailPage({
     zone: "",
     planogramId: "",
     complianceRuleSetId: "",
+  });
+  const fixtureComplianceStorageKey = getFixtureComplianceAssociationsStorageKey(effectiveStoreId);
+
+  usePersistedFixturePlanogramOverrides({
+    storageKey: fixtureComplianceStorageKey,
+    overrides: fixtureComplianceOverrides,
+    setOverrides: setFixtureComplianceOverrides,
   });
 
   const effectiveFixturePlanogramId = fixture

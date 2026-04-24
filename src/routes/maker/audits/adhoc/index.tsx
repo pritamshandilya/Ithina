@@ -1,209 +1,226 @@
 import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { format } from "date-fns";
-import { FolderOpen, Plus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { LayoutGrid, Plus, Search } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
+import { createMakerPlanogramTableColumns } from "@/components/planogram/planogram-maker-table-columns";
+import { PLANOGRAM_INITIAL_SORT, PlanogramActionsMenu } from "@/components/planogram/planogram-table-columns";
+import { DataTable } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAdhocAnalyses } from "@/queries/maker";
-import { mockUser } from "@/lib/api/mock-data";
-import type { AdhocAnalysis, AdhocAnalysisStatus } from "@/types/maker";
-import { getRelativePath } from "@/lib/utils";
+import { fetchStoreFixtures as fetchCheckerStoreFixtures } from "@/queries/checker/api/fixtures";
+import { useComplianceRuleSets, useShelves } from "@/queries/maker";
 import { PageHeader } from "@/components/shared/page-header";
 import { useStore } from "@/providers/store";
+import { useToast } from "@/hooks/use-toast";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { PlanogramArrangement } from "@/types/planogram";
+import type { PlanogramShelfRow, Shelf } from "@/types/maker";
+import { getShelfFixtureId } from "@/lib/fixtures/analysis";
 
 export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
 });
 
-const ADHOC_STATUS_LABELS: Record<AdhocAnalysisStatus, string> = {
-  processing: "Processing",
-  completed: "Completed",
-  failed: "Failed",
-};
-
-function getAdhocStatusClass(status: AdhocAnalysisStatus): string {
-  switch (status) {
-    case "completed":
-      return "bg-chart-2/20 text-chart-2 border-chart-2/30";
-    case "processing":
-      return "bg-accent/20 text-accent border-accent/30";
-    case "failed":
-      return "bg-destructive/20 text-destructive border-destructive/30";
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
+function toPlanogramRow(
+  shelf: Shelf,
+  defaultComplianceRuleSetName = "Default Rules",
+  fixturePlanogramId?: string | null,
+): PlanogramShelfRow {
+  const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
+  const skuCount = arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ?? 0;
+  const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
+  return {
+    ...shelf,
+    planogramId: fixturePlanogramId ?? undefined,
+    complianceRuleSet: defaultComplianceRuleSetName,
+    categorizeBy: "By Category",
+    lastRun: shelf.lastAuditDate,
+    productsCount: skuCount,
+    issuesCount: issues,
+  };
 }
-
-const ADHOC_COLUMNS: DataTableColumn<AdhocAnalysis>[] = [
-  {
-    title: "Fixture ID",
-    field: "fixtureId",
-    width: 140,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.fixtureId ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Fixture Name",
-    field: "fixtureName",
-    minWidth: 160,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.fixtureName ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Store",
-    field: "storeName",
-    sorter: "string",
-    minWidth: 160,
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.storeName}</span>`;
-    },
-  },
-  {
-    title: "Zone",
-    field: "zone",
-    width: 100,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground">${row.zone ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Section",
-    field: "section",
-    minWidth: 140,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm font-medium text-foreground truncate block">${row.section ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Fixture",
-    field: "fixtureType",
-    width: 130,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      const type = row.fixtureType?.replace(/_/g, " ") ?? "—";
-      return `<span class="text-sm font-medium text-foreground">${type}</span>`;
-    },
-  },
-  {
-    title: "Dimensions",
-    field: "dimensions",
-    width: 120,
-    sorter: "string",
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      return `<span class="text-sm tabular-nums font-medium text-foreground">${row.dimensions ?? "—"}</span>`;
-    },
-  },
-  {
-    title: "Date",
-    field: "createdAt",
-    sorter: "datetime",
-    width: 120,
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      const date = row.createdAt instanceof Date ? row.createdAt : new Date(row.createdAt);
-      return `<span class="text-sm font-medium text-foreground">${format(date, "MMM d, yyyy")}</span>`;
-    },
-  },
-  {
-    title: "Status",
-    field: "status",
-    sorter: "string",
-    width: 130,
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      const label = ADHOC_STATUS_LABELS[row.status] ?? row.status;
-      const statusClass = getAdhocStatusClass(row.status);
-      return `<span class="inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ${statusClass}">${label}</span>`;
-    },
-  },
-  {
-    title: "Score",
-    field: "complianceScore",
-    sorter: "number",
-    width: 100,
-    headerSort: true,
-    headerFilter: false,
-    formatter: (cell: unknown) => {
-      const row = (cell as { getData: () => AdhocAnalysis }).getData();
-      if (row.status !== "completed" || row.complianceScore == null) {
-        return `<span class="text-sm font-medium text-foreground">—</span>`;
-      }
-      const color =
-        row.complianceScore >= 90
-          ? "text-chart-2"
-          : row.complianceScore >= 75
-            ? "text-accent"
-            : "text-destructive";
-      return `<span class="text-sm tabular-nums font-medium ${color}">${row.complianceScore}%</span>`;
-    },
-  },
-];
 
 function AdhocAnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedStore } = useStore();
-  const selectedStoreId = selectedStore?.id || mockUser.storeId;
-  const { data: adhocAnalyses, isLoading } = useAdhocAnalyses(selectedStoreId);
-  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const { toast } = useToast();
+  const { data: shelves, isLoading } = useShelves();
+  const { data: storeFixtures = [] } = useQuery({
+    queryKey: ["maker", "fixtures", "list", selectedStore?.id ?? "no-store"],
+    queryFn: fetchCheckerStoreFixtures,
+    enabled: !!selectedStore?.id,
+    staleTime: 60 * 1000,
+  });
+  const { data: ruleSets = [] } = useComplianceRuleSets();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 50 });
+  const [actionsMenu, setActionsMenu] = useState<{
+    row: PlanogramShelfRow;
+    triggerEl: HTMLElement;
+    anchorPoint: { x: number; y: number };
+  } | null>(null);
+  const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
+  const [complianceSheetRuleSet, setComplianceSheetRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
+  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<string | null>(null);
+  const actionsMenuRef = useRef<HTMLDivElement>(null);
+  const tableWrapperRef = useRef<HTMLDivElement>(null);
+  const defaultRuleSetName = useMemo(
+    () => ruleSets.find((s) => s.isDefault)?.name ?? "Default Rules",
+    [ruleSets],
+  );
 
-  const handleRowClick = (row: AdhocAnalysis) => {
-    navigate({
-      to: "/maker/historical-analysis/$analysisId",
-      params: { analysisId: row.id },
-      search: { type: "adhoc", backTo: getRelativePath(location.pathname) },
+  const shelvesByFixtureId = useMemo(() => {
+    const map = new Map<string, Shelf[]>();
+    (shelves ?? []).forEach((shelf) => {
+      const fixtureId = getShelfFixtureId(shelf);
+      const fixtureShelves = map.get(fixtureId) ?? [];
+      fixtureShelves.push(shelf);
+      map.set(fixtureId, fixtureShelves);
     });
-  };
+    return map;
+  }, [shelves]);
 
-  const analyses = adhocAnalyses ?? [];
-  const sortedAnalyses = useMemo(() => {
-    return [...analyses].sort((a, b) => {
-      const dateA = new Date(a.createdAt).getTime();
-      const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA;
+  const fixtureRows = useMemo(() => {
+    return storeFixtures.map((fixture) => {
+      const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
+      const representativeShelf = fixtureShelves[0];
+      const fallbackShelf: Shelf = {
+        id: fixture.id,
+        fixtureId: fixture.id,
+        shelfName: fixture.code ?? fixture.type ?? "Fixture",
+        status: "never-audited",
+        aisleCode: fixture.physical_location.aisle,
+        zone: fixture.physical_location.zone,
+        section: fixture.physical_location.section,
+        fixtureType: fixture.type,
+        dimensions: `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
+      };
+      const baseRow = toPlanogramRow(
+        representativeShelf ?? fallbackShelf,
+        defaultRuleSetName,
+        fixture.planogram_id ?? null,
+      );
+      return {
+        ...baseRow,
+        id: fixture.id,
+        fixtureId: fixture.id,
+        fixtureCode: fixture.code ?? "",
+        fixtureShelvesCount: fixtureShelves.length,
+        aisleCode: fixture.physical_location.aisle || baseRow.aisleCode || undefined,
+        zone: fixture.physical_location.zone || baseRow.zone,
+        section: fixture.physical_location.section || baseRow.section,
+        fixtureType: fixture.type || baseRow.fixtureType,
+        dimensions: `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
+        complianceRuleSet: defaultRuleSetName,
+      } satisfies PlanogramShelfRow;
     });
-  }, [analyses]);
+  }, [defaultRuleSetName, shelvesByFixtureId, storeFixtures]);
 
-  const tableVisibleCount = Math.max(
-    0,
-    Math.min(
-      tablePagination.pageSize,
-      sortedAnalyses.length - (tablePagination.page - 1) * tablePagination.pageSize
-    )
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return fixtureRows;
+    const q = searchQuery.toLowerCase();
+    return fixtureRows.filter(
+      (r) =>
+        r.shelfName.toLowerCase().includes(q) ||
+        r.complianceRuleSet?.toLowerCase().includes(q) ||
+        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
+        String((r as { fixtureId?: string }).fixtureId ?? "").toLowerCase().includes(q) ||
+        r.fixtureCode?.toLowerCase().includes(q) ||
+        r.zone?.toLowerCase().includes(q) ||
+        r.section?.toLowerCase().includes(q) ||
+        r.fixtureType?.toLowerCase().includes(q),
+    );
+  }, [fixtureRows, searchQuery]);
+
+  useEffect(() => {
+    if (!actionsMenu) return;
+    const handlePointerDown = (event: Event) => {
+      const target = event.target as Node;
+      if (actionsMenuRef.current?.contains(target)) return;
+      setActionsMenu(null);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [actionsMenu]);
+
+  const handleOpenMenu = useCallback((row: PlanogramShelfRow, triggerEl: HTMLElement) => {
+    const triggerRect = triggerEl.getBoundingClientRect();
+    setActionsMenu({
+      row,
+      triggerEl,
+      anchorPoint: { x: triggerRect.left, y: triggerRect.top },
+    });
+  }, []);
+
+  const handleRunAdhoc = useCallback(
+    (row: PlanogramShelfRow) => {
+      if ((row.fixtureShelvesCount ?? 0) <= 0) {
+        toast({
+          title: "No shelves found",
+          description: "This fixture has no shelves.",
+          variant: "destructive",
+        });
+        setActionsMenu(null);
+        return;
+      }
+
+      const targetFixtureId = row.fixtureId ?? row.id;
+      if (!targetFixtureId) return;
+      navigate({
+        to: "/maker/audits/adhoc/new",
+        search: { fixtureId: targetFixtureId, from: location.pathname },
+      });
+      setActionsMenu(null);
+    },
+    [location.pathname, navigate, toast],
+  );
+
+  const handleViewCompliance = useCallback(
+    (row: PlanogramShelfRow) => {
+      const requestedName = row.complianceRuleSet ?? defaultRuleSetName;
+      const matched =
+        ruleSets.find((ruleSet) => ruleSet.name === requestedName) ??
+        (requestedName === "Default Rules"
+          ? (ruleSets.find((ruleSet) => ruleSet.isDefault) ?? null)
+          : null);
+      setComplianceSheetRuleSet(matched);
+      setComplianceSheetRuleSetName(matched?.name ?? requestedName);
+      setComplianceSheetOpen(true);
+      setActionsMenu(null);
+    },
+    [defaultRuleSetName, ruleSets],
+  );
+
+  const tableColumns = useMemo(
+    () =>
+      createMakerPlanogramTableColumns({
+        onOpenMenu: handleOpenMenu,
+      }),
+    [handleOpenMenu],
+  );
+
+  const fixtureTable = useMemo(
+    () => (
+      <DataTable<PlanogramShelfRow>
+        columns={tableColumns}
+        data={filteredRows}
+        rowIdField="id"
+        initialSort={PLANOGRAM_INITIAL_SORT}
+        emptyMessage="No fixtures match your search"
+        pageSize={50}
+        pageSizeSelector={[10, 20, 50, 75, 100]}
+        headerFilters={false}
+        layout="fitData"
+        onPaginationChange={setTablePagination}
+        onRowClick={handleRunAdhoc}
+      />
+    ),
+    [filteredRows, handleRunAdhoc, tableColumns],
   );
 
   return (
@@ -211,7 +228,7 @@ function AdhocAnalysisPage() {
       pageHeader={
         <PageHeader
           title="Adhoc Analysis"
-          description="Upload a fixture image and let AI analyze your retail space without a planogram."
+          description="Select a fixture and run adhoc analysis without requiring a planogram in the request."
         >
           <Button asChild variant="success" className="shrink-0">
             <Link
@@ -227,13 +244,32 @@ function AdhocAnalysisPage() {
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
+          <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="group relative w-full sm:max-w-md">
+              <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
+              <Input
+                placeholder="Search fixture by type, code, or location..."
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus:border-accent h-12 pl-11 transition-all"
+              />
+            </div>
+          </div>
 
-          {sortedAnalyses.length > 0 && (
+          {filteredRows.length > 0 && (
             <p className="mt-4 shrink-0 text-sm text-muted-foreground">
               Showing{" "}
-              <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
-              <span className="font-semibold text-foreground">{sortedAnalyses.length}</span>{" "}
-              analyses
+              <span className="font-semibold text-foreground">
+                {Math.max(
+                  0,
+                  Math.min(
+                    tablePagination.pageSize,
+                    filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize,
+                  ),
+                )}
+              </span>{" "}
+              of <span className="font-semibold text-foreground">{filteredRows.length}</span>{" "}
+              fixture{filteredRows.length !== 1 ? "s" : ""}
             </p>
           )}
 
@@ -243,15 +279,14 @@ function AdhocAnalysisPage() {
                 <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-64 w-full rounded-lg" />
               </div>
-            ) : sortedAnalyses.length === 0 ? (
+            ) : filteredRows.length === 0 ? (
               <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                  <FolderOpen className="h-7 w-7 text-muted-foreground" aria-hidden />
+                  <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground">No adhoc analyses yet</h3>
+                <h3 className="text-lg font-semibold text-foreground">No fixtures found</h3>
                 <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Start by creating a new adhoc analysis. Upload a fixture image and let AI analyze
-                  your retail space.
+                  Add fixtures first to run adhoc analysis and view compliance details.
                 </p>
                 <Button asChild variant="success" className="mt-6">
                   <Link
@@ -264,23 +299,33 @@ function AdhocAnalysisPage() {
                 </Button>
               </div>
             ) : (
-              <DataTable<AdhocAnalysis>
-                columns={ADHOC_COLUMNS}
-                data={sortedAnalyses}
-                rowIdField="id"
-                initialSort={{ field: "createdAt", dir: "desc" }}
-                emptyMessage="No adhoc analyses yet"
-                pageSize={10}
-                pageSizeSelector={[5, 10, 20, 50]}
-                headerFilters={false}
-                layout="fitData"
-                onPaginationChange={setTablePagination}
-                onRowClick={handleRowClick}
-              />
+              <div ref={tableWrapperRef}>
+                {fixtureTable}
+              </div>
             )}
           </div>
         </div>
       </div>
+      {actionsMenu ? (
+        <PlanogramActionsMenu
+          ref={actionsMenuRef}
+          row={actionsMenu.row}
+          triggerEl={actionsMenu.triggerEl}
+          anchorPoint={actionsMenu.anchorPoint}
+          variant="maker"
+          onClose={() => setActionsMenu(null)}
+          onRunAdhoc={handleRunAdhoc}
+          onViewComplianceRule={handleViewCompliance}
+          onDeleteShelf={undefined}
+          onDeleteFixture={undefined}
+        />
+      ) : null}
+      <ComplianceRuleViewSheet
+        open={complianceSheetOpen}
+        onOpenChange={setComplianceSheetOpen}
+        ruleSet={complianceSheetRuleSet}
+        ruleSetName={complianceSheetRuleSetName}
+      />
     </MainLayout>
   );
 }

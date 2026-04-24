@@ -48,6 +48,7 @@ export function NewAdhocAnalysisPage() {
     <AnalysisFlowPage
       title="New Adhoc Analysis"
       backTo={backTo}
+      analysisType="ADHOC"
       showShelfSelection
       selectedShelfId={selectedFixtureId}
       onShelfSelect={setSelectedFixtureId}

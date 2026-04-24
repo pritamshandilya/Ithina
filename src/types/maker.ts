@@ -126,6 +126,10 @@ export interface AdhocAnalysis {
   shelfId?: string;
   /** Shelf name from capture context */
   shelfName?: string;
+  /** Planogram ID linked to this analysis job when available */
+  planogramId?: string;
+  /** Backend analysis type for this job */
+  analysisType?: "adhoc" | "planogram";
   /** Zone from capture context (e.g. Grocery, Dairy) */
   zone?: string;
   /** Section from capture context */

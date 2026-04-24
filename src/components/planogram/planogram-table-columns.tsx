@@ -10,7 +10,7 @@ import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
 import type { PlanogramShelfRow } from "@/types/maker";
 import { Button } from "@/components/ui/button";
-import { FilePenLine, FileText, LayoutGrid, Plus, Trash2 } from "lucide-react";
+import { FilePenLine, FileText, LayoutGrid, Plus, ScanLine, Trash2 } from "lucide-react";
 import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
@@ -350,6 +350,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
     variant,
     onClose,
     onView,
+    onRunAdhoc,
     onRunPlanogram,
     onViewComplianceRule,
     onAssociatePlanogram,
@@ -486,7 +487,7 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           <span className="min-w-0">Planogram Analysis</span>
         </Button>
       ) : null}
-      {/* {onRunAdhoc ? (
+      {onRunAdhoc ? (
         <Button
           type="button"
           variant="icon-ghost"
@@ -497,9 +498,9 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           }}
         >
           <ScanLine className="shrink-0 text-muted-foreground" />
-          <span className="min-w-0">Adhoc analysis</span>
+          <span className="min-w-0">Adhoc Analysis</span>
         </Button>
-      ) : null} */}
+      ) : null}
       {onViewComplianceRule ? (
         <Button
           type="button"
@@ -511,26 +512,30 @@ export const PlanogramActionsMenu = forwardRef(function PlanogramActionsMenu(
           }}
         >
           <FileText className="shrink-0 text-muted-foreground" />
-          <span className="min-w-0">View Compliance Rule</span>
+          <span className="min-w-0">View Compliance</span>
         </Button>
       ) : null}
-      <div className="-mx-1 my-1 h-px bg-border" />
-      <Button
-        type="button"
-        variant="destructive-ghost"
-        className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0"
-        onClick={() => {
-          if (onDeleteFixture) {
-            onDeleteFixture(row);
-          } else {
-            onDeleteShelf?.(row.id);
-          }
-          onClose();
-        }}
-      >
-        <Trash2 />
-        {deleteLabel}
-      </Button>
+      {onDeleteFixture || onDeleteShelf ? (
+        <>
+          <div className="-mx-1 my-1 h-px bg-border" />
+          <Button
+            type="button"
+            variant="destructive-ghost"
+            className="flex w-full cursor-pointer items-center justify-start gap-2 rounded-sm px-2 py-1.5 text-sm [&_svg]:size-4 [&_svg]:shrink-0"
+            onClick={() => {
+              if (onDeleteFixture) {
+                onDeleteFixture(row);
+              } else {
+                onDeleteShelf?.(row.id);
+              }
+              onClose();
+            }}
+          >
+            <Trash2 />
+            {deleteLabel}
+          </Button>
+        </>
+      ) : null}
     </div>
   );
 

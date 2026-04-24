@@ -29,17 +29,9 @@ export function getAnnotatedImagePreview(
   imageMimeType?: string | null,
 ): string | null {
   if (!result) return null;
-  const annotatedImage = result.annotated_image;
-  if (typeof annotatedImage !== "string" || annotatedImage.trim().length === 0) return null;
-  const rawValue = annotatedImage.trim();
-  if (rawValue.startsWith("data:image/")) {
-    return rawValue;
-  }
-  const mimeType =
-    typeof imageMimeType === "string" && imageMimeType.trim().length > 0
-      ? imageMimeType
-      : "image/jpeg";
-  return `data:${mimeType};base64,${rawValue}`;
+  const imagePath = result.image_path;
+  if (!imagePath) return null;
+  return `${process.env.VITE_API_URL}/${imagePath}`;
 }
 
 export function mapAnalysisResultToReportSnippet(

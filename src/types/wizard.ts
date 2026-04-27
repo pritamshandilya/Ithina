@@ -35,6 +35,8 @@ export interface StagedSku {
   current: number;
   proposed: number;
   safe: boolean;
+  /** When `safe` is false, optional API explanation (e.g. policy text). */
+  violationReason?: string | null;
   margin?: string;
   /** Base cost used for margin safety re-calculation when discount changes. */
   baseCost?: number;

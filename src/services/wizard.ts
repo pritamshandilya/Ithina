@@ -121,6 +121,7 @@ export async function submitWizardIntent(
       current,
       proposed,
       safe: s.is_safe,
+      violationReason: s.violation_reason ?? null,
       margin: `${s.margin_pct}%`,
       baseCost: s.base_cost,
       discount,

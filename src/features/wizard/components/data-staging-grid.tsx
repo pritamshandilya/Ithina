@@ -14,6 +14,20 @@ function escapeCellText(raw: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** Any SKU with `safe === false` (API `is_safe: false`) — margin, guard rails, etc. */
+function stagingRowHasAlert(row: { safe: boolean }): boolean {
+  return row.safe === false;
+}
+
+/** Short label for compliance pill when row is in alert state. */
+function alertComplianceDetail(row: StagedSku): string {
+  const reason = row.violationReason?.trim();
+  if (reason) {
+    return reason.length > 22 ? `${reason.slice(0, 22)}…` : reason;
+  }
+  return row.margin ?? "—";
+}
+
 /** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
 function isBogoLikeOffer(row: StagedSku): boolean {
   const t = (row.offerType ?? "").toLowerCase().trim();
@@ -76,7 +90,7 @@ const CSV_PREVIEW_COLS: IthColumnDef<CsvRow>[] = [
     label: "Check",
     align: "center",
     render: (row) => (
-      <IthBadge label={row.safe ? "Pass" : "Low margin"} variant={row.safe ? "emerald" : "amber"} />
+      <IthBadge label={row.safe ? "Pass" : "Alert"} variant={row.safe ? "emerald" : "rose"} />
     ),
   },
 ];
@@ -262,7 +276,7 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const val = (cell as { getValue: () => boolean }).getValue();
         if (val) return `<span class="rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">PASS</span>`;
-        return `<span class="rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">LOW MARGIN</span>`;
+        return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-2 py-0.5 font-mono text-[10px] text-rose-400">ALERT</span>`;
       },
     },
     {
@@ -285,11 +299,7 @@ function DataStagingGrid({
 
   const csvRowFormatter = useMemo(() => (row: { getData: () => IndexedCsvRow; getElement: () => HTMLElement }) => {
     const d = row.getData();
-    if (!d.safe) {
-      const el = row.getElement();
-      el.style.borderLeft = "2px solid rgb(251 113 133)";
-      el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
-    }
+    row.getElement().classList.toggle("wizard-staging-row-alert", stagingRowHasAlert(d));
   }, []);
 
   const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => {
@@ -492,7 +502,12 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-1.5 py-0.5 font-mono text-[9px] leading-none text-emerald-400">PASS</span>`;
-        return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[9px] leading-none text-rose-400">ALERT (${row.margin})</span>`;
+        const detail = escapeCellText(alertComplianceDetail(row));
+        const fullReason = row.violationReason?.trim()
+          ? escapeCellText(row.violationReason.trim())
+          : "";
+        const titleAttr = fullReason ? ` title="${fullReason}"` : "";
+        return `<span class="inline-flex max-w-full flex-col gap-0.5 rounded border border-rose-400/35 bg-rose-400/12 px-1.5 py-0.5 font-mono text-[9px] leading-tight text-rose-300"${titleAttr}><span class="font-semibold tracking-wide text-rose-400">ALERT</span><span class="truncate text-[8px] text-rose-200/90">${detail}</span></span>`;
       },
     },
     {
@@ -518,11 +533,13 @@ function DataStagingGrid({
     const el = row.getElement();
     el.classList.toggle("wizard-staging-row-excluded", d.included === false);
     el.classList.toggle("wizard-staging-row-free", d.isFree === true);
-    if (!d.safe) {
-      el.style.borderLeft = "2px solid rgb(251 113 133)";
-      el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    const alert = stagingRowHasAlert(d);
+    el.classList.toggle("wizard-staging-row-alert", alert);
+    if (alert) {
+      el.style.borderLeft = "";
+      el.style.backgroundColor = "";
     } else if (d.isFree) {
-      el.style.borderLeft = "2px solid var(--color-ithina-purple)";
+      el.style.borderLeft = "3px solid var(--color-ithina-purple)";
       el.style.backgroundColor = "color-mix(in srgb, var(--color-ithina-purple) 12%, transparent)";
     } else {
       el.style.borderLeft = "";

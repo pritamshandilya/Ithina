@@ -451,6 +451,21 @@
   opacity: 0.5;
 }
 
+/* Alert SKUs (`is_safe: false`): full-row light red — must beat Tabulator `!important` row stripes. */
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-alert {
+  border-left: 5px solid rgb(244 63 94) !important;
+  background-color: rgb(244 63 94 / 0.14) !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-alert.tabulator-row-even {
+  background-color: rgb(244 63 94 / 0.14) !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-alert:hover,
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-alert.tabulator-row-even:hover {
+  background-color: rgb(244 63 94 / 0.2) !important;
+}
+
 /* Include column: align header “select all” with row checkboxes (same vertical axis). */
 .data-table-wrapper.wizard-staging-table .tabulator-header .tabulator-col.wizard-staging-col-include .tabulator-col-content {
   display: flex;

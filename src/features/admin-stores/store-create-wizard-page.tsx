@@ -51,7 +51,7 @@ export default function StoreCreateWizardPage() {
       </header>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <div className="w-full space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:pb-8">
+        <div className="ithina-page-inner space-y-6 py-6 lg:pb-8">
           <StoreOnboardingStepper
             step={o.step}
             icons={{ basic: StoreIcon, config: Globe, team: UsersIcon }}
@@ -88,7 +88,7 @@ export default function StoreCreateWizardPage() {
               isFinishing={o.isFinishing}
               onToggleUser={o.toggleUserSelection}
               onBulkSelectionChange={o.bulkUserSelectionChange}
-              onBack={() => navigate({ to: "/admin/stores" })}
+              onBack={() => o.goToStep(1)}
               onFinish={() => void o.handleFinish()}
             />
           )}

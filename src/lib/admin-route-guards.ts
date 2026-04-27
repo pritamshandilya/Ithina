@@ -10,7 +10,7 @@ export function assertAdminOrgRoute(): void {
   if (typeof window === "undefined") return;
   if (PromoAuthService.getCurrentUser()?.role !== "admin") return;
   if (StoreContext.getStoreId()) {
-    throw redirect({ to: "/admin/campaigns", replace: true });
+    throw redirect({ to: "/admin/store-dashboard", replace: true });
   }
 }
 

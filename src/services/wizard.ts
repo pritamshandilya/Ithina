@@ -15,7 +15,9 @@ import {
   MOCK_MARGINS,
   MOCK_STORES,
 } from "@/mocks/wizard";
+import { formatIsoRangeUsShort, normalizeDraftScheduleForParsing } from "@/lib/wizard-datetime";
 import { draftCampaignFromPrompt } from "@/services/campaigns";
+import type { ApiCampaignDraftResponse, ApiCampaignSKU } from "@/types/api/campaigns";
 import type {
   ChatMessage,
   HardwareDevice,
@@ -25,6 +27,45 @@ import type {
   WizardMargin,
   WizardStore,
 } from "@/types/wizard";
+
+export interface DraftCampaignMeta {
+  campaignThemeName: string | null;
+  scheduleStartIso: string | null;
+  scheduleEndIso: string | null;
+}
+
+function pickAgentSuggestScheduleLabel(s: ApiCampaignSKU): string | undefined {
+  const raw =
+    s.agent_suggest_schedule?.trim() ||
+    s.suggested_schedule_label?.trim() ||
+    s.schedule_hint?.trim() ||
+    "";
+  return raw || undefined;
+}
+
+function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta {
+  const meta = response.campaign_meta;
+  const themeRaw =
+    response.campaign_theme_name?.trim() ||
+    response.recommended_campaign_name?.trim() ||
+    meta?.campaign_name?.trim() ||
+    "";
+  const scheduleStartRaw =
+    response.recommended_schedule_start?.trim() ||
+    response.suggested_schedule_start?.trim() ||
+    meta?.schedule_start?.trim() ||
+    null;
+  const scheduleEndRaw =
+    response.recommended_schedule_end?.trim() ||
+    response.suggested_schedule_end?.trim() ||
+    meta?.schedule_end?.trim() ||
+    null;
+  return {
+    campaignThemeName: themeRaw || null,
+    scheduleStartIso: normalizeDraftScheduleForParsing(scheduleStartRaw, "start"),
+    scheduleEndIso: normalizeDraftScheduleForParsing(scheduleEndRaw, "end"),
+  };
+}
 
 // ─── Static reference data (no backend equivalent yet) ───────────────────────
 
@@ -50,17 +91,30 @@ export async function submitWizardIntent(
   prompt: string,
   _constraints: WizardConstraints,
   options?: { sessionId?: string | null },
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string }> {
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
   const response = await draftCampaignFromPrompt({
     prompt,
     source_type: "nl",
     ...(options?.sessionId ? { session_id: options.sessionId } : {}),
   });
 
+  const draftMeta = extractDraftMeta(response);
+  const campaignWindowLabel = formatIsoRangeUsShort(draftMeta.scheduleStartIso, draftMeta.scheduleEndIso);
+
   const skus: StagedSku[] = response.skus.map((s) => {
     const current = s.current_price;
     const proposed = s.proposed_price;
     const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
+    const eslRaw = s.esl_id ?? s.ESL_ID ?? undefined;
+    const rankingScore = typeof s.score === "number" && !Number.isNaN(s.score) ? s.score : undefined;
+    const rowSchedule = pickAgentSuggestScheduleLabel(s) ?? campaignWindowLabel ?? undefined;
+    const offerType =
+      s.offer_type?.trim() || s.offerType?.trim() || undefined;
+    const offerLabel =
+      s.offer_label?.trim() || s.offerLabel?.trim() || undefined;
+    const stockRaw = s.stock_qty ?? s.stockQty;
+    const stockQty =
+      typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? "",
@@ -71,6 +125,13 @@ export async function submitWizardIntent(
       baseCost: s.base_cost,
       discount,
       included: true,
+      isFree: s.is_free === true || s.isFree === true,
+      ...(eslRaw ? { eslId: String(eslRaw) } : {}),
+      ...(rankingScore !== undefined ? { rankingScore } : {}),
+      ...(rowSchedule ? { agentSuggestSchedule: rowSchedule } : {}),
+      ...(offerType ? { offerType } : {}),
+      ...(offerLabel ? { offerLabel } : {}),
+      ...(stockQty !== undefined ? { stockQty } : {}),
     };
   });
 
@@ -78,6 +139,8 @@ export async function submitWizardIntent(
     aiReply: { role: "ai", text: response.message },
     skus,
     sessionId: response.session_id,
+    draftMeta,
+    suggestions: response.suggestions ?? [],
   };
 }
 

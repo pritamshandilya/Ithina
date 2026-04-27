@@ -359,10 +359,7 @@ export default function CampaignHistoryModal({ campaign, onClose }: Props) {
         </div>
 
         {/* ── Footer ──────────────────────────────────────────────── */}
-        <div className="flex shrink-0 items-center justify-between border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-3">
-          <p className="font-mono text-[10px] text-slate-600">
-            ID: <span className="text-slate-500">{campaign.id}</span>
-          </p>
+        <div className="flex shrink-0 items-center justify-end border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-3">
           <button
             type="button"
             onClick={onClose}

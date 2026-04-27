@@ -8,8 +8,8 @@
  * Status mapping:
  *   Backend               → Frontend UI
  *   ─────────────────────────────────────
- *   draft / generating    → "Draft"
- *   pending_approval      → "Draft"  (visible to maker as pending)
+ *   draft                 → "Draft"
+ *   generating / pending_approval → "Pending"
  *   approved / active     → "Active"
  *   scheduled             → "Scheduled"
  *   publishing            → "Scheduled"
@@ -27,6 +27,7 @@ import {
   MOCK_MONTH_NAMES,
 } from "@/mocks/campaigns";
 import type {
+  ApiCampaignApproveRequest,
   ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignChatResponse,
@@ -35,6 +36,8 @@ import type {
   ApiCampaignEventResponse,
   ApiCampaignGenerateRequest,
   ApiCampaignResponse,
+  ApiCampaignSubmitRequest,
+  ApiGuardrailsStatus,
 } from "@/types/api/campaigns";
 import type {
   CampaignCreateForm,
@@ -60,6 +63,7 @@ function scheduleFieldsFromWizardStep(schedule: {
   startDate: string;
   startTime: string;
   endDate: string;
+  endTime?: string;
 }): Pick<ApiCampaignGenerateRequest, "scheduled_start" | "scheduled_end" | "scheduled_time"> {
   if (!schedule.startDate?.trim()) {
     return { scheduled_start: null, scheduled_end: null, scheduled_time: null };
@@ -69,7 +73,8 @@ function scheduleFieldsFromWizardStep(schedule: {
   const scheduled_start = Number.isNaN(start.getTime()) ? null : start.toISOString();
   let scheduled_end: string | null = null;
   if (schedule.endDate?.trim()) {
-    const end = new Date(`${schedule.endDate}T${schedule.startTime || "00:00"}:00`);
+    const endT = (schedule.endTime ?? schedule.startTime) || "00:00";
+    const end = new Date(`${schedule.endDate}T${endT}:00`);
     if (!Number.isNaN(end.getTime())) scheduled_end = end.toISOString();
   }
   return { scheduled_start, scheduled_end, scheduled_time };
@@ -96,33 +101,89 @@ function mapApiStatusToUi(apiStatus: string): CampaignListStatus {
   }
 }
 
-function derivePipeline(
-  status: CampaignListStatus,
-  flags: { isPending: boolean; isApproved: boolean; isRejected: boolean },
-): string[] {
-  // Workflow-first pipeline rendering:
-  // - pending submission should explicitly show Approval stage
-  // - approved/live should show deploy stage
-  // - rejected should show approval terminal state
-  if (flags.isApproved || status === "Active") {
+/**
+ * Pipeline breadcrumb: last item is the active stage.
+ * - Data: NL draft / chat only (`draft`, no persisted assets yet).
+ * - Design: `generating` (POST /campaigns/generate in flight or persisted as generating).
+ * - Guard Rails: `draft` with pass/warn, or fail once SKUs/hardware exist (post-design review).
+ * - Approval: `pending_approval` only (after submit).
+ */
+function derivePipelineFromSignals(params: {
+  status: string;
+  guardrails: ApiGuardrailsStatus;
+  hasAssets: boolean;
+}): string[] {
+  const s = params.status;
+  const gr = params.guardrails;
+  const hasAssets = params.hasAssets;
+
+  if (s === "approved" || s === "active") {
     return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
   }
-  if (flags.isRejected || status === "Rejected") {
+  if (s === "rejected") {
     return ["Data", "Design", "Guard Rails", "Approval"];
   }
-  if (flags.isPending) {
-    return ["Data", "Design", "Guard Rails", "Approval"];
-  }
-  if (status === "Scheduled") {
+  if (s === "scheduled" || s === "publishing") {
     return ["Data", "Design", "Guard Rails", "Scheduled"];
   }
-  if (status === "Pending") {
+  if (s === "pending_approval") {
     return ["Data", "Design", "Guard Rails", "Approval"];
   }
-  if (status === "Draft") {
+  if (s === "generating") {
     return ["Data", "Design"];
   }
+  if (s === "draft") {
+    if (gr === "pass" || gr === "warn") {
+      return ["Data", "Design", "Guard Rails"];
+    }
+    if (hasAssets) {
+      // guardrails failed or not yet run — still at Design step
+      return ["Data", "Design"];
+    }
+    return ["Data"];
+  }
   return ["Data"];
+}
+
+function derivePipelineFromApi(api: ApiCampaignResponse): string[] {
+  const hasAssets =
+    (api.skus?.length ?? 0) > 0 || (api.hardware_targets?.length ?? 0) > 0;
+  return derivePipelineFromSignals({
+    status: api.status,
+    guardrails: api.guardrails_status,
+    hasAssets,
+  });
+}
+
+/** Fallback when `apiStatus` is missing (legacy mocks). */
+function legacyDerivePipelineFromUiStatus(status: CampaignListStatus): string[] {
+  switch (status) {
+    case "Active":
+    case "Completed":
+      return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
+    case "Scheduled":
+      return ["Data", "Design", "Guard Rails", "Scheduled"];
+    case "Pending":
+      return ["Data", "Design", "Guard Rails", "Approval"];
+    case "Draft":
+      return ["Data", "Design"];
+    case "Rejected":
+      return ["Data", "Design", "Guard Rails", "Approval"];
+    default:
+      return ["Data"];
+  }
+}
+
+export function derivePipelineForRow(row: CampaignListItem): string[] {
+  if (row.pipeline?.length) return row.pipeline;
+  if (row.apiStatus) {
+    return derivePipelineFromSignals({
+      status: row.apiStatus,
+      guardrails: row.guardrailsStatus ?? "fail",
+      hasAssets: row.skus > 0 || (row.hardware?.length ?? 0) > 0,
+    });
+  }
+  return legacyDerivePipelineFromUiStatus(row.status);
 }
 
 // ─── Response adapter ────────────────────────────────────────────────────────
@@ -131,9 +192,13 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
   const uiStatus = mapApiStatusToUi(api.status);
   const isApproved = api.status === "approved" || api.status === "active";
   const isRejected = api.status === "rejected";
-  // Backend currently persists newly submitted campaigns as "generating" before
-  // a dedicated pending_approval transition endpoint exists.
-  const isPending = api.status === "pending_approval" || api.status === "generating";
+  const submittedForApproval =
+    api.status === "pending_approval" ||
+    api.status === "approved" ||
+    api.status === "active" ||
+    api.status === "scheduled" ||
+    api.status === "publishing" ||
+    api.status === "rejected";
 
   const displayInitiator = api.initiator_name?.trim() || api.initiator_id;
   const displayApprover = api.approver_name?.trim() || api.approver_id || undefined;
@@ -143,16 +208,18 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
     name: api.name,
     status: uiStatus,
     apiStatus: api.status,
+    guardrailsStatus: api.guardrails_status,
     skus: api.skus.length,
     hardware: api.hardware_targets ?? [],
+    createdAt: api.created_at,
     // All Campaigns date should reflect creation time.
     date: new Date(api.created_at).toLocaleDateString(),
     initiator: displayInitiator,
-    pipeline: derivePipeline(uiStatus, { isPending, isApproved, isRejected }),
+    pipeline: derivePipelineFromApi(api),
     paused: uiStatus === "Scheduled" ? false : undefined,
     ownerId: api.initiator_id,
     ownerName: displayInitiator,
-    submittedForApproval: isPending || isApproved || isRejected,
+    submittedForApproval,
     approvalStatus: isApproved ? "approved" : isRejected ? "rejected" : "pending",
     reviewedById: api.approver_id ?? undefined,
     reviewedByName: displayApprover,
@@ -161,11 +228,19 @@ function adaptApiCampaign(api: ApiCampaignResponse): CampaignListItem {
     scheduledAt: api.scheduled_start ?? undefined,
     scheduledEndAt: api.scheduled_end ?? undefined,
     scheduledTime: api.scheduled_time ?? undefined,
+    rawSkus: api.skus,
+    sourceType: api.source_type,
+    aiPrompt: api.ai_prompt,
   };
 }
 
 // ─── Core campaign API calls ─────────────────────────────────────────────────
 
+/**
+ * Lists all campaigns for the active store (`GET /api/v1/campaigns`).
+ * In DevTools, the Name column may show only `campaigns`; open the row and confirm the
+ * request URL has **no** trailing `/events` — that distinguishes this from {@link getCampaignTimeline}.
+ */
 export async function getCampaignList(): Promise<CampaignListItem[]> {
   const { data } = await promoApiClient.get<ApiCampaignResponse[]>(
     `${API_PREFIX}/campaigns`,
@@ -173,9 +248,24 @@ export async function getCampaignList(): Promise<CampaignListItem[]> {
   return data.map(adaptApiCampaign);
 }
 
-export async function approveCampaign(id: string): Promise<CampaignListItem> {
+export async function submitCampaign(
+  id: string,
+  payload: ApiCampaignSubmitRequest,
+): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/${id}/submit`,
+    payload,
+  );
+  return adaptApiCampaign(data);
+}
+
+export async function approveCampaign(
+  id: string,
+  payload: ApiCampaignApproveRequest,
+): Promise<CampaignListItem> {
   const { data } = await promoApiClient.post<ApiCampaignResponse>(
     `${API_PREFIX}/campaigns/${id}/approve`,
+    payload,
   );
   return adaptApiCampaign(data);
 }
@@ -285,13 +375,39 @@ export async function getCampaign(id: string): Promise<CampaignListItem> {
   return adaptApiCampaign(data);
 }
 
+/**
+ * `/campaigns/{id}/events` may return a bare array or a wrapper object.
+ * Always produce an array so React code can spread / iterate safely.
+ */
+export function normalizeCampaignEventsPayload(
+  data: unknown,
+): ApiCampaignEventResponse[] {
+  if (Array.isArray(data)) return data as ApiCampaignEventResponse[];
+  if (data != null && typeof data === "object") {
+    const o = data as Record<string, unknown>;
+    for (const key of ["events", "data", "items", "results"] as const) {
+      const v = o[key];
+      if (Array.isArray(v)) return v as ApiCampaignEventResponse[];
+    }
+  }
+  return [];
+}
+
+/**
+ * Per-campaign timeline (`GET /api/v1/campaigns/{id}/events`). There is no app-wide `/events` route.
+ * Used for polling until terminal pipeline events (e.g. `campaign_published` after checker approval).
+ *
+ * **DevTools:** Chrome often labels both this and {@link getCampaignList} as `campaigns` in the Network
+ * **Name** column. Inspect **Request URL**: batch-render polling ends with `/campaigns/{uuid}/events`;
+ * the store-scoped list is exactly `/api/v1/campaigns` with no id segment.
+ */
 export async function getCampaignTimeline(
   campaignId: string,
 ): Promise<ApiCampaignEventResponse[]> {
-  const { data } = await promoApiClient.get<ApiCampaignEventResponse[]>(
+  const { data } = await promoApiClient.get<unknown>(
     `${API_PREFIX}/campaigns/${campaignId}/events`,
   );
-  return data;
+  return normalizeCampaignEventsPayload(data);
 }
 
 export async function postCampaignChat(
@@ -321,6 +437,7 @@ export interface WizardGenerateOptions {
     startDate: string;
     startTime: string;
     endDate: string;
+    endTime?: string;
   };
 }
 

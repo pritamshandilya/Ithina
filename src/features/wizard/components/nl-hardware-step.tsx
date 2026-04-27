@@ -1,8 +1,18 @@
-import { AlertTriangle, Check, LayoutPanelTop, Plus, Wand2 } from "lucide-react";
+import { AlertTriangle, Check, ImageOff, LayoutPanelTop, Loader2, Plus, Wand2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import EslSvgRenderer from "@/features/campaign-studio/esl-svg-renderer";
+import { eslCanvasDimensions, eslPreviewAspectClass } from "@/features/campaign-studio/esl-preview-aspect";
+import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
+import type { LayoutVariant } from "@/types/api/campaigns";
 import { cn } from "@/lib/utils";
 import type { HardwareDeviceId } from "@/types/wizard";
+import {
+  defaultPromoApiBase,
+  firstEslHardwareFromSizes,
+  previewUrlWithCacheBuster,
+  resolveWizardPreviewLayout,
+} from "@/features/wizard/lib/preview-layout";
 import type { AppliedDesignSelection } from "./campaign-studio-modal";
 
 import {
@@ -23,11 +33,29 @@ export interface NlHardwareStepProps {
   sizeByDevice: Record<HardwareDeviceId, string[]>;
   onToggleSize: (id: HardwareDeviceId, size: string) => void;
   designConfigured: boolean;
+  /** Legacy template/upload modal. Prefer `onConfigureDesign` for real generate + studio. */
   onSetShowStudio: (value: boolean) => void;
+  /** POST /campaigns/generate + navigate to Campaign Studio. */
+  onConfigureDesign?: () => void | Promise<void>;
+  isGeneratingLayouts?: boolean;
   selectedVariant: "A" | "B" | "C";
   selectedDesign: AppliedDesignSelection | null;
+  /** Merged from campaign layout events; drives Step 2 thumbnail when AI-generated. */
+  generatedVariants?: LayoutVariant[];
+  eslPreviewPlaceholders?: EslPlaceholders;
+  imageCacheBuster?: number;
+  apiBaseUrl?: string;
   onNext: () => void;
+  /** When false, hides the bottom "Next: Guard Rails" bar (primary lives in WizardStepHeader). */
+  showFooterNext?: boolean;
 }
+
+const EMPTY_ESL_PLACEHOLDERS: EslPlaceholders = {
+  name: "",
+  price: "",
+  was: "",
+  offer_label: "",
+};
 
 function NlHardwareStep({
   selectedDevices,
@@ -38,9 +66,16 @@ function NlHardwareStep({
   onToggleSize,
   designConfigured,
   onSetShowStudio,
+  onConfigureDesign,
+  isGeneratingLayouts = false,
   selectedVariant,
   selectedDesign,
+  generatedVariants = [],
+  eslPreviewPlaceholders,
+  imageCacheBuster = 0,
+  apiBaseUrl,
   onNext,
+  showFooterNext = true,
 }: NlHardwareStepProps) {
   const [eslDropOpen, setEslDropOpen] = useState(false);
   const [lcdDropOpen, setLcdDropOpen] = useState(false);
@@ -86,6 +121,14 @@ function NlHardwareStep({
       : `${eslSizeCount || 1} size${eslSizeCount !== 1 ? "s" : ""} · e-ink · 3-colour`;
 
   const designReadyToProgress = designConfigured && canConfigure;
+
+  const handleConfigureClick = useCallback(() => {
+    if (onConfigureDesign) {
+      void onConfigureDesign();
+      return;
+    }
+    onSetShowStudio(true);
+  }, [onConfigureDesign, onSetShowStudio]);
   const sourceLabel =
     selectedDesign?.source === "template"
       ? "Template Library"
@@ -98,6 +141,31 @@ function NlHardwareStep({
       : selectedDesign?.source === "upload"
         ? selectedDesign.uploadedFileName ?? "Uploaded Design"
         : `Variant ${selectedVariant} — ${selectedVariant === "A" ? "Price-Dominant" : selectedVariant === "B" ? "Urgency" : "Balanced"}`;
+
+  const previewPlaceholders = eslPreviewPlaceholders ?? EMPTY_ESL_PLACEHOLDERS;
+
+  const eslHardwareSlug = useMemo(
+    () => firstEslHardwareFromSizes(eslSizes),
+    [eslSizes],
+  );
+
+  const resolvedPreviewLayout = useMemo((): LayoutVariant | null => {
+    if (!generatedVariants.length) return null;
+    const isLcd = designDevice === LCD_DEVICE;
+    return resolveWizardPreviewLayout(
+      generatedVariants,
+      selectedVariant,
+      isLcd ? null : eslHardwareSlug,
+      isLcd,
+    );
+  }, [generatedVariants, selectedVariant, designDevice, eslHardwareSlug]);
+
+  const apiBase = apiBaseUrl ?? defaultPromoApiBase();
+
+  const previewImageUrl = useMemo(() => {
+    if (!resolvedPreviewLayout) return null;
+    return previewUrlWithCacheBuster(resolvedPreviewLayout.image_url, apiBase, imageCacheBuster);
+  }, [resolvedPreviewLayout, apiBase, imageCacheBuster]);
 
   const toggleEslSize = useCallback((size: string) => onToggleSize(ESL_DEVICE, size), [onToggleSize]);
   const toggleLcdSize = useCallback((size: string) => onToggleSize(LCD_DEVICE, size), [onToggleSize]);
@@ -248,7 +316,7 @@ function NlHardwareStep({
           )}
         </div>
 
-        {hasAnySizeSelection && (
+        {hasAnySizeSelection && showFooterNext && (
           <div className="mt-auto border-t border-ithina-border/40 pt-4">
             {!designReadyToProgress && (
               <div className="mb-2 flex items-center gap-1.5 text-[10px] text-amber-400">
@@ -301,8 +369,8 @@ function NlHardwareStep({
               </div>
               <button
                 type="button"
-                onClick={() => onSetShowStudio(true)}
-                disabled={!canConfigure}
+                onClick={handleConfigureClick}
+                disabled={!canConfigure || isGeneratingLayouts}
                 className={cn(
                   "inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold shadow-[0_0_12px_rgba(168,85,247,0.25)] transition-all disabled:cursor-not-allowed disabled:opacity-40",
                   designDevice === LCD_DEVICE
@@ -310,50 +378,121 @@ function NlHardwareStep({
                     : "bg-ithina-purple text-white hover:bg-ithina-purple-hover",
                 )}
               >
-                <Wand2 className="size-3.5" />
-                {designConfigured ? "Edit Design" : "Configure Design"}
+                {isGeneratingLayouts ? (
+                  <Loader2 className="size-3.5 animate-spin" aria-hidden />
+                ) : (
+                  <Wand2 className="size-3.5" />
+                )}
+                {isGeneratingLayouts
+                  ? "Generating layouts…"
+                  : designConfigured
+                    ? "Regenerate layouts"
+                    : "Configure Design"}
               </button>
             </div>
             {designConfigured ? (
               <div className="flex items-start gap-5 p-5">
                 <div className="shrink-0">
                   {designDevice === LCD_DEVICE ? (
-                    <div className="aspect-video w-[160px] overflow-hidden rounded-md border-2 border-slate-600">
-                      <div className="flex h-full flex-col bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]">
-                        <div
-                          className="shrink-0 py-1 text-center"
-                          style={{ background: selectedDesign?.templateHeaderColor ?? "#d97706" }}
-                        >
-                          <span className="text-[7px] font-black uppercase tracking-widest text-black">
-                            {selectedDesign?.templateHeaderText ?? "FLASH SALE"}
-                          </span>
-                        </div>
-                        <div className="flex min-h-0 flex-1 flex-col justify-end p-[5px]">
-                          <span className="text-[6px] text-slate-400">{selectedDesign?.templateProductLine ?? "Premium Salmon Tray"}</span>
-                          <span className="text-[16px] font-black leading-none text-white">
-                            $10<span className="text-[10px]">.39</span>
-                          </span>
+                    previewImageUrl ? (
+                      <div className="aspect-video w-[160px] overflow-hidden rounded-md border-2 border-slate-600 bg-black/40">
+                        <img
+                          src={previewImageUrl}
+                          alt=""
+                          className="h-full w-full object-cover object-center"
+                        />
+                      </div>
+                    ) : selectedDesign?.source === "template" &&
+                      (selectedDesign.templateHeaderText ||
+                        selectedDesign.templateProductLine ||
+                        selectedDesign.templateHeaderColor) ? (
+                      <div className="aspect-video w-[160px] overflow-hidden rounded-md border-2 border-slate-600">
+                        <div className="flex h-full flex-col bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]">
+                          <div
+                            className="shrink-0 py-1 text-center"
+                            style={{ background: selectedDesign.templateHeaderColor ?? "#d97706" }}
+                          >
+                            <span className="text-[7px] font-black uppercase tracking-widest text-black">
+                              {selectedDesign.templateHeaderText ?? " "}
+                            </span>
+                          </div>
+                          <div className="flex min-h-0 flex-1 flex-col justify-end p-[5px]">
+                            {selectedDesign.templateProductLine ? (
+                              <span className="text-[6px] text-slate-400">{selectedDesign.templateProductLine}</span>
+                            ) : null}
+                            <span className="text-[10px] font-semibold text-slate-500">Template preview</span>
+                          </div>
                         </div>
                       </div>
+                    ) : (
+                      <div className="flex aspect-video w-[160px] flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-600 bg-ithina-bg/40 px-2 text-center">
+                        <ImageOff className="size-6 text-slate-600" aria-hidden />
+                        <p className="text-[9px] leading-tight text-slate-500">
+                          No LCD preview yet. Regenerate layouts in Campaign Studio.
+                        </p>
+                      </div>
+                    )
+                  ) : resolvedPreviewLayout?.elements && resolvedPreviewLayout.elements.length > 0 ? (
+                    <div
+                      className={cn(
+                        "w-[120px] overflow-hidden rounded-md border-2 border-slate-400 bg-[#F9F9F9]",
+                        eslPreviewAspectClass(resolvedPreviewLayout.hardware_type),
+                      )}
+                    >
+                      <EslSvgRenderer
+                        elements={resolvedPreviewLayout.elements}
+                        placeholders={previewPlaceholders}
+                        canvasWidth={eslCanvasDimensions(resolvedPreviewLayout.hardware_type).width}
+                        canvasHeight={eslCanvasDimensions(resolvedPreviewLayout.hardware_type).height}
+                        className="h-full w-full"
+                      />
                     </div>
-                  ) : (
+                  ) : previewImageUrl ? (
+                    <div
+                      className={cn(
+                        "w-[120px] overflow-hidden rounded-md border-2 border-slate-400 bg-[#F0F0F0]",
+                        eslPreviewAspectClass(resolvedPreviewLayout?.hardware_type),
+                      )}
+                    >
+                      <img
+                        src={previewImageUrl}
+                        alt=""
+                        className="h-full w-full object-cover object-top"
+                      />
+                    </div>
+                  ) : selectedDesign?.source === "template" &&
+                    (selectedDesign.templateHeaderText ||
+                      selectedDesign.templateProductLine ||
+                      selectedDesign.templateHeaderColor) ? (
                     <div className="w-[120px] overflow-hidden rounded-md border-2 border-slate-400 bg-[#F0F0F0]">
                       <div
                         className="py-1 text-center"
-                        style={{ background: selectedDesign?.templateHeaderColor ?? "#cc0000" }}
+                        style={{ background: selectedDesign.templateHeaderColor ?? "#cc0000" }}
                       >
                         <span className="text-[7px] font-black uppercase tracking-wide text-white">
-                          {selectedDesign?.templateHeaderText ?? "EXPIRING IN 48H"}
+                          {selectedDesign.templateHeaderText ?? "\u00A0"}
                         </span>
                       </div>
                       <div className="bg-[#F5F5F5] p-2">
-                        <p className="text-[7px] font-semibold text-[#555]">
-                          {selectedDesign?.templateProductLine ?? "Premium Salmon Tray"}
-                        </p>
-                        <p className="text-[22px] font-black leading-none text-[#111]">
-                          $10<span className="text-[13px]">.39</span>
-                        </p>
+                        {selectedDesign.templateProductLine ? (
+                          <p className="text-[7px] font-semibold text-[#555]">{selectedDesign.templateProductLine}</p>
+                        ) : null}
+                        <p className="text-[10px] text-slate-500">Template preview</p>
                       </div>
+                    </div>
+                  ) : selectedDesign?.source === "upload" ? (
+                    <div className="flex w-[120px] flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-600 bg-ithina-bg/40 px-2 py-6 text-center">
+                      <ImageOff className="size-6 text-slate-600" aria-hidden />
+                      <p className="text-[9px] leading-tight text-slate-500">
+                        Uploaded file: {selectedDesign.uploadedFileName ?? "—"}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="flex w-[120px] flex-col items-center justify-center gap-1.5 rounded-md border border-dashed border-slate-600 bg-ithina-bg/40 px-2 py-6 text-center">
+                      <ImageOff className="size-6 text-slate-600" aria-hidden />
+                      <p className="text-[9px] leading-tight text-slate-500">
+                        Preview unavailable. Open Campaign Studio to regenerate layouts.
+                      </p>
                     </div>
                   )}
                   <p className="mt-1.5 text-center font-mono text-[9px] text-slate-500">Preview</p>
@@ -396,16 +535,26 @@ function NlHardwareStep({
             ) : (
               <button
                 type="button"
-                onClick={() => onSetShowStudio(true)}
-                disabled={!canConfigure}
+                onClick={handleConfigureClick}
+                disabled={!canConfigure || isGeneratingLayouts}
                 className="flex w-full flex-col items-center justify-center gap-3 p-8 transition-colors hover:bg-white/[0.02] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <div className="flex size-12 items-center justify-center rounded-xl border border-dashed border-ithina-purple/30 bg-ithina-purple/10">
-                  <Plus className="size-6 text-ithina-purple/60" strokeWidth={1.5} aria-hidden />
+                  {isGeneratingLayouts ? (
+                    <Loader2 className="size-6 animate-spin text-ithina-purple" aria-hidden />
+                  ) : (
+                    <Plus className="size-6 text-ithina-purple/60" strokeWidth={1.5} aria-hidden />
+                  )}
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-medium text-slate-400">No design configured yet</p>
-                  <p className="mt-0.5 text-xs text-slate-600">Click to open Campaign Studio</p>
+                  <p className="text-sm font-medium text-slate-400">
+                    {isGeneratingLayouts ? "Starting AI layout generation…" : "No design configured yet"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-600">
+                    {onConfigureDesign
+                      ? "Click to run generate and open Campaign Studio"
+                      : "Click to open Campaign Studio"}
+                  </p>
                 </div>
               </button>
             )}

@@ -1,18 +1,25 @@
-import { Search, UserPlus } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Search, Trash2, UserPlus } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAssignableStoreUsers, useAssignStoreUser } from "@/hooks/use-store-settings";
-import type { StoreProfile } from "@/types/store-settings";
+import {
+  useAssignableStoreUsers,
+  useAssignStoreUser,
+  useRemoveStoreUser,
+  useStoreStaff,
+} from "@/hooks/use-store-settings";
+import type { StoreProfile, StoreStaffMember } from "@/types/store-settings";
+import { cn } from "@/lib/utils";
 
 type Props = {
   open: boolean;
@@ -20,10 +27,60 @@ type Props = {
   store: StoreProfile | null;
 };
 
+function StaffRow({
+  member,
+  trailing,
+  className,
+  subtitle,
+}: {
+  member: StoreStaffMember;
+  trailing: React.ReactNode;
+  className?: string;
+  /** e.g. email for “available” rows */
+  subtitle?: string;
+}) {
+  const initials = `${member.firstName?.[0] ?? "U"}${member.lastName?.[0] ?? "U"}`;
+  const roleUpper = member.role.toUpperCase();
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-xl border border-ithina-border/80 bg-ithina-bg/40 px-3 py-3",
+        className,
+      )}
+    >
+      <div className="flex min-w-0 items-center gap-3">
+        <div
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-ithina-purple/30 bg-ithina-purple/15 text-xs font-bold text-ithina-purple"
+          aria-hidden
+        >
+          {initials}
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-white">
+            {member.firstName} {member.lastName}
+          </p>
+          {subtitle ? <p className="truncate text-xs text-slate-500">{subtitle}</p> : null}
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{roleUpper}</p>
+        </div>
+      </div>
+      {trailing}
+    </div>
+  );
+}
+
 export function StoreStaffAssignmentSheet({ open, onOpenChange, store }: Props) {
-  const { data: available = [], isLoading } = useAssignableStoreUsers({ enabled: open });
+  const { data: staff = [], isLoading: staffLoading } = useStoreStaff();
+  const { data: available = [], isLoading: availableLoading } = useAssignableStoreUsers({ enabled: open });
   const assignMutation = useAssignStoreUser();
+  const removeMutation = useRemoveStoreUser();
   const [q, setQ] = useState("");
+
+  const busy = assignMutation.isPending || removeMutation.isPending;
+
+  useEffect(() => {
+    if (!open) setQ("");
+  }, [open]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -35,88 +92,124 @@ export function StoreStaffAssignmentSheet({ open, onOpenChange, store }: Props) 
 
   if (!store) return null;
 
+  const availableEmptyMessage =
+    available.length === 0
+      ? "No more staff members available to assign."
+      : "No users match your search.";
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full border-ithina-border bg-ithina-sidebar sm:max-w-md"
-      >
-        <SheetHeader className="border-b border-ithina-border pb-4 text-left">
-          <SheetTitle className="text-white">Manage store staff</SheetTitle>
-          <SheetDescription className="text-slate-400">
-            Assign makers and checkers to {store.name}.
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex flex-1 flex-col gap-4 overflow-hidden px-4 pb-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
-            <Input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Search by name or email"
-              className="h-10 rounded-lg border-ithina-border bg-ithina-bg pl-9 text-sm text-white placeholder:text-slate-500 focus-visible:border-ithina-purple"
-              aria-label="Search users"
-            />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md gap-0 sm:max-w-lg">
+        <DialogHeader className="flex-row items-start gap-4 space-y-0">
+          <div className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-ithina-purple/35 bg-ithina-purple/15 text-ithina-purple">
+            <UserPlus className="size-5" aria-hidden />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {isLoading ? (
+          <div className="min-w-0 flex-1 space-y-1.5 pt-0.5">
+            <DialogTitle>Manage Store Staff</DialogTitle>
+            <DialogDescription className="text-slate-300">{store.name}</DialogDescription>
+          </div>
+        </DialogHeader>
+
+        <div className="max-h-[min(52vh,420px)] space-y-6 overflow-y-auto px-6 py-5">
+          <section className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Assigned staff</h4>
+            {staffLoading ? (
               <div className="space-y-2">
-                <Skeleton className="h-14 w-full rounded-xl bg-ithina-border/40" />
-                <Skeleton className="h-14 w-full rounded-xl bg-ithina-border/40" />
+                <Skeleton className="h-[68px] w-full rounded-xl bg-ithina-border/40" />
+                <Skeleton className="h-[68px] w-full rounded-xl bg-ithina-border/40" />
               </div>
-            ) : filtered.length === 0 ? (
-              <p className="py-8 text-center text-sm text-slate-500">
-                No users available to assign.
-              </p>
+            ) : staff.length === 0 ? (
+              <p className="py-2 text-sm italic text-slate-500">No one is assigned to this store yet.</p>
             ) : (
               <ul className="space-y-2">
-                {filtered.map((u) => {
-                  const initials = `${u.firstName?.[0] ?? "U"}${u.lastName?.[0] ?? "U"}`;
-                  const roleLabel = u.role.charAt(0).toUpperCase() + u.role.slice(1);
-                  return (
-                    <li
-                      key={u.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border border-ithina-border bg-ithina-panel px-3 py-2.5"
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex size-9 shrink-0 items-center justify-center rounded-full border border-ithina-purple/25 bg-ithina-purple/10 text-xs font-bold text-ithina-purple">
-                          {initials}
-                        </div>
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">
-                            {u.firstName} {u.lastName}
-                          </p>
-                          <p className="truncate text-xs text-slate-500">{u.email}</p>
-                          <span className="mt-0.5 inline-block rounded-md border border-ithina-border px-2 py-0.5 text-[10px] font-semibold text-slate-400">
-                            {roleLabel}
-                          </span>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={assignMutation.isPending}
-                        className="shrink-0 border-ithina-border bg-transparent text-ithina-purple hover:bg-ithina-purple/10 hover:text-white"
-                        onClick={() => {
-                          assignMutation.mutate(u.id, {
-                            onSuccess: () => {
-                              setQ("");
-                            },
-                          });
-                        }}
-                      >
-                        <UserPlus className="size-3.5" aria-hidden />
-                        Add
-                      </Button>
-                    </li>
-                  );
-                })}
+                {staff.map((member) => (
+                  <li key={member.id}>
+                    <StaffRow
+                      member={member}
+                      trailing={
+                        member.role === "admin" ? (
+                          <span className="shrink-0 text-xs text-slate-600">—</span>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => removeMutation.mutate(member.id)}
+                            className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg text-rose-400 transition-colors hover:bg-rose-500/10 disabled:opacity-40"
+                            aria-label={`Remove ${member.firstName} ${member.lastName}`}
+                          >
+                            <Trash2 className="size-4" aria-hidden />
+                          </button>
+                        )
+                      }
+                    />
+                  </li>
+                ))}
               </ul>
             )}
-          </div>
+          </section>
+
+          <section className="space-y-3">
+            <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Available staff</h4>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
+              <Input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Find users..."
+                className="h-10 rounded-lg border-ithina-border bg-ithina-bg pl-9 text-sm text-white placeholder:text-slate-500 focus-visible:border-ithina-purple"
+                aria-label="Find users"
+              />
+            </div>
+            {availableLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-[68px] w-full rounded-xl bg-ithina-border/40" />
+                <Skeleton className="h-[68px] w-full rounded-xl bg-ithina-border/40" />
+              </div>
+            ) : filtered.length === 0 ? (
+              <p className="py-4 text-center text-sm italic text-slate-500">{availableEmptyMessage}</p>
+            ) : (
+              <ul className="space-y-2">
+                {filtered.map((u) => (
+                  <li key={u.id}>
+                    <StaffRow
+                      member={u}
+                      subtitle={u.email}
+                      trailing={
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={busy}
+                          className="shrink-0 border-ithina-border bg-transparent text-ithina-purple hover:bg-ithina-purple/10 hover:text-white"
+                          onClick={() => {
+                            assignMutation.mutate(u.id, {
+                              onSuccess: () => setQ(""),
+                            });
+                          }}
+                        >
+                          <UserPlus className="size-3.5" aria-hidden />
+                          Add
+                        </Button>
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
-      </SheetContent>
-    </Sheet>
+
+        <DialogFooter className="bg-ithina-bg/30">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="min-w-[96px] border-ithina-border bg-transparent font-semibold text-white hover:bg-ithina-panel"
+          >
+            Done
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,5 @@
 import { promoApiClient } from "@/lib/promo-api-client";
+import type { ApiUserResponse } from "@/types/api/users";
 
 const API_PREFIX = "/api/v1";
 
@@ -23,11 +24,19 @@ export interface CreateStorePayload {
   is_active?: boolean;
 }
 
+/** Partial update for PUT /store (matches API StoreUpdateRequest). */
+export interface UpdateStorePayload {
+  name?: string;
+  address?: string;
+  region?: string;
+  currency?: string;
+  is_active?: boolean;
+}
+
 export type StoreStaffUserType = "admin" | "checker" | "maker";
 
-export interface StoreUser {
-  id: string;
-}
+/** Store staff row from GET /store/users (matches API UserResponse). */
+export type StoreUser = ApiUserResponse;
 
 export async function listStores(): Promise<Store[]> {
   const { data } = await promoApiClient.get<Store[]>(`${API_PREFIX}/stores`);
@@ -59,21 +68,24 @@ export async function listStoreUsers(
   return data;
 }
 
+export async function updateStore(
+  storeId: string,
+  payload: UpdateStorePayload,
+): Promise<Store> {
+  const { data } = await promoApiClient.put<Store>(`${API_PREFIX}/store`, payload, {
+    headers: {
+      "X-Store-Id": storeId,
+    },
+  });
+
+  return data;
+}
+
 export async function updateStoreActive(
   storeId: string,
   is_active: boolean,
 ): Promise<Store> {
-  const { data } = await promoApiClient.put<Store>(
-    `${API_PREFIX}/store`,
-    { is_active },
-    {
-      headers: {
-        "X-Store-Id": storeId,
-      },
-    },
-  );
-
-  return data;
+  return updateStore(storeId, { is_active });
 }
 
 export async function deleteCurrentStore(storeId: string): Promise<void> {
@@ -95,5 +107,14 @@ export async function assignUserToStore(storeId: string, userId: string): Promis
       },
     },
   );
+}
+
+/** Admin: remove a user from store staff (DELETE /store/users/{user_id} with X-Store-Id). */
+export async function removeUserFromStore(storeId: string, userId: string): Promise<void> {
+  await promoApiClient.delete(`${API_PREFIX}/store/users/${encodeURIComponent(userId)}`, {
+    headers: {
+      "X-Store-Id": storeId,
+    },
+  });
 }
 

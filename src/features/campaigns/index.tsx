@@ -409,8 +409,8 @@ export default function Campaigns() {
               data={filtered}
               rowIdField="id"
               emptyMessage="No campaigns match the current filters"
-              pageSize={10}
-              pageSizeSelector={[5, 10, 20, 50]}
+              pageSize={15}
+              pageSizeSelector={[5, 10, 15, 20, 50]}
               initialSort={{ field: "date", dir: "desc" }}
               showRowNumber
             />

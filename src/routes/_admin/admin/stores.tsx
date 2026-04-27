@@ -1,7 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 
-import AdminStoresPage from "@/features/admin-stores";
-
+/**
+ * Layout route for `/admin/stores/*`. Renders child routes (list index, create wizard).
+ * Without `<Outlet />`, `/admin/stores/new` incorrectly showed the list page component.
+ */
 export const Route = createFileRoute("/_admin/admin/stores")({
-  component: AdminStoresPage,
+  component: AdminStoresLayout,
 });
+
+function AdminStoresLayout() {
+  return <Outlet />;
+}

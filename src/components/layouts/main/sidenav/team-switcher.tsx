@@ -45,6 +45,7 @@ export function TeamSwitcher() {
   );
 
   const isOrgDashboard = !activeStoreId;
+  const makerCannotUseOrgScope = role === "maker";
 
   const handleOrgClick = () => {
     StoreContext.clearStoreId();
@@ -62,7 +63,7 @@ export function TeamSwitcher() {
   const handleStoreClick = (store: StoreRecord) => {
     StoreContext.setStoreId(store.id);
     if (role === "admin") {
-      navigate({ to: "/admin/campaigns" });
+      navigate({ to: "/admin/store-dashboard" });
       return;
     }
     if (role === "checker") {
@@ -87,7 +88,7 @@ export function TeamSwitcher() {
                 isCollapsed && "justify-center rounded-xl p-0",
               )}
             >
-              <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl border border-accent/15 bg-accent/10 text-accent">
+              <div className="flex aspect-square size-9 shrink-0 items-center justify-center rounded-xl border border-primary/15 bg-primary/10 text-primary">
                 <Building2 className="size-4" />
               </div>
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
@@ -107,10 +108,12 @@ export function TeamSwitcher() {
           >
             <DropdownMenuLabel className="px-2 py-1.5 text-xs text-muted-foreground">Organization</DropdownMenuLabel>
             <DropdownMenuItem
+              disabled={makerCannotUseOrgScope}
               onClick={handleOrgClick}
               className={cn(
-                "cursor-pointer gap-2 p-2",
-                isOrgDashboard && "bg-sidebar-accent text-sidebar-accent-foreground",
+                "gap-2 p-2",
+                !makerCannotUseOrgScope && "cursor-pointer",
+                isOrgDashboard && !makerCannotUseOrgScope && "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               <div className="flex size-7 items-center justify-center rounded-lg border border-border/60 bg-secondary">
@@ -120,7 +123,7 @@ export function TeamSwitcher() {
                 <span className="font-medium">
                   {role === "admin" ? "Organization view" : organization.name}
                 </span>
-                {isOrgDashboard ? <Check className="size-3.5 shrink-0" /> : null}
+                {isOrgDashboard && !makerCannotUseOrgScope ? <Check className="size-3.5 shrink-0" /> : null}
               </div>
             </DropdownMenuItem>
 

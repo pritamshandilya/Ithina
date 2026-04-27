@@ -22,3 +22,21 @@ export function formatCampaignDateTime(value: string): string {
 
   return `${day}/${month}/${year} ${h}:${min} ${ampm}`;
 }
+
+/** "April 13, 2026 at 4:10 PM" for profile and account metadata (local timezone). */
+export function formatProfileDateTime(iso: string | null | undefined): string | null {
+  if (!iso?.trim()) return null;
+  const d = new Date(iso.trim());
+  if (Number.isNaN(d.getTime())) return null;
+  const datePart = d.toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const timePart = d.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+  return `${datePart} at ${timePart}`;
+}

@@ -6,6 +6,8 @@ export interface CampaignListItem {
   status: CampaignListStatus;
   /** Raw API status string (e.g. pending_approval, publishing) for fleet and tooling. */
   apiStatus?: string;
+  /** From API `guardrails_status` — drives pipeline when status is `draft`. */
+  guardrailsStatus?: "pass" | "warn" | "fail";
   /**
    * Prototype-only UI fields (used for the campaign pipeline breadcrumb in /campaigns).
    * Backend integration may provide this later; keeping optional avoids breaking API payloads.
@@ -15,6 +17,8 @@ export interface CampaignListItem {
   skus: number;
   hardware: string[];
   date: string;
+  /** ISO 8601 from API `created_at` (for dashboards / trends). */
+  createdAt: string;
   initiator: string;
   ownerId?: string;
   ownerName?: string;
@@ -30,6 +34,12 @@ export interface CampaignListItem {
   scheduledEndAt?: string;
   /** Time-of-day label from API (`scheduled_time`), e.g. `08:00`. */
   scheduledTime?: string;
+  /** Full SKU detail rows from the API response (used for ESL preview placeholder substitution). */
+  rawSkus?: import("@/types/api/campaigns").ApiCampaignSKU[];
+  /** From API `source_type` (e.g. nl, manual). */
+  sourceType?: string;
+  /** Original campaign intent prompt when from NL path. */
+  aiPrompt?: string | null;
 }
 
 export interface CampaignStatCard {

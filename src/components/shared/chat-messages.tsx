@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef } from "react";
 
 
 import AssistantStaggeredBubbles from "@/components/shared/assistant-staggered-bubbles";
+import ChatMarkdown from "@/components/shared/chat-markdown";
 
 import { cn } from "@/lib/utils";
 
@@ -22,7 +23,11 @@ interface ChatMessagesProps {
 
 
 
-export default function ChatMessages({ messages, isTyping, className }: ChatMessagesProps) {
+export default function ChatMessages({
+  messages,
+  isTyping,
+  className,
+}: ChatMessagesProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -62,9 +67,9 @@ export default function ChatMessages({ messages, isTyping, className }: ChatMess
 
           className={cn(
 
-            "mb-2 flex flex-col animate-[slideUp_0.3s_ease-out]",
+            "mb-2 flex w-full min-w-0 flex-col animate-[slideUp_0.3s_ease-out]",
 
-            msg.role === "user" ? "items-end" : "items-start",
+            msg.role === "user" ? "items-end" : "items-stretch",
 
           )}
 
@@ -74,7 +79,7 @@ export default function ChatMessages({ messages, isTyping, className }: ChatMess
 
             <div className="max-w-[90%] rounded-2xl rounded-tr-sm border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm backdrop-blur-sm">
 
-              {msg.text}
+              <ChatMarkdown content={msg.text} />
 
             </div>
 
@@ -87,6 +92,8 @@ export default function ChatMessages({ messages, isTyping, className }: ChatMess
               messageKey={idx}
 
               onLayoutChange={scrollToBottom}
+
+              summaryEnrichment={msg.summaryEnrichment}
 
             />
 

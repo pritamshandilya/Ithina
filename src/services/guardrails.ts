@@ -41,6 +41,7 @@ function adaptApiGuardrail(api: ApiGuardrailResponse): GuardRailRule {
     severity: mapSeverityToUi(api.severity),
     description: api.description ?? "",
     active: api.is_active,
+    thresholdValue: api.threshold_value,
   };
 }
 

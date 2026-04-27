@@ -1,12 +1,36 @@
 /**
- * Campaign table column definitions — IthTable (native HTML table).
- * Design: Ithina Design System §2.4 + image reference.
+ * Campaign table column definitions — Tabulator DataTable.
  */
 
-import { Check, ChevronRight, CirclePause, History, Pencil, PlayCircle, Trash2 } from "lucide-react";
-
-import type { IthColumnDef } from "@/components/ui/ith-table";
+import type { DataTableCell, DataTableColumn } from "@/components/ui/data-table";
+import { derivePipelineForRow } from "@/services/campaigns";
 import type { CampaignListItem, CampaignListStatus } from "@/types/campaigns";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Tabulator / DOM may report `Text` as `event.target` when clicking label text; `Text` has no `closest()`. */
+function findActionElement(e: MouseEvent): HTMLElement | null {
+  const path = (e as Event & { composedPath?(): EventTarget[] }).composedPath?.();
+  if (Array.isArray(path)) {
+    for (const n of path) {
+      if (n instanceof Element) {
+        const a = n.closest?.("[data-action]");
+        if (a instanceof HTMLElement) return a;
+      }
+    }
+  }
+  const t = e.target;
+  const el: Element | null =
+    t instanceof Element ? t : t instanceof Text ? t.parentElement : null;
+  if (!el) return null;
+  return el.closest("[data-action]") as HTMLElement | null;
+}
 
 export type CampaignProtoStatus =
   | "active"
@@ -28,12 +52,12 @@ export function toPrototypeStatus(status: CampaignListStatus): CampaignProtoStat
 }
 
 const STATUS_PILL: Record<CampaignProtoStatus, string> = {
-  active:    "text-ithina-purple  border-ithina-purple/30  bg-ithina-purple/10",
-  scheduled: "text-amber-400     border-amber-400/30      bg-amber-400/10",
-  completed: "text-emerald-400   border-emerald-400/30    bg-emerald-400/10",
-  draft:     "text-slate-400     border-slate-600/60      bg-white/5",
-  pending:   "text-orange-400    border-orange-400/30     bg-orange-400/10",
-  rejected:  "text-rose-400      border-rose-400/30       bg-rose-400/10",
+  active:    "text-purple-400  border-purple-400/30  bg-purple-400/10",
+  scheduled: "text-emerald-300 border-emerald-400/40 bg-emerald-400/15",
+  completed: "text-chart-2    border-chart-2/30     bg-chart-2/10",
+  draft:     "text-slate-400  border-slate-600/60   bg-white/5",
+  pending:   "text-yellow-300 border-yellow-400/40  bg-yellow-400/15",
+  rejected:  "text-rose-400   border-rose-400/30    bg-rose-400/10",
 };
 
 const STATUS_LABEL: Record<CampaignProtoStatus, string> = {
@@ -46,128 +70,40 @@ const STATUS_LABEL: Record<CampaignProtoStatus, string> = {
 };
 
 const PIPELINE_STAGE_CLASS: Record<string, string> = {
-  Deployed:    "text-emerald-400 font-semibold",
-  Scheduled:   "text-amber-400  font-semibold",
-  Approval:    "text-orange-400  font-semibold",
-  "Guard Rails": "text-ithina-purple font-semibold",
-  Design:      "text-blue-400   font-semibold",
-  Data:        "text-slate-400  font-semibold",
+  Deployed:      "text-chart-2 font-semibold",
+  Scheduled:     "text-emerald-400 font-semibold",
+  Approval:      "text-yellow-400 font-semibold",
+  "Guard Rails": "text-purple-400 font-semibold",
+  Design:        "text-blue-400 font-semibold",
+  Data:          "text-slate-400 font-semibold",
 };
 
-export function derivePipeline(status: CampaignListStatus): string[] {
-  switch (status) {
-    case "Active":
-    case "Completed":
-      return ["Data", "Design", "Guard Rails", "Scheduled", "Deployed"];
-    case "Scheduled":
-      return ["Data", "Design", "Guard Rails", "Scheduled"];
-    case "Pending":
-      return ["Data", "Design", "Guard Rails", "Approval"];
-    case "Draft":
-      return ["Data", "Design"];
-    case "Rejected":
-      return ["Data", "Design", "Guard Rails", "Approval"];
-  }
+function pipelineHtml(pipeline: string[]): string {
+  return pipeline
+    .map((stage, i) => {
+      const isLast = i === pipeline.length - 1;
+      // Completed steps: readable muted text (no tiny 11px + dark slate-600 on dark rows).
+      const cls = isLast
+        ? (PIPELINE_STAGE_CLASS[stage] ?? "text-slate-300 font-semibold")
+        : "text-slate-400 font-medium";
+      const arrow =
+        !isLast
+          ? `<svg class="size-3.5 shrink-0 text-slate-500 inline-block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`
+          : "";
+      return `<span class="inline-flex items-center gap-1.5"><span class="whitespace-nowrap text-sm ${cls}">${stage}</span>${arrow}</span>`;
+    })
+    .join("");
 }
 
-function PipelineStages({ pipeline }: { pipeline: string[] }) {
-  return (
-    <div className="flex flex-wrap items-center gap-1">
-      {pipeline.map((stage, i) => {
-        const isLast = i === pipeline.length - 1;
-        return (
-          <span key={stage} className="flex items-center gap-1">
-            <span
-              className={`font-mono text-[9px] whitespace-nowrap ${
-                isLast
-                  ? (PIPELINE_STAGE_CLASS[stage] ?? "text-slate-400 font-semibold")
-                  : "text-slate-600 line-through"
-              }`}
-            >
-              {stage}
-            </span>
-            {!isLast && <ChevronRight className="size-2.5 shrink-0 text-slate-700" strokeWidth={2} aria-hidden />}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function HardwarePills({ hardware }: { hardware: string[] }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {hardware.map((hw) => {
-        const cls = hw.startsWith("ESL")
-          ? "bg-blue-400/10 border-blue-400/20 text-blue-300"
-          : "bg-amber-400/10 border-amber-400/20 text-amber-300";
-        return (
-          <span
-            key={hw}
-            className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-medium ${cls}`}
-          >
-            {hw}
-          </span>
-        );
-      })}
-    </div>
-  );
-}
-
-function EditBtn() {
-  return (
-    <button
-      type="button"
-      data-action="edit"
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-white/10 bg-white/[0.04] px-2 py-1.5 text-[10px] font-semibold text-slate-300 transition-all hover:bg-white/[0.08] hover:text-white"
-    >
-      <Pencil className="size-3" strokeWidth={2} aria-hidden />
-      Edit
-    </button>
-  );
-}
-
-function PauseBtn({ paused }: { paused: boolean }) {
-  return (
-    <button
-      type="button"
-      data-action="pause"
-      className={`inline-flex items-center gap-1 whitespace-nowrap rounded-lg border px-2 py-1.5 text-[10px] font-semibold transition-all ${
-        paused
-          ? "border-amber-400/30 bg-amber-400/10 text-amber-400 hover:bg-amber-400/20"
-          : "border-white/10 bg-white/[0.03] text-slate-400 hover:bg-white/[0.08] hover:text-white"
-      }`}
-    >
-      {paused ? <PlayCircle className="size-3" strokeWidth={2} aria-hidden /> : <CirclePause className="size-3" strokeWidth={2} aria-hidden />}
-      {paused ? "Resume" : "Pause"}
-    </button>
-  );
-}
-
-function HistoryBtn() {
-  return (
-    <button
-      type="button"
-      data-action="history"
-      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-white/10 bg-white/[0.03] px-2 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
-    >
-      <History className="size-3" strokeWidth={2} aria-hidden />
-      History
-    </button>
-  );
-}
-
-function DeleteBtn() {
-  return (
-    <button
-      type="button"
-      data-action="delete"
-      aria-label="Delete campaign"
-      className="inline-flex items-center justify-center rounded-lg border border-rose-400/20 px-2 py-1.5 text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"
-    >
-      <Trash2 className="size-3" strokeWidth={2} aria-hidden />
-    </button>
-  );
+function hardwarePillsHtml(hardware: string[]): string {
+  return hardware
+    .map((hw) => {
+      const cls = hw.startsWith("ESL")
+        ? "bg-blue-400/10 border-blue-400/20 text-blue-300"
+        : "bg-amber-400/10 border-amber-400/20 text-amber-300";
+      return `<span class="rounded border px-1.5 py-0.5 font-mono text-xs font-medium ${cls}">${hw}</span>`;
+    })
+    .join("");
 }
 
 export function canDeleteCampaignByStatus(status: CampaignListStatus): boolean {
@@ -175,127 +111,188 @@ export function canDeleteCampaignByStatus(status: CampaignListStatus): boolean {
 }
 
 export interface BuildCampaignColumnsParams {
-  selectedIds: Set<string>;
   pausedById: Record<string, boolean>;
-  allSelected: boolean;
-  anySelected: boolean;
-  onToggleAll: (checked: boolean) => void;
+  onEdit: (row: CampaignListItem) => void;
+  onPause: (row: CampaignListItem) => void;
+  onHistory: (row: CampaignListItem) => void;
+  onDelete: (id: string) => void;
 }
 
 export function buildCampaignColumns({
-  selectedIds,
   pausedById,
-}: BuildCampaignColumnsParams): IthColumnDef<CampaignListItem>[] {
+  onEdit,
+  onPause,
+  onHistory,
+  onDelete,
+}: BuildCampaignColumnsParams): DataTableColumn<CampaignListItem>[] {
   return [
     {
-      key: "select",
-      label: "",
-      width: "w-[44px]",
-      render: (row) => (
-        <button
-          type="button"
-          data-proto-row-select="true"
-          aria-label={`Select campaign ${row.name}`}
-          className={`inline-flex size-4 items-center justify-center rounded border transition-colors ${
-            selectedIds.has(row.id)
-              ? "border-ithina-purple bg-ithina-purple text-white"
-              : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
-          }`}
-        >
-          <Check className="size-2.5" strokeWidth={3} aria-hidden />
-        </button>
-      ),
-    },
-    {
-      key: "name",
-      label: "Campaign",
-      sortable: true,
-      render: (row) => (
-        <p className="text-[13px] font-semibold leading-tight text-white">{row.name}</p>
-      ),
-    },
-    {
-      key: "status",
-      label: "Status",
-      width: "w-[120px]",
-      render: (row) => {
-        const proto = toPrototypeStatus(row.status);
+      title: "Campaign",
+      field: "name",
+      minWidth: 220,
+      widthGrow: 1.25,
+      variableHeight: true,
+      headerHozAlign: "left",
+      hozAlign: "left",
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const row = rowData as CampaignListItem;
         return (
-          <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-semibold ${STATUS_PILL[proto]}`}>
-            {proto === "active" && (
-              <span className="inline-block size-1.5 shrink-0 animate-pulse rounded-full bg-current" />
-            )}
-            {STATUS_LABEL[proto]}
-          </span>
+          row.name.toLowerCase().includes(term) || row.id.toLowerCase().includes(term)
         );
       },
-    },
-    {
-      key: "pipeline",
-      label: "Pipeline Stage",
-      render: (row) => {
-        const pipeline = row.pipeline ?? derivePipeline(row.status);
-        return <PipelineStages pipeline={pipeline} />;
+      formatter: (cell: DataTableCell<CampaignListItem>) => {
+        const row = cell.getData();
+        const name = escapeHtml(row.name);
+        return `<div class="min-w-0 text-left font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">${name}</div>`;
       },
     },
     {
-      key: "hardware",
-      label: "Hardware",
-      width: "w-[170px]",
-      render: (row) => <HardwarePills hardware={row.hardware} />,
+      title: "Status",
+      field: "status",
+      width: 130,
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const row = rowData as CampaignListItem;
+        const proto = toPrototypeStatus(row.status);
+        const label = STATUS_LABEL[proto].toLowerCase();
+        const raw = String(row.status).toLowerCase();
+        return label.includes(term) || raw.includes(term);
+      },
+      formatter: (cell: DataTableCell<CampaignListItem>) => {
+        const row = cell.getData();
+        const proto = toPrototypeStatus(row.status);
+        const pulse = proto === "active" ? `<span class="inline-block size-1.5 shrink-0 animate-pulse rounded-full bg-current"></span>` : "";
+        return `<span class="inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-xs font-semibold ${STATUS_PILL[proto]}">${pulse}${STATUS_LABEL[proto]}</span>`;
+      },
     },
     {
-      key: "skus",
-      label: "SKUs",
-      width: "w-[72px]",
-      align: "left",
-      render: (row) => (
-        <span className="font-mono text-sm tabular-nums text-slate-400">{row.skus}</span>
-      ),
+      title: "Pipeline Stage",
+      field: "pipeline",
+      minWidth: 620,
+      widthGrow: 2,
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const row = rowData as CampaignListItem;
+        const pipeline = derivePipelineForRow(row);
+        const haystack = pipeline.join(" ").toLowerCase();
+        return haystack.includes(term);
+      },
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: DataTableCell<CampaignListItem>) => {
+        const row = cell.getData();
+        const pipeline = derivePipelineForRow(row);
+        return `<div class="flex w-max min-w-max max-w-none flex-nowrap items-center gap-1 whitespace-nowrap">${pipelineHtml(pipeline)}</div>`;
+      },
     },
     {
-      key: "date",
-      label: "Date",
-      width: "w-[120px]",
-      render: (row) => (
-        <span className="whitespace-nowrap font-mono text-xs text-slate-500">{row.date}</span>
-      ),
+      title: "Hardware",
+      field: "hardware",
+      width: 180,
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const row = rowData as CampaignListItem;
+        const haystack = (row.hardware ?? []).join(" ").toLowerCase();
+        return haystack.includes(term);
+      },
+      formatter: (cell: DataTableCell<CampaignListItem>) => {
+        const row = cell.getData();
+        return `<div class="flex flex-wrap gap-1">${hardwarePillsHtml(row.hardware)}</div>`;
+      },
     },
     {
-      key: "initiator",
-      label: "Initiator",
-      width: "w-[140px]",
-      render: (row) => <span className="text-xs text-slate-400">{row.initiator}</span>,
+      title: "SKUs",
+      field: "skus",
+      width: 72,
+      sorter: "number",
+      headerFilter: "input" as const,
+      headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+        const term = String(value ?? "").trim().toLowerCase();
+        if (!term) return true;
+        const n = (rowData as CampaignListItem).skus;
+        return String(n ?? "").toLowerCase().includes(term);
+      },
+      formatter: (cell: DataTableCell<CampaignListItem>) =>
+        `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
     },
     {
-      key: "actions",
-      label: "Actions",
-      align: "right",
-      width: "w-[240px]",
-      render: (row) => {
+      title: "Date",
+      field: "date",
+      width: 120,
+      headerFilter: "input" as const,
+      formatter: (cell: DataTableCell<CampaignListItem>) =>
+        `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
+    },
+    {
+      title: "Initiator",
+      field: "initiator",
+      width: 140,
+      headerFilter: "input" as const,
+      formatter: (cell: DataTableCell<CampaignListItem>) =>
+        `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
+    },
+    {
+      title: "Actions",
+      field: "actions",
+      headerSort: false,
+      headerFilter: false,
+      width: 176,
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: DataTableCell<CampaignListItem>) => {
+        const row = cell.getData();
         const proto = toPrototypeStatus(row.status);
         const paused = pausedById[row.id] ?? row.paused ?? false;
-        const canDelete = canDeleteCampaignByStatus(row.status);
-        return (
-          <div className="flex flex-wrap items-center justify-end gap-1.5">
-            {proto === "draft" && <EditBtn />}
-            {proto === "scheduled" && <PauseBtn paused={paused} />}
-            <HistoryBtn />
-            {canDelete ? (
-              <DeleteBtn />
-            ) : (
-              <button
-                type="button"
-                data-action="delete"
-                aria-label="Delete campaign unavailable"
-                title="Only Draft or Rejected campaigns can be deleted."
-                className="inline-flex items-center justify-center rounded-lg border border-slate-600/40 px-2 py-1.5 text-slate-600 opacity-60 transition-all hover:border-slate-500 hover:bg-white/[0.03]"
-              >
-                <Trash2 className="size-3" strokeWidth={2} aria-hidden />
-              </button>
-            )}
-          </div>
-        );
+        const canDel = canDeleteCampaignByStatus(row.status);
+
+        const editBtn = proto === "draft"
+          ? `<button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit campaign">
+              <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>` : "";
+
+        const pauseBtn = proto === "scheduled"
+          ? `<button type="button" data-action="pause" class="inline-flex size-8 items-center justify-center rounded-md border transition-all ${
+            paused
+              ? "border-amber-400/35 bg-amber-400/10 text-amber-400 hover:border-amber-400/60 hover:bg-amber-400/20"
+              : "border-white/15 bg-white/[0.03] text-slate-400 hover:border-primary/40 hover:bg-white/[0.06] hover:text-white"
+          }" aria-label="${paused ? "Resume" : "Pause"} campaign">
+              ${
+                paused
+                  ? `<svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`
+                  : `<svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="10" y1="15" x2="10" y2="9"/><line x1="14" y1="15" x2="14" y2="9"/></svg>`
+              }
+            </button>` : "";
+
+        const historyBtn = `<button type="button" data-action="history" class="inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Campaign history">
+          <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </button>`;
+
+        const deleteBtn = canDel
+          ? `<button type="button" data-action="delete" aria-label="Delete campaign" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
+          : `<span title="Only Draft or Rejected campaigns can be deleted." class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md border border-slate-600/40 text-slate-600 opacity-50" aria-hidden="true"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>`;
+
+        return `<div class="flex flex-nowrap items-center justify-end gap-1">${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
+      },
+      cellClick: (e: MouseEvent, cell: DataTableCell<CampaignListItem>) => {
+        const action = findActionElement(e);
+        if (!action) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const row = cell.getData();
+        const a = action.dataset.action;
+        if (a === "edit")    onEdit(row);
+        if (a === "pause")   onPause(row);
+        if (a === "history") onHistory(row);
+        if (a === "delete")  onDelete(row.id);
       },
     },
   ];

@@ -4,7 +4,14 @@ import { useMemo, useState } from "react";
 import { IthBadge } from "@/components/ui/ith-table";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OrgUser } from "@/features/admin-users/types";
+
 const ROLE_LABEL = { admin: "Admin", maker: "Maker", checker: "Checker" } as const;
+
+function roleBadgeVariant(role: OrgUser["role"]): "amber" | "purple" | "emerald" {
+  if (role === "admin") return "amber";
+  if (role === "checker") return "emerald";
+  return "purple";
+}
 
 interface StoreOnboardingTeamStepPromoProps {
   usersLoading: boolean;
@@ -52,33 +59,24 @@ export function StoreOnboardingTeamStepPromo({
 
   return (
     <div className="rounded-xl border border-ithina-border bg-ithina-panel/90 shadow-xl">
-      <div className="border-b border-ithina-border px-6 py-5">
-        <h2 className="text-lg font-bold text-white">Assign users to store</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Makers and checkers you select will have access to this store.
-        </p>
-      </div>
-      <div className="space-y-4 px-6 py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={onBack}
-            disabled={isFinishing}
-            className="btn btn-secondary gap-1 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <ChevronLeft className="size-4" aria-hidden />
-            Back
-          </button>
-          <button
-            type="button"
-            onClick={onFinish}
-            disabled={isFinishing}
-            className="btn btn-primary min-w-[180px] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {isFinishing ? "Finishing…" : "Finish onboarding"}
-          </button>
+      <div className="flex flex-col gap-4 border-b border-ithina-border px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-lg font-bold text-white">Assign users to store</h2>
+          <p className="text-sm text-slate-500">
+            Makers and checkers you select will have access to this store.
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={onFinish}
+          disabled={isFinishing}
+          className="btn btn-primary shrink-0 self-start disabled:cursor-not-allowed disabled:opacity-50 sm:self-auto"
+        >
+          {isFinishing ? "Finishing…" : "Finish onboarding"}
+        </button>
+      </div>
 
+      <div className="space-y-4 px-6 py-6">
         {usersLoading ? (
           <Skeleton className="h-32 w-full rounded-lg" />
         ) : assignableUsers.length === 0 ? (
@@ -91,7 +89,7 @@ export function StoreOnboardingTeamStepPromo({
               <p className="text-xs text-slate-500">
                 {selectedCount} user{selectedCount === 1 ? "" : "s"} selected
               </p>
-              <div className="relative w-full sm:w-72">
+              <div className="relative w-full sm:w-80">
                 <Search
                   className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500"
                   aria-hidden
@@ -127,10 +125,13 @@ export function StoreOnboardingTeamStepPromo({
                         aria-label="Select all visible users"
                       />
                     </th>
-                    <th className="th-base font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                      User
+                    <th className="th-base px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                      Name
                     </th>
-                    <th className="th-base font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                    <th className="th-base px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-slate-500">
+                      Email
+                    </th>
+                    <th className="th-base px-3 py-2 font-mono text-[10px] uppercase tracking-widest text-slate-500">
                       Role
                     </th>
                   </tr>
@@ -147,19 +148,16 @@ export function StoreOnboardingTeamStepPromo({
                           aria-label={`Select ${u.firstName} ${u.lastName}`}
                         />
                       </td>
-                      <td className="td-base">
-                        <span className="font-medium text-white">
+                      <td className="td-base px-3 py-3 text-white">
+                        <span className="font-medium">
                           {u.firstName} {u.lastName}
                         </span>
-                        <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
-                          {u.email}
-                        </span>
                       </td>
-                      <td className="td-base">
-                        <IthBadge
-                          label={ROLE_LABEL[u.role]}
-                          variant={u.role === "admin" ? "amber" : "purple"}
-                        />
+                      <td className="td-base px-3 py-3 font-mono text-[12px] text-slate-400">
+                        {u.email}
+                      </td>
+                      <td className="td-base px-3 py-3">
+                        <IthBadge label={ROLE_LABEL[u.role]} variant={roleBadgeVariant(u.role)} />
                       </td>
                     </tr>
                   ))}
@@ -168,6 +166,18 @@ export function StoreOnboardingTeamStepPromo({
             </div>
           </>
         )}
+
+        <div className="flex justify-start pt-2">
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={isFinishing}
+            className="btn btn-secondary gap-1 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft className="size-4" aria-hidden />
+            Back
+          </button>
+        </div>
       </div>
     </div>
   );

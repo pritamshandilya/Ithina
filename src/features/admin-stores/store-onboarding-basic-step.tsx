@@ -29,25 +29,24 @@ export function StoreOnboardingBasicStep({
 }: StoreOnboardingBasicStepProps) {
   return (
     <div className="rounded-xl border border-ithina-border bg-ithina-panel/90 shadow-xl">
-      <div className="border-b border-ithina-border px-6 py-5">
-        <h2 className="text-lg font-bold text-white">Basic store details</h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Name and locate your store. You can refine settings later.
-        </p>
+      <div className="flex flex-col gap-4 border-b border-ithina-border px-6 py-5 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h2 className="text-lg font-bold text-white">Basic store details</h2>
+          <p className="text-sm text-slate-500">
+            Name and locate your store. You can refine settings later.
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={!canContinue}
+          onClick={onNext}
+          className="btn btn-ghost shrink-0 gap-1 self-start sm:self-auto disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Next
+          <ChevronRight className="size-4" aria-hidden />
+        </button>
       </div>
       <div className="space-y-4 px-6 py-6">
-        <div className="flex justify-end">
-          <button
-            type="button"
-            disabled={!canContinue}
-            onClick={onNext}
-            className="btn btn-primary min-w-[140px] gap-1 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Next
-            <ChevronRight className="size-4" aria-hidden />
-          </button>
-        </div>
-
         <div className="form-group">
           <label htmlFor="store-name" className="form-label">
             Store name

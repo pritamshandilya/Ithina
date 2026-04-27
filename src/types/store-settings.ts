@@ -6,8 +6,10 @@ export interface StoreProfile {
   id: string;
   name: string;
   address: string;
+  region: string;
   currency: string;
   defaultDimensions: StoreDimensionUnit;
+  isActive: boolean;
 }
 
 export interface StoreStaffMember {

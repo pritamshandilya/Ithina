@@ -32,15 +32,32 @@ function StepPill({ step, currentStep, icon: Icon, label, description }: StepPil
             "border-ithina-border bg-ithina-panel/80 text-slate-500",
         )}
       >
-        <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-ithina-bg/80 text-xs font-semibold text-slate-300">
-          {isCompleted ? <Check className="size-4 text-emerald-400" aria-hidden /> : step + 1}
+        <div
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-colors",
+            isCompleted && "bg-emerald-500/15 text-emerald-400",
+            isActive && "ring-2 ring-ithina-purple/40 bg-ithina-purple/15 text-ithina-purple",
+            !isActive && !isCompleted && "bg-ithina-bg/80 text-slate-400",
+          )}
+        >
+          {isCompleted ? (
+            <Check className="size-4 text-emerald-400" aria-hidden />
+          ) : isActive ? (
+            <Icon className="size-4" aria-hidden />
+          ) : (
+            <span className="tabular-nums">{step + 1}</span>
+          )}
         </div>
         <div className="flex min-w-0 flex-col items-start gap-0.5">
-          <div className="flex items-center gap-2">
-            <Icon className="size-4 shrink-0" aria-hidden />
-            <span className="text-sm font-semibold">{label}</span>
-          </div>
-          <p className="text-[11px] text-slate-500">{description}</p>
+          <span className="text-sm font-semibold leading-tight">{label}</span>
+          <p
+            className={cn(
+              "text-[11px] leading-snug",
+              isActive ? "text-ithina-purple/80" : "text-slate-500",
+            )}
+          >
+            {description}
+          </p>
         </div>
       </div>
     </li>
@@ -49,8 +66,8 @@ function StepPill({ step, currentStep, icon: Icon, label, description }: StepPil
 
 function StepSeparator() {
   return (
-    <li className="flex items-center">
-      <div className="h-px w-6 rounded-full bg-ithina-border" />
+    <li className="hidden items-center self-center sm:flex" aria-hidden>
+      <div className="h-px w-8 rounded-full bg-ithina-border lg:w-10" />
     </li>
   );
 }
@@ -69,7 +86,7 @@ export function StoreOnboardingStepper({
   icons: { basic: BasicIcon, config: ConfigIcon, team: TeamIcon },
 }: StoreOnboardingStepperProps) {
   return (
-    <ol className="flex flex-wrap items-stretch gap-3 rounded-2xl px-2 py-3 shadow-sm">
+    <ol className="flex flex-wrap items-stretch gap-2 sm:gap-3 lg:gap-4">
       <StepPill
         step={0}
         currentStep={step}

@@ -1,20 +1,22 @@
-import {
-  Check,
-  CloudUpload,
-  Fish,
-  LayoutGrid,
-  Monitor,
-  RectangleHorizontal,
-  X,
-  Zap,
-} from "lucide-react";
+import { Check, CloudUpload, Loader2, Monitor, RectangleHorizontal, Sparkles, X } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 
 import AiModifyPanel from "./ai-modify-panel";
 
+import {
+  ESL_VARIANTS,
+  EslLivePreview,
+  EslVariantCard,
+  LcdLivePreview,
+  LcdVariantCard,
+  STUDIO_TABS,
+  type StudioTabId,
+} from "@/features/campaign-studio/campaign-studio-shared-ui";
+import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
+import type { LayoutVariant } from "@/types/api/campaigns";
 import { cn } from "@/lib/utils";
 
-export type StudioTabId = "ai" | "library" | "upload";
+export type { StudioTabId };
 
 export interface CampaignStudioModalProps {
   open: boolean;
@@ -23,6 +25,23 @@ export interface CampaignStudioModalProps {
   selectedVariant: "A" | "B" | "C";
   onSelectVariant: (v: "A" | "B" | "C") => void;
   onApply: (selection: AppliedDesignSelection) => void;
+  /** When true an "AI is generating…" overlay fills the modal body */
+  isGenerating?: boolean;
+  /** Layout rows from timeline events (merged client-side; may include image_url and/or elements) */
+  generatedVariants?: LayoutVariant[];
+  /** Called when user clicks "Apply to Campaign" in the live AI tab (e.g. save variant on draft, close modal). */
+  onSubmitForApproval?: (variantId: string) => void;
+  isSubmitting?: boolean;
+  /** Live AI Modify wiring */
+  isRefining?: boolean;
+  onSendChat?: (message: string) => void;
+  /** AI reply text to display after each layout_refined event */
+  lastAiResponse?: string;
+  /** Bumped on each refinement to cache-bust identical image URLs */
+  imageCacheBuster?: number;
+  apiBaseUrl?: string;
+  /** Product placeholders for ESL SVG renderer ({name}/{price}/{was} substitution) */
+  placeholders?: EslPlaceholders;
 }
 
 export type AppliedDesignSelection = {
@@ -34,94 +53,6 @@ export type AppliedDesignSelection = {
   templateProductLine?: string;
   uploadedFileName?: string;
 };
-
-const STUDIO_TABS: { id: StudioTabId; label: string; icon: typeof Zap }[] = [
-  { id: "ai", label: "AI Generate", icon: Zap },
-  { id: "library", label: "Template Library", icon: LayoutGrid },
-  { id: "upload", label: "Manual Upload", icon: CloudUpload },
-];
-
-function EslLivePreview({ variant }: { variant: "A" | "B" | "C" }) {
-  return (
-    <div className="mx-auto max-w-[108px] overflow-hidden rounded-[5px] border-2 border-slate-400 bg-[#F0F0F0]">
-      {variant === "B" ? (
-        <>
-          <div className="bg-[#cc0000] py-0.5 text-center">
-            <span className="text-[6px] font-black uppercase tracking-wide text-white">EXPIRING IN 48H</span>
-          </div>
-          <div className="flex min-h-[50px] items-end justify-between px-1 py-1">
-            <div>
-              <span className="block text-[5.5px] leading-tight text-[#555]">
-                Premium
-                <br />
-                Salmon
-              </span>
-              <span className="text-[5px] text-[#aaa] line-through">$12.99</span>
-            </div>
-            <span className="text-[17px] font-black leading-none text-[#111]">
-              $10<span className="text-[10px]">.39</span>
-            </span>
-          </div>
-        </>
-      ) : variant === "C" ? (
-        <div className="flex min-h-[50px] p-0.5">
-          <div className="flex w-[38%] items-center justify-center rounded-sm bg-[#dde3ea] text-sm">
-            <Fish className="size-3.5 text-slate-600" strokeWidth={1.5} aria-hidden />
-          </div>
-          <div className="mx-0.5 w-0.5 shrink-0 bg-[#aaa]" />
-          <div className="flex min-w-0 flex-1 flex-col justify-between py-px">
-            <span className="text-[5px] text-[#555]">Premium Salmon</span>
-            <span className="text-[15px] font-black leading-none text-[#111]">
-              $10<span className="text-[9px]">.39</span>
-            </span>
-          </div>
-        </div>
-      ) : (
-        <>
-          <div className="bg-[#cc0000] py-0.5 text-center">
-            <span className="text-[6px] font-black uppercase tracking-wide text-white">EXPIRING IN 48H</span>
-          </div>
-          <div className="flex min-h-[50px] flex-col justify-between p-1">
-            <span className="text-[6px] font-semibold text-[#555]">Premium Salmon Tray</span>
-            <span className="text-[19px] font-black leading-none text-[#111]">
-              $10<span className="text-[11px]">.39</span>
-            </span>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function LcdLivePreview() {
-  return (
-    <div className="mx-auto aspect-video max-w-[136px] overflow-hidden rounded-[5px] border-2 border-slate-600">
-      <div className="flex h-full flex-col bg-gradient-to-br from-[#1e3a5f] to-[#0f172a]">
-        <div className="shrink-0 bg-[#d97706] py-0.5 text-center">
-          <span className="text-[6px] font-black tracking-wide text-black">FLASH SALE</span>
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col justify-end p-1">
-          <span className="text-[5.5px] text-slate-400">Premium Salmon Tray</span>
-          <span className="text-[15px] font-black leading-none text-white">
-            $10<span className="text-[9px]">.39</span>
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-interface VariantDef {
-  id: "A" | "B" | "C";
-  label: string;
-  recommended?: boolean;
-}
-
-const ESL_VARIANTS: VariantDef[] = [
-  { id: "A", label: "A. PRICE-DOMINANT" },
-  { id: "B", label: "B. URGENCY", recommended: true },
-  { id: "C", label: "C. BALANCED" },
-];
 
 type TemplateItem = {
   id: string;
@@ -183,173 +114,9 @@ const TEMPLATE_LIBRARY: TemplateItem[] = [
   },
 ];
 
-
-function EslVariantCard({
-  v,
-  selected,
-  onSelect,
-}: {
-  v: VariantDef;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "relative cursor-pointer overflow-hidden rounded-xl border-2 text-left transition-all hover:-translate-y-0.5",
-        selected
-          ? "border-ithina-purple shadow-[0_0_16px_rgba(168,85,247,0.2)]"
-          : "border-ithina-border hover:border-ithina-purple/50",
-      )}
-    >
-      {v.recommended && (
-        <div className="absolute -top-px left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ithina-purple px-2 py-0.5 text-[7px] font-bold text-white">
-          AI RECOMMENDED
-        </div>
-      )}
-      <div
-        className={cn(
-          "flex items-center justify-between bg-ithina-bg/80 px-2 py-1.5",
-          v.recommended && "mt-2",
-        )}
-      >
-        <span className="font-mono text-[9px] font-bold text-slate-400">{v.label}</span>
-        {selected && (
-          <div className="flex size-3 shrink-0 items-center justify-center rounded-full bg-ithina-purple">
-            <Check className="size-2 text-white" strokeWidth={3} />
-          </div>
-        )}
-      </div>
-      {v.id === "A" && (
-        <div className="flex aspect-[4/3] flex-col bg-[#E8ECF0] p-1">
-          <div className="mb-0.5 bg-[#cc0000] py-0.5 text-center">
-            <span className="text-[6px] font-black uppercase tracking-wide text-white">EXPIRING IN 48H</span>
-          </div>
-          <div className="flex min-h-0 flex-1 flex-col justify-end">
-            <span className="text-[7px] font-semibold text-[#555]">Premium Salmon Tray</span>
-            <span className="text-[22px] font-black leading-none text-[#111]">
-              $10<span className="text-[13px]">.39</span>
-            </span>
-          </div>
-        </div>
-      )}
-      {v.id === "B" && (
-        <div className="flex aspect-[4/3] flex-col bg-[#E8ECF0] p-1">
-          <div className="mb-0.5 bg-[#cc0000] py-0.5 text-center">
-            <span className="text-[6px] font-black uppercase tracking-wide text-white">EXPIRING IN 48H</span>
-          </div>
-          <div className="flex min-h-0 flex-1 items-end justify-between px-0.5 pb-0.5">
-            <div>
-              <span className="block text-[7px] leading-tight text-[#555]">
-                Premium
-                <br />
-                Salmon Tray
-              </span>
-              <span className="text-[6px] text-[#aaa] line-through">WAS $12.99</span>
-            </div>
-            <span className="text-[22px] font-black leading-none text-[#111]">
-              $10<span className="text-[13px]">.39</span>
-            </span>
-          </div>
-        </div>
-      )}
-      {v.id === "C" && (
-        <div className="flex aspect-[4/3] bg-[#E8ECF0] p-1">
-          <div className="flex w-[40%] items-center justify-center rounded-md bg-[#dde3ea]">
-            <Fish className="size-5 text-slate-600" strokeWidth={1.5} aria-hidden />
-          </div>
-          <div className="mx-0.5 w-0.5 shrink-0 bg-[#888]" />
-          <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-            <div className="rounded-sm bg-[#cc0000] py-0.5 text-center">
-              <span className="text-[5px] font-black text-white">CLEARANCE</span>
-            </div>
-            <div>
-              <span className="block text-[6px] text-[#555]">Premium Salmon Tray</span>
-              <span className="text-[18px] font-black leading-none text-[#111]">
-                $10<span className="text-[11px]">.39</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-    </button>
-  );
-}
-
-function LcdVariantCard({
-  v,
-  selected,
-  onSelect,
-}: {
-  v: VariantDef;
-  selected: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      className={cn(
-        "relative cursor-pointer overflow-hidden rounded-xl border-2 text-left transition-all hover:-translate-y-0.5",
-        selected
-          ? "border-ithina-purple shadow-[0_0_16px_rgba(168,85,247,0.2)]"
-          : "border-ithina-border hover:border-ithina-purple/50",
-      )}
-    >
-      {v.recommended && (
-        <div className="absolute -top-px left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-full bg-ithina-purple px-2 py-0.5 text-[7px] font-bold text-white">
-          AI RECOMMENDED
-        </div>
-      )}
-      <div className="relative h-[100px] overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-[url(https://images.unsplash.com/photo-1553621042-f6e147245754?auto=format&fit=crop&w=600&q=80)]"
-        />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(4,4,14,0.94)_0%,rgba(4,4,14,0.65)_50%,rgba(4,4,14,0.08)_100%)]" />
-        <div
-          className={cn(
-            "absolute left-2 top-1.5 font-mono text-[8px] uppercase tracking-widest text-slate-400",
-            v.recommended && "top-3.5",
-          )}
-        >
-          {v.label}
-        </div>
-        {selected && (
-          <div className="absolute right-2 top-1.5 z-10 flex size-3 items-center justify-center rounded-full bg-ithina-purple">
-            <Check className="size-2 text-white" strokeWidth={3} />
-          </div>
-        )}
-        <div className="absolute bottom-0 left-0 right-0 p-2.5">
-          {v.id === "B" && (
-            <div className="mb-1 inline-flex rounded bg-red-600 px-1.5 py-0.5 text-[7px] font-black tracking-widest text-white">
-              EXPIRING IN 48H
-            </div>
-          )}
-          {v.id === "A" && (
-            <div className="mb-1 inline-flex rounded border border-white/10 bg-black/50 px-1.5 py-0.5 font-mono text-[7px] tracking-widest text-white">
-              CLEARANCE
-            </div>
-          )}
-          {v.id === "C" && (
-            <div className="mb-1 inline-flex rounded bg-red-700 px-1.5 py-0.5 text-[7px] font-black tracking-widest text-white">
-              CLEARANCE
-            </div>
-          )}
-          <div className="text-[8px] font-semibold leading-tight text-white">Premium Salmon Tray</div>
-          {v.id === "B" && <div className="text-[6px] text-gray-400 line-through">WAS $12.99</div>}
-          <div className="text-sm font-black leading-none tracking-tighter text-white">$10.39</div>
-        </div>
-        {v.id === "B" && (
-          <div className="absolute bottom-2 right-2 text-lg drop-shadow-lg" aria-hidden>
-            🍣
-          </div>
-        )}
-      </div>
-    </button>
-  );
-}
+const API_BASE =
+  (import.meta.env.VITE_PROMO_API_URL as string | undefined) ??
+  "https://backend.promo.creativebits.tech";
 
 function CampaignStudioModal({
   open,
@@ -358,12 +125,28 @@ function CampaignStudioModal({
   selectedVariant,
   onSelectVariant,
   onApply,
+  isGenerating = false,
+  generatedVariants,
+  onSubmitForApproval,
+  isSubmitting = false,
+  isRefining = false,
+  onSendChat,
+  lastAiResponse,
+  imageCacheBuster = 0,
+  apiBaseUrl = API_BASE,
+  placeholders,
 }: CampaignStudioModalProps) {
   const [studioTab, setStudioTab] = useState<StudioTabId>("ai");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATE_LIBRARY[0].id);
   const [uploadedFileName, setUploadedFileName] = useState<string>("");
   const [aiResetKey, setAiResetKey] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const hasLiveLayouts = Boolean(
+    generatedVariants?.some(
+      (v) => v.image_url != null && String(v.image_url).trim() !== "",
+    ),
+  );
 
   useEffect(() => {
     if (open) {
@@ -377,6 +160,27 @@ function CampaignStudioModal({
   if (!open) return null;
 
   const isLcd = mode === "lcd";
+
+  /** Get the image URL for a given variant letter + current hardware. */
+  function livePreviewUrl(variantLetter: string): string | null {
+    if (!generatedVariants?.length) return null;
+    const match =
+      generatedVariants.find(
+        (v) =>
+          v.variant_id === variantLetter &&
+          (isLcd ? v.hardware_type === "lcd" : v.hardware_type !== "lcd"),
+      ) ?? generatedVariants.find((v) => v.variant_id === variantLetter);
+    const path = match?.image_url;
+    if (path == null || String(path).trim() === "") return null;
+    const s = String(path).trim();
+    const base = s.startsWith("http://") || s.startsWith("https://")
+      ? s
+      : `${apiBaseUrl}${s.startsWith("/") ? s : `/${s}`}`;
+    // Cache-bust: backend regenerates images at the same path after refinement
+    return imageCacheBuster > 0 ? `${base}?v=${imageCacheBuster}` : base;
+  }
+
+  const selectedPreviewUrl = livePreviewUrl(selectedVariant);
 
   return (
     <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/80 backdrop-blur-md">
@@ -441,11 +245,47 @@ function CampaignStudioModal({
             </div>
             <div className="border-t border-ithina-border/60 p-4">
               <p className="mb-2 font-mono text-[9px] uppercase tracking-widest text-slate-600">Live Preview</p>
-              {isLcd ? <LcdLivePreview /> : <EslLivePreview variant={selectedVariant} />}
+              {selectedPreviewUrl ? (
+                <div
+                  className={cn(
+                    "mx-auto overflow-hidden rounded-[5px] border-2 bg-black/20",
+                    isLcd
+                      ? "aspect-video max-w-[136px] border-slate-600"
+                      : "max-w-[108px] border-slate-400",
+                  )}
+                >
+                  <img key={selectedPreviewUrl} src={selectedPreviewUrl} alt="" className="size-full object-cover" />
+                </div>
+              ) : isLcd ? (
+                <LcdLivePreview />
+              ) : (
+                <EslLivePreview variant={selectedVariant} />
+              )}
             </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+            {/* ── Generating overlay ── */}
+            {isGenerating && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-6 bg-ithina-sidebar/95 backdrop-blur-sm">
+                <div className="relative flex size-20 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10">
+                  <Sparkles className="size-8 text-ithina-purple" />
+                  <Loader2 className="absolute -inset-2 size-24 animate-spin text-ithina-purple/30" />
+                </div>
+                <div className="text-center">
+                  <h3 className="mb-2 text-lg font-bold text-white">
+                    AI is designing your layouts…
+                  </h3>
+                  <p className="text-sm text-slate-400">
+                    This usually takes 15–30 seconds.
+                  </p>
+                </div>
+                <div className="h-1 w-48 overflow-hidden rounded-full bg-ithina-border">
+                  <div className="h-full animate-[indeterminate_1.5s_ease-in-out_infinite] rounded-full bg-ithina-purple" />
+                </div>
+              </div>
+            )}
+
             {studioTab === "ai" && (
               <>
                 <div className="flex min-h-0 flex-1 overflow-hidden">
@@ -454,13 +294,22 @@ function CampaignStudioModal({
                       Select a layout variant
                     </p>
                     <div className={cn(isLcd ? "flex flex-col gap-3" : "grid grid-cols-3 gap-4")}>
-                      {ESL_VARIANTS.map((v) =>
-                        isLcd ? (
+                      {ESL_VARIANTS.map((v) => {
+                        const variantLayout = !isLcd
+                          ? (generatedVariants?.find(
+                              (gv) =>
+                                gv.variant_id === v.id &&
+                                gv.hardware_type !== "lcd",
+                            ) ?? generatedVariants?.find((gv) => gv.variant_id === v.id))
+                          : undefined;
+                        return isLcd ? (
                           <LcdVariantCard
                             key={v.id}
                             v={v}
                             selected={selectedVariant === v.id}
                             onSelect={() => onSelectVariant(v.id)}
+                            previewImageUrl={livePreviewUrl(v.id)}
+                            isScanning={isRefining && selectedVariant === v.id}
                           />
                         ) : (
                           <EslVariantCard
@@ -468,12 +317,29 @@ function CampaignStudioModal({
                             v={v}
                             selected={selectedVariant === v.id}
                             onSelect={() => onSelectVariant(v.id)}
+                            previewImageUrl={livePreviewUrl(v.id)}
+                            isScanning={isRefining && selectedVariant === v.id}
+                            hardwareType={variantLayout?.hardware_type ?? "chroma29"}
+                            elements={variantLayout?.elements ?? null}
+                            placeholders={placeholders}
                           />
-                        ),
-                      )}
+                        );
+                      })}
                     </div>
                   </div>
-                  <AiModifyPanel resetKey={aiResetKey} />
+                  <AiModifyPanel
+                    resetKey={aiResetKey}
+                    live={
+                      onSendChat
+                        ? {
+                            disabled: !hasLiveLayouts || isSubmitting,
+                            isRefining,
+                            onSend: onSendChat,
+                            lastAiResponse,
+                          }
+                        : undefined
+                    }
+                  />
                 </div>
                 <div className="flex shrink-0 items-center justify-between border-t border-ithina-border bg-ithina-bg/40 px-5 py-3">
                   <p className="text-xs text-slate-500">
@@ -481,11 +347,22 @@ function CampaignStudioModal({
                   </p>
                   <button
                     type="button"
-                    onClick={() => onApply({ source: "ai" })}
-                    className="flex items-center gap-2 rounded-xl bg-ithina-purple px-5 py-2 text-sm font-bold text-white transition-all hover:bg-ithina-purple-hover"
+                    onClick={() => {
+                      if (onSubmitForApproval) {
+                        onSubmitForApproval(selectedVariant);
+                      } else {
+                        onApply({ source: "ai" });
+                      }
+                    }}
+                    disabled={isSubmitting || (!!onSubmitForApproval && !hasLiveLayouts)}
+                    className="flex items-center gap-2 rounded-xl bg-ithina-purple px-5 py-2 text-sm font-bold text-white transition-all hover:bg-ithina-purple-hover disabled:opacity-50"
                   >
+                    {isSubmitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Check className="size-4" strokeWidth={2} />
+                    )}
                     Apply to Campaign
-                    <Check className="size-4" strokeWidth={2} />
                   </button>
                 </div>
               </>

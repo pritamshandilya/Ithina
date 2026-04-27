@@ -1,10 +1,7 @@
-import { AlertTriangle, CheckCircle2, Clock3, Search, TrendingUp } from "lucide-react";
-import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { AlertTriangle, CheckCircle2, Clock3, TrendingUp } from "lucide-react";
+import { useMemo } from "react";
 
-import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { useCampaignList } from "@/hooks/use-campaigns";
-import { formatCampaignDateTime } from "@/lib/format-datetime";
 import { cn } from "@/lib/utils";
 
 interface CheckerHistoryRow {
@@ -17,15 +14,6 @@ interface CheckerHistoryRow {
   reviewedAt: string;
 }
 
-const DEFAULT_HISTORY_ROWS: CheckerHistoryRow[] = [
-  { id: "ch-1", campaignName: "Weekend Beverage Promo", campaignId: "CMP-9941-A", initiator: "System (Auto)", decision: "approved", guardRails: "pass", reviewedAt: "Today, 08:45 AM" },
-  { id: "ch-2", campaignName: "Electronics Flash Sale", campaignId: "CMP-8810-B", initiator: "Sarah J.", decision: "approved", guardRails: "warning", reviewedAt: "Yesterday, 14:22 PM" },
-  { id: "ch-3", campaignName: "Dairy & Bakery Weekend", campaignId: "CMP-9937-E", initiator: "Marcus T.", decision: "approved", guardRails: "pass", reviewedAt: "Mar 14, 10:05 AM" },
-  { id: "ch-4", campaignName: "Q2 Electronics Flash Sale", campaignId: "CMP-9939-C", initiator: "James O.", decision: "rejected", guardRails: "warning", reviewedAt: "Mar 13, 17:12 PM" },
-  { id: "ch-5", campaignName: "Spring Produce Launch", campaignId: "CMP-9938-D", initiator: "Auto-Scheduled", decision: "approved", guardRails: "pass", reviewedAt: "Mar 12, 09:15 AM" },
-  { id: "ch-6", campaignName: "Valentine's Day Special", campaignId: "CMP-9935-G", initiator: "Sarah J.", decision: "approved", guardRails: "pass", reviewedAt: "Feb 14, 12:10 PM" },
-];
-
 interface CheckerStat {
   label: string;
   value: number;
@@ -34,86 +22,24 @@ interface CheckerStat {
   trendClass: string;
 }
 
-const COLUMNS: IthColumnDef<CheckerHistoryRow>[] = [
-  {
-    key: "campaign",
-    label: "Campaign ID & Name",
-    sortable: true,
-    render: (row) => <IthPrimaryCell primary={row.campaignName} secondary={`ID: ${row.campaignId}`} />,
-  },
-  {
-    key: "initiator",
-    label: "Initiator",
-    field: "initiator",
-    sortable: true,
-  },
-  {
-    key: "decision",
-    label: "Decision",
-    render: (row) =>
-      row.decision === "approved" ? (
-        <IthBadge label="Approved" variant="emerald" dot pulse />
-      ) : (
-        <IthBadge label="Rejected" variant="rose" />
-      ),
-  },
-  {
-    key: "guardRails",
-    label: "Guard Rails",
-    render: (row) =>
-      row.guardRails === "pass" ? (
-        <IthBadge label="All Pass" variant="emerald" />
-      ) : (
-        <IthBadge label="1 Warning" variant="amber" />
-      ),
-  },
-  {
-    key: "reviewedAt",
-    label: "Reviewed At",
-    align: "right",
-    sortable: true,
-    render: (row) => (
-      <span className="whitespace-nowrap text-xs text-slate-400 tabular-nums">
-        {formatCampaignDateTime(row.reviewedAt)}
-      </span>
-    ),
-  },
-];
-
 export default function CheckerDashboard() {
-  const navigate = useNavigate();
   const { data: campaigns = [] } = useCampaignList();
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const PAGE_SIZE = 5;
 
   const historyRows = useMemo<CheckerHistoryRow[]>(() => {
     const reviewed = campaigns.filter((c) => c.submittedForApproval && c.approvalStatus !== "pending");
-    if (reviewed.length === 0) return DEFAULT_HISTORY_ROWS;
     return reviewed.map((c, idx) => ({
       id: `ch-${idx}-${c.id}`,
       campaignName: c.name,
       campaignId: c.id,
       initiator: c.ownerName ?? c.initiator,
       decision: c.approvalStatus === "approved" ? "approved" : "rejected",
-      guardRails: "pass",
+      guardRails: c.guardrailsStatus === "warn" ? "warning" : "pass",
       reviewedAt: c.reviewedAt ?? c.date,
     }));
   }, [campaigns]);
 
-  const filteredRows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return historyRows;
-    return historyRows.filter(
-      (row) =>
-        row.campaignName.toLowerCase().includes(q) ||
-        row.campaignId.toLowerCase().includes(q) ||
-        row.initiator.toLowerCase().includes(q),
-    );
-  }, [historyRows, search]);
-
-  const approvedCount = filteredRows.filter((r) => r.decision === "approved").length;
-  const rejectedCount = filteredRows.filter((r) => r.decision === "rejected").length;
+  const approvedCount = historyRows.filter((r) => r.decision === "approved").length;
+  const rejectedCount = historyRows.filter((r) => r.decision === "rejected").length;
 
   const stats: CheckerStat[] = [
     {
@@ -139,7 +65,7 @@ export default function CheckerDashboard() {
     },
     {
       label: "Total Reviewed",
-      value: filteredRows.length,
+      value: historyRows.length,
       icon: TrendingUp,
       trend: "This Month",
       trendClass: "text-ithina-purple",
@@ -168,43 +94,6 @@ export default function CheckerDashboard() {
             </div>
           );
         })}
-      </div>
-
-      <div className="flex min-h-[300px] flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
-        <header className="flex shrink-0 items-center justify-between border-b border-ithina-border bg-white/[0.01] px-6 py-4">
-          <h3 className="text-sm font-semibold text-white">Campaign History (Previously Reviewed)</h3>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" aria-hidden />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search campaigns..."
-              aria-label="Search reviewed campaigns"
-              className="w-52 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-9 pr-3 text-xs text-white transition-colors focus:border-ithina-purple focus:outline-none"
-            />
-          </div>
-        </header>
-
-        <IthTable<CheckerHistoryRow>
-          data={filteredRows}
-          columns={COLUMNS}
-          rowKey={(row) => row.id}
-          onRowClick={() => navigate({ to: "/checker/campaigns" })}
-          rowHighlight={(row) => (row.decision === "approved" ? "emerald" : row.decision === "rejected" ? "rose" : null)}
-          pagination={{
-            page,
-            pageSize: PAGE_SIZE,
-            total: filteredRows.length,
-            onPageChange: setPage,
-            rowLabel: "campaigns",
-          }}
-          empty={{ message: "No reviewed campaigns found." }}
-          className="rounded-none border-0"
-        />
       </div>
     </div>
   );

@@ -1,7 +1,9 @@
-import { AlertCircle, Check, Loader2, Plus, X } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { AlertCircle, Ban, Check, LayoutList, Loader2, Search, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useLocation } from "@tanstack/react-router";
 
-import { PrototypeTabulator } from "@/components/ui/prototype-tabulator";
+import { DataTable } from "@/components/ui/data-table";
+import { Skeleton } from "@/components/ui/skeleton";
 import { buildGuardRailTabulatorColumns } from "./guard-rails-table-columns";
 import type { GuardRailCategory, GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import {
@@ -13,8 +15,6 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-type GuardRailFilter = "All" | GuardRailCategory;
-
 interface NewGuardRailForm {
   name: string;
   category: GuardRailCategory;
@@ -22,8 +22,6 @@ interface NewGuardRailForm {
   description: string;
   active: boolean;
 }
-
-const FILTERS: GuardRailFilter[] = ["All", "Pricing", "Brand", "Regulatory", "Content"];
 
 const EMPTY_FORM: NewGuardRailForm = {
   name: "",
@@ -33,11 +31,19 @@ const EMPTY_FORM: NewGuardRailForm = {
   active: true,
 };
 
+type GuardRailsPrimaryTab = "all" | "inactive";
+type GuardRailsStatusFilter = "all" | "active" | "inactive";
+
 export default function Admin() {
-  const [activeFilter, setActiveFilter] = useState<GuardRailFilter>("All");
+  const location = useLocation();
+  const readOnly = location.pathname !== "/admin/settings";
+
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState<NewGuardRailForm>(EMPTY_FORM);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [primaryTab, setPrimaryTab] = useState<GuardRailsPrimaryTab>("all");
+  const [statusFilter, setStatusFilter] = useState<GuardRailsStatusFilter>("all");
 
   const { data: rules = [], isLoading, isError, error } = useGuardrails();
   const createMutation = useCreateGuardrail();
@@ -45,18 +51,63 @@ export default function Admin() {
   const deleteMutation = useDeleteGuardrail();
   const { toast } = useToast();
 
-  const filteredRules = useMemo<GuardRailRule[]>(() => {
-    if (activeFilter === "All") return rules;
-    return rules.filter((r) => r.category === activeFilter);
-  }, [activeFilter, rules]);
-
-  const activeCount = useMemo(() => rules.filter((r) => r.active).length, [rules]);
-
-  const openCreateModal = () => {
+  const openCreateModal = useCallback(() => {
     setEditingRuleId(null);
     setForm(EMPTY_FORM);
     setShowModal(true);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (readOnly) return;
+    const onOpen = () => openCreateModal();
+    window.addEventListener("promo:open-guard-rail-modal", onOpen);
+    return () => window.removeEventListener("promo:open-guard-rail-modal", onOpen);
+  }, [openCreateModal, readOnly]);
+
+  const inactiveCount = useMemo(() => rules.filter((r) => !r.active).length, [rules]);
+
+  const statusFilters = useMemo(
+    () => [
+      {
+        id: "all" as const,
+        label: "All",
+        count: rules.length,
+      },
+      {
+        id: "active" as const,
+        label: "Active",
+        count: rules.filter((r) => r.active).length,
+      },
+      {
+        id: "inactive" as const,
+        label: "Inactive",
+        count: rules.filter((r) => !r.active).length,
+      },
+    ],
+    [rules],
+  );
+
+  const filteredRules = useMemo<GuardRailRule[]>(() => {
+    const q = search.trim().toLowerCase();
+    const matchSearch = (r: GuardRailRule) =>
+      !q ||
+      r.name.toLowerCase().includes(q) ||
+      r.description.toLowerCase().includes(q) ||
+      r.id.toLowerCase().includes(q) ||
+      r.category.toLowerCase().includes(q) ||
+      r.severity.toLowerCase().includes(q);
+
+    let base = rules;
+    if (primaryTab === "inactive") {
+      base = rules.filter((r) => !r.active);
+    } else if (statusFilter === "active") {
+      base = rules.filter((r) => r.active);
+    } else if (statusFilter === "inactive") {
+      base = rules.filter((r) => !r.active);
+    }
+
+    return base.filter(matchSearch);
+  }, [rules, search, primaryTab, statusFilter]);
 
   const closeModal = useCallback(() => {
     setShowModal(false);
@@ -146,83 +197,143 @@ export default function Admin() {
     [deleteMutation, updateMutation],
   );
 
-  const columns = useMemo(() => buildGuardRailTabulatorColumns(), []);
+  const columns = useMemo(
+    () => buildGuardRailTabulatorColumns({ onAction: handleTableAction, readOnly }),
+    [handleTableAction, readOnly],
+  );
 
   return (
     <>
-      <div className="flex h-full w-full flex-col overflow-hidden animate-[fadeIn_0.3s_ease-out]">
-        <div className="flex shrink-0 items-center gap-3 border-b border-ithina-border/40 px-7 pb-4 pt-5">
-          <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel p-0.5">
-            {FILTERS.map((f) => (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setActiveFilter(f)}
-                className={cn(
-                  "rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
-                  activeFilter === f
-                    ? "bg-ithina-purple text-white shadow-sm"
-                    : "text-slate-400 hover:text-white",
-                )}
-              >
-                {f}
-              </button>
-            ))}
-          </div>
+      <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
+        <div className="ithina-page w-full flex flex-col">
+          <div className="mx-auto w-full max-w-screen-2xl space-y-4 px-4 pb-10 pt-4 lg:px-8">
+            {readOnly ? (
+              <p className="rounded-lg border border-ithina-border/40 bg-ithina-panel/30 px-4 py-3 text-sm text-muted-foreground">
+                View only. Contact an administrator to add or change guard rails.
+              </p>
+            ) : null}
 
-          <div className="flex-1" />
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrimaryTab("all");
+                    setStatusFilter("all");
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    primaryTab === "all"
+                      ? "bg-ithina-purple text-white shadow-sm"
+                      : "text-slate-400 hover:text-white",
+                  )}
+                >
+                  <LayoutList className="size-3.5 shrink-0" aria-hidden />
+                  All Rules
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrimaryTab("inactive");
+                    setStatusFilter("all");
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    primaryTab === "inactive"
+                      ? "bg-ithina-purple text-white shadow-sm"
+                      : "text-slate-400 hover:text-white",
+                  )}
+                >
+                  <Ban className="size-3.5 shrink-0" aria-hidden />
+                  Inactive
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                      primaryTab === "inactive"
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-500/20 text-slate-400",
+                    )}
+                  >
+                    {inactiveCount}
+                  </span>
+                </button>
+              </div>
 
-          <button
-            type="button"
-            onClick={openCreateModal}
-            className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
-          >
-            <Plus className="size-4 shrink-0" aria-hidden />
-            Add Guard Rail
-          </button>
-        </div>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
-          {isLoading && (
-            <div className="flex flex-1 items-center justify-center gap-3 text-slate-400">
-              <Loader2 className="size-5 animate-spin" />
-              <span className="text-sm">Loading guard rails…</span>
+              {primaryTab === "all" && (
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  {statusFilters.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setStatusFilter(f.id)}
+                      className={cn(
+                        "h-8 rounded-md border px-2.5 text-xs font-medium transition-all",
+                        statusFilter === f.id
+                          ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
+                          : "border-ithina-border/60 text-slate-500 hover:border-slate-500 hover:text-white",
+                      )}
+                    >
+                      {f.label}
+                      <span className="ml-1 text-[9px] tabular-nums opacity-60">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
 
-          {isError && (
-            <div className="flex flex-1 items-center justify-center gap-3 text-rose-400">
-              <AlertCircle className="size-5" />
-              <span className="text-sm">
-                {(error as Error)?.message ?? "Failed to load guard rails"}
-              </span>
-            </div>
-          )}
-
-          {!isLoading && !isError && (
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-              <PrototypeTabulator
-                className="guard-rails-tabulator-prototype min-h-0 flex-1 border-0"
-                columns={columns}
-                data={filteredRules}
-                layout="fitColumns"
-                pagination={false}
-                tableHeight="100%"
-                onCellClick={(e, row) => handleTableAction(e, row)}
+            <div className="group relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by rule name, description, or ID..."
+                className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label="Search guard rails"
               />
             </div>
-          )}
 
-          <div className="flex shrink-0 items-center justify-between border-t border-ithina-border/40 bg-ithina-bg/40 px-6 py-2.5 text-xs text-slate-600">
-            <span className="font-mono">
-              {rules.length} rules<span className="mx-1.5">•</span>
-              {activeCount} active
-            </span>
+            {isLoading && (
+              <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-10 w-full rounded-md" />
+                ))}
+              </div>
+            )}
+
+            {!isLoading && isError && (
+              <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+                <AlertCircle className="size-5 shrink-0" />
+                <span className="text-sm">
+                  {(error as Error)?.message ?? "Failed to load guard rails"}
+                </span>
+              </div>
+            )}
+
+            {!isLoading && !isError && (
+              <div className="min-w-0">
+                <DataTable<GuardRailRule>
+                  className="guard-rails-tabulator-prototype"
+                  columns={columns}
+                  data={filteredRules}
+                  rowIdField="id"
+                  layout="fitColumns"
+                  pagination
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  emptyMessage="No guard rails found matching your criteria"
+                  headerFilters
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {showModal && (
+      {showModal && !readOnly && (
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(8,8,20,0.93)] p-6 backdrop-blur-[6px]"
           onClick={closeModal}

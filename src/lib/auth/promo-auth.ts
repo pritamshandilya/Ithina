@@ -1,5 +1,6 @@
 import { promoApiClient } from "@/lib/promo-api-client";
 import { clearAuthToken, setAuthToken } from "@/lib/auth/session";
+import { resetClientSessionState } from "@/lib/reset-client-session-state";
 import { StoreContext } from "@/lib/store-context";
 
 export interface OrganizationSummary {
@@ -34,10 +35,6 @@ export interface PromoUser {
   lastName: string;
   role: string;
   organization: OrganizationSummary;
-}
-
-interface StoreSummary {
-  id: string;
 }
 
 const USER_KEY = "promo_auth_user";
@@ -93,7 +90,7 @@ function mapCurrentUser(payload: AuthCurrentUserResponse): PromoUser {
 export function getDashboardUrlForRole(role: string): string {
   switch (role) {
     case "admin":
-      return "/admin/users";
+      return "/admin/dashboard";
     case "checker":
       return "/checker/dashboard";
     case "maker":
@@ -102,23 +99,20 @@ export function getDashboardUrlForRole(role: string): string {
   }
 }
 
-export class PromoAuthService {
-  private static async ensureActiveStore(): Promise<void> {
-    const existing = StoreContext.getStoreId();
-    if (existing) return;
-
-    try {
-      const { data } = await promoApiClient.get<StoreSummary[]>(`${API_PREFIX}/stores`);
-      const firstStore = data[0];
-      if (firstStore?.id) {
-        StoreContext.setStoreId(firstStore.id);
-      }
-    } catch {
-      // Do not block login/user hydration if store lookup fails.
-      // Campaign endpoints will surface a clear backend error.
-    }
+/** First route after sign-in: makers/checkers choose a store before the role dashboard. */
+export function getPostAuthEntryPath(role: string): string {
+  switch (role) {
+    case "admin":
+      return "/admin/dashboard";
+    case "checker":
+    case "maker":
+      return "/select-store";
+    default:
+      return "/select-store";
   }
+}
 
+export class PromoAuthService {
   static async loginWithForm(
     username: string,
     password: string,
@@ -145,7 +139,8 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
-    await this.ensureActiveStore();
+    resetClientSessionState();
+    StoreContext.clearStoreId();
 
     return user;
   }
@@ -164,7 +159,8 @@ export class PromoAuthService {
 
     const user = mapCurrentUser(me);
     saveUser(user, loginData.expires_in);
-    await this.ensureActiveStore();
+    resetClientSessionState();
+    StoreContext.clearStoreId();
 
     return user;
   }
@@ -181,6 +177,7 @@ export class PromoAuthService {
     } finally {
       clearAuthStorage();
       StoreContext.clearStoreId();
+      resetClientSessionState();
     }
   }
 
@@ -190,7 +187,6 @@ export class PromoAuthService {
     );
     const user = mapCurrentUser(data);
     saveUser(user);
-    await this.ensureActiveStore();
     return user;
   }
 

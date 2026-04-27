@@ -1,9 +1,16 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
 import type { ChatMessage, StagedSku, WizardConstraints } from "@/types/wizard";
+import {
+  DEFAULT_LANGUAGE_CODE,
+  isLanguageCode,
+  type LanguageCode,
+} from "../../features/wizard/lib/promo-languages";
 
 type InputMode = "ai" | "csv";
 export type WizardMode = "nl" | "manual";
+
+const PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY = "promo_assistant_lang";
 
 interface CsvRow {
   sku: string;
@@ -26,6 +33,19 @@ interface WizardState {
   csvFileName: string;
   csvConfirmed: boolean;
   campaignNamed: boolean;
+  /** Language the Promo Assistant AI should reply in (prepended to outgoing prompts). */
+  promoAssistantLanguage: LanguageCode;
+}
+
+/** Read persisted language from localStorage (safe on SSR / missing window). */
+function readPersistedLanguage(): LanguageCode {
+  if (typeof window === "undefined") return DEFAULT_LANGUAGE_CODE;
+  try {
+    const raw = window.localStorage.getItem(PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY);
+    return isLanguageCode(raw) ? raw : DEFAULT_LANGUAGE_CODE;
+  } catch {
+    return DEFAULT_LANGUAGE_CODE;
+  }
 }
 
 const initialState: WizardState = {
@@ -45,6 +65,7 @@ const initialState: WizardState = {
   csvFileName: "",
   csvConfirmed: false,
   campaignNamed: false,
+  promoAssistantLanguage: readPersistedLanguage(),
 };
 
 const wizardSlice = createSlice({
@@ -67,14 +88,16 @@ const wizardSlice = createSlice({
       state.messages.push(action.payload);
     },
     setGridData(state, action: PayloadAction<StagedSku[]>) {
-      state.gridData = action.payload.map((r) => ({
+      const rows = action.payload;
+      if (!Array.isArray(rows)) return;
+      state.gridData = rows.map((r) => ({
         ...r,
         included: r.included !== false,
       }));
     },
     mergeGridData(state, action: PayloadAction<StagedSku[]>) {
       const incoming = action.payload;
-      if (incoming.length === 0) return;
+      if (!Array.isArray(incoming) || incoming.length === 0) return;
 
       const existingByKey = new Map(
         state.gridData.map((r) => [r.sku, r]),
@@ -86,6 +109,13 @@ const wizardSlice = createSlice({
           ...r,
           /** New draft turn always wins for pricing; only preserve user include/exclude toggles. */
           included: prev ? prev.included : r.included !== false,
+          eslId: r.eslId ?? prev?.eslId,
+          rankingScore: r.rankingScore ?? prev?.rankingScore,
+          agentSuggestSchedule: r.agentSuggestSchedule ?? prev?.agentSuggestSchedule,
+          offerType: r.offerType ?? prev?.offerType,
+          offerLabel: r.offerLabel ?? prev?.offerLabel,
+          stockQty: r.stockQty ?? prev?.stockQty,
+          isFree: r.isFree ?? prev?.isFree ?? false,
         };
       });
     },
@@ -164,8 +194,15 @@ const wizardSlice = createSlice({
       state.gridData = [];
       state.campaignNamed = false;
     },
-    resetWizard() {
-      return initialState;
+    /** Clears chat bubbles only (keeps grid) when navigating between wizard steps. */
+    clearChatMessagesForStepChange(state) {
+      state.messages = [];
+    },
+    setPromoAssistantLanguage(state, action: PayloadAction<LanguageCode>) {
+      state.promoAssistantLanguage = action.payload;
+    },
+    resetWizard(state) {
+      return { ...initialState, promoAssistantLanguage: state.promoAssistantLanguage };
     },
   },
 });
@@ -192,7 +229,11 @@ export const {
   removeCsvRow,
   removeAllCsvViolations,
   resetPromoAssistantChat,
+  clearChatMessagesForStepChange,
+  setPromoAssistantLanguage,
   resetWizard,
 } = wizardSlice.actions;
+
+export { PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY };
 
 export default wizardSlice.reducer;

@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
+import { useEffect, useMemo } from "react";
+
+import {
+  extractVariantsFromEvents,
+  getScheduledPreviewImageUrl,
+  getSubmittedVariantId,
+} from "@/features/campaign-studio/types";
+
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
+import { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 import { toast } from "@/hooks/use-toast";
 import {
@@ -20,21 +30,35 @@ import {
   getMonthNames,
   postCampaignChat,
   rejectCampaign,
+  submitCampaign,
   updateCampaign,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
 import type {
+  ApiCampaignApproveRequest,
   ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
+  ApiCampaignSubmitRequest,
 } from "@/types/api/campaigns";
+
+export type {
+  UseCampaignEventsContext,
+  UseCampaignEventsOptions,
+} from "@/hooks/use-campaign-events";
+export { useCampaignEvents } from "@/hooks/use-campaign-events";
 
 export const campaignKeys = {
   all: ["campaigns"] as const,
-  list: ["campaigns", "list"] as const,
-  detail: (id: string) => ["campaigns", "detail", id] as const,
-  timeline: (id: string) => ["campaigns", "timeline", id] as const,
+  /** Invalidate every cached campaign list (all stores). */
+  listPrefix: ["campaigns", "list"] as const,
+  list: (storeScopeId: string | null) =>
+    ["campaigns", "list", storeScopeId ?? "__org__"] as const,
+  detail: (id: string, storeScopeId: string | null) =>
+    ["campaigns", "detail", id, storeScopeId ?? "__org__"] as const,
+  timeline: (id: string, storeScopeId: string | null) =>
+    ["campaigns", "timeline", id, storeScopeId ?? "__org__"] as const,
   filters: ["campaigns", "filters"] as const,
   statDefinitions: ["campaigns", "statDefinitions"] as const,
   statusStyles: ["campaigns", "statusStyles"] as const,
@@ -44,8 +68,9 @@ export const campaignKeys = {
 };
 
 export function useCampaignList() {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.list,
+    queryKey: campaignKeys.list(storeId),
     queryFn: getCampaignList,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -112,7 +137,7 @@ export function useCreateCampaign() {
   return useMutation({
     mutationFn: (form: CampaignCreateForm) => createCampaign(form),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -124,7 +149,7 @@ export function useUpdateCampaign() {
     mutationFn: ({ id, form }: { id: string; form: CampaignCreateForm }) =>
       updateCampaign(id, form),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -135,7 +160,7 @@ export function useDeleteCampaign() {
   return useMutation({
     mutationFn: (id: string) => deleteCampaign(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
     onError: (error: unknown) => {
@@ -151,12 +176,36 @@ export function useDeleteCampaign() {
   });
 }
 
+export function useSubmitCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: ApiCampaignSubmitRequest;
+    }) => submitCampaign(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
+      qc.invalidateQueries({ queryKey: ["dashboard"] });
+      qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
+    },
+  });
+}
+
 export function useApproveCampaign() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => approveCampaign(id),
+    mutationFn: ({
+      id,
+      payload,
+    }: {
+      id: string;
+      payload: ApiCampaignApproveRequest;
+    }) => approveCampaign(id, payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
       qc.invalidateQueries({ queryKey: ["fleet"] });
@@ -169,7 +218,7 @@ export function useRejectCampaign() {
   return useMutation({
     mutationFn: (id: string) => rejectCampaign(id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
       qc.invalidateQueries({ queryKey: ["approval", "inbox"] });
     },
@@ -191,7 +240,7 @@ export function useGenerateCampaign() {
     mutationFn: (payload: ApiCampaignGenerateRequest) =>
       generateCampaign(payload),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: campaignKeys.list });
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
       qc.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -212,8 +261,9 @@ export function useChatCampaign() {
 
 /** Fetch a single campaign by id */
 export function useCampaign(id: string) {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.detail(id),
+    queryKey: campaignKeys.detail(id, storeId),
     queryFn: () => getCampaign(id),
     enabled: Boolean(id),
     staleTime: 15_000,
@@ -223,13 +273,70 @@ export function useCampaign(id: string) {
 
 /** Fetch the chronological event / chat timeline for a campaign */
 export function useCampaignTimeline(campaignId: string) {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: campaignKeys.timeline(campaignId),
+    queryKey: campaignKeys.timeline(campaignId, storeId),
     queryFn: () => getCampaignTimeline(campaignId),
     enabled: Boolean(campaignId),
     staleTime: 10_000,
     gcTime: 5 * 60_000,
   });
+}
+
+/**
+ * Layout image the user selected in the studio, derived from the campaign
+ * timeline (layout events + `submitted_for_approval` variant id). Reuses the
+ * same query cache as {@link useCampaignTimeline}.
+ */
+export function useCampaignLayoutPreviewUrl(
+  campaignId: string | undefined,
+  options?: { hardwareOrder?: string[] },
+) {
+  const id = campaignId ?? "";
+  const { data: events, isLoading } = useCampaignTimeline(id);
+  const hardwareOrder = options?.hardwareOrder ?? [];
+  const hardwareKey = hardwareOrder.join("\0");
+  const imageUrl = useMemo(() => {
+    if (!campaignId || !events) return undefined;
+    const variants = extractVariantsFromEvents(events);
+    return getScheduledPreviewImageUrl(
+      variants,
+      getSubmittedVariantId(events),
+      hardwareOrder,
+    );
+  }, [campaignId, events, hardwareKey]);
+
+  return { imageUrl, isLoading: Boolean(campaignId) && isLoading };
+}
+
+/**
+ * Poll campaign events (legacy API). Prefer `useCampaignEvents` for start/stop/auto-stop.
+ * `enabled` toggles polling without unmounting; timeline cache is scoped by store + campaign id.
+ */
+export function useCampaignEventsPolling(
+  campaignId: string,
+  enabled: boolean,
+  intervalMs = 3_000,
+) {
+  const { events, isLoading, isFetching, error, refetch, startPolling, stopPolling } =
+    useCampaignEvents(campaignId, {
+      intervalMs,
+      initialPolling: enabled,
+      shouldStop: () => false,
+    });
+
+  useEffect(() => {
+    if (enabled) startPolling();
+    else stopPolling();
+  }, [enabled, startPolling, stopPolling]);
+
+  return {
+    data: events,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  };
 }
 
 /** Post a chat message to the Campaign Studio AI (returns an event entry) */
@@ -244,7 +351,7 @@ export function usePostCampaignChat() {
       payload: ApiCampaignChatMessageRequest;
     }) => postCampaignChat(campaignId, payload),
     onSuccess: (_data, { campaignId }) => {
-      qc.invalidateQueries({ queryKey: campaignKeys.timeline(campaignId) });
+      qc.invalidateQueries({ queryKey: ["campaigns", "timeline", campaignId] });
     },
   });
 }

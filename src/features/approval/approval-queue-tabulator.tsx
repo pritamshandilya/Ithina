@@ -1,23 +1,55 @@
-/**
- * ApprovalQueueTabulator — redesigned with IthTable (native HTML table).
- * Three tabs: Pending Approval · Approved · All
- * Design: Ithina Design System §2.4 + screenshots.
+﻿/**
+ * ApprovalQueueTabulator — Three-tab approval queue using DataTable (Tabulator).
+ * Tabs: Pending Approval · Approved · All
  */
 
-import { AlertTriangle, Check, Clock, Search, X, Zap } from "lucide-react";
+import { AlertCircle, Check, Search, X, Zap } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
-import LoadingSpinner from "@/components/shared/loading-spinner";
-import { IthBadge, IthPrimaryCell, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
-import { useInboxItems } from "@/hooks/use-approval";
-import { useApproveCampaign, useCampaignList, useRejectCampaign } from "@/hooks/use-campaigns";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  ApprovalHistoryDialog,
+  type ApprovalHistoryTarget,
+} from "@/features/approval/components/approval-history-dialog";
+import { ApprovalPublishWatcher } from "@/features/approval/approval-publish-watcher";
+import { getSubmittedVariantId } from "@/features/campaign-studio/types";
+import type { ApiCampaignEventResponse } from "@/types/api/campaigns";
+import { useApproveInboxItem, useInboxItems, useRejectInboxItem } from "@/hooks/use-approval";
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
+import { campaignKeys, useCampaignList } from "@/hooks/use-campaigns";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
 
-/* ─── Local types ─────────────────────────────────────────────────────────── */
-
 type TabId = "pending" | "approved" | "all";
+
+const APPROVAL_TABLE_PAGE_SIZE = 15;
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** Tabulator header filter: case-insensitive substring in joined fields (same idea as All Campaigns). */
+function headerTextIncludes(value: unknown, rowData: object, pick: (row: object) => string): boolean {
+  const term = String(value ?? "").trim().toLowerCase();
+  if (!term) return true;
+  return pick(rowData).toLowerCase().includes(term);
+}
 
 interface ApprovedRow {
   id: string;
@@ -39,703 +71,758 @@ interface AllRow {
   date: string;
 }
 
-/* ─── Hardware pills ─────────────────────────────────────────────────────── */
+/* ── HTML formatter helpers ── */
 
-function HardwarePills({ items }: { items: string[] }) {
-  return (
-    <div className="flex flex-wrap gap-1">
-      {items.map((hw) => {
-        const cls = hw.startsWith("ESL")
-          ? "bg-blue-400/10 border-blue-400/20 text-blue-300"
-          : "bg-amber-400/10 border-amber-400/20 text-amber-300";
-        return (
-          <span key={hw} className={`rounded border px-1.5 py-0.5 font-mono text-[9px] font-medium ${cls}`}>
-            {hw}
-          </span>
-        );
-      })}
-    </div>
-  );
+function hardwarePillsHtml(items: string[]): string {
+  return items
+    .map((hw) => {
+      const cls = hw.startsWith("ESL")
+        ? "bg-blue-400/10 border-blue-400/20 text-blue-300"
+        : "bg-amber-400/10 border-amber-400/20 text-amber-300";
+      return `<span class="rounded border px-1.5 py-0.5 font-mono text-[9px] font-medium ${cls}">${hw}</span>`;
+    })
+    .join("");
 }
 
-/* ─── Guard rails badge ─────────────────────────────────────────────────── */
-
-function GuardRailsBadge({
-  label,
-  variant,
-}: {
-  label: string;
-  variant: "success" | "warning";
-}) {
-  return variant === "success" ? (
-    <span className="inline-flex items-center gap-1 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">
-      <Check className="size-2.5 shrink-0" strokeWidth={2.5} aria-hidden />
-      {label}
-    </span>
-  ) : (
-    <span className="inline-flex items-center gap-1 rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
-      <AlertTriangle className="size-2.5 shrink-0" strokeWidth={2} aria-hidden />
-      {label}
-    </span>
-  );
+function guardRailsHtml(label: string, variant: "success" | "warning"): string {
+  if (variant === "success") {
+    return `<span class="inline-flex items-center gap-1 rounded border border-chart-2/20 bg-chart-2/10 px-2 py-0.5 font-mono text-[10px] text-chart-2">
+      <svg class="size-2.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>${label}</span>`;
+  }
+  return `<span class="inline-flex items-center gap-1 rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
+    <svg class="size-2.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${label}</span>`;
 }
 
-/* ─── Checkbox cell & header ─────────────────────────────────────────────── */
-
-function CheckboxCell({
-  checked,
-  label,
-  dataAttr,
-}: {
-  checked: boolean;
-  label: string;
-  dataAttr: string;
-}) {
-  return (
-    <button
-      type="button"
-      {...{ [dataAttr]: "true" }}
-      aria-label={label}
-      className={`inline-flex size-4 items-center justify-center rounded border transition-colors ${
-        checked
-          ? "border-ithina-purple bg-ithina-purple text-white"
-          : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
-      }`}
-    >
-      <Check className="size-2.5" strokeWidth={3} aria-hidden />
-    </button>
-  );
-}
-
-/* ─── Static mock data ───────────────────────────────────────────────────── */
-
-const APPROVED_ROWS: ApprovedRow[] = [
-  { id: "CMP-9941-A", title: "Weekend Beverage Promo",  approvedBy: "Store Manager", skus: 42, hardware: ['ESL 4.2"', 'LCD 10"'],  approvedAt: "Mar 8 · 08:00 AM",  status: "Deployed"  },
-  { id: "CMP-9940-B", title: "Sushi Clearance – Urgent", approvedBy: "Sarah J.",    skus: 4,  hardware: ['ESL 4.2"', 'ESL 2.9"'], approvedAt: "Mar 7 · 11:15 AM",  status: "Deployed"  },
-  { id: "CMP-9938-D", title: "Spring Produce Launch",    approvedBy: "Store Manager",skus: 76, hardware: ['ESL 4.2"', 'LCD 10"'],  approvedAt: "Mar 6 · 14:00 PM",  status: "Scheduled" },
-  { id: "CMP-9936-F", title: "BOGO Snacks Promotion",    approvedBy: "Sarah J.",    skus: 22, hardware: ['ESL 4.2"'],               approvedAt: "Mar 3 · 09:30 AM",  status: "Deployed"  },
-];
-
-const ALL_ROWS: AllRow[] = [
-  { id: "CMP-9937-E", title: "Dairy & Bakery Weekend",  initiator: "Marcus T.",      skus: 31, approvalStatus: "Pending",  guardRails: "Pass",       date: "Mar 14 · 10:05 AM" },
-  { id: "CMP-9939-C", title: "Electronics Flash Sale",   initiator: "Sarah J.",       skus: 18, approvalStatus: "Pending",  guardRails: "1 warning",  date: "Mar 13 · 15:22 PM" },
-  { id: "CMP-9942-H", title: "Frozen Food Clearance",    initiator: "Auto-Scheduled", skus: 12, approvalStatus: "Pending",  guardRails: "Pass",       date: "Mar 12 · 09:44 AM" },
-  { id: "CMP-9941-A", title: "Weekend Beverage Promo",   initiator: "Store Manager",  skus: 42, approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 8 · 08:00 AM"  },
-  { id: "CMP-9940-B", title: "Sushi Clearance – Urgent", initiator: "Sarah J.",       skus: 4,  approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 7 · 11:15 AM"  },
-  { id: "CMP-9938-D", title: "Spring Produce Launch",    initiator: "Store Manager",  skus: 76, approvalStatus: "Approved", guardRails: "Pass",       date: "Mar 6 · 14:00 PM"  },
-  { id: "CMP-9935-G", title: "Valentine's Day Special",  initiator: "Auto-Scheduled", skus: 15, approvalStatus: "Approved", guardRails: "Pass",       date: "Feb 14 · 08:00 AM" },
-  { id: "CMP-9934-X", title: "New Year Markdowns",       initiator: "Marcus T.",      skus: 9,  approvalStatus: "Rejected", guardRails: "2 warnings", date: "Jan 2 · 10:00 AM"  },
-];
-
-/* ─── Component ──────────────────────────────────────────────────────────── */
+/* ── Component ── */
 
 export default function ApprovalQueueTabulator() {
   const { data: inbox = [], isLoading, isError } = useInboxItems();
   const { data: campaigns = [] } = useCampaignList();
-  const approveMutation = useApproveCampaign();
-  const rejectMutation = useRejectCampaign();
+  const approveMutation = useApproveInboxItem();
+  const rejectMutation = useRejectInboxItem();
+  const qc = useQueryClient();
+  const activeStoreId = useActiveStoreId();
 
   const [tab, setTab]       = useState<TabId>("pending");
   const [search, setSearch] = useState("");
-  const [page, setPage]     = useState(1);
+  const [historyTarget, setHistoryTarget] = useState<ApprovalHistoryTarget | null>(null);
+  const [publishWatchIds, setPublishWatchIds] = useState<Set<string>>(() => new Set());
 
-  /* Pending tab selection */
-  const [selectedIds,    setSelectedIds]    = useState<Set<string>>(() => new Set());
-  /* All tab selection */
-  const [allSelectedIds, setAllSelectedIds] = useState<Set<string>>(() => new Set());
+  /* Bulk selection via Tabulator's built-in isBulkEnabled */
+  const [selectedPending, setSelectedPending] = useState<InboxItem[]>([]);
+  const [, setSelectedAll] = useState<AllRow[]>([]);
+
+  /** Confirmation before calling reject API (bulk from toolbar). */
+  const [rejectTarget, setRejectTarget] = useState<InboxItem[] | null>(null);
+
+  const selectedPendingIds = useMemo(() => new Set(selectedPending.map((r) => r.id)), [selectedPending]);
+
+  const openHistory = useCallback((id: string, title: string) => {
+    if (!id) return;
+    setHistoryTarget({ id, title });
+  }, []);
+
+  const requestBulkReject = useCallback(() => {
+    if (selectedPending.length === 0) return;
+    setRejectTarget([...selectedPending]);
+  }, [selectedPending]);
+
+  const handleConfirmReject = useCallback(() => {
+    if (!rejectTarget?.length) return;
+    for (const item of rejectTarget) {
+      if (item.id) rejectMutation.mutate(item.id);
+    }
+    setSelectedPending([]);
+    setRejectTarget(null);
+  }, [rejectMutation, rejectTarget]);
+
+  const getCachedVariant = useCallback(
+    (campaignId: string): string | undefined =>
+      getSubmittedVariantId(
+        qc.getQueryData<ApiCampaignEventResponse[]>([
+          ...campaignKeys.timeline(campaignId, activeStoreId),
+          "eventsPoll",
+        ]) ?? [],
+      ) ?? undefined,
+    [qc, activeStoreId],
+  );
 
   /* ── Pending tab ── */
-
   const pendingCount = useMemo(() => inbox.filter((i) => i.status === "pending").length, [inbox]);
 
   const filteredPending = useMemo(() => {
     const q = search.trim().toLowerCase();
     return inbox.filter((i) => {
-      const matchSearch = !q || i.title.toLowerCase().includes(q) || i.initiator.toLowerCase().includes(q) || i.id.toLowerCase().includes(q);
-      return i.status === "pending" && matchSearch;
+      if (i.status !== "pending") return false;
+      return !q || i.title.toLowerCase().includes(q) || i.initiator.toLowerCase().includes(q) || i.id.toLowerCase().includes(q);
     });
   }, [inbox, search]);
 
-  const pendingAllSelected = useMemo(
-    () => filteredPending.length > 0 && filteredPending.every((i) => selectedIds.has(i.id)),
-    [filteredPending, selectedIds],
-  );
-  const pendingAnySelected = useMemo(
-    () => filteredPending.some((i) => selectedIds.has(i.id)),
-    [filteredPending, selectedIds],
-  );
-
-  const togglePendingSelect = useCallback((id: string) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }, []);
-
-  const toggleAllPending = useCallback(
-    (checked: boolean) =>
-      setSelectedIds(checked ? new Set(filteredPending.map((i) => i.id)) : new Set()),
-    [filteredPending],
-  );
-
   const bulkApprove = useCallback(() => {
-    selectedIds.forEach((id) => approveMutation.mutate(id));
-    setSelectedIds(new Set());
-  }, [approveMutation, selectedIds]);
-
-  const bulkReject = useCallback(() => {
-    selectedIds.forEach((id) => rejectMutation.mutate(id));
-    setSelectedIds(new Set());
-  }, [rejectMutation, selectedIds]);
-
-  const handlePendingRowClick = useCallback(
-    (row: InboxItem, e: React.MouseEvent<HTMLTableRowElement>) => {
-      const target = e.target as HTMLElement;
-      if (target.closest?.("[data-proto-row-checkbox='true']")) { togglePendingSelect(row.id); return; }
-
-      const actionEl = target.closest?.("[data-action]") as HTMLElement | null;
-      const action = actionEl?.getAttribute("data-action");
-      if (!action) return;
-
-      if (action === "approve") {
-        approveMutation.mutate(row.id);
-      }
-      if (action === "approve-live") {
-        approveMutation.mutate(row.id, {
-          onSuccess: () => {
-            toast({
-              title: "Approved & queued for fleet",
-              description:
-                "Approval is saved. The campaign will appear on Fleet when the backend schedules or starts publishing.",
-            });
-          },
-        });
-      }
-      if (action === "reject") {
-        rejectMutation.mutate(row.id);
-      }
-    },
-    [approveMutation, rejectMutation, togglePendingSelect],
-  );
-
-  /* ── All tab ── */
-
-  const filteredAll = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const allRowsFromCampaigns: AllRow[] =
-      campaigns.length > 0
-        ? campaigns.map((c) => ({
-            id: c.id,
-            title: c.name,
-            initiator: c.ownerName ?? c.initiator,
-            skus: c.skus,
-            approvalStatus:
-              c.approvalStatus === "approved"
-                ? "Approved"
-                : c.approvalStatus === "rejected"
-                  ? "Rejected"
-                  : "Pending",
-            guardRails: "Pass",
-            date: c.date,
-          }))
-        : ALL_ROWS;
-    return allRowsFromCampaigns.filter((r) => !q || r.title.toLowerCase().includes(q) || r.initiator.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
-  }, [campaigns, search]);
-
-  const allTabAllSelected = useMemo(
-    () => filteredAll.length > 0 && filteredAll.every((r) => allSelectedIds.has(r.id)),
-    [filteredAll, allSelectedIds],
-  );
-  const allTabAnySelected = useMemo(() => filteredAll.some((r) => allSelectedIds.has(r.id)), [filteredAll, allSelectedIds]);
-
-  const toggleAllTabSelect = useCallback((id: string) => {
-    setAllSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+    selectedPending.forEach((item) => {
+      if (!item.id) { toast({ title: "Cannot approve", description: "Campaign ID is missing.", variant: "destructive" }); return; }
+      approveMutation.mutate(
+        { id: item.id, scheduleType: item.scheduleType, selectedVariantId: getCachedVariant(item.id) },
+        { onSuccess: () => setPublishWatchIds((prev) => new Set([...prev, item.id])) },
+      );
     });
-  }, []);
+    setSelectedPending([]);
+  }, [approveMutation, getCachedVariant, selectedPending]);
 
-  const toggleAllInAllTab = useCallback(
-    (checked: boolean) =>
-      setAllSelectedIds(checked ? new Set(filteredAll.map((r) => r.id)) : new Set()),
-    [filteredAll],
-  );
+  /** Same as row-level “Approve & Go Live” — with confirmation toast. */
+  const bulkApproveAndGoLive = useCallback(() => {
+    if (selectedPending.length === 0) return;
+    let ok = 0;
+    for (const item of selectedPending) {
+      if (!item.id) {
+        toast({ title: "Cannot approve", description: "Campaign ID is missing.", variant: "destructive" });
+        continue;
+      }
+      ok += 1;
+      approveMutation.mutate(
+        { id: item.id, scheduleType: item.scheduleType, selectedVariantId: getCachedVariant(item.id) },
+        {
+          onSuccess: () => {
+            setPublishWatchIds((prev) => new Set([...prev, item.id]));
+          },
+        },
+      );
+    }
+    if (ok > 0) {
+      toast({
+        title: "Approved & publishing",
+        description: "We’ll notify you when batch render completes for the selected campaign(s).",
+      });
+    }
+    setSelectedPending([]);
+  }, [approveMutation, getCachedVariant, selectedPending]);
 
   /* ── Approved tab ── */
-
-  const filteredApproved = useMemo(() => {
+  const filteredApproved = useMemo((): ApprovedRow[] => {
     const q = search.trim().toLowerCase();
-    const approvedRowsFromCampaigns: ApprovedRow[] =
-      campaigns.filter((c) => c.approvalStatus === "approved").map((c) => ({
-        id: c.id,
-        title: c.name,
+    return campaigns
+      .filter((c) => c.approvalStatus === "approved")
+      .map((c) => ({
+        id: c.id, title: c.name,
         approvedBy: c.reviewedByName ?? "Checker",
-        skus: c.skus,
-        hardware: c.hardware,
+        skus: c.skus, hardware: c.hardware,
         approvedAt: c.reviewedAt ?? c.date,
-        status: "Deployed",
-      }));
-    const source = approvedRowsFromCampaigns.length > 0 ? approvedRowsFromCampaigns : APPROVED_ROWS;
-    return source.filter((r) => !q || r.title.toLowerCase().includes(q) || r.approvedBy.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
+        status: "Deployed" as const,
+      }))
+      .filter((r) => !q || r.title.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
   }, [campaigns, search]);
 
-  /* ── Column definitions ── */
+  /* ── All tab ── */
+  const filteredAll = useMemo((): AllRow[] => {
+    const q = search.trim().toLowerCase();
+    return campaigns
+      .map((c) => ({
+        id: c.id, title: c.name,
+        initiator: c.ownerName ?? c.initiator,
+        skus: c.skus,
+        approvalStatus: (c.approvalStatus === "approved" ? "Approved" : c.approvalStatus === "rejected" ? "Rejected" : "Pending") as AllRow["approvalStatus"],
+        guardRails: "Pass" as const,
+        date: c.date,
+      }))
+      .filter((r) => !q || r.title.toLowerCase().includes(q) || r.initiator.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
+  }, [campaigns, search]);
 
-  const pendingColumns = useMemo<IthColumnDef<InboxItem>[]>(
+  const historyIconOnly = `<button type="button" data-action="history" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" title="Approval history" aria-label="Approval history">
+    <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+  </button>`;
+
+  /* ── Pending columns ── */
+  const pendingColumns = useMemo<DataTableColumn<InboxItem>[]>(
     () => [
       {
-        key: "select",
-        label: "",
-        width: "w-[44px]",
-        align: "center",
-        headerRender: () => (
-          <button
-            type="button"
-            aria-label="Select all pending"
-            onClick={(e) => { e.stopPropagation(); toggleAllPending(!pendingAllSelected); }}
-            className={`inline-flex size-4 items-center justify-center rounded border transition-colors ${
-              pendingAllSelected
-                ? "border-ithina-purple bg-ithina-purple text-white"
-                : pendingAnySelected
-                  ? "border-ithina-purple bg-ithina-purple/40 text-white"
-                  : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
-            }`}
-          >
-            <Check className="size-2.5" strokeWidth={3} aria-hidden />
-          </button>
-        ),
-        render: (row) => (
-          <CheckboxCell
-            checked={selectedIds.has(row.id)}
-            label={`Select ${row.title}`}
-            dataAttr="data-proto-row-checkbox"
-          />
-        ),
-      },
-      {
-        key: "campaign",
-        label: "Campaign",
-        sortable: true,
-        render: (row) => (
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="text-[13px] font-semibold leading-tight text-white">{row.title}</p>
-              {row.urgent && (
-                <span className="rounded border border-rose-400/20 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-rose-400">
-                  Expires 48H
-                </span>
-              )}
-            </div>
-            <p className="mt-0.5 font-mono text-[10px] text-slate-400">{row.id}</p>
-            {row.subtitle && <p className="mt-0.5 font-mono text-[10px] text-slate-500">{row.subtitle}</p>}
-          </div>
-        ),
-      },
-      {
-        key: "initiator",
-        label: "Submitted By",
-        width: "w-[140px]",
-        render: (row) => <span className="text-xs text-slate-400">{row.initiator}</span>,
-      },
-      {
-        key: "skus",
-        label: "SKUs",
-        width: "w-[72px]",
-        render: (row) => <span className="font-mono text-sm tabular-nums text-slate-400">{row.skus}</span>,
-      },
-      {
-        key: "hardware",
-        label: "Hardware",
-        width: "w-[180px]",
-        render: (row) => <HardwarePills items={row.hardwareTargets ?? []} />,
-      },
-      {
-        key: "guardRails",
-        label: "Guard Rails",
-        width: "w-[140px]",
-        render: (row) => (
-          <GuardRailsBadge
-            label={row.guardRailsLabel ?? (row.metaVariant === "success" ? "All Pass" : row.meta)}
-            variant={row.metaVariant === "success" ? "success" : "warning"}
-          />
-        ),
-      },
-      {
-        key: "submittedAt",
-        label: "Submitted",
-        width: "w-[160px]",
-        render: (row) => (
-          <span className="whitespace-nowrap font-mono text-xs text-slate-500">
-            {row.submittedAt ?? row.meta}
-          </span>
-        ),
-      },
-      {
-        key: "actions",
-        label: "Actions",
-        align: "right",
-        width: "min-w-[300px] w-[320px]",
-        render: (_row) => (
-          <div className="flex max-w-[320px] flex-wrap items-center justify-end gap-1.5">
-            <button
-              type="button"
-              data-action="approve"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-emerald-400/25 bg-emerald-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-white"
-            >
-              <Check className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Approve
-            </button>
-            <button
-              type="button"
-              data-action="approve-live"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-ithina-purple/35 bg-ithina-purple/15 px-2.5 py-1.5 text-[10px] font-semibold text-ithina-purple transition-all hover:bg-ithina-purple hover:text-white"
-            >
-              <Zap className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Approve &amp; Go Live
-            </button>
-            <button
-              type="button"
-              data-action="reject"
-              className="inline-flex items-center gap-1 rounded-lg border border-rose-400/20 bg-transparent px-2.5 py-1.5 text-[10px] font-semibold text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"
-            >
-              <X className="size-3 shrink-0" strokeWidth={2.5} aria-hidden />
-              Reject
-            </button>
-            <button
-              type="button"
-              data-action="history"
-              className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
-            >
-              <Clock className="size-3 shrink-0" aria-hidden />
-              History
-            </button>
-          </div>
-        ),
-      },
-    ],
-    [pendingAllSelected, pendingAnySelected, selectedIds, toggleAllPending],
-  );
-
-  const approvedColumns = useMemo<IthColumnDef<ApprovedRow>[]>(
-    () => [
-      {
-        key: "title",
-        label: "Campaign",
-        sortable: true,
-        render: (row) => <IthPrimaryCell primary={row.title} secondary={row.id} />,
-      },
-      {
-        key: "approvedBy",
-        label: "Approved By",
-        width: "w-[150px]",
-        render: (row) => <span className="text-xs text-slate-400">{row.approvedBy}</span>,
-      },
-      {
-        key: "skus",
-        label: "SKUs",
-        width: "w-[72px]",
-        render: (row) => <span className="font-mono text-sm tabular-nums text-slate-400">{row.skus}</span>,
-      },
-      {
-        key: "hardware",
-        label: "Hardware",
-        width: "w-[180px]",
-        render: (row) => <HardwarePills items={row.hardware} />,
-      },
-      {
-        key: "approvedAt",
-        label: "Approved",
-        width: "w-[160px]",
-        render: (row) => <span className="whitespace-nowrap font-mono text-xs text-slate-500">{row.approvedAt}</span>,
-      },
-      {
-        key: "status",
-        label: "Status",
-        width: "w-[130px]",
-        render: (row) =>
-          row.status === "Deployed" ? (
-            <IthBadge label="Deployed" variant="emerald" dot pulse />
-          ) : (
-            <IthBadge label="Scheduled" variant="purple" />
-          ),
-      },
-      {
-        key: "actions",
-        label: "Actions",
-        align: "right",
-        width: "w-[110px]",
-        render: () => (
-          <button
-            type="button"
-            data-action="history"
-            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
-          >
-            <Clock className="size-3 shrink-0" aria-hidden />
-            History
-          </button>
-        ),
-      },
-    ],
-    [],
-  );
-
-  const allColumns = useMemo<IthColumnDef<AllRow>[]>(
-    () => [
-      {
-        key: "select",
-        label: "",
-        width: "w-[44px]",
-        align: "center",
-        headerRender: () => (
-          <button
-            type="button"
-            aria-label="Select all"
-            onClick={(e) => { e.stopPropagation(); toggleAllInAllTab(!allTabAllSelected); }}
-            className={`inline-flex size-4 items-center justify-center rounded border transition-colors ${
-              allTabAllSelected
-                ? "border-ithina-purple bg-ithina-purple text-white"
-                : allTabAnySelected
-                  ? "border-ithina-purple bg-ithina-purple/40 text-white"
-                  : "border-slate-500/80 bg-transparent text-transparent hover:border-slate-300"
-            }`}
-          >
-            <Check className="size-2.5" strokeWidth={3} aria-hidden />
-          </button>
-        ),
-        render: (row) => (
-          <CheckboxCell
-            checked={allSelectedIds.has(row.id)}
-            label={`Select ${row.title}`}
-            dataAttr="data-all-row-checkbox"
-          />
-        ),
-      },
-      {
-        key: "title",
-        label: "Campaign",
-        sortable: true,
-        render: (row) => <IthPrimaryCell primary={row.title} secondary={row.id} />,
-      },
-      {
-        key: "initiator",
-        label: "Initiator",
-        width: "w-[150px]",
-        render: (row) => <span className="text-xs text-slate-400">{row.initiator}</span>,
-      },
-      {
-        key: "skus",
-        label: "SKUs",
-        width: "w-[72px]",
-        render: (row) => <span className="font-mono text-sm tabular-nums text-slate-400">{row.skus}</span>,
-      },
-      {
-        key: "approvalStatus",
-        label: "Approval Status",
-        width: "w-[140px]",
-        render: (row) => {
-          const variants = { Approved: "emerald", Pending: "amber", Rejected: "rose" } as const;
-          return (
-            <IthBadge
-              label={row.approvalStatus}
-              variant={variants[row.approvalStatus]}
-              dot={row.approvalStatus === "Approved"}
-            />
-          );
+        title: "Campaign",
+        field: "title",
+        minWidth: 220,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as InboxItem;
+            return [row.title, row.subtitle ?? "", row.id].join(" ");
+          }),
+        formatter: (cell: DataTableCell<InboxItem>) => {
+          const row = cell.getData();
+          const title = escapeHtml(row.title);
+          const sub = row.subtitle ? escapeHtml(row.subtitle) : "";
+          const urgentBadge = row.urgent
+            ? `<span class="rounded border border-rose-400/20 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[10px] uppercase tracking-widest text-rose-400">Expires 48H</span>`
+            : "";
+          const publishingBadge =
+            row.apiStatus === "publishing"
+              ? `<span class="inline-flex items-center gap-1 rounded border border-amber-400/25 bg-amber-400/[0.08] px-1.5 py-0.5 font-mono text-[9px] font-semibold text-amber-400">
+                <svg class="size-2.5 shrink-0 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+                Publishing
+              </span>`
+              : "";
+          return `
+            <div class="min-w-0 text-left">
+              <div class="flex flex-wrap items-center gap-2">
+                <p class="text-[13px] font-semibold leading-tight text-foreground">${title}</p>
+                ${publishingBadge}
+                ${urgentBadge}
+              </div>
+              ${sub ? `<p class="mt-0.5 font-mono text-[10px] text-muted-foreground opacity-80">${sub}</p>` : ""}
+            </div>`;
         },
       },
       {
-        key: "guardRails",
-        label: "Guard Rails",
-        width: "w-[130px]",
-        render: (row) => (
-          <GuardRailsBadge
-            label={row.guardRails === "Pass" ? "All Pass" : row.guardRails}
-            variant={row.guardRails === "Pass" ? "success" : "warning"}
-          />
-        ),
+        title: "Submitted By",
+        field: "initiator",
+        width: 140,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<InboxItem>) =>
+          `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
       {
-        key: "date",
-        label: "Date",
-        width: "w-[160px]",
-        render: (row) => <span className="whitespace-nowrap font-mono text-xs text-slate-500">{row.date}</span>,
+        title: "SKUs",
+        field: "skus",
+        width: 72,
+        sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as InboxItem).skus).toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<InboxItem>) =>
+          `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
       },
       {
-        key: "actions",
-        label: "Actions",
-        align: "right",
-        width: "w-[110px]",
-        render: () => (
-          <button
-            type="button"
-            data-action="history"
-            className="inline-flex items-center gap-1 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[10px] font-semibold text-slate-400 transition-all hover:bg-white/[0.08] hover:text-white"
-          >
-            <Clock className="size-3 shrink-0" aria-hidden />
-            History
-          </button>
-        ),
+        title: "Hardware",
+        field: "hardwareTargets",
+        width: 180,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => (r as InboxItem).hardwareTargets?.join(" ") ?? ""),
+        formatter: (cell: DataTableCell<InboxItem>) => {
+          const row = cell.getData();
+          return `<div class="flex flex-wrap gap-1">${hardwarePillsHtml(row.hardwareTargets ?? [])}</div>`;
+        },
+      },
+      {
+        title: "Guard Rails",
+        field: "metaVariant",
+        width: 140,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const row = rowData as InboxItem;
+          const label = row.guardRailsLabel ?? (row.metaVariant === "success" ? "All Pass" : row.meta);
+          return [label, row.meta, row.metaVariant].join(" ").toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<InboxItem>) => {
+          const row = cell.getData();
+          const label = row.guardRailsLabel ?? (row.metaVariant === "success" ? "All Pass" : row.meta);
+          const variant = row.metaVariant === "success" ? "success" : "warning";
+          return guardRailsHtml(label, variant);
+        },
+      },
+      {
+        title: "Submitted",
+        field: "submittedAt",
+        width: 160,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const row = rowData as InboxItem;
+          return `${row.submittedAt ?? ""} ${row.meta ?? ""}`.toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<InboxItem>) => {
+          const row = cell.getData();
+          return `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${row.submittedAt ?? row.meta ?? ""}</span>`;
+        },
+      },
+      {
+        title: "History",
+        field: "actions",
+        headerSort: false,
+        headerFilter: false,
+        width: 80,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<InboxItem>) => {
+          const action = (_e.target as HTMLElement).closest("[data-action]") as HTMLElement | null;
+          if (!action || action.dataset.action !== "history") return;
+          const row = cell.getData();
+          if (!row.id) {
+            toast({ title: "Cannot open history", description: "Campaign ID is missing.", variant: "destructive" });
+            return;
+          }
+          openHistory(row.id, row.title);
+        },
       },
     ],
-    [allTabAllSelected, allTabAnySelected, allSelectedIds, toggleAllInAllTab],
+    [openHistory],
+  );
+
+  /* ── Approved columns ── */
+  const approvedColumns = useMemo<DataTableColumn<ApprovedRow>[]>(
+    () => [
+      {
+        title: "Campaign",
+        field: "title",
+        minWidth: 180,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as ApprovedRow;
+            return [row.title, row.id].join(" ");
+          }),
+        formatter: (cell: DataTableCell<ApprovedRow>) => {
+          const row = cell.getData();
+          const title = escapeHtml(row.title);
+          return `<div class="text-left">
+            <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
+          </div>`;
+        },
+      },
+      {
+        title: "Approved By",
+        field: "approvedBy",
+        width: 150,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<ApprovedRow>) =>
+          `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "SKUs",
+        field: "skus",
+        width: 72,
+        sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as ApprovedRow).skus).toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<ApprovedRow>) =>
+          `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "Hardware",
+        field: "hardware",
+        width: 180,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => (r as ApprovedRow).hardware?.join(" ") ?? ""),
+        formatter: (cell: DataTableCell<ApprovedRow>) => {
+          const row = cell.getData();
+          return `<div class="flex flex-wrap gap-1">${hardwarePillsHtml(row.hardware)}</div>`;
+        },
+      },
+      {
+        title: "Approved",
+        field: "approvedAt",
+        width: 160,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<ApprovedRow>) =>
+          `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "Status",
+        field: "status",
+        width: 130,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const s = String((rowData as ApprovedRow).status).toLowerCase();
+          return s.includes(term) || (term === "deploy" && s === "deployed");
+        },
+        formatter: (cell: DataTableCell<ApprovedRow>) => {
+          const deployed = cell.getValue() === "Deployed";
+          if (deployed) {
+            return `<span class="inline-flex items-center gap-1.5 rounded-full border border-chart-2/20 bg-chart-2/10 px-2.5 py-0.5 text-xs font-semibold text-chart-2"><span class="size-1.5 rounded-full bg-current animate-pulse"></span>Deployed</span>`;
+          }
+          return `<span class="inline-flex items-center gap-1.5 rounded-full border border-purple-500/20 bg-purple-500/10 px-2.5 py-0.5 text-xs font-semibold text-purple-400"><span class="size-1.5 rounded-full bg-current"></span>Scheduled</span>`;
+        },
+      },
+      {
+        title: "History",
+        field: "actions",
+        headerSort: false,
+        headerFilter: false,
+        width: 80,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<ApprovedRow>) => {
+          const t = (_e.target as HTMLElement).closest("[data-action]");
+          if (t?.getAttribute("data-action") !== "history") return;
+          const row = cell.getData();
+          openHistory(row.id, row.title);
+        },
+      },
+    ],
+    [openHistory],
+  );
+
+  /* ── All columns ── */
+  const allColumns = useMemo<DataTableColumn<AllRow>[]>(
+    () => [
+      {
+        title: "Campaign",
+        field: "title",
+        minWidth: 180,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) =>
+          headerTextIncludes(value, rowData as object, (r) => {
+            const row = r as AllRow;
+            return [row.title, row.id].join(" ");
+          }),
+        formatter: (cell: DataTableCell<AllRow>) => {
+          const row = cell.getData();
+          const title = escapeHtml(row.title);
+          return `<div class="text-left">
+            <p class="min-w-0 text-[13px] font-semibold leading-tight text-foreground">${title}</p>
+          </div>`;
+        },
+      },
+      {
+        title: "Initiator",
+        field: "initiator",
+        width: 150,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<AllRow>) =>
+          `<span class="text-xs text-slate-400">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "SKUs",
+        field: "skus",
+        width: 72,
+        sorter: "number",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as AllRow).skus).toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<AllRow>) =>
+          `<span class="font-mono text-sm tabular-nums text-slate-400">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "Approval Status",
+        field: "approvalStatus",
+        width: 140,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          return String((rowData as AllRow).approvalStatus).toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<AllRow>) => {
+          const v = String(cell.getValue() ?? "");
+          const map: Record<string, string> = {
+            Approved: "border-chart-2/20 bg-chart-2/10 text-chart-2",
+            Pending:  "border-amber-400/20 bg-amber-400/10 text-amber-400",
+            Rejected: "border-rose-400/20 bg-rose-400/10 text-rose-400",
+          };
+          const cls = map[v] ?? map.Pending;
+          const dot = v === "Approved" ? `<span class="size-1.5 rounded-full bg-current"></span>` : "";
+          return `<span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}">${dot}${v}</span>`;
+        },
+      },
+      {
+        title: "Guard Rails",
+        field: "guardRails",
+        width: 130,
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fv: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const v = String((rowData as AllRow).guardRails);
+          const label = v === "Pass" ? "All Pass" : v;
+          return `${v} ${label}`.toLowerCase().includes(term);
+        },
+        formatter: (cell: DataTableCell<AllRow>) => {
+          const v = String(cell.getValue() ?? "");
+          const label = v === "Pass" ? "All Pass" : v;
+          return guardRailsHtml(label, v === "Pass" ? "success" : "warning");
+        },
+      },
+      {
+        title: "Date",
+        field: "date",
+        width: 160,
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<AllRow>) =>
+          `<span class="whitespace-nowrap font-mono text-xs text-slate-500">${String(cell.getValue() ?? "")}</span>`,
+      },
+      {
+        title: "History",
+        field: "actions",
+        headerSort: false,
+        headerFilter: false,
+        width: 80,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: () => `<div class="flex justify-end">${historyIconOnly}</div>`,
+        cellClick: (_e: MouseEvent, cell: DataTableCell<AllRow>) => {
+          const t = (_e.target as HTMLElement).closest("[data-action]");
+          if (t?.getAttribute("data-action") !== "history") return;
+          const row = cell.getData();
+          openHistory(row.id, row.title);
+        },
+      },
+    ],
+    [openHistory],
   );
 
   /* ── Tabs config ── */
-
   const tabItems: { id: TabId; label: string; count: number | null }[] = [
     { id: "pending",  label: "Pending Approval", count: pendingCount },
     { id: "approved", label: "Approved",         count: null },
     { id: "all",      label: "All",              count: null },
   ];
 
-  const bulkDisabled = selectedIds.size === 0;
-
-  if (isError) {
-    return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center" role="alert">
-        <p className="text-sm font-semibold text-rose-400">Failed to load approval queue</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <LoadingSpinner label="Loading approval queue..." className="flex-1" />;
-  }
+  const pendingSelectedCount = selectedPendingIds.size;
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden animate-[fadeIn_0.4s_ease-out]">
-
-      {/* ── Toolbar ── */}
-      <div className="flex shrink-0 items-center justify-between border-b border-ithina-border/40 px-7 pb-4 pt-5">
-
-        {/* Tab switcher */}
-        <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel p-0.5">
-          {tabItems.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => { setTab(t.id); setPage(1); }}
-              className={cn(
-                "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
-                tab === t.id ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              {t.label}
-              {t.count != null && (
-                <span
+    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
+      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
+            <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
+              {tabItems.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setTab(t.id)}
                   className={cn(
-                    "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
-                    tab === t.id ? "bg-white/20 text-white" : "bg-amber-400/20 text-amber-400",
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    tab === t.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-slate-400 hover:text-foreground",
                   )}
                 >
-                  {t.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+                  {t.label}
+                  {t.count != null && (
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                        tab === t.id
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-amber-400/20 text-amber-400",
+                      )}
+                    >
+                      {t.count}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
 
-        {/* Right actions */}
-        <div className="flex items-center gap-2">
-          {tab === "pending" && (
-            <>
-              {selectedIds.size > 0 && (
-                <span className="rounded bg-ithina-purple/10 px-2 py-1 text-[10px] font-semibold text-ithina-purple">
-                  {selectedIds.size} selected
-                </span>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {tab === "pending" && (
+                <>
+                  {pendingSelectedCount > 0 && (
+                    <span className="rounded-md bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+                      {pendingSelectedCount} selected
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={bulkApprove}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-xs font-bold shadow-sm transition-colors",
+                      pendingSelectedCount > 0
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                        : "cursor-not-allowed border border-ithina-border/40 bg-transparent text-slate-600 opacity-50",
+                    )}
+                  >
+                    <Check className="size-3.5 shrink-0" strokeWidth={2.5} aria-hidden />
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={bulkApproveAndGoLive}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md border px-4 text-xs font-bold shadow-sm transition-colors",
+                      pendingSelectedCount > 0
+                        ? "border-ithina-purple/40 bg-ithina-purple/90 text-white hover:bg-ithina-purple"
+                        : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-50",
+                    )}
+                  >
+                    <Zap className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                    Approve &amp; go live
+                  </button>
+                  <button
+                    type="button"
+                    disabled={pendingSelectedCount === 0}
+                    onClick={requestBulkReject}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-md border px-4 text-xs font-bold transition-colors",
+                      pendingSelectedCount > 0
+                        ? "border-rose-500/40 text-rose-400 hover:border-rose-500 hover:bg-rose-500 hover:text-white"
+                        : "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-50",
+                    )}
+                  >
+                    <X className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+                    Reject
+                  </button>
+                </>
               )}
-              <button
-                type="button"
-                disabled={bulkDisabled}
-                onClick={bulkApprove}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  bulkDisabled
-                    ? "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40"
-                    : "border-emerald-400/25 bg-emerald-400/10 text-emerald-400 hover:bg-emerald-500 hover:text-white",
-                )}
-              >
-                <Check className="size-3 shrink-0" strokeWidth={2} aria-hidden />
-                Approve All
-              </button>
-              <button
-                type="button"
-                disabled={bulkDisabled}
-                onClick={bulkReject}
-                className={cn(
-                  "inline-flex items-center gap-1 rounded border px-2.5 py-1.5 text-[10px] font-semibold transition-all",
-                  bulkDisabled
-                    ? "cursor-not-allowed border-ithina-border/40 text-slate-600 opacity-40"
-                    : "border-rose-400/20 text-rose-400 hover:bg-rose-500 hover:text-white",
-                )}
-              >
-                <X className="size-3 shrink-0" strokeWidth={2} aria-hidden />
-                Reject All
-              </button>
-            </>
-          )}
+            </div>
+          </div>
 
-          <div className="relative">
+          <div className="group relative shrink-0">
             <Search
-              className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-slate-500"
+              className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
               aria-hidden
             />
             <input
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+              onChange={(e) => setSearch(e.target.value)}
               type="search"
-              placeholder="Search…"
+              placeholder="Search by campaign, submitter, or ID…"
               aria-label="Search approval queue"
-              className="w-44 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-8 pr-3 text-sm text-white transition-colors focus:border-ithina-purple focus:outline-none"
+              className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
             />
           </div>
+
+          {isLoading && (
+            <div className="shrink-0 space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <Skeleton key={idx} className="h-10 w-full rounded-md" />
+              ))}
+            </div>
+          )}
+
+          {isError && (
+            <div
+              className="flex shrink-0 items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300"
+              role="alert"
+            >
+              <AlertCircle className="size-5 shrink-0" />
+              <span className="text-sm">Failed to load approval queue</span>
+            </div>
+          )}
+
+          {!isLoading && !isError && (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+              {tab === "pending" && (
+                <DataTable<InboxItem>
+                  data={filteredPending}
+                  columns={pendingColumns}
+                  rowIdField="id"
+                  isBulkEnabled
+                  onSelectionChange={setSelectedPending}
+                  pagination
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
+                  emptyMessage="No pending submissions."
+                  className="min-h-0 flex-1"
+                />
+              )}
+
+              {tab === "approved" && (
+                <DataTable<ApprovedRow>
+                  data={filteredApproved}
+                  columns={approvedColumns}
+                  rowIdField="id"
+                  pagination
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
+                  emptyMessage="No approved campaigns."
+                  className="min-h-0 flex-1"
+                />
+              )}
+
+              {tab === "all" && (
+                <DataTable<AllRow>
+                  data={filteredAll}
+                  columns={allColumns}
+                  rowIdField="id"
+                  isBulkEnabled
+                  onSelectionChange={setSelectedAll}
+                  pagination
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
+                  emptyMessage="No campaigns."
+                  className="min-h-0 flex-1"
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Table ── */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        {tab === "pending" && (
-          <IthTable<InboxItem>
-            data={filteredPending}
-            columns={pendingColumns}
-            rowKey={(r) => r.id}
-            onRowClick={handlePendingRowClick}
-            rowHighlight={(r) => selectedIds.has(r.id) ? "purple" : null}
-            pagination={{ page, pageSize: 10, total: filteredPending.length, onPageChange: setPage, rowLabel: "items" }}
-            empty={{ message: "No pending submissions." }}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
+      <ApprovalHistoryDialog
+        open={historyTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setHistoryTarget(null);
+        }}
+        target={historyTarget}
+      />
 
-        {tab === "approved" && (
-          <IthTable<ApprovedRow>
-            data={filteredApproved}
-            columns={approvedColumns}
-            rowKey={(r) => r.id}
-            pagination={{ page, pageSize: 10, total: filteredApproved.length, onPageChange: setPage, rowLabel: "items" }}
-            empty={{ message: "No approved campaigns." }}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
+      <Dialog
+        open={rejectTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRejectTarget(null);
+        }}
+      >
+        <DialogContent showClose className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reject selected campaigns?</DialogTitle>
+            <DialogDescription className="text-left">
+              {rejectTarget && rejectTarget.length > 0 ? (
+                <>
+                  Are you sure you want to reject{" "}
+                  <span className="font-semibold text-slate-200">{rejectTarget.length}</span>{" "}
+                  selected campaign{rejectTarget.length === 1 ? "" : "s"}? This cannot be undone.
+                </>
+              ) : null}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setRejectTarget(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleConfirmReject}
+              disabled={rejectMutation.isPending}
+            >
+              {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-        {tab === "all" && (
-          <IthTable<AllRow>
-            data={filteredAll}
-            columns={allColumns}
-            rowKey={(r) => r.id}
-            onRowClick={(row, e) => {
-              const target = e.target as HTMLElement;
-              if (target.closest?.("[data-all-row-checkbox='true']")) toggleAllTabSelect(row.id);
-            }}
-            rowHighlight={(r) => allSelectedIds.has(r.id) ? "purple" : null}
-            pagination={{ page, pageSize: 10, total: filteredAll.length, onPageChange: setPage, rowLabel: "items" }}
-            empty={{ message: "No campaigns." }}
-            className="rounded-none border-0 flex-1"
-          />
-        )}
-      </div>
+      {[...publishWatchIds].map((id) => (
+        <ApprovalPublishWatcher
+          key={id}
+          campaignId={id}
+          onDone={() =>
+            setPublishWatchIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            })
+          }
+        />
+      ))}
     </div>
   );
 }
+

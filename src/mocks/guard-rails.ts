@@ -8,6 +8,8 @@ export interface GuardRailRule {
   severity: GuardRailSeverity;
   description: string;
   active: boolean;
+  /** From API; used to interpret margin floor checks in campaign detail. */
+  thresholdValue?: number | null;
 }
 
 export const MOCK_GUARD_RAIL_RULES: GuardRailRule[] = [

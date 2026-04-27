@@ -120,7 +120,7 @@ export function StoreStaffTab({ canEdit = true }: Props) {
             data={staff}
             rowIdField="id"
             headerFilters={false}
-            showRowNumber={false}
+            showRowNumber
             pagination
             pageSize={5}
             pageSizeSelector={[5, 10, 20]}

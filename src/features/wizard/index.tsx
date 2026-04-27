@@ -1,19 +1,20 @@
-import { AlertTriangle, ArrowRight } from "lucide-react";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { AlertTriangle, ArrowRight, Loader2, Shield } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   activateCampaign,
   activateCampaignWithId,
   setCampaignName,
-  setPendingApproval,
   setStagedSkus,
 } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
   pushMessage as pushWizardMessage,
+  PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
   removeAllCsvViolations,
   mergeGridData,
   removeCsvRow,
@@ -26,20 +27,27 @@ import {
   setCsvRows,
   setHasSplit,
   setInputMode as setWizardInputMode,
+  setPromoAssistantLanguage,
   setShowGrid,
   setWMode,
   setWStep,
   toggleGridRowIncluded,
   updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
+import {
+  buildPromptWithLanguage,
+  type LanguageCode,
+} from "./lib/promo-languages";
 import type { HardwareDeviceId } from "@/types/wizard";
-import { approvalKeys } from "@/hooks/use-approval";
-import { campaignKeys } from "@/hooks/use-campaigns";
+import { useCampaignEvents } from "@/hooks/use-campaign-events";
+import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
 import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
-import { createCampaignFromWizard } from "@/services/campaigns";
-import { PromoAuthService } from "@/lib/auth/promo-auth";
-import type { CampaignListItem } from "@/types/campaigns";
-import type { InboxItem } from "@/types/approval";
+import { createCampaignFromWizard, generateCampaign } from "@/services/campaigns";
+import { mergeLayoutVariants } from "@/features/campaign-studio/types";
+import type { LayoutVariant } from "@/types/api/campaigns";
+import { buildChatProductsLabel } from "@/lib/chat-products-label";
+import { isPromoDiscoveryQuery } from "@/lib/promo-discovery-intent";
+import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
 import ChatPanel from "./components/chat-panel";
 import DataStagingGrid from "./components/data-staging-grid";
 import type { InputMode } from "./components/data-staging-grid";
@@ -48,9 +56,14 @@ import type { WizardEntryInput, WizardMode } from "./components/mode-chooser";
 import ScreenSelector from "./components/screen-selector";
 import ManualUpload from "./components/manual-upload";
 import WizardStepHeader from "./components/wizard-step-header";
-import GuardRailsStep from "./components/guard-rails-step";
+import GuardRailsStep, { type GuardRailsWizardHeaderApi } from "./components/guard-rails-step";
 import ScheduleStep from "./components/schedule-step";
 import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
+import CampaignStudioModal, { type AppliedDesignSelection } from "./components/campaign-studio-modal";
+import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
+import { defaultPromoApiBase } from "./lib/preview-layout";
+import { isNlScreensStepComplete } from "./lib/nl-screens-readiness";
+import { toast } from "@/hooks/use-toast";
 
 interface CsvRow {
   sku: string;
@@ -82,14 +95,17 @@ export default function Wizard() {
   const [uploadedFiles, setUploadedFiles] = useState<Partial<Record<HardwareDeviceId, string>>>({});
   const [activeDevice, setActiveDevice] = useState<HardwareDeviceId | null>(null);
   const [designConfigured, setDesignConfigured] = useState(false);
+  /** Last Campaign Studio apply (template/upload) or AI; drives Step 2 preview labels. */
+  const [appliedStudioSelection, setAppliedStudioSelection] = useState<AppliedDesignSelection | null>(null);
   const [showStudio, setShowStudio] = useState(false);
   const [selectedVariant, setSelectedVariant] = useState<"A" | "B" | "C">("B");
   const [schedule, setSchedule] = useState<{
     startDate: string;
     startTime: string;
     endDate: string;
+    endTime: string;
     autoApprove: boolean;
-  }>({ startDate: "", startTime: "08:00", endDate: "", autoApprove: false });
+  }>({ startDate: "", startTime: "08:00", endDate: "", endTime: "08:00", autoApprove: false });
   const [sizeByDevice, setSizeByDevice] = useState<Record<HardwareDeviceId, string[]>>({
     chroma29: [],
     chroma42: ['2.9"'],
@@ -110,19 +126,127 @@ export default function Wizard() {
     csvFileName,
     csvConfirmed,
     campaignNamed,
+    promoAssistantLanguage,
   } = useAppSelector((s) => s.wizard);
 
   const campaignName = useAppSelector((s) => s.campaign.name);
+  const campaignActive = useAppSelector((s) => s.campaign.active);
+  const campaignIdFromStore = useAppSelector((s) => s.campaign.id);
 
   const [isTyping, setIsTyping] = useState(false);
   const [inputText, setInputText] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [designGeneratePending, setDesignGeneratePending] = useState(false);
+  /** Tracks whether the Campaign Studio modal is in "generating" overlay state */
+  const [studioGenerating, setStudioGenerating] = useState(false);
+  /** Layout rows merged from timeline events (preserves image_url across partial API payloads) */
+  const [generatedVariants, setGeneratedVariants] = useState<LayoutVariant[]>([]);
+  const [isRefining, setIsRefining] = useState(false);
+  /** Bumped on each layout_refined to cache-bust identical image URLs */
+  const [imageCacheBuster, setImageCacheBuster] = useState(0);
+  const [guardRailsCanProceed, setGuardRailsCanProceed] = useState(false);
+  const [guardRailsHeaderApi, setGuardRailsHeaderApi] = useState<GuardRailsWizardHeaderApi | null>(null);
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
+  const chatMutation = usePostCampaignChat();
+  const submitMutation = useSubmitCampaign();
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
+
+  /**
+   * IDs of all events we already knew about at the moment polling was (re-)started.
+   * The event handler only reacts to events NOT in this set, preventing stale
+   * `layout_generated` results from falsely triggering when polling restarts after
+   * a chat message is sent.
+   */
+  const knownEventIdsAtPollStart = useRef<Set<string>>(new Set());
+
+  /** True while we wait for a layout event after POST /chat (drives AI reply bubble). */
+  const expectingChatLayoutEventRef = useRef(false);
+
+  /** Stable ref so async callbacks can read the latest studioEvents without stale closure. */
+  const studioEventsRef = useRef<ReturnType<typeof useCampaignEvents>["events"]>([]);
+
+  /**
+   * Poll campaign events — NO shouldStop here; we stop manually in the effect below
+   * so that restarting polling after chat doesn't immediately quit on old events.
+   */
+  const {
+    events: studioEvents,
+    startPolling: startStudioPolling,
+    stopPolling: stopStudioPolling,
+  } = useCampaignEvents(
+    campaignIdFromStore ?? "",
+    {
+      intervalMs: 2_500,
+      initialPolling: false,
+    },
+  );
+
+  // Keep stable ref in sync with current events (always store a real array)
+  useEffect(() => {
+    studioEventsRef.current = Array.isArray(studioEvents) ? studioEvents : [];
+  }, [studioEvents]);
+
+  const [lastAiResponse, setLastAiResponse] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const knownIds = knownEventIdsAtPollStart.current;
+    const timeline = Array.isArray(studioEvents) ? studioEvents : [];
+    // Only react to events that arrived AFTER this polling cycle started
+    const newEvent = [...timeline]
+      .reverse()
+      .find(
+        (e) =>
+          !knownIds.has(e.id) &&
+          (e.event_type === "layout_generated" ||
+            e.event_type === "layout_refined" ||
+            e.event_type === "error"),
+      );
+
+    if (!newEvent) return;
+
+    stopStudioPolling();
+
+    if (newEvent.event_type === "error") {
+      setStudioGenerating(false);
+      setIsRefining(false);
+      expectingChatLayoutEventRef.current = false;
+      return;
+    }
+
+    const rawVariants = newEvent.payload_snapshot?.variants;
+    if (rawVariants != null) {
+      setGeneratedVariants((prev) => mergeLayoutVariants(prev, rawVariants as LayoutVariant[]));
+    }
+    setStudioGenerating(false);
+    setIsRefining(false);
+    if (expectingChatLayoutEventRef.current) {
+      setImageCacheBuster(Date.now());
+      if (newEvent.message && newEvent.message.trim() !== "") {
+        setLastAiResponse(newEvent.message);
+      }
+    }
+    expectingChatLayoutEventRef.current = false;
+  }, [studioEvents, stopStudioPolling]);
+
+  const prevWStepForChatRef = useRef(wStep);
+  useEffect(() => {
+    if (prevWStepForChatRef.current === wStep) return;
+    prevWStepForChatRef.current = wStep;
+    // Keep Redux `messages` when changing steps (e.g. products ↔ design). Clearing caused an
+    // empty/black chat when returning to Select products. Reset only local composer state.
+    setIsTyping(false);
+    setInputText("");
+    setSuggestions([]);
+    setError(null);
+    if (wStep !== 2) {
+      stopStudioPolling();
+    }
+  }, [wStep, stopStudioPolling]);
 
   const wSteps = wMode === "nl" ? NL_STEPS : MANUAL_STEPS;
 
@@ -183,6 +307,16 @@ export default function Wizard() {
     [gridData],
   );
 
+  const eslPreviewPlaceholders = useMemo<EslPlaceholders>(
+    () => ({
+      name: gridData[0]?.name ?? "",
+      price: gridData[0]?.proposed != null ? `$${gridData[0].proposed.toFixed(2)}` : "",
+      was: gridData[0]?.current != null ? `$${gridData[0].current.toFixed(2)}` : "",
+      offer_label: gridData[0]?.offerLabel ?? "",
+    }),
+    [gridData],
+  );
+
   // ── Navigation helpers ─────────────────────────────────────────────
   const handleSelectMode = useCallback((mode: WizardMode, input: WizardEntryInput) => {
     dispatch(setWMode(mode));
@@ -192,6 +326,7 @@ export default function Wizard() {
     dispatch(setShowGrid(input === "csv"));
     setActiveDevice(null);
     setDesignConfigured(false);
+    setAppliedStudioSelection(null);
     setShowStudio(false);
     setSelectedVariant("B");
     setSizeByDevice({
@@ -213,6 +348,16 @@ export default function Wizard() {
       dispatch(setWStep(wStep - 1));
     }
   }, [wStep, dispatch]);
+
+  const handleWizardStepClick = useCallback(
+    (step: number) => {
+      if (step === wStep) return;
+      if (step > wStep) return;
+      if (step < 1) return;
+      dispatch(setWStep(step));
+    },
+    [wStep, dispatch],
+  );
 
   const handleToggleDevice = useCallback((id: HardwareDeviceId) => {
     setSelectedDevices((prev) =>
@@ -254,51 +399,291 @@ export default function Wizard() {
     [campaignNamed, dispatch],
   );
 
-  const handleSubmit = useCallback(async () => {
-    const text = inputText.trim();
+  const handleAiCampaignNameChange = useCallback(
+    (value: string) => {
+      if (campaignActive) dispatch(setCampaignName(value));
+      else dispatch(activateCampaign(value.trim() || "Promo Campaign"));
+    },
+    [campaignActive, dispatch],
+  );
+
+  const aiScheduleStartLocal = useMemo(() => {
+    if (!schedule.startDate?.trim()) return "";
+    return `${schedule.startDate}T${(schedule.startTime || "08:00").slice(0, 5)}`;
+  }, [schedule.startDate, schedule.startTime]);
+
+  const aiScheduleEndLocal = useMemo(() => {
+    if (!schedule.endDate?.trim()) return "";
+    const t = (schedule.endTime || schedule.startTime || "08:00").slice(0, 5);
+    return `${schedule.endDate}T${t}`;
+  }, [schedule.endDate, schedule.endTime, schedule.startTime]);
+
+  const handleAiScheduleStartLocalChange = useCallback((value: string) => {
+    const parts = datetimeLocalValueToParts(value);
+    if (!parts) {
+      setSchedule((s) => ({ ...s, startDate: "", startTime: "08:00" }));
+      return;
+    }
+    setSchedule((s) => ({ ...s, startDate: parts.date, startTime: parts.time }));
+  }, []);
+
+  const handleAiScheduleEndLocalChange = useCallback((value: string) => {
+    const parts = datetimeLocalValueToParts(value);
+    if (!parts) {
+      setSchedule((s) => ({ ...s, endDate: "", endTime: s.startTime }));
+      return;
+    }
+    setSchedule((s) => ({ ...s, endDate: parts.date, endTime: parts.time }));
+  }, []);
+
+  /** Stable object so memo(DataStagingGrid) skips re-render while typing in chat (avoids table flicker). */
+  const aiCampaignToolbarMemo = useMemo(
+    () => ({
+      campaignName,
+      onCampaignNameChange: handleAiCampaignNameChange,
+      scheduleStartLocal: aiScheduleStartLocal,
+      scheduleEndLocal: aiScheduleEndLocal,
+      onScheduleStartLocalChange: handleAiScheduleStartLocalChange,
+      onScheduleEndLocalChange: handleAiScheduleEndLocalChange,
+    }),
+    [
+      campaignName,
+      handleAiCampaignNameChange,
+      aiScheduleStartLocal,
+      aiScheduleEndLocal,
+      handleAiScheduleStartLocalChange,
+      handleAiScheduleEndLocalChange,
+    ],
+  );
+
+  const handleSubmit = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? inputText).trim();
     if (!text || intentMutation.isPending) return;
 
     if (!hasSplit) dispatch(setHasSplit(true));
-    if (!showGrid) dispatch(setShowGrid(true));
     setError(null);
 
     pushMessage({ role: "user", text });
     setInputText("");
+    setSuggestions([]);
     setIsTyping(true);
-    generateCampaignName(text);
 
     try {
       const existingSessionId = pipelineSessionIdRef.current;
-      const { aiReply, skus, sessionId } = await intentMutation.mutateAsync({
-        text,
+      // Chat bubble keeps the raw typed text; only the wire payload is augmented
+      // with a language directive so the AI replies in the selected language.
+      const promptForApi = buildPromptWithLanguage(text, promoAssistantLanguage);
+      const { aiReply, skus, sessionId, draftMeta, suggestions: newSuggestions } = await intentMutation.mutateAsync({
+        text: promptForApi,
         constraints,
         ...(existingSessionId ? { sessionId: existingSessionId } : {}),
       });
       pipelineSessionIdRef.current = sessionId;
+
+      if (draftMeta.campaignThemeName) {
+        if (campaignActive) dispatch(setCampaignName(draftMeta.campaignThemeName));
+        else dispatch(activateCampaign(draftMeta.campaignThemeName));
+        dispatch(setCampaignNamed(true));
+      } else if (!campaignNamed) {
+        generateCampaignName(text);
+      }
+
+      if (draftMeta.scheduleStartIso || draftMeta.scheduleEndIso) {
+        setSchedule((prev) => {
+          const next = { ...prev };
+          if (draftMeta.scheduleStartIso) {
+            const local = isoToDatetimeLocalValue(draftMeta.scheduleStartIso);
+            const p = datetimeLocalValueToParts(local);
+            if (p) {
+              next.startDate = p.date;
+              next.startTime = p.time;
+            }
+          }
+          if (draftMeta.scheduleEndIso) {
+            const local = isoToDatetimeLocalValue(draftMeta.scheduleEndIso);
+            const p = datetimeLocalValueToParts(local);
+            if (p) {
+              next.endDate = p.date;
+              next.endTime = p.time;
+            }
+          }
+          return next;
+        });
+      }
+
       setIsTyping(false);
-      pushMessage(aiReply);
+      setSuggestions(newSuggestions);
+
+      // Staging grid: show for promo-discovery questions ("what promos do we have") or when
+      // the draft returns SKUs (campaign build). Avoid opening an empty grid on every turn.
+      const openStaging =
+        isPromoDiscoveryQuery(text) || skus.length > 0 || (showGrid && gridData.length > 0);
+      dispatch(setShowGrid(openStaging));
+
+      const skuRowsForLabel = skus.length > 0 ? skus : gridData;
+      const productsLabel = buildChatProductsLabel(skuRowsForLabel);
+
+      const scheduleStartIso =
+        draftMeta.scheduleStartIso ??
+        (schedule.startDate?.trim()
+          ? `${schedule.startDate}T${(schedule.startTime || "08:00").slice(0, 5)}:00`
+          : null);
+      const scheduleEndIso =
+        draftMeta.scheduleEndIso ??
+        (schedule.endDate?.trim()
+          ? `${schedule.endDate}T${(schedule.endTime || schedule.startTime || "08:00").slice(0, 5)}:00`
+          : null);
+
+      const resolvedCampaignName =
+        draftMeta.campaignThemeName?.trim() || campaignName?.trim() || null;
+
+      const summaryEnrichment =
+        scheduleStartIso || scheduleEndIso || productsLabel || resolvedCampaignName
+          ? {
+              ...(resolvedCampaignName ? { campaignName: resolvedCampaignName } : {}),
+              scheduleStartIso,
+              scheduleEndIso,
+              ...(productsLabel ? { productsLabel } : {}),
+            }
+          : undefined;
+
+      pushMessage({
+        ...aiReply,
+        ...(summaryEnrichment ? { summaryEnrichment } : {}),
+      });
       if (skus.length > 0) {
         dispatch(mergeGridData(skus));
       }
-    } catch {
+    } catch (err) {
       setIsTyping(false);
-      setError("Failed to process intent. Please try again.");
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        pipelineSessionIdRef.current = null;
+        setError("Session expired. Your next message will start a fresh draft.");
+      } else {
+        setError("Failed to process intent. Please try again.");
+      }
     }
-  }, [inputText, intentMutation, hasSplit, showGrid, constraints, pushMessage, generateCampaignName, dispatch]);
+  }, [
+    inputText,
+    intentMutation,
+    hasSplit,
+    constraints,
+    showGrid,
+    gridData.length,
+    pushMessage,
+    generateCampaignName,
+    dispatch,
+    campaignActive,
+    campaignNamed,
+    campaignName,
+    gridData,
+    schedule.startDate,
+    schedule.startTime,
+    schedule.endDate,
+    schedule.endTime,
+    promoAssistantLanguage,
+  ]);
+
+  const handleSuggestionClick = useCallback(
+    (text: string) => {
+      setSuggestions([]);
+      setInputText("");
+      handleSubmit(text);
+    },
+    [handleSubmit],
+  );
 
   const handleResetPromoChat = useCallback(() => {
     if (intentMutation.isPending || hwConfirmMutation.isPending) return;
     pipelineSessionIdRef.current = null;
     dispatch(resetPromoAssistantChat());
     dispatch(setCampaignName(""));
+    setSchedule({ startDate: "", startTime: "08:00", endDate: "", endTime: "08:00", autoApprove: false });
     setInputText("");
+    setSuggestions([]);
     setIsTyping(false);
     setError(null);
   }, [dispatch, intentMutation.isPending, hwConfirmMutation.isPending]);
 
+  const handlePromoLanguageChange = useCallback(
+    (code: LanguageCode) => {
+      dispatch(setPromoAssistantLanguage(code));
+    },
+    [dispatch],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
+        promoAssistantLanguage,
+      );
+    } catch {
+      // localStorage may be unavailable (private mode, quota); failing here is non-fatal.
+    }
+  }, [promoAssistantLanguage]);
+
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
   }, [dispatch]);
+
+  /**
+   * Step 2 — "Configure Design":
+   *   1. POST /campaigns/generate  →  202 Accepted
+   *   2. Open Campaign Studio modal immediately (generating overlay visible)
+   *   3. Poll GET /api/v1/campaigns/{id}/events until layout_generated fires, then reveal variant cards
+   */
+  const handleNlConfigureDesign = useCallback(async () => {
+    const hardwareTargetsForApi = buildHardwareTargetsForApi();
+    if (hardwareTargetsForApi.length === 0) {
+      setError("Select at least one hardware target and size before generating layouts.");
+      return;
+    }
+
+    // Re-open studio for an already-generated campaign
+    if (campaignIdFromStore) {
+      setShowStudio(true);
+      return;
+    }
+
+    if (!pipelineSessionIdRef.current) {
+      setError("Complete Step 1 chat first so a draft session exists, then try again.");
+      return;
+    }
+
+    setDesignGeneratePending(true);
+    setError(null);
+    try {
+      const name = campaignName?.trim() || undefined;
+      const created = await generateCampaign({
+        session_id: pipelineSessionIdRef.current,
+        hardware_targets: hardwareTargetsForApi,
+        ...(name ? { name } : {}),
+      });
+      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.listPrefix });
+
+      // Open the modal in "generating" mode — event polling starts immediately.
+      // Snapshot the IDs of any existing events so the effect only reacts to NEW ones.
+      knownEventIdsAtPollStart.current = new Set(studioEventsRef.current.map((e) => e.id));
+      setGeneratedVariants([]);
+      setStudioGenerating(true);
+      setShowStudio(true);
+      startStudioPolling();
+    } catch {
+      setError("Failed to generate layouts. Check your connection and try again.");
+    } finally {
+      setDesignGeneratePending(false);
+    }
+  }, [
+    buildHardwareTargetsForApi,
+    campaignIdFromStore,
+    campaignName,
+    dispatch,
+    queryClient,
+    startStudioPolling,
+  ]);
 
   const handleNlNextFromGuardRails = useCallback(() => {
     dispatch(setWStep(4));
@@ -310,6 +695,7 @@ export default function Wizard() {
         startDate: payload.startDate,
         startTime: payload.startTime,
         endDate: payload.endDate,
+        endTime: payload.startTime,
         autoApprove: payload.autoApprove,
       });
       dispatch(setWStep(5));
@@ -317,100 +703,121 @@ export default function Wizard() {
     [dispatch],
   );
 
-  const handleNlSubmit = useCallback(async () => {
-    const hardwareTargetsForApi = buildHardwareTargetsForApi();
-    if (hardwareTargetsForApi.length === 0) {
-      setError("Select at least one hardware target before submit.");
+  const handleScheduleFieldsChange = useCallback(
+    (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => {
+      setSchedule((prev) => ({
+        ...prev,
+        startDate: payload.startDate,
+        startTime: payload.startTime,
+        endDate: payload.endDate,
+        endTime: payload.startTime,
+        autoApprove: payload.autoApprove,
+      }));
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (wStep !== 3) {
+      setGuardRailsCanProceed(false);
+      setGuardRailsHeaderApi(null);
+    }
+  }, [wStep]);
+
+  /**
+   * When coming back to Select Products (e.g. from Guard Rails), local schedule state can be
+   * out of sync with the chat summary card. Pull missing start/end from the last assistant
+   * summary enrichment so datetime fields and Next gating match what the user already saw.
+   */
+  const prevWStepForProductSyncRef = useRef(wStep);
+  useEffect(() => {
+    if (wMode !== "nl") {
+      prevWStepForProductSyncRef.current = wStep;
       return;
     }
-    const resolvedName = campaignName || "Untitled Campaign";
-    let resolvedId = `inbox-${Date.now()}`;
-    let submitSucceeded = false;
-    let created: CampaignListItem | null = null;
-    try {
-      const sessionId =
-        pipelineSessionIdRef.current ??
-        (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `session-${Date.now()}`);
-      created = await createCampaignFromWizard(resolvedName, hardwareTargetsForApi, {
-        sessionId,
-        schedule: {
-          startDate: schedule.startDate,
-          startTime: schedule.startTime,
-          endDate: schedule.endDate,
-        },
+    const from = prevWStepForProductSyncRef.current;
+    const enteredStep1 = from !== 1 && wStep === 1;
+    prevWStepForProductSyncRef.current = wStep;
+    if (!enteredStep1) return;
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const m = messages[i];
+      if (m.role !== "ai" || !m.summaryEnrichment) continue;
+      const e = m.summaryEnrichment;
+      setSchedule((prev) => {
+        const next = { ...prev };
+        if (e.scheduleStartIso) {
+          const local = isoToDatetimeLocalValue(e.scheduleStartIso);
+          const p = datetimeLocalValueToParts(local);
+          if (p && !next.startDate?.trim()) {
+            next.startDate = p.date;
+            next.startTime = p.time;
+          }
+        }
+        if (e.scheduleEndIso) {
+          const local = isoToDatetimeLocalValue(e.scheduleEndIso);
+          const p = datetimeLocalValueToParts(local);
+          if (p && !next.endDate?.trim()) {
+            next.endDate = p.date;
+            next.endTime = p.time;
+          }
+        }
+        return next;
       });
-      dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
-      resolvedId = created.id;
-      await queryClient.invalidateQueries({ queryKey: campaignKeys.list });
-      submitSucceeded = true;
-    } catch {
-      setError("Failed to submit campaign for approval. Please fix and try again.");
+      break;
+    }
+  }, [wStep, wMode, messages]);
+
+  // ── Step 5: Send for Approval ─────────────────────────────────────
+  const handleNlSubmit = useCallback(() => {
+    if (!campaignIdFromStore) {
+      setError("No campaign found. Please complete the wizard from the beginning.");
       return;
     }
-
-    if (!submitSucceeded || !created) return;
-
-    const now = new Date();
-    const submittedAt = `${now.toLocaleDateString("en-US", { month: "short", day: "2-digit" })} · ${now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`;
-    const hardwareTargets = selectedDevices.map(toApprovalHardwareLabel);
-
-    const currentUser = PromoAuthService.getCurrentUser();
-    const fromProfile = currentUser
-      ? [currentUser.firstName, currentUser.lastName].filter(Boolean).join(" ").trim()
-      : "";
-    const initiatorDisplay =
-      created.ownerName?.trim() ||
-      created.initiator?.trim() ||
-      fromProfile ||
-      "You";
-
-    const pendingInboxItem: InboxItem = {
-      id: resolvedId,
-      title: resolvedName,
-      subtitle: "Waiting for approver decision",
-      initiator: initiatorDisplay,
-      skus:
-        inputMode === "csv"
-          ? csvRows.length
-          : gridData.length > 0
-            ? includedGridSkuCount
-            : 3,
-      meta: "Pending",
-      metaVariant: "muted",
-      urgent: false,
-      status: "pending",
-      hardwareTargets,
-      guardRailsLabel: "All Pass",
-      submittedAt,
-    };
-
-    queryClient.setQueryData<InboxItem[] | undefined>(approvalKeys.inbox, (prev) => {
-      if (!prev) return [pendingInboxItem];
-      const withoutDuplicate = prev.filter((item) => item.id !== pendingInboxItem.id);
-      return [pendingInboxItem, ...withoutDuplicate];
-    });
-
-    dispatch(setPendingApproval(true));
-    dispatch(resetWizard());
-    dispatch(resetStudio());
-    navigate({ to: "/campaigns" });
+    const scheduleType = schedule.startDate?.trim() ? "scheduled" : "immediate";
+    const nameForSubmit =
+      import.meta.env.VITE_SUBMIT_NAME_ON_CAMPAIGN === "true"
+        ? campaignName?.trim()
+        : undefined;
+    submitMutation.mutate(
+      {
+        id: campaignIdFromStore,
+        payload: {
+          selected_variant_id: selectedVariant,
+          schedule_type: scheduleType,
+          ...(nameForSubmit ? { name: nameForSubmit } : {}),
+        },
+      },
+      {
+        onSuccess: async () => {
+          // Ensure list is fresh before leave so the new row appears on All Campaigns.
+          await queryClient.refetchQueries({ queryKey: campaignKeys.listPrefix });
+          toast({
+            title: "Sent for Approval",
+            description: `Variant ${selectedVariant} is now pending review by the approver.`,
+          });
+          dispatch(resetWizard());
+          dispatch(resetStudio());
+          navigate({ to: "/maker/dashboard" });
+        },
+        onError: () => {
+          toast({
+            title: "Submission failed",
+            description: "Could not send the campaign for approval. Please try again.",
+            variant: "destructive",
+          });
+        },
+      },
+    );
   }, [
-    buildHardwareTargetsForApi,
+    campaignIdFromStore,
     campaignName,
-    csvRows.length,
-    dispatch,
-    gridData.length,
-    includedGridSkuCount,
-    inputMode,
-    navigate,
-    queryClient,
+    selectedVariant,
     schedule.startDate,
-    schedule.startTime,
-    schedule.endDate,
-    selectedDevices,
-    toApprovalHardwareLabel,
+    submitMutation,
+    queryClient,
+    dispatch,
+    navigate,
   ]);
 
   // Manual flow confirm
@@ -428,7 +835,7 @@ export default function Wizard() {
           : `session-${Date.now()}`;
       const created = await createCampaignFromWizard(name, hardwareTargetsForApi, {
         sessionId,
-        schedule: { startDate: "", startTime: "08:00", endDate: "" },
+        schedule: { startDate: "", startTime: "08:00", endDate: "", endTime: "08:00" },
       });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
     } catch {
@@ -492,12 +899,227 @@ export default function Wizard() {
 
   const marginFloor = parseInt(constraints.marginFloor) / 100;
 
-  // ── Proceed button visibility for NL step 1 ────────────────────────
-  const canProceedNl =
-    (inputMode === "ai" &&
-      showGrid &&
-      (gridData.length === 0 || includedGridSkuCount > 0)) ||
-    (inputMode === "csv" && csvConfirmed);
+  // ── Studio: chat send handler ─────────────────────────────────────
+  const handleStudioChatSend = useCallback(
+    (message: string) => {
+      if (!campaignIdFromStore) return;
+      setIsRefining(true);
+      chatMutation.mutate(
+        {
+          campaignId: campaignIdFromStore,
+          payload: { message, variant_id: selectedVariant },
+        },
+        {
+          onSuccess: () => {
+            expectingChatLayoutEventRef.current = true;
+            // Snapshot known IDs BEFORE restarting polling so the event effect
+            // won't falsely stop on the already-seen layout_generated event.
+            knownEventIdsAtPollStart.current = new Set(
+              studioEventsRef.current.map((e) => e.id),
+            );
+            startStudioPolling();
+          },
+          onError: () => {
+            expectingChatLayoutEventRef.current = false;
+            setIsRefining(false);
+            toast({ title: "Refinement failed", description: "Please try again.", variant: "destructive" });
+          },
+        },
+      );
+    },
+    [campaignIdFromStore, selectedVariant, chatMutation, startStudioPolling],
+  );
+
+  // ── Studio: Apply to Campaign (draft) — continue wizard; do not POST /submit here ──
+  const handleStudioApplyToCampaign = useCallback(
+    (variantId: string) => {
+      const v =
+        variantId === "A" || variantId === "B" || variantId === "C" ? variantId : selectedVariant;
+      stopStudioPolling();
+      expectingChatLayoutEventRef.current = false;
+      setIsRefining(false);
+      setStudioGenerating(false);
+      setSelectedVariant(v);
+      setDesignConfigured(true);
+      setAppliedStudioSelection({ source: "ai" });
+      setShowStudio(false);
+      toast({
+        title: "Design applied",
+        description: `Variant ${v} is saved on this draft. Continue to Guard Rails when ready.`,
+      });
+    },
+    [selectedVariant, stopStudioPolling],
+  );
+
+  // ── NL step 1: Next is enabled when staging is ready (end date is finalized on Schedule step) ──
+  const nlStep1NextEnabled = useMemo(() => {
+    if (inputMode === "csv") {
+      return csvConfirmed && csvRows.length > 0;
+    }
+    return (
+      includedGridSkuCount > 0 &&
+      campaignName.trim().length > 0 &&
+      Boolean(schedule.startDate?.trim())
+    );
+  }, [
+    inputMode,
+    csvConfirmed,
+    csvRows.length,
+    includedGridSkuCount,
+    campaignName,
+    schedule.startDate,
+  ]);
+
+  const nlStep1NextTitle = !nlStep1NextEnabled
+    ? inputMode === "csv"
+      ? "Confirm your CSV and stage at least one row before continuing."
+      : "Add at least one product, a campaign name, and a campaign start date before continuing."
+    : "Continue to Select Screens & Design";
+
+  const headerPrimaryClass =
+    "flex shrink-0 items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50";
+
+  const nlScreensReady = isNlScreensStepComplete(
+    selectedDevices,
+    sizeByDevice,
+    designConfigured,
+  );
+
+  const manualHeaderUploadsReady =
+    selectedDevices.length > 0 && selectedDevices.every((d) => Boolean(uploadedFiles[d]));
+
+  const wizardHeaderTrailing: ReactNode = (() => {
+    if (wMode === "nl") {
+      if (wStep === 1) {
+        return (
+          <button
+            type="button"
+            onClick={() => dispatch(setWStep(2))}
+            disabled={hwConfirmMutation.isPending || !nlStep1NextEnabled}
+            title={nlStep1NextTitle}
+            className={headerPrimaryClass}
+          >
+            Next: Select Screens & Design
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 2) {
+        return (
+          <button
+            type="button"
+            onClick={handleNlNextFromScreens}
+            disabled={!nlScreensReady || designGeneratePending}
+            className={headerPrimaryClass}
+          >
+            Next: Guard Rails
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 3) {
+        if (guardRailsCanProceed) {
+          return (
+            <button type="button" onClick={handleNlNextFromGuardRails} className={headerPrimaryClass}>
+              Proceed to Scheduling
+              <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+            </button>
+          );
+        }
+        if (guardRailsHeaderApi?.mode === "running") {
+          return (
+            <div
+              className="flex shrink-0 items-center gap-2 rounded-lg border border-ithina-border/60 bg-ithina-bg/50 px-3 py-2 text-xs font-medium text-slate-300"
+              role="status"
+              aria-live="polite"
+            >
+              <Loader2 className="size-3.5 shrink-0 animate-spin text-ithina-purple" aria-hidden />
+              Validating…
+            </div>
+          );
+        }
+        if (guardRailsHeaderApi?.mode === "check") {
+          const checkTitle = guardRailsHeaderApi.checkDisabled
+            ? "Select at least one guard rail to validate."
+            : "Run compliance checks on the selected rules.";
+          return (
+            <button
+              type="button"
+              onClick={guardRailsHeaderApi.onCheckValidate}
+              disabled={guardRailsHeaderApi.checkDisabled}
+              title={checkTitle}
+              className={headerPrimaryClass}
+            >
+              <Shield className="size-3.5 shrink-0" strokeWidth={2} aria-hidden />
+              Check &amp; Validate
+            </button>
+          );
+        }
+        return null;
+      }
+      if (wStep === 4) {
+        return (
+          <button
+            type="button"
+            onClick={() =>
+              handleNlNextFromSchedule({
+                startDate: schedule.startDate,
+                startTime: schedule.startTime,
+                endDate: schedule.endDate,
+                autoApprove: schedule.autoApprove,
+              })
+            }
+            className={headerPrimaryClass}
+          >
+            Review &amp; Submit
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 5) {
+        return (
+          <button
+            type="button"
+            onClick={handleNlSubmit}
+            disabled={submitMutation.isPending}
+            className={headerPrimaryClass}
+          >
+            {submitMutation.isPending ? "Submitting…" : "Send for Approval"}
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+    }
+    if (wMode === "manual") {
+      if (wStep === 1) {
+        return (
+          <button
+            type="button"
+            onClick={() => dispatch(setWStep(2))}
+            disabled={selectedDevices.length === 0}
+            className={headerPrimaryClass}
+          >
+            Next: Upload Banners
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+      if (wStep === 2) {
+        return (
+          <button
+            type="button"
+            onClick={() => void handleManualConfirm()}
+            disabled={!manualHeaderUploadsReady}
+            className={headerPrimaryClass}
+          >
+            Confirm &amp; Proceed to Studio
+            <ArrowRight className="size-3.5 shrink-0" aria-hidden />
+          </button>
+        );
+      }
+    }
+    return null;
+  })();
 
   return (
     <>
@@ -525,19 +1147,8 @@ export default function Wizard() {
               currentStep={wStep}
               steps={wSteps}
               onBack={handleBack}
-              trailingSlot={
-                wStep === 1 && wMode === "nl" && canProceedNl ? (
-                  <button
-                    type="button"
-                    onClick={() => dispatch(setWStep(2))}
-                    disabled={hwConfirmMutation.isPending}
-                    className="flex shrink-0 items-center gap-2 rounded-lg bg-ithina-purple px-4 py-2 text-xs font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Next: Select Screens & Design
-                    <ArrowRight className="size-3.5 shrink-0" aria-hidden />
-                  </button>
-                ) : null
-              }
+              onStepClick={handleWizardStepClick}
+              trailingSlot={wizardHeaderTrailing}
             />
 
             {/* ── NL Step 1: Intent & Data Staging ── */}
@@ -594,7 +1205,7 @@ export default function Wizard() {
                       className={
                         inputMode === "csv"
                           ? "flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto px-4 pb-4 pt-3 sm:px-5"
-                          : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-3 pt-2 sm:px-4"
+                          : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-4 pt-2 sm:px-4"
                       }
                     >
                       {inputMode === "csv" ? (
@@ -619,7 +1230,7 @@ export default function Wizard() {
                         />
                       ) : (
                         <>
-                          <div className="flex min-h-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col">
+                          <div className="flex h-full min-h-0 min-w-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col overflow-hidden">
                             <ChatPanel
                               messages={messages}
                               isTyping={isTyping}
@@ -629,10 +1240,14 @@ export default function Wizard() {
                               onResetChat={handleResetPromoChat}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
+                              suggestions={suggestions}
+                              onSuggestionClick={handleSuggestionClick}
+                              language={promoAssistantLanguage}
+                              onLanguageChange={handlePromoLanguageChange}
                             />
                           </div>
                           {showGrid ? (
-                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-staging-section>
                               <DataStagingGrid
                                 data={gridData}
                                 isGenerating={hwConfirmMutation.isPending}
@@ -649,6 +1264,7 @@ export default function Wizard() {
                                 onRemoveCsvRow={handleRemoveCsvRow}
                                 onRemoveAllViolations={handleRemoveAllViolations}
                                 marginFloor={marginFloor}
+                                aiCampaignToolbar={aiCampaignToolbarMemo}
                               />
                             </div>
                           ) : (
@@ -686,27 +1302,49 @@ export default function Wizard() {
                 sizeByDevice={sizeByDevice}
                 onToggleSize={handleToggleDeviceSize}
                 onNext={handleNlNextFromScreens}
+                showFooterPrimary={false}
                 storeNumber={constraints.store}
+                onConfigureDesign={handleNlConfigureDesign}
+                isGeneratingLayouts={designGeneratePending}
+                selectedDesign={appliedStudioSelection}
+                generatedVariants={generatedVariants}
+                eslPreviewPlaceholders={eslPreviewPlaceholders}
+                imageCacheBuster={imageCacheBuster}
+                apiBaseUrl={defaultPromoApiBase()}
               />
             )}
 
             {wStep === 3 && wMode === "nl" && (
-              <GuardRailsStep onNext={handleNlNextFromGuardRails} />
+              <GuardRailsStep
+                onNext={handleNlNextFromGuardRails}
+                onProceedAvailableChange={setGuardRailsCanProceed}
+                onWizardHeaderActionChange={setGuardRailsHeaderApi}
+                hideFooterProceed
+              />
             )}
 
             {wStep === 4 && wMode === "nl" && (
-              <ScheduleStep onNext={handleNlNextFromSchedule} />
+              <ScheduleStep
+                initialSchedule={schedule}
+                onNext={handleNlNextFromSchedule}
+                onScheduleFieldsChange={handleScheduleFieldsChange}
+                showFooterReview={false}
+              />
             )}
 
             {wStep === 5 && wMode === "nl" && (
               <SubmitReviewStep
                 onSubmit={handleNlSubmit}
+                isSubmitting={submitMutation.isPending}
+                showFooterSubmit={false}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={inputMode === "csv" ? csvRows.length : includedGridSkuCount}
                 scheduleDateLabel={formatWizardScheduleDate(schedule.startDate) || "Immediate"}
                 scheduleTimeLabel={schedule.startTime || "08:00"}
                 scheduleEndLabel={
-                  schedule.endDate?.trim() ? formatWizardScheduleDate(schedule.endDate) : undefined
+                  schedule.endDate?.trim()
+                    ? `${formatWizardScheduleDate(schedule.endDate)} · ${schedule.endTime || schedule.startTime || "08:00"}`
+                    : undefined
                 }
                 autoApproveNote={
                   schedule.autoApprove
@@ -736,6 +1374,7 @@ export default function Wizard() {
                 sizeByDevice={sizeByDevice}
                 onToggleSize={handleToggleDeviceSize}
                 onNext={() => dispatch(setWStep(2))}
+                showFooterPrimary={false}
               />
             )}
 
@@ -748,11 +1387,41 @@ export default function Wizard() {
                 uploadedFiles={uploadedFiles}
                 onFileUploaded={(id, name) => setUploadedFiles((prev) => ({ ...prev, [id]: name }))}
                 onConfirm={handleManualConfirm}
+                showFooterConfirm={false}
               />
             )}
           </div>
         )}
       </div>
+
+      {/* ── Campaign Studio Modal ──────────────────────────────────── */}
+      <CampaignStudioModal
+        open={showStudio}
+        onClose={() => setShowStudio(false)}
+        mode={
+          selectedDevices.includes("lcd") && !selectedDevices.includes("chroma42")
+            ? "lcd"
+            : "esl"
+        }
+        selectedVariant={selectedVariant}
+        onSelectVariant={setSelectedVariant}
+        onApply={(selection) => {
+          setDesignConfigured(true);
+          setAppliedStudioSelection(selection);
+          setShowStudio(false);
+          if (selection.source !== "ai") {
+            toast({ title: "Design applied", description: `Template "${selection.templateName ?? "custom"}" applied.` });
+          }
+        }}
+        isGenerating={studioGenerating}
+        generatedVariants={generatedVariants}
+        imageCacheBuster={imageCacheBuster}
+        isRefining={isRefining}
+        onSendChat={handleStudioChatSend}
+        lastAiResponse={lastAiResponse}
+        onSubmitForApproval={handleStudioApplyToCampaign}
+        placeholders={eslPreviewPlaceholders}
+      />
     </>
   );
 }

@@ -1,258 +1,301 @@
-import { useMemo, useState } from "react";
-import { AlertCircle, Loader2, MapPin, Plus, Store, Trash2 } from "lucide-react";
+import { AlertCircle, Ruler, Search, Store } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 
+import { DataTable, type DataTableCell, type DataTableColumn } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useCreateAdminStore, useAdminStores, useUpdateAdminStoreActive, type StoreWithStaffCount } from "@/hooks/use-admin-stores";
-import { cn } from "@/lib/utils";
+import {
+  useAdminStores,
+  useUpdateAdminStore,
+  useUpdateAdminStoreActive,
+  type StoreWithStaffCount,
+} from "@/hooks/use-admin-stores";
 
-interface NewStoreForm {
-  name: string;
-  address: string;
-  region: string;
-  currency: string;
+import { AdminEditStoreModal, AdminStaffStoreModal } from "./admin-stores-modals";
+
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-const EMPTY_FORM: NewStoreForm = {
-  name: "",
-  address: "",
-  region: "",
-  currency: "KES",
-};
-
 export default function AdminStoresPage() {
-  const {
-    data: stores = [],
-    isLoading,
-    isError,
-    error,
-  } = useAdminStores();
-
-  const createStoreMutation = useCreateAdminStore();
+  const { data: stores = [], isLoading, isError, error } = useAdminStores();
   const updateStoreActiveMutation = useUpdateAdminStoreActive();
+  const updateStoreMutation = useUpdateAdminStore();
 
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState<NewStoreForm>(EMPTY_FORM);
+  const [editStore, setEditStore] = useState<StoreWithStaffCount | null>(null);
+  const [teamStore, setTeamStore] = useState<StoreWithStaffCount | null>(null);
 
-  const canSubmit = useMemo(
-    () =>
-      Boolean(
-        form.name.trim() &&
-          form.address.trim() &&
-          form.region.trim() &&
-          form.currency.trim(),
-      ),
-    [form.address, form.currency, form.name, form.region],
+  const setEditRef = useRef(setEditStore);
+  const setTeamRef = useRef(setTeamStore);
+  const mutationRef = useRef(updateStoreActiveMutation);
+  useEffect(() => {
+    setEditRef.current = setEditStore;
+    setTeamRef.current = setTeamStore;
+    mutationRef.current = updateStoreActiveMutation;
+  }, [setEditStore, setTeamStore, updateStoreActiveMutation]);
+
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return stores;
+    return stores.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.address.toLowerCase().includes(q) ||
+        s.region.toLowerCase().includes(q) ||
+        s.currency.toLowerCase().includes(q) ||
+        s.id.toLowerCase().includes(q),
+    );
+  }, [stores, search]);
+
+  const columns = useMemo<DataTableColumn<StoreWithStaffCount>[]>(
+    () => [
+      {
+        title: "Store Details",
+        field: "name",
+        minWidth: 200,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+          const term = String(value ?? "").trim().toLowerCase();
+          if (!term) return true;
+          const d = rowData as StoreWithStaffCount;
+          return (
+            d.name.toLowerCase().includes(term) || d.id.toLowerCase().includes(term)
+          );
+        },
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const row = cell.getData();
+          const storeIcon = renderToStaticMarkup(
+            <Store className="size-5 text-primary" strokeWidth={2} aria-hidden />,
+          );
+          const name = escapeHtml(row.name);
+          const idShort = escapeHtml(row.id.slice(0, 8));
+          return `
+            <div class="flex items-center gap-3">
+              <div class="flex size-10 shrink-0 items-center justify-center rounded-xl border border-primary/35 bg-primary/20 text-primary shadow-inner shadow-black/10">
+                ${storeIcon}
+              </div>
+              <div class="text-left">
+                <p class="font-semibold leading-tight text-foreground">${name}</p>
+                <p class="text-[10px] uppercase tracking-widest text-muted-foreground opacity-70">ID: ${idShort}</p>
+              </div>
+            </div>`;
+        },
+      },
+      {
+        title: "Address",
+        field: "address",
+        minWidth: 250,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const value = escapeHtml(String(cell.getValue() ?? "—"));
+          const pinIcon = renderToStaticMarkup(
+            <svg className="size-3.5 shrink-0 opacity-70" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>,
+          );
+          return `
+            <div class="flex items-center gap-2 text-muted-foreground">
+              ${pinIcon}
+              <span class="text-sm truncate">${value}</span>
+            </div>`;
+        },
+      },
+      {
+        title: "Region",
+        field: "region",
+        width: 130,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const value = escapeHtml(String(cell.getValue() ?? "—"));
+          return `<span class="text-sm text-muted-foreground">${value}</span>`;
+        },
+      },
+      {
+        title: "Status",
+        field: "is_active",
+        width: 120,
+        headerFilter: "list" as const,
+        headerFilterParams: {
+          values: { "": "All", "true": "Active", "false": "Inactive" },
+        },
+        headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
+          const v = value as string | boolean | undefined;
+          if (v === "" || v === undefined || v === null) return true;
+          const row = rowData as StoreWithStaffCount;
+          if (v === true || v === "true") return row.is_active === true;
+          if (v === false || v === "false") return row.is_active === false;
+          return true;
+        },
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const active = Boolean(cell.getValue());
+          const statusClass = active
+            ? "border-emerald-500/30 text-emerald-500"
+            : "border-destructive/30 text-destructive";
+          const label = active ? "Active" : "Inactive";
+          return `<span class="inline-flex rounded border px-1.5 py-0.5 text-xs ${statusClass}">${label}</span>`;
+        },
+      },
+      {
+        title: "Currency",
+        field: "currency",
+        width: 130,
+        headerHozAlign: "left",
+        hozAlign: "left",
+        headerFilter: "input" as const,
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const globeIcon = renderToStaticMarkup(
+            <svg className="size-3 opacity-70" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>,
+          );
+          const cur = escapeHtml(String(cell.getValue() ?? "USD"));
+          return `
+            <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+              ${globeIcon}
+              <span>${cur}</span>
+            </div>`;
+        },
+      },
+      {
+        title: "Dimensions",
+        field: "dimensions",
+        headerSort: false,
+        headerFilter: false,
+        width: 140,
+        formatter: () => {
+          const rulerIcon = renderToStaticMarkup(
+            <Ruler className="size-3 opacity-70" aria-hidden />,
+          );
+          return `
+            <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+              ${rulerIcon}
+              <span>Metric</span>
+            </div>`;
+        },
+      },
+      {
+        title: "Actions",
+        field: "actions",
+        headerSort: false,
+        headerFilter: false,
+        width: 100,
+        hozAlign: "right",
+        headerHozAlign: "right",
+        formatter: (cell: DataTableCell<StoreWithStaffCount>) => {
+          const row = cell.getData();
+          const canDeactivate = row.is_active;
+          return `
+            <div class="flex items-center justify-end gap-1">
+              <button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit store">
+                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button type="button" data-action="team" class="staff-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Manage staff">
+                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </button>
+              <button type="button" data-action="deactivate" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white disabled:cursor-not-allowed disabled:opacity-40" ${canDeactivate ? "" : "disabled"} aria-label="Deactivate store">
+                <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+              </button>
+            </div>`;
+        },
+        cellClick: (_e: MouseEvent, cell: DataTableCell<StoreWithStaffCount>) => {
+          const t = (_e.target as HTMLElement).closest("button");
+          if (!t) return;
+          const row = cell.getData();
+          if (t.classList.contains("edit-btn")) {
+            setEditRef.current(row);
+            return;
+          }
+          if (t.classList.contains("staff-btn")) {
+            setTeamRef.current(row);
+            return;
+          }
+          if (t.classList.contains("delete-btn") && row.is_active) {
+            if (!window.confirm(`Deactivate "${row.name}"? You can reactivate it later from this list.`)) return;
+            mutationRef.current.mutate({ storeId: row.id, is_active: false });
+          }
+        },
+      },
+    ],
+    [],
   );
 
-  async function handleCreate() {
-    if (!canSubmit) return;
-    await createStoreMutation.mutateAsync({
-      name: form.name.trim(),
-      address: form.address.trim(),
-      region: form.region.trim(),
-      currency: form.currency.trim(),
-      is_active: true,
-    });
-    setShowModal(false);
-    setForm(EMPTY_FORM);
-  }
-
-  function handleToggleActive(store: StoreWithStaffCount) {
-    if (updateStoreActiveMutation.isPending) return;
-    updateStoreActiveMutation.mutate({
-      storeId: store.id,
-      is_active: !store.is_active,
-    });
-  }
-
   return (
-    <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-y-auto p-6 lg:p-8">
-          <div className="mx-auto max-w-5xl space-y-6 pb-10">
+    <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
+      <div className="ithina-page w-full flex flex-col">
+        <div className="mx-auto w-full max-w-screen-2xl space-y-4 px-4 pb-10 pt-4 lg:px-8">
+            <div className="group relative">
+              <Search
+                className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
+                aria-hidden
+              />
+              <input
+                type="search"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or address..."
+                className="h-12 w-full rounded-md border border-input bg-card py-2 pl-11 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-colors hover:border-accent/50 focus:border-accent focus:outline-none focus:ring-2 focus:ring-ring/30"
+                aria-label="Search stores"
+              />
+            </div>
 
-            {/* Header */}
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-xl border border-ithina-emerald/25 bg-ithina-emerald/10">
-                  <Store className="size-4 text-ithina-emerald" />
-                </div>
-                <div>
-                  <h1 className="text-base font-bold text-white">Stores</h1>
-                  <p className="text-xs text-slate-500">
-                    Manage stores across your organization.
-                  </p>
-                </div>
+            {isLoading && (
+              <div className="space-y-3 rounded-xl border border-ithina-border/40 bg-ithina-panel/20 p-4">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <Skeleton key={idx} className="h-10 w-full rounded-md" />
+                ))}
               </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(true)}
-                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white shadow-[0_0_15px_rgba(168,85,247,0.25)] transition-colors hover:bg-ithina-purple-hover"
-              >
-                <Plus className="size-4" />
-                Add Store
-              </button>
-            </div>
+            )}
 
-            {/* Store list */}
-            <div className="space-y-3">
-              {isLoading && (
-                <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, idx) => (
-                    <div key={idx} className="rounded-2xl border px-6 py-5">
-                      <Skeleton className="h-10 w-10 rounded-xl" />
-                      <div className="mt-3 space-y-2">
-                        <Skeleton className="h-4 w-48 rounded-md" />
-                        <Skeleton className="h-3 w-64 rounded-md" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+            {!isLoading && isError && (
+              <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
+                <AlertCircle className="size-5 shrink-0" />
+                <span className="text-sm">{(error as Error)?.message ?? "Failed to load stores"}</span>
+              </div>
+            )}
 
-              {!isLoading && isError && (
-                <div className="flex items-center gap-3 rounded-2xl border border-rose-400/20 bg-rose-400/5 px-6 py-4 text-rose-300">
-                  <AlertCircle className="size-5 shrink-0" />
-                  <span className="text-sm">
-                    {(error as Error)?.message ?? "Failed to load stores"}
-                  </span>
-                </div>
-              )}
-
-              {!isLoading && !isError && (
-                <>
-                  {stores.map((store) => (
-                    <div
-                      key={store.id}
-                      className={cn(
-                        "flex items-center gap-4 rounded-2xl border px-6 py-5 transition-all",
-                        store.is_active
-                          ? "border-ithina-border bg-ithina-panel"
-                          : "border-ithina-border/50 bg-ithina-panel/50 opacity-60",
-                      )}
-                    >
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-ithina-emerald/20 bg-ithina-emerald/10">
-                        <Store className="size-4 text-ithina-emerald" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-white">{store.name}</p>
-                          <span
-                            className={cn(
-                              "inline-flex items-center rounded border px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-widest",
-                              store.is_active
-                                ? "text-ithina-emerald bg-ithina-emerald/10 border-ithina-emerald/20"
-                                : "text-slate-500 bg-white/5 border-white/10",
-                            )}
-                          >
-                            {store.is_active ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        <div className="mt-1 flex items-center gap-1 text-xs text-slate-500">
-                          <MapPin className="size-3 shrink-0" />
-                          {store.address}
-                        </div>
-                        <p className="mt-0.5 font-mono text-[10px] text-slate-600">
-                          {store.region} · {store.currency} · {store.staffCount} staff
-                        </p>
-                      </div>
-
-                      <div className="flex shrink-0 items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(store)}
-                          disabled={updateStoreActiveMutation.isPending}
-                          className={cn(
-                            "rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
-                            store.is_active
-                              ? "border-ithina-rose/20 bg-ithina-rose/5 text-ithina-rose hover:bg-ithina-rose/15"
-                              : "border-ithina-emerald/20 bg-ithina-emerald/5 text-ithina-emerald hover:bg-ithina-emerald/15",
-                          )}
-                        >
-                          {store.is_active ? "Deactivate" : "Reactivate"}
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          </div>
+            {!isLoading && !isError && (
+              <div className="min-w-0">
+                <DataTable<StoreWithStaffCount>
+                  data={filtered}
+                  columns={columns}
+                  rowIdField="id"
+                  pagination
+                  pageSize={10}
+                  pageSizeSelector={[5, 10, 20, 50]}
+                  emptyMessage="No stores found matching your criteria"
+                  headerFilters
+                />
+              </div>
+            )}
         </div>
       </div>
 
-      {showModal && (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-[rgba(8,8,20,0.93)] p-6 backdrop-blur-[6px]"
-          onClick={() => setShowModal(false)}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-md overflow-hidden rounded-[20px] border border-ithina-border bg-ithina-sidebar shadow-[0_30px_80px_rgba(0,0,0,0.8)]"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <header className="flex items-center justify-between border-b border-ithina-border px-7 py-5">
-              <h3 className="text-base font-bold text-white">Add New Store</h3>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-white/10 hover:text-white"
-                aria-label="Close"
-              >
-                <Trash2 className="size-5" />
-              </button>
-            </header>
+      <AdminEditStoreModal
+        store={editStore}
+        onClose={() => {
+          updateStoreMutation.reset();
+          setEditStore(null);
+        }}
+        isPending={updateStoreMutation.isPending}
+        error={updateStoreMutation.error as Error | null}
+        onSave={(payload) => {
+          if (!editStore) return;
+          updateStoreMutation.mutate(
+            { storeId: editStore.id, payload },
+            { onSuccess: () => setEditStore(null) },
+          );
+        }}
+      />
 
-            <div className="space-y-5 px-7 py-6">
-              {[
-                { key: "name" as const, label: "Store Name", placeholder: "e.g. CBD Flagship" },
-                { key: "address" as const, label: "Address", placeholder: "Full address" },
-                { key: "region" as const, label: "Region", placeholder: "e.g. Nairobi" },
-                { key: "currency" as const, label: "Currency", placeholder: "e.g. KES" },
-              ].map(({ key, label, placeholder }) => (
-                <div key={key}>
-                  <label className="mb-2 block text-sm font-semibold text-slate-300">
-                    {label}
-                  </label>
-                  <input
-                    type="text"
-                    value={form[key]}
-                    onChange={(e) => setForm((prev) => ({ ...prev, [key]: e.target.value }))}
-                    placeholder={placeholder}
-                    className="w-full rounded-lg border border-ithina-border bg-ithina-bg px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:border-ithina-purple focus:outline-none"
-                  />
-                </div>
-              ))}
-            </div>
-
-            <footer className="flex justify-end gap-3 border-t border-ithina-border px-7 py-4">
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="rounded-lg px-4 py-2 text-sm font-medium text-slate-400 hover:text-white"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCreate}
-                disabled={!canSubmit || createStoreMutation.isPending}
-                className="flex items-center gap-2 rounded-lg bg-ithina-purple px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {createStoreMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
-                ) : (
-                  <Plus className="size-4" />
-                )}
-                Add Store
-              </button>
-            </footer>
-          </div>
-        </div>
-      )}
-    </>
+      <AdminStaffStoreModal store={teamStore} onClose={() => setTeamStore(null)} />
+    </div>
   );
 }

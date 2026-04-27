@@ -6,8 +6,19 @@ import { cn } from "@/lib/utils";
 import type { GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
 import { useAppSelector } from "@/store/hooks";
 
+/** Pushes Check & Validate / running state up to {@link WizardStepHeader} trailing slot. */
+export type GuardRailsWizardHeaderApi =
+  | { mode: "check"; onCheckValidate: () => void; checkDisabled: boolean }
+  | { mode: "running" };
+
 interface GuardRailsStepProps {
   onNext: () => void;
+  /** Fires when the step-advancing action becomes available (validation passed). */
+  onProceedAvailableChange?: (canProceed: boolean) => void;
+  /** When true, hides the bottom "Proceed to Scheduling" bar (header holds primary). */
+  hideFooterProceed?: boolean;
+  /** Wire primary actions into the global wizard header (same row as other steps' Next). */
+  onWizardHeaderActionChange?: (api: GuardRailsWizardHeaderApi | null) => void;
 }
 
 type ValidationState = "idle" | "running" | "passed";
@@ -70,7 +81,12 @@ function RuleCheckboxRow({
   );
 }
 
-export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
+export default function GuardRailsStep({
+  onNext,
+  onProceedAvailableChange,
+  hideFooterProceed = false,
+  onWizardHeaderActionChange,
+}: GuardRailsStepProps) {
   const gridData = useAppSelector((s) => s.wizard.gridData);
   const includedLen = useMemo(
     () => gridData.filter((r) => r.included !== false).length,
@@ -106,11 +122,11 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
     });
   }, []);
 
-  const runValidation = () => {
+  const runValidation = useCallback(() => {
     if (state === "running") return;
     setState("running");
     setActiveValidationStep(0);
-  };
+  }, [state]);
 
   useEffect(() => {
     if (state !== "running") return;
@@ -162,14 +178,35 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
     setActiveValidationStep(0);
   };
 
+  useEffect(() => {
+    onProceedAvailableChange?.(state === "passed");
+  }, [state, onProceedAvailableChange]);
+
+  useEffect(() => {
+    if (!onWizardHeaderActionChange) return;
+    if (state === "idle") {
+      onWizardHeaderActionChange({
+        mode: "check",
+        onCheckValidate: runValidation,
+        checkDisabled: selectedRules.length === 0,
+      });
+    } else if (state === "running") {
+      onWizardHeaderActionChange({ mode: "running" });
+    } else {
+      onWizardHeaderActionChange(null);
+    }
+    return () => onWizardHeaderActionChange(null);
+  }, [state, onWizardHeaderActionChange, runValidation, selectedRules.length]);
+
   return (
     <div className="flex min-h-0 flex-1 animate-[fadeIn_0.3s_ease-out] overflow-hidden">
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden border-r border-ithina-border/50">
-        <div className="shrink-0 px-6 pb-4 pt-6">
+        <div className="shrink-0 border-b border-ithina-border/30 px-6 pb-4 pt-6">
           <h3 className="text-lg font-bold text-white">Guard Rails</h3>
           <p className="mt-0.5 text-sm text-slate-400">
-            Select the guard rails to apply, then click{" "}
-            <span className="font-medium text-white">Check &amp; Validate</span> to run compliance checks.
+            Select the guard rails to apply, then use{" "}
+            <span className="font-medium text-white">Check &amp; Validate</span> in the top bar to run
+            compliance checks.
           </p>
         </div>
 
@@ -262,18 +299,20 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
                 </div>
               </div>
             </div>
-            <div className="shrink-0 border-t border-ithina-border/40 bg-ithina-bg/20 px-6 py-4">
-              <button
-                type="button"
-                onClick={onNext}
-                className="flex items-center gap-2 rounded-xl bg-ithina-purple px-8 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
-              >
-                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-                Proceed to Scheduling
-              </button>
-            </div>
+            {!hideFooterProceed && (
+              <div className="shrink-0 border-t border-ithina-border/40 bg-ithina-bg/20 px-6 py-4">
+                <button
+                  type="button"
+                  onClick={onNext}
+                  className="flex items-center gap-2 rounded-xl bg-ithina-purple px-8 py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
+                >
+                  <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                  Proceed to Scheduling
+                </button>
+              </div>
+            )}
           </>
         )}
 
@@ -329,22 +368,6 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
                   </button>
                 </div>
               </div>
-            </div>
-            <div className="shrink-0 border-t border-ithina-border/40 bg-ithina-bg/20 px-6 py-4">
-              <button
-                type="button"
-                onClick={runValidation}
-                disabled={selectedRules.length === 0}
-                className={cn(
-                  "flex items-center gap-2 rounded-xl px-8 py-3 text-sm font-bold transition-all disabled:cursor-not-allowed disabled:opacity-40",
-                  selectedRules.length > 0
-                    ? "bg-ithina-purple text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] hover:bg-ithina-purple-hover"
-                    : "border border-ithina-border bg-ithina-panel text-slate-500",
-                )}
-              >
-                <Shield className="size-4" strokeWidth={2} aria-hidden />
-                Check &amp; Validate
-              </button>
             </div>
           </>
         )}
@@ -442,7 +465,8 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
             <div>
               <p className="mb-0.5 text-xs font-semibold text-rose-300">Selection Required</p>
               <p className="text-[11px] leading-relaxed text-slate-400">
-                Select at least one guard rail then click Check &amp; Validate.
+                Select at least one guard rail, then use <span className="text-slate-300">Check &amp; Validate</span>{" "}
+                in the top bar.
               </p>
             </div>
           </div>
@@ -454,8 +478,8 @@ export default function GuardRailsStep({ onNext }: GuardRailsStepProps) {
             <div>
               <p className="mb-0.5 text-xs font-semibold text-ithina-purple">Ready to Validate</p>
               <p className="text-[11px] leading-relaxed text-slate-400">
-                {selectedRules.length} rule{selectedRules.length !== 1 ? "s" : ""} selected. Click Check &amp;
-                Validate to proceed.
+                {selectedRules.length} rule{selectedRules.length !== 1 ? "s" : ""} selected. Use{" "}
+                <span className="text-slate-300">Check &amp; Validate</span> in the top bar to run checks.
               </p>
             </div>
           </div>

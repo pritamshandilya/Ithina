@@ -4,43 +4,69 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   X,
 } from "lucide-react";
 import type { RefObject } from "react";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import CampaignDetailModal from "@/features/campaigns/components/campaign-detail-modal";
+import { useCampaignList } from "@/hooks/use-campaigns";
 import { cn } from "@/lib/utils";
+
+/** Mirrors wizard parent `schedule` — used to seed Step 5 from AI / staging toolbar. */
+export interface ScheduleStepInitialSchedule {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  autoApprove: boolean;
+}
 
 interface ScheduleStepProps {
   onNext: (payload: { startDate: string; startTime: string; endDate: string; autoApprove: boolean }) => void;
+  initialSchedule?: ScheduleStepInitialSchedule;
+  /** When false, hides the form footer primary (lives in WizardStepHeader). */
+  showFooterReview?: boolean;
+  /** Keeps parent in sync for header primary action. */
+  onScheduleFieldsChange?: (payload: {
+    startDate: string;
+    startTime: string;
+    endDate: string;
+    autoApprove: boolean;
+  }) => void;
+}
+
+const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
+
+function parseYmd(ymd: string): { year: number; month: number; day: number } | null {
+  const m = ymd.trim().match(YMD);
+  if (!m) return null;
+  const year = Number(m[1]);
+  const month = Number(m[2]) - 1;
+  const day = Number(m[3]);
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
+  return { year, month, day };
 }
 
 type SchedFilter = "All" | "Recurring" | "One-time";
 type DeploymentType = "recurring" | "one-time";
 
 interface ScheduledItem {
-  id: number;
+  id: string;
   name: string;
+  date: Date;
   day: number;
   time: string;
   type: DeploymentType;
 }
-
-/** Matches index_3.1.html `wizardScheduledItems` */
-const WIZARD_SCHEDULED_ITEMS: ScheduledItem[] = [
-  { id: 1, name: "Weekend Beverage Promo", day: 22, time: "08:00 AM", type: "recurring" },
-  { id: 2, name: "Electronics Flash Sale", day: 28, time: "06:00 AM", type: "one-time" },
-  { id: 3, name: "Easter Seasonal Push", day: 31, time: "00:01 AM", type: "one-time" },
-];
-
-const CAL_YEAR = 2026;
-const CAL_MONTH = 2; // March (0-indexed)
-const EVENT_DAYS = new Set([22, 28, 31]);
-
-function buildCalendarCells(): { n?: number; empty: boolean; isToday: boolean; hasEvent: boolean }[] {
-  const firstDow = new Date(CAL_YEAR, CAL_MONTH, 1).getDay();
-  const daysInMonth = 31;
+function buildCalendarCells(
+  year: number,
+  month: number,
+  eventDays: Set<number>,
+): { n?: number; empty: boolean; isToday: boolean; hasEvent: boolean }[] {
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const now = new Date();
   const cells: { n?: number; empty: boolean; isToday: boolean; hasEvent: boolean }[] = [];
   for (let i = 0; i < firstDow; i++) {
     cells.push({ empty: true, isToday: false, hasEvent: false });
@@ -49,8 +75,8 @@ function buildCalendarCells(): { n?: number; empty: boolean; isToday: boolean; h
     cells.push({
       n,
       empty: false,
-      isToday: n === 21,
-      hasEvent: EVENT_DAYS.has(n),
+      isToday: now.getFullYear() === year && now.getMonth() === month && n === now.getDate(),
+      hasEvent: eventDays.has(n),
     });
   }
   while (cells.length % 7 !== 0) {
@@ -59,7 +85,13 @@ function buildCalendarCells(): { n?: number; empty: boolean; isToday: boolean; h
   return cells;
 }
 
-export default function ScheduleStep({ onNext }: ScheduleStepProps) {
+export default function ScheduleStep({
+  onNext,
+  initialSchedule,
+  showFooterReview = true,
+  onScheduleFieldsChange,
+}: ScheduleStepProps) {
+  const { data: campaigns = [], isLoading: schedulesLoading } = useCampaignList();
   const todayIso = useMemo(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -67,27 +99,93 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
     const d = `${now.getDate()}`.padStart(2, "0");
     return `${y}-${m}-${d}`;
   }, []);
-  const [startDate, setStartDate] = useState(todayIso);
-  const [startTime, setStartTime] = useState("08:00");
-  const [endDate, setEndDate] = useState("");
-  const [autoApprove, setAutoApprove] = useState(false);
+  const [startDate, setStartDate] = useState(() => {
+    const s = initialSchedule?.startDate?.trim();
+    return s || todayIso;
+  });
+  const [startTime, setStartTime] = useState(() => {
+    const t = initialSchedule?.startTime?.trim();
+    return t || "08:00";
+  });
+  const [endDate, setEndDate] = useState(() => initialSchedule?.endDate?.trim() || "");
+  const [autoApprove, setAutoApprove] = useState(() => initialSchedule?.autoApprove ?? false);
   const [schedFilter, setSchedFilter] = useState<SchedFilter>("All");
-  const [selectedSchedDay, setSelectedSchedDay] = useState<number | null>(21);
+  const [selectedSchedDay, setSelectedSchedDay] = useState<number | null>(() => {
+    const s = initialSchedule?.startDate?.trim();
+    const p = s ? parseYmd(s) : null;
+    if (p) return p.day;
+    return new Date().getDate();
+  });
+  const [displayMonth, setDisplayMonth] = useState(() => {
+    const s = initialSchedule?.startDate?.trim();
+    const p = s ? parseYmd(s) : null;
+    if (p) return new Date(p.year, p.month, 1);
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [viewCampaignId, setViewCampaignId] = useState<string | null>(null);
+
+  useEffect(() => {
+    onScheduleFieldsChange?.({
+      startDate,
+      startTime,
+      endDate,
+      autoApprove,
+    });
+  }, [startDate, startTime, endDate, autoApprove, onScheduleFieldsChange]);
 
   const startDateRef = useRef<HTMLInputElement | null>(null);
   const endDateRef = useRef<HTMLInputElement | null>(null);
 
-  const calDays = useMemo(() => buildCalendarCells(), []);
+  const scheduledItems = useMemo<ScheduledItem[]>(() => {
+    return campaigns
+      .filter((campaign) => campaign.apiStatus !== "rejected")
+      .map((campaign) => {
+        const rawDate = campaign.scheduledAt ?? campaign.createdAt;
+        const parsed = new Date(rawDate);
+        const validDate = Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+        return {
+          id: campaign.id,
+          name: campaign.name,
+          date: validDate,
+          day: validDate.getDate(),
+          time: validDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          type: (campaign.scheduledEndAt ? "recurring" : "one-time") as DeploymentType,
+        };
+      })
+      .sort((a, b) => a.date.getTime() - b.date.getTime());
+  }, [campaigns]);
+
+  const monthItems = useMemo(
+    () =>
+      scheduledItems.filter(
+        (item) =>
+          item.date.getFullYear() === displayMonth.getFullYear() &&
+          item.date.getMonth() === displayMonth.getMonth(),
+      ),
+    [displayMonth, scheduledItems],
+  );
+
+  const eventDays = useMemo(() => new Set(monthItems.map((item) => item.day)), [monthItems]);
+  const calDays = useMemo(
+    () => buildCalendarCells(displayMonth.getFullYear(), displayMonth.getMonth(), eventDays),
+    [displayMonth, eventDays],
+  );
+
+  const monthLabel = useMemo(
+    () => displayMonth.toLocaleString("en-US", { month: "long", year: "numeric" }),
+    [displayMonth],
+  );
 
   const filteredScheduled = useMemo(() => {
-    if (schedFilter === "Recurring") return WIZARD_SCHEDULED_ITEMS.filter((s) => s.type === "recurring");
-    if (schedFilter === "One-time") return WIZARD_SCHEDULED_ITEMS.filter((s) => s.type === "one-time");
-    return WIZARD_SCHEDULED_ITEMS;
-  }, [schedFilter]);
+    if (schedFilter === "Recurring") return monthItems.filter((s) => s.type === "recurring");
+    if (schedFilter === "One-time") return monthItems.filter((s) => s.type === "one-time");
+    return monthItems;
+  }, [monthItems, schedFilter]);
 
   const dayCampaigns = useMemo(
-    () => (day: number) => WIZARD_SCHEDULED_ITEMS.filter((s) => s.day === day),
-    [],
+    () => (day: number) => monthItems.filter((s) => s.day === day),
+    [monthItems],
   );
 
   const openPicker = (ref: RefObject<HTMLInputElement | null>) => {
@@ -103,6 +201,10 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
   };
 
   return (
+    <>
+    {viewCampaignId && (
+      <CampaignDetailModal campaignId={viewCampaignId} onClose={() => setViewCampaignId(null)} />
+    )}
     <div className="flex min-h-0 flex-1 animate-[fadeIn_0.3s_ease-out] overflow-hidden">
       <div className="flex h-full min-h-0 w-full overflow-hidden">
         {/* Left: schedule form — index_3.1.html ~1977–2018 */}
@@ -190,31 +292,38 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
               </div>
             </label>
           </div>
-          <button
-            type="button"
-            onClick={() => onNext({ startDate, startTime, endDate, autoApprove })}
-            className="flex items-center gap-2 self-start rounded-xl bg-ithina-purple px-7 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
-          >
-            Review &amp; Submit
-            <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
-          </button>
+          {showFooterReview && (
+            <button
+              type="button"
+              onClick={() => onNext({ startDate, startTime, endDate, autoApprove })}
+              className="flex items-center gap-2 self-start rounded-xl bg-ithina-purple px-7 py-2.5 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.3)] transition-all hover:bg-ithina-purple-hover"
+            >
+              Review &amp; Submit
+              <ArrowRight className="size-4" strokeWidth={2} aria-hidden />
+            </button>
+          )}
         </div>
 
         {/* Centre: calendar — w-60, index_3.1.html ~2020–2065 */}
         <div className="flex w-60 shrink-0 flex-col overflow-hidden border-r border-ithina-border/50">
           <div className="flex-1 overflow-y-auto p-4">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-semibold text-white">March 2026</span>
+              <span className="text-xs font-semibold text-white">{monthLabel}</span>
               <div className="flex gap-1">
                 <button
                   type="button"
-                  onClick={() => setSelectedSchedDay(22)}
+                  onClick={() => setSelectedSchedDay(new Date().getDate())}
                   className="rounded border border-ithina-purple/25 bg-ithina-purple/10 px-2 py-0.5 font-mono text-[9px] font-semibold text-ithina-purple transition-colors hover:bg-ithina-purple/20"
                 >
                   Today
                 </button>
                 <button
                   type="button"
+                  onClick={() =>
+                    setDisplayMonth(
+                      (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                    )
+                  }
                   className="rounded-md border border-ithina-border/60 p-1 text-slate-500 transition-colors hover:text-white"
                   aria-label="Previous month"
                 >
@@ -222,6 +331,11 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
                 </button>
                 <button
                   type="button"
+                  onClick={() =>
+                    setDisplayMonth(
+                      (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                    )
+                  }
                   className="rounded-md border border-ithina-border/60 p-1 text-slate-500 transition-colors hover:text-white"
                   aria-label="Next month"
                 >
@@ -273,7 +387,9 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
             {selectedSchedDay != null ? (
               <div className="mt-4 flex flex-col gap-2 border-t border-ithina-border/40 pt-4">
                 <div className="mb-1 flex items-center justify-between">
-                  <p className="font-mono text-[10px] font-semibold text-white">Mar {selectedSchedDay}</p>
+                  <p className="font-mono text-[10px] font-semibold text-white">
+                    {displayMonth.toLocaleString("en-US", { month: "short" })} {selectedSchedDay}
+                  </p>
                   <button
                     type="button"
                     onClick={() => setSelectedSchedDay(null)}
@@ -285,7 +401,7 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
                 </div>
                 {dayCampaigns(selectedSchedDay).length === 0 ? (
                   <div className="py-2 text-center">
-                    <p className="text-[10px] text-slate-600">No campaigns on this day</p>
+                    <p className="text-[10px] text-slate-600">No backend campaigns on this day</p>
                   </div>
                 ) : (
                   dayCampaigns(selectedSchedDay).map((sc) => (
@@ -324,7 +440,7 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
           <div className="flex flex-col gap-3 p-5">
             <div className="mb-1 flex items-center justify-between">
               <p className="font-mono text-[10px] uppercase tracking-widest text-slate-500">
-                Upcoming Deployments · {WIZARD_SCHEDULED_ITEMS.length}
+                Upcoming Deployments · {filteredScheduled.length}
               </p>
               <div className="flex gap-1">
                 {(["All", "Recurring", "One-time"] as const).map((sf) => (
@@ -344,58 +460,62 @@ export default function ScheduleStep({ onNext }: ScheduleStepProps) {
                 ))}
               </div>
             </div>
-            {filteredScheduled.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                onClick={() => setSelectedSchedDay(s.day)}
-                className="group cursor-pointer rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-left transition-colors hover:border-ithina-purple/30"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className={cn(
-                        "flex size-8 shrink-0 items-center justify-center rounded-lg",
-                        s.type === "recurring" ? "bg-blue-500/10" : "bg-ithina-purple/10",
-                      )}
-                    >
-                      {s.type === "recurring" ? (
-                        <RefreshCw className="size-3.5 text-blue-400" strokeWidth={1.5} aria-hidden />
-                      ) : (
+            {schedulesLoading ? (
+              <div className="rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-center text-xs text-slate-500">
+                Loading backend deployments...
+              </div>
+            ) : filteredScheduled.length === 0 ? (
+              <div className="rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-center text-xs text-slate-500">
+                No upcoming deployments from backend for this month.
+              </div>
+            ) : (
+              filteredScheduled.map((s) => (
+                <div
+                  key={s.id}
+                  className="group flex flex-col gap-3 rounded-xl border border-ithina-border/60 bg-ithina-panel p-4 text-left sm:flex-row sm:items-start sm:justify-between"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSchedDay(s.day)}
+                    className="min-w-0 flex-1 text-left transition-colors hover:text-white"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ithina-purple/10">
                         <Calendar className="size-3.5 text-ithina-purple" strokeWidth={1.5} aria-hidden />
-                      )}
-                    </div>
-                    <div>
-                      <div className="mb-0.5 flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-semibold text-white">{s.name}</span>
-                        <span
-                          className={cn(
-                            "rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wide",
-                            s.type === "recurring"
-                              ? "bg-blue-400/10 text-blue-400"
-                              : "bg-ithina-purple/10 text-ithina-purple",
-                          )}
-                        >
-                          {s.type === "recurring" ? "RECURRING" : "ONE-TIME"}
-                        </span>
                       </div>
-                      <p className="text-[11px] text-slate-500">
-                        Mar {s.day} · {s.time}
-                      </p>
+                      <div>
+                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                          <span className="text-sm font-semibold text-white">{s.name}</span>
+                          <span className="rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-wide bg-ithina-purple/10 text-ithina-purple">
+                            {s.type === "recurring" ? "RECURRING" : "ONE-TIME"}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500">
+                          {s.date.toLocaleString("en-US", { month: "short" })} {s.day} · {s.time}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="shrink-0 text-right">
+                  </button>
+                  <div className="flex shrink-0 items-center justify-end gap-2 sm:flex-col sm:items-end">
                     <span className="inline-flex items-center gap-1 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] text-emerald-400">
                       <Check className="size-2.5" strokeWidth={2} aria-hidden />
                       Approved
                     </span>
+                    <button
+                      type="button"
+                      onClick={() => setViewCampaignId(s.id)}
+                      className="rounded-md border border-sky-400/30 bg-sky-400/10 px-2.5 py-1.5 text-[10px] font-semibold text-sky-300 transition-colors hover:border-sky-400/50 hover:bg-sky-400/20"
+                    >
+                      View
+                    </button>
                   </div>
                 </div>
-              </button>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>
     </div>
+    </>
   );
 }

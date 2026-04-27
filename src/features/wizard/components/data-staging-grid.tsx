@@ -6,6 +6,31 @@ import { IthBadge, IthTable, type IthColumnDef } from "@/components/ui/ith-table
 import { cn } from "@/lib/utils";
 import type { StagedSku } from "@/types/wizard";
 
+function escapeCellText(raw: string): string {
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
+function isBogoLikeOffer(row: StagedSku): boolean {
+  const t = (row.offerType ?? "").toLowerCase().trim();
+  const l = (row.offerLabel ?? "").toLowerCase().trim();
+  if (/\bbogo(f)?\b/.test(t)) return true;
+  if (t.includes("buy") && t.includes("get")) return true;
+  if (
+    l.includes("buy 1 get 1") ||
+    l.includes("buy one get one") ||
+    l.includes("bogof") ||
+    l.includes("bogo")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export type InputMode = "ai" | "csv";
 
 /* ─── CSV preview table ──────────────────────────────────────────────────── */
@@ -102,6 +127,15 @@ interface DataStagingGridProps {
   onRemoveAllViolations: () => void;
   marginFloor: number;
   hideModeToggle?: boolean;
+  /** Step 1 AI grid: campaign name + schedule on the left; toggles on the right. */
+  aiCampaignToolbar?: {
+    campaignName: string;
+    onCampaignNameChange: (value: string) => void;
+    scheduleStartLocal: string;
+    scheduleEndLocal: string;
+    onScheduleStartLocalChange: (value: string) => void;
+    onScheduleEndLocalChange: (value: string) => void;
+  };
 }
 
 function DataStagingGrid({
@@ -122,8 +156,13 @@ function DataStagingGrid({
   onRemoveAllViolations,
   marginFloor,
   hideModeToggle = false,
+  aiCampaignToolbar,
 }: DataStagingGridProps) {
   const csvInput = useRef<HTMLInputElement>(null);
+  /** Latest grid rows for formatters — avoids recreating Tabulator columns on every `included` toggle. */
+  const gridDataRef = useRef(data);
+  gridDataRef.current = data;
+
   const csvWarnings = csvRows.filter((r) => !r.safe).length;
 
   const aiIncludedCount = useMemo(() => data.filter((r) => r.included !== false).length, [data]);
@@ -257,7 +296,7 @@ function DataStagingGrid({
     const includeColumn: DataTableColumn<StagedSku> = {
       title: "",
       field: "included",
-      width: 44,
+      width: 40,
       cssClass: "wizard-staging-col-include",
       headerSort: false,
       headerFilter: false,
@@ -266,20 +305,25 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const checked = row.included !== false;
-        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-6 items-center justify-center rounded border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>" : ""}</button>`;
+        return `<input type="checkbox" data-action="toggle-include" aria-label="Include in campaign" ${checked ? "checked" : ""} />`;
       },
       cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
-        if (target.closest?.("[data-action='toggle-include']")) {
+        const input = target.closest?.("[data-action='toggle-include']") as HTMLInputElement | null;
+        if (input) {
+          _e.preventDefault();
           _e.stopPropagation();
-          onToggleGridRowIncluded(cell.getData().sku);
+          const row = cell.getData();
+          const wasIncluded = row.included !== false;
+          input.checked = !wasIncluded;
+          onToggleGridRowIncluded(row.sku);
         }
       },
     };
 
     if (onSetAllGridRowsIncluded) {
       includeColumn.titleFormatter = function formatIncludeColumnHeader() {
-        return `<button type="button" data-action="toggle-all-include" aria-label="Include all SKUs in campaign" class="wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 border-slate-600 transition-colors hover:border-slate-500"></button>`;
+        return `<input type="checkbox" data-action="toggle-all-include" aria-label="Include all SKUs in campaign" />`;
       };
     }
 
@@ -297,19 +341,94 @@ function DataStagingGrid({
     {
       title: "Product",
       field: "name",
-      minWidth: 180,
-      widthGrow: 1,
+      minWidth: 200,
+      widthGrow: 1.35,
       hozAlign: "left",
       headerHozAlign: "left",
+      vertAlign: "top",
+      variableHeight: true,
       formatter: (cell: unknown) => {
-        const val = (cell as { getValue: () => string }).getValue();
-        return `<span class="text-xs font-medium leading-tight text-slate-200">${val}</span>`;
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const val = escapeCellText(row.name ?? "");
+        const gridRows = gridDataRef.current;
+        const includedRows = gridRows.filter((r) => r.included !== false);
+        const freeInGrid = includedRows.filter((r) => r.isFree);
+        const bogo = isBogoLikeOffer(row);
+        const freeBadge = row.isFree
+          ? `<span class="shrink-0 rounded border border-ithina-purple/40 bg-ithina-purple/15 px-1 py-px font-mono text-[8px] font-bold uppercase leading-none text-ithina-purple">Free</span>`
+          : "";
+        const primaryBadge =
+          bogo && freeInGrid.length > 0 && !row.isFree
+            ? `<span class="shrink-0 rounded border border-slate-500/45 bg-slate-500/10 px-1 py-px font-mono text-[8px] font-bold uppercase leading-none text-slate-400">Primary</span>`
+            : "";
+        return `<div class="flex flex-wrap items-start gap-x-1.5 gap-y-1 text-xs font-medium leading-snug text-slate-200"><span class="min-w-0 max-w-full flex-1 break-words">${val}</span>${freeBadge}${primaryBadge}</div>`;
+      },
+    },
+    {
+      title: "Offer",
+      field: "offerLabel",
+      width: 132,
+      minWidth: 118,
+      maxWidth: 220,
+      hozAlign: "left",
+      headerHozAlign: "left",
+      vertAlign: "top",
+      variableHeight: true,
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const label = (row.offerLabel ?? "").trim();
+        const typeRaw = (row.offerType ?? "").trim();
+        const labelEsc = label ? escapeCellText(label) : "";
+        const typeEsc = typeRaw ? escapeCellText(typeRaw) : "";
+
+        const gridRowsOffer = gridDataRef.current;
+        const includedRows = gridRowsOffer.filter((r) => r.included !== false);
+        const freeRows = includedRows.filter((r) => r.isFree);
+        const bogo = isBogoLikeOffer(row);
+
+        let mainHtml = "";
+        if (!labelEsc && !typeEsc) {
+          mainHtml = `<span class="text-[11px] text-slate-600">—</span>`;
+        } else if (typeEsc && labelEsc) {
+          mainHtml = `<span class="text-[11px] leading-snug text-slate-200"><span class="font-mono text-[10px] text-slate-500">${typeEsc}</span><span class="mx-1 text-slate-600">·</span><span>${labelEsc}</span></span>`;
+        } else {
+          mainHtml = `<span class="text-[11px] leading-snug text-slate-200">${typeEsc || labelEsc}</span>`;
+        }
+
+        let roleHtml = "";
+        if (bogo && freeRows.length > 0) {
+          if (row.isFree) {
+            const primaries = includedRows.filter((r) => !r.isFree);
+            const names = primaries
+              .map((p) => p.name)
+              .slice(0, 3)
+              .join(", ");
+            const more = primaries.length > 3 ? "…" : "";
+            roleHtml = `<span class="mt-1 block text-[10px] font-medium text-ithina-purple/90">Free unit</span>`;
+            if (names) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] leading-snug text-slate-500">Paid with: ${escapeCellText(names)}${more}</span>`;
+            }
+          } else {
+            roleHtml = `<span class="mt-1 block text-[10px] text-slate-500">Primary (paid line)</span>`;
+            if (freeRows.length === 1) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] leading-snug text-slate-400">+ Free: ${escapeCellText(freeRows[0].name)}</span>`;
+            } else if (freeRows.length > 1) {
+              roleHtml += `<span class="mt-0.5 block text-[10px] text-slate-400">+ ${freeRows.length} free units</span>`;
+            }
+          }
+        }
+
+        if (roleHtml) {
+          return `<div class="flex flex-col gap-0">${mainHtml}${roleHtml}</div>`;
+        }
+        return mainHtml;
       },
     },
     {
       title: "Current",
       field: "current",
       width: 100,
+      minWidth: 92,
       sorter: "number",
       hozAlign: "right",
       headerHozAlign: "right",
@@ -338,6 +457,23 @@ function DataStagingGrid({
       },
     },
     {
+      title: "Stock",
+      field: "stockQty",
+      width: 88,
+      minWidth: 80,
+      sorter: "number",
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const q = row.stockQty;
+        if (typeof q !== "number" || Number.isNaN(q)) {
+          return `<span class="font-mono text-[11px] text-slate-600">—</span>`;
+        }
+        return `<span class="font-mono text-xs text-slate-300">${q}</span>`;
+      },
+    },
+    {
       title: "Proposed",
       field: "proposed",
       width: 110,
@@ -359,6 +495,21 @@ function DataStagingGrid({
         return `<span class="rounded border border-rose-400/30 bg-rose-400/10 px-1.5 py-0.5 font-mono text-[9px] leading-none text-rose-400">ALERT (${row.margin})</span>`;
       },
     },
+    {
+      title: "Suggest dates",
+      field: "agentSuggestSchedule",
+      minWidth: 118,
+      widthGrow: 0.65,
+      sorter: "string",
+      hozAlign: "left",
+      headerHozAlign: "left",
+      formatter: (cell: unknown) => {
+        const row = (cell as { getData: () => StagedSku }).getData();
+        const raw = (row.agentSuggestSchedule ?? "").trim() || "—";
+        const esc = escapeCellText(raw);
+        return `<span class="text-[11px] leading-snug text-slate-300">${esc}</span>`;
+      },
+    },
     ];
   }, [onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
 
@@ -366,9 +517,13 @@ function DataStagingGrid({
     const d = row.getData();
     const el = row.getElement();
     el.classList.toggle("wizard-staging-row-excluded", d.included === false);
+    el.classList.toggle("wizard-staging-row-free", d.isFree === true);
     if (!d.safe) {
       el.style.borderLeft = "2px solid rgb(251 113 133)";
       el.style.backgroundColor = "rgba(127, 29, 29, 0.1)";
+    } else if (d.isFree) {
+      el.style.borderLeft = "2px solid var(--color-ithina-purple)";
+      el.style.backgroundColor = "color-mix(in srgb, var(--color-ithina-purple) 12%, transparent)";
     } else {
       el.style.borderLeft = "";
       el.style.backgroundColor = "";
@@ -376,8 +531,6 @@ function DataStagingGrid({
   }, []);
 
   const aiTableRef = useRef<HTMLDivElement>(null);
-  const gridDataRef = useRef(data);
-  gridDataRef.current = data;
   const setAllIncludedRef = useRef(onSetAllGridRowsIncluded);
   setAllIncludedRef.current = onSetAllGridRowsIncluded;
 
@@ -430,29 +583,18 @@ function DataStagingGrid({
     if (!root || !onSetAllGridRowsIncluded) return;
 
     const syncHeaderIncludeAll = () => {
-      const btn = root.querySelector<HTMLButtonElement>('[data-action="toggle-all-include"]');
-      if (!btn) return;
+      const input = root.querySelector<HTMLInputElement>('[data-action="toggle-all-include"]');
+      if (!input) return;
       const rows = gridDataRef.current;
       const all = rows.length > 0 && rows.every((r) => r.included !== false);
       const some = rows.some((r) => r.included !== false);
-      const checked = all;
       const partial = some && !all;
-      btn.setAttribute("aria-pressed", String(checked));
-      btn.setAttribute(
+      input.checked = all;
+      input.indeterminate = partial;
+      input.setAttribute(
         "aria-label",
-        checked ? "Clear all SKUs from campaign" : "Include all SKUs in campaign",
+        all ? "Clear all SKUs from campaign" : "Include all SKUs in campaign",
       );
-      btn.className = cn(
-        "wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 transition-colors",
-        checked && "border-ithina-purple bg-ithina-purple/20",
-        partial && !checked && "border-ithina-purple/50 bg-ithina-purple/5",
-        !checked && !partial && "border-slate-600 hover:border-slate-500",
-      );
-      btn.innerHTML = checked
-        ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>"
-        : partial
-          ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple/70\">−</span>"
-          : "";
     };
 
     syncHeaderIncludeAll();
@@ -481,17 +623,57 @@ function DataStagingGrid({
   return (
     <div
       className={cn(
-        "relative flex h-full min-h-0 min-w-0 flex-1 animate-[fadeIn_0.5s_ease-out] flex-col overflow-y-auto overflow-x-auto",
+        "relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-auto",
         hideModeToggle
           ? "bg-transparent"
           : "rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl",
       )}
     >
       {!hideModeToggle && (
-      <header className="flex shrink-0 items-center justify-between gap-3 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
-        {!hideModeToggle ? (
+      <header className="flex shrink-0 flex-wrap items-start justify-between gap-3 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
+        <div className="min-w-0 flex-1 space-y-2 pr-2">
+          {inputMode === "ai" && data.length > 0 && aiCampaignToolbar ? (
+            <>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-slate-400">Campaign Name:</span>
+                <input
+                  id="wizard-ai-campaign-name"
+                  type="text"
+                  value={aiCampaignToolbar.campaignName}
+                  onChange={(e) => aiCampaignToolbar.onCampaignNameChange(e.target.value)}
+                  placeholder="e.g. Q3 Sushi Promo"
+                  autoComplete="off"
+                  className="min-h-8 min-w-[12rem] max-w-xl flex-1 rounded-lg border border-ithina-border bg-ithina-bg px-3 py-1.5 text-xs font-semibold text-white shadow-inner transition-colors focus:border-ithina-purple focus:outline-none"
+                />
+              </div>
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <span className="shrink-0 text-xs font-medium text-slate-400">Campaign schedule:</span>
+                <input
+                  id="wizard-ai-schedule-start"
+                  type="datetime-local"
+                  value={aiCampaignToolbar.scheduleStartLocal}
+                  onChange={(e) => aiCampaignToolbar.onScheduleStartLocalChange(e.target.value)}
+                  aria-label="Campaign start"
+                  className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                />
+                <span className="shrink-0 text-xs font-medium text-slate-500">to</span>
+                <input
+                  id="wizard-ai-schedule-end"
+                  type="datetime-local"
+                  value={aiCampaignToolbar.scheduleEndLocal}
+                  onChange={(e) => aiCampaignToolbar.onScheduleEndLocalChange(e.target.value)}
+                  aria-label="Campaign end"
+                  className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                />
+              </div>
+            </>
+          ) : null}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
             <button
+              type="button"
               onClick={() => onInputModeChange("ai")}
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
@@ -502,6 +684,7 @@ function DataStagingGrid({
               AI Assisted
             </button>
             <button
+              type="button"
               onClick={() => onInputModeChange("csv")}
               className={cn(
                 "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
@@ -512,17 +695,13 @@ function DataStagingGrid({
               CSV Upload
             </button>
           </div>
-        ) : (
-          <div />
-        )}
-        <div className="ml-auto flex items-center gap-3">
           {inputMode === "ai" && data.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">
+            <span className="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:max-w-none sm:text-xs">
               {aiIncludedCount} of {data.length} SKUs included — Review proposals below
             </span>
           )}
           {inputMode === "csv" && csvRows.length > 0 && (
-            <span className="hidden text-xs text-slate-400 lg:block">
+            <span className="text-right text-xs text-slate-400">
               {csvRows.length} rows loaded
             </span>
           )}
@@ -655,7 +834,7 @@ function DataStagingGrid({
             </div>
           )}
           {data.length > 0 && (
-            <div ref={aiTableRef} className="min-h-0 flex-1 overflow-auto px-2 pb-2 pt-0 sm:px-3">
+            <div ref={aiTableRef} className="flex min-h-0 flex-1 flex-col overflow-auto px-2 pb-2 pt-0 sm:px-3">
               <DataTable<StagedSku>
                 columns={aiColumns}
                 data={data}
@@ -666,7 +845,7 @@ function DataStagingGrid({
                 showRowNumber
                 layout="fitColumns"
                 rowFormatter={aiRowFormatter}
-                className="wizard-staging-table min-h-0"
+                className="wizard-staging-table min-h-0 flex-1"
               />
             </div>
           )}

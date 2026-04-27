@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setCampaignName } from "@/store/slices/campaign-slice";
@@ -10,6 +10,9 @@ export interface SubmitDisplayTag {
 
 interface SubmitReviewStepProps {
   onSubmit: () => void;
+  isSubmitting?: boolean;
+  /** When false, hides the bottom submit bar (primary in WizardStepHeader). */
+  showFooterSubmit?: boolean;
   dataSourceLabel: string;
   skuCount: number;
   scheduleDateLabel?: string;
@@ -23,6 +26,8 @@ interface SubmitReviewStepProps {
 
 export default function SubmitReviewStep({
   onSubmit,
+  isSubmitting = false,
+  showFooterSubmit = true,
   dataSourceLabel,
   skuCount,
   scheduleDateLabel = "Immediate",
@@ -106,16 +111,23 @@ export default function SubmitReviewStep({
           </div>
         </div>
 
+        {showFooterSubmit && (
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onSubmit}
-            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ithina-purple py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-ithina-purple-hover"
+            disabled={isSubmitting}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ithina-purple py-3 text-sm font-bold text-white shadow-[0_0_20px_rgba(168,85,247,0.35)] transition-all hover:bg-ithina-purple-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
-            Send for Approval
+            {isSubmitting ? (
+              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden />
+            ) : (
+              <CheckCircle2 className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+            )}
+            {isSubmitting ? "Submitting…" : "Send for Approval"}
           </button>
         </div>
+        )}
 
         <p className="text-center text-[10px] text-slate-600">
           Draft cleared on submit · campaign moves to Approval Queue

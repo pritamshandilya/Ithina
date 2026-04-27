@@ -42,13 +42,35 @@ export interface StagedSku {
   discount: number;
   /** When false, SKU stays in the grid but is excluded from counts and submission. Default: included. */
   included?: boolean;
+  eslId?: string;
+  rankingScore?: number;
+  /** Per-SKU label from the promo assistant, e.g. "Oct 15 – Oct 20 (Soon)". */
+  agentSuggestSchedule?: string;
+  /** Draft API: e.g. bundle, bogof. */
+  offerType?: string;
+  /** Draft API: e.g. "Bundle Primary", "FREE ITEM (Bundle Reward)". */
+  offerLabel?: string;
+  /** On-hand stock from draft API. */
+  stockQty?: number;
+  /** True when this SKU is the free / reward line in a bundle or BOGO. */
+  isFree?: boolean;
 }
 
 export type ChatRole = "user" | "ai";
 
+/** Fills summary-card rows when the AI reply omits dates/products (follow-up turns). */
+export interface ChatSummaryEnrichment {
+  /** Campaign theme name from draft API / Redux — authoritative for the Name row. */
+  campaignName?: string | null;
+  scheduleStartIso?: string | null;
+  scheduleEndIso?: string | null;
+  productsLabel?: string | null;
+}
+
 export interface ChatMessage {
   role: ChatRole;
   text: string;
+  summaryEnrichment?: ChatSummaryEnrichment;
 }
 
 export type HardwareDeviceId = "chroma29" | "chroma42" | "lcd";

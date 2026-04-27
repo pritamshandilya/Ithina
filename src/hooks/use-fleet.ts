@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { useActiveStoreId } from "@/hooks/use-active-store-id";
 import {
   getFleetStats,
   getHardwareAlert,
@@ -9,14 +10,18 @@ import {
 
 export const fleetKeys = {
   all: ["fleet"] as const,
-  stats: ["fleet", "stats"] as const,
-  queue: ["fleet", "queue"] as const,
-  alert: ["fleet", "alert"] as const,
+  statsPrefix: ["fleet", "stats"] as const,
+  stats: (storeScopeId: string | null) => ["fleet", "stats", storeScopeId ?? "__org__"] as const,
+  queuePrefix: ["fleet", "queue"] as const,
+  queue: (storeScopeId: string | null) => ["fleet", "queue", storeScopeId ?? "__org__"] as const,
+  alertPrefix: ["fleet", "alert"] as const,
+  alert: (storeScopeId: string | null) => ["fleet", "alert", storeScopeId ?? "__org__"] as const,
 };
 
 export function useFleetStats() {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: fleetKeys.stats,
+    queryKey: fleetKeys.stats(storeId),
     queryFn: getFleetStats,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
@@ -26,8 +31,9 @@ export function useFleetStats() {
 }
 
 export function useQueueRows() {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: fleetKeys.queue,
+    queryKey: fleetKeys.queue(storeId),
     queryFn: getQueueRows,
     staleTime: 15_000,
     gcTime: 5 * 60_000,
@@ -37,8 +43,9 @@ export function useQueueRows() {
 }
 
 export function useHardwareAlertQuery() {
+  const storeId = useActiveStoreId();
   return useQuery({
-    queryKey: fleetKeys.alert,
+    queryKey: fleetKeys.alert(storeId),
     queryFn: getHardwareAlert,
     staleTime: 30_000,
     gcTime: 5 * 60_000,
@@ -51,8 +58,8 @@ export function useResolveAlert() {
   return useMutation({
     mutationFn: resolveHardwareAlert,
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: fleetKeys.alert });
-      qc.invalidateQueries({ queryKey: fleetKeys.stats });
+      qc.invalidateQueries({ queryKey: fleetKeys.alertPrefix });
+      qc.invalidateQueries({ queryKey: fleetKeys.statsPrefix });
     },
   });
 }

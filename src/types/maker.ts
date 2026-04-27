@@ -52,6 +52,8 @@ export interface Shelf {
   notes?: string;
   /** Planogram ID when shelf is created from planogram visual builder */
   planogramId?: string;
+  /** Human-readable planogram name for fixture/shelf assignment displays */
+  planogramName?: string;
   /** User's edited arrangement when shelf is from planogram */
   arrangement?: unknown;
   /** Zone of the store */

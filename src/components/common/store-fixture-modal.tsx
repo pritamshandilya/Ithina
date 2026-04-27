@@ -52,7 +52,6 @@ export function StoreFixtureModal({
   isSaving = false,
   mode = "create",
   initialValues,
-  planogramOptions = [],
 }: StoreFixtureModalProps) {
   const normalizeText = (value: string | undefined): string => {
     if (value === undefined) return "";
@@ -63,7 +62,9 @@ export function StoreFixtureModal({
     return trimmed;
   };
 
-  const normalizeOptionalText = (value: string | undefined): string | undefined => {
+  const normalizeOptionalText = (
+    value: string | undefined,
+  ): string | undefined => {
     const normalized = normalizeText(value);
     return normalized ? normalized : undefined;
   };
@@ -76,7 +77,8 @@ export function StoreFixtureModal({
     width: normalizeText(initialValues?.width),
     height: normalizeText(initialValues?.height),
     depth: normalizeText(initialValues?.depth),
-    dimensionUnit: (initialValues?.dimensionUnit ?? DEFAULT_VALUES.dimensionUnit) as StoreDimensionUnit,
+    dimensionUnit: (initialValues?.dimensionUnit ??
+      DEFAULT_VALUES.dimensionUnit) as StoreDimensionUnit,
     section: normalizeText(initialValues?.section),
     aisle: normalizeText(initialValues?.aisle),
     zone: normalizeText(initialValues?.zone),
@@ -101,20 +103,25 @@ export function StoreFixtureModal({
   }, [isOpen, initialValues]);
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl" showCloseButton>
-      <div className="bg-card border border-border rounded-xl shadow-2xl overflow-hidden text-foreground glassmorphism">
-        <div className="flex items-center justify-between p-4 border-b border-border bg-muted/20">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-xl"
+      showCloseButton
+    >
+      <div className="bg-card border-border text-foreground glassmorphism overflow-hidden rounded-xl border shadow-2xl">
+        <div className="border-border bg-muted/20 flex items-center justify-between border-b p-4">
           <div>
             <h3 className="text-lg font-semibold tracking-tight">
               {mode === "create" ? "Add Fixture" : "Edit Fixture"}
             </h3>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-muted-foreground mt-1 text-xs">
               Configure fixture shape and store location.
             </p>
           </div>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="space-y-5 p-6">
           <div className="grid gap-2">
             <Label htmlFor="fixture-type">Fixture Type</Label>
             <Input
@@ -175,7 +182,9 @@ export function StoreFixtureModal({
                 <Input
                   type="number"
                   value={form.width}
-                  onChange={(e) => setForm((f) => ({ ...f, width: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, width: e.target.value }))
+                  }
                   placeholder="Width"
                   className="h-9"
                 />
@@ -183,7 +192,9 @@ export function StoreFixtureModal({
                 <Input
                   type="number"
                   value={form.height}
-                  onChange={(e) => setForm((f) => ({ ...f, height: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, height: e.target.value }))
+                  }
                   placeholder="Height"
                   className="h-9"
                 />
@@ -191,7 +202,9 @@ export function StoreFixtureModal({
                 <Input
                   type="number"
                   value={form.depth}
-                  onChange={(e) => setForm((f) => ({ ...f, depth: e.target.value }))}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, depth: e.target.value }))
+                  }
                   placeholder="Depth"
                   className="h-9"
                 />
@@ -205,7 +218,9 @@ export function StoreFixtureModal({
               <Input
                 id="fixture-section"
                 value={form.section}
-                onChange={(e) => setForm((f) => ({ ...f, section: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, section: e.target.value }))
+                }
                 placeholder="General"
               />
             </div>
@@ -214,7 +229,9 @@ export function StoreFixtureModal({
               <Input
                 id="fixture-aisle"
                 value={form.aisle}
-                onChange={(e) => setForm((f) => ({ ...f, aisle: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, aisle: e.target.value }))
+                }
                 placeholder="A1"
               />
             </div>
@@ -223,7 +240,9 @@ export function StoreFixtureModal({
               <Input
                 id="fixture-zone"
                 value={form.zone}
-                onChange={(e) => setForm((f) => ({ ...f, zone: e.target.value }))}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, zone: e.target.value }))
+                }
                 placeholder="General"
               />
             </div>
@@ -246,4 +265,3 @@ export function StoreFixtureModal({
     </Modal>
   );
 }
-

@@ -26,7 +26,7 @@ function parseNumericValue(value: unknown): number {
 
 export function getAnnotatedImagePreview(
   result: Record<string, unknown> | null,
-  imageMimeType?: string | null,
+  _imageMimeType?: string | null,
 ): string | null {
   if (!result) return null;
   const imagePath = result.image_path;
@@ -40,21 +40,32 @@ export function mapAnalysisResultToReportSnippet(
   if (!result) return DEFAULT_REPORT_SNIPPET;
 
   const summary = (result.summary as Record<string, unknown> | undefined) ?? {};
-  const compliance = (result.compliance as Record<string, unknown> | undefined) ?? {};
-  const planogramDiff = (result.planogram_diff as Record<string, unknown> | undefined) ?? {};
-  const rows = (result.rows as Array<Record<string, unknown>> | undefined) ?? [];
+  const compliance =
+    (result.compliance as Record<string, unknown> | undefined) ?? {};
+  const planogramDiff =
+    (result.planogram_diff as Record<string, unknown> | undefined) ?? {};
+  const rows =
+    (result.rows as Array<Record<string, unknown>> | undefined) ?? [];
   const issuesRaw = (planogramDiff.issues as DiffIssue[] | undefined) ?? [];
-  const actionItems = (planogramDiff.action_items as string[] | undefined) ?? [];
+  const actionItems =
+    (planogramDiff.action_items as string[] | undefined) ?? [];
   const detected =
     parseNumericValue(planogramDiff.detected_total) ||
     parseNumericValue(summary.total) ||
     parseNumericValue(result.count);
   const expectedTotal = parseNumericValue(planogramDiff.expected_total);
 
-  const missing = issuesRaw.filter((issue) => issue.type === "MISSING_PRODUCT").length;
-  const misplaced = issuesRaw.filter((issue) => issue.type === "MISPLACED_PRODUCT").length;
-  const extra = issuesRaw.filter((issue) => issue.type === "UNEXPECTED_PRODUCT").length;
-  const analysisIssues = issuesRaw.length || parseNumericValue(compliance.failed);
+  const missing = issuesRaw.filter(
+    (issue) => issue.type === "MISSING_PRODUCT",
+  ).length;
+  const misplaced = issuesRaw.filter(
+    (issue) => issue.type === "MISPLACED_PRODUCT",
+  ).length;
+  const extra = issuesRaw.filter(
+    (issue) => issue.type === "UNEXPECTED_PRODUCT",
+  ).length;
+  const analysisIssues =
+    issuesRaw.length || parseNumericValue(compliance.failed);
   const matched =
     expectedTotal > 0
       ? Math.max(expectedTotal - missing - misplaced, 0)
@@ -131,6 +142,8 @@ export function mapAnalysisResultToReportSnippet(
       (summary.executive_summary as string | undefined) ??
       DEFAULT_REPORT_SNIPPET.executiveSummary,
     aiRecommendations:
-      actionItems.length > 0 ? actionItems : DEFAULT_REPORT_SNIPPET.aiRecommendations,
+      actionItems.length > 0
+        ? actionItems
+        : DEFAULT_REPORT_SNIPPET.aiRecommendations,
   };
 }

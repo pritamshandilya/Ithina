@@ -1,13 +1,19 @@
 import {
+  ArrowDown,
   ArrowRight,
+  Calendar,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Globe,
   MessageCircle,
   RotateCcw,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { memo, useEffect, useRef, useState } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
@@ -29,16 +35,97 @@ import {
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/types/wizard";
 
-const SUGGESTIONS_INLINE = 3;
-
-const chipBtnClass =
-  "min-h-[2.75rem] min-w-0 w-full rounded-lg border border-ithina-purple/25 bg-white/[0.04] px-2.5 py-2.5 text-left text-[13px] font-medium leading-normal text-slate-100 transition-all whitespace-normal [overflow-wrap:anywhere] hover:border-ithina-purple/45 hover:bg-ithina-purple/10";
+/** Fewer tiles per page than a long carousel; same card size and icon treatment. */
+const SUGGESTIONS_PER_PAGE = 3;
 
 const suggestionArrowBtnClass =
-  "flex size-9 shrink-0 items-center justify-center self-center rounded-lg border border-ithina-border/80 bg-white/[0.04] text-slate-400 transition-colors hover:border-ithina-purple/45 hover:bg-ithina-purple/10 hover:text-ithina-purple disabled:pointer-events-none disabled:opacity-30";
+  "flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-ithina-border/80 bg-white/[0.04] text-slate-400 transition-colors hover:border-ithina-purple/45 hover:bg-ithina-purple/10 hover:text-ithina-purple disabled:pointer-events-none disabled:opacity-30";
+
+type SuggestionKind = "confirm" | "modify" | "remove" | "extend" | "preview" | "other";
+
+const SUGGESTION_KIND_META: Record<
+  SuggestionKind,
+  { label: string; Icon: LucideIcon; border: string; iconWrap: string; labelClass: string }
+> = {
+  confirm: {
+    label: "CONFIRM",
+    Icon: Check,
+    border: "border-ithina-purple/55 hover:border-ithina-purple/80",
+    iconWrap: "bg-ithina-purple text-white shadow-sm",
+    labelClass: "text-ithina-purple",
+  },
+  modify: {
+    label: "MODIFY",
+    Icon: ArrowDown,
+    border: "border-emerald-500/45 hover:border-emerald-400/65",
+    iconWrap: "bg-emerald-500 text-white shadow-sm",
+    labelClass: "text-emerald-400",
+  },
+  remove: {
+    label: "REMOVE",
+    Icon: Trash2,
+    border: "border-rose-500/45 hover:border-rose-400/65",
+    iconWrap: "bg-rose-500 text-white shadow-sm",
+    labelClass: "text-rose-400",
+  },
+  extend: {
+    label: "EXTEND",
+    Icon: Calendar,
+    border: "border-amber-500/45 hover:border-amber-400/65",
+    iconWrap: "bg-amber-500 text-white shadow-sm",
+    labelClass: "text-amber-400",
+  },
+  preview: {
+    label: "PREVIEW",
+    Icon: Eye,
+    border: "border-indigo-500/45 hover:border-indigo-400/65",
+    iconWrap: "bg-indigo-500 text-white shadow-sm",
+    labelClass: "text-indigo-400",
+  },
+  other: {
+    label: "ACTION",
+    Icon: Sparkles,
+    border: "border-violet-500/35 hover:border-violet-400/55",
+    iconWrap: "bg-violet-600 text-white shadow-sm",
+    labelClass: "text-violet-400",
+  },
+};
 
 /**
- * Up to three quick replies per view; prev/next arrows page through the full list.
+ * Infer card category from suggestion copy (no backend intent field required).
+ * Order matters: remove/extend checks before broad "modify" heuristics.
+ */
+function inferSuggestionKind(text: string): SuggestionKind {
+  const s = text.trim().toLowerCase();
+  if (!s) return "other";
+  if (/\b(remove|delete|drop|exclude|take\s+out|omit)\b/i.test(s)) return "remove";
+  if (/\bpreview\b|review\s+before/i.test(s)) return "preview";
+  if (
+    /\b(yes,?|launch\s+this|go\s+ahead|apply\s+this|proceed)\b/i.test(s) ||
+    /^yes\b/i.test(s)
+  ) {
+    return "confirm";
+  }
+  if (
+    /\b(push|reschedule|postpone)\b.*\b(launch|start|date)\b/i.test(s) ||
+    /\b(launch|start)\b.*\b(to|until|by)\b/i.test(s) ||
+    /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday|tomorrow|next\s+week)\b/i.test(s) ||
+    /\bextend(\s+by)?\b.*\bday/i.test(s) ||
+    /\b\d+\s+more\s+days?\b/i.test(s)
+  ) {
+    return "extend";
+  }
+  if (
+    /\b(discount|bogo|increase|lower|reduce|change|rename|make\s+it|add\s+to|switch\s+to)\b/i.test(s) ||
+    /\bname\s+to\b/i.test(s)
+  ) {
+    return "modify";
+  }
+  return "other";
+}
+
+/**
+ * Carousel of fixed-size suggestion cards (icon + category + body). Pages when list exceeds per-page count.
  */
 function SuggestionChips({
   chips,
@@ -47,7 +134,7 @@ function SuggestionChips({
   chips: string[];
   onPick: (text: string) => void;
 }) {
-  const totalPages = Math.max(1, Math.ceil(chips.length / SUGGESTIONS_INLINE));
+  const totalPages = Math.max(1, Math.ceil(chips.length / SUGGESTIONS_PER_PAGE));
   const [page, setPage] = useState(0);
 
   useEffect(() => {
@@ -55,15 +142,13 @@ function SuggestionChips({
   }, [chips]);
 
   const safePage = Math.min(page, totalPages - 1);
-  const start = safePage * SUGGESTIONS_INLINE;
-  const visible = chips.slice(start, start + SUGGESTIONS_INLINE);
-  const gridCols =
-    visible.length === 1 ? "grid-cols-1" : visible.length === 2 ? "grid-cols-2" : "grid-cols-3";
-  const showArrows = chips.length > SUGGESTIONS_INLINE;
+  const start = safePage * SUGGESTIONS_PER_PAGE;
+  const visible = chips.slice(start, start + SUGGESTIONS_PER_PAGE);
+  const showArrows = chips.length > SUGGESTIONS_PER_PAGE;
 
   return (
-    <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label="Quick reply suggestions">
-      <div className="flex min-w-0 items-stretch gap-1">
+    <div className="flex min-w-0 flex-col gap-2" role="group" aria-label="Quick reply suggestions">
+      <div className="flex min-w-0 items-stretch gap-1.5">
         {showArrows ? (
           <button
             type="button"
@@ -75,18 +160,52 @@ function SuggestionChips({
             <ChevronLeft className="size-4" aria-hidden />
           </button>
         ) : null}
-        <div className={cn("grid min-w-0 flex-1 items-start gap-1.5", gridCols)}>
-          {visible.map((chip, i) => (
-            <button
-              key={`p${safePage}-${start + i}-${chip.slice(0, 48)}`}
-              type="button"
-              onClick={() => onPick(chip)}
-              title={chip}
-              className={chipBtnClass}
-            >
-              {chip}
-            </button>
-          ))}
+        <div
+          className={cn(
+            "grid min-h-[118px] min-w-0 flex-1 gap-2",
+            visible.length === 1 && "grid-cols-1",
+            visible.length === 2 && "grid-cols-2",
+            visible.length >= 3 && "grid-cols-3",
+          )}
+        >
+          {visible.map((chip, i) => {
+            const kind = inferSuggestionKind(chip);
+            const meta = SUGGESTION_KIND_META[kind];
+            const { Icon } = meta;
+            return (
+              <button
+                key={`p${safePage}-${start + i}-${chip.slice(0, 48)}`}
+                type="button"
+                onClick={() => onPick(chip)}
+                title={chip}
+                className={cn(
+                  "flex h-[118px] w-full min-w-0 flex-col items-center justify-between rounded-xl border-2 bg-white/[0.03] px-2 py-2.5 text-center transition-all hover:bg-white/[0.06]",
+                  meta.border,
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-8 shrink-0 items-center justify-center rounded-lg [&>svg]:size-4",
+                    meta.iconWrap,
+                  )}
+                  aria-hidden
+                >
+                  <Icon strokeWidth={2.25} />
+                </span>
+                <span
+                  className={cn(
+                    "max-w-full truncate text-[9px] font-bold uppercase tracking-wider",
+                    meta.labelClass,
+                  )}
+                >
+                  {meta.label}
+                </span>
+                <span className="line-clamp-3 w-full text-[11px] font-medium leading-snug text-slate-100 [overflow-wrap:anywhere]">
+                  {chip}
+                </span>
+              </button>
+            );
+          })}
         </div>
         {showArrows ? (
           <button
@@ -100,6 +219,24 @@ function SuggestionChips({
           </button>
         ) : null}
       </div>
+      {totalPages > 1 ? (
+        <div className="flex justify-center gap-1.5" role="tablist" aria-label="Suggestion pages">
+          {Array.from({ length: totalPages }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              role="tab"
+              aria-selected={i === safePage}
+              aria-label={`Suggestions page ${i + 1} of ${totalPages}`}
+              className={cn(
+                "size-1.5 rounded-full transition-colors",
+                i === safePage ? "bg-ithina-purple" : "bg-white/20 hover:bg-white/35",
+              )}
+              onClick={() => setPage(i)}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }

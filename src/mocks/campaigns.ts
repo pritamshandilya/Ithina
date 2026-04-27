@@ -111,7 +111,7 @@ export const MOCK_CAMPAIGN_FILTERS: CampaignFilterOption[] = [
 export const MOCK_CAMPAIGN_STAT_DEFINITIONS: CampaignStatDefinition[] = [
   { label: "Total Campaigns", tag: "All time", color: "text-white", countStatus: null },
   { label: "Active Now", tag: "Running", color: "text-ithina-purple", countStatus: "Active" },
-  { label: "Scheduled", tag: "Upcoming", color: "text-amber-400", countStatus: "Scheduled" },
+  { label: "Scheduled", tag: "Upcoming", color: "text-emerald-400", countStatus: "Scheduled" },
   { label: "Completed", tag: "This month", color: "text-emerald-400", countStatus: "Completed" },
 ];
 
@@ -121,8 +121,8 @@ export const MOCK_CAMPAIGN_STATUS_STYLES: Record<CampaignListStatus, CampaignSta
     calendar: "bg-ithina-purple/20 text-ithina-purple",
   },
   Scheduled: {
-    table: "text-amber-400 border-amber-400/30 bg-amber-400/10",
-    calendar: "bg-amber-400/15 text-amber-400",
+    table: "text-emerald-300 border-emerald-400/40 bg-emerald-400/15",
+    calendar: "bg-emerald-400/20 text-emerald-300",
   },
   Completed: {
     table: "text-emerald-400 border-emerald-400/30 bg-emerald-400/10",
@@ -133,8 +133,8 @@ export const MOCK_CAMPAIGN_STATUS_STYLES: Record<CampaignListStatus, CampaignSta
     calendar: "bg-slate-600/40 text-slate-400",
   },
   Pending: {
-    table: "text-sky-400 border-sky-400/30 bg-sky-400/10",
-    calendar: "bg-sky-400/15 text-sky-400",
+    table: "text-yellow-300 border-yellow-400/40 bg-yellow-400/15",
+    calendar: "bg-yellow-400/20 text-yellow-300",
   },
   Rejected: {
     table: "text-rose-400 border-rose-400/40 bg-rose-400/10",

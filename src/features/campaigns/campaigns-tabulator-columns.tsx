@@ -53,10 +53,10 @@ export function toPrototypeStatus(status: CampaignListStatus): CampaignProtoStat
 
 const STATUS_PILL: Record<CampaignProtoStatus, string> = {
   active:    "text-purple-400  border-purple-400/30  bg-purple-400/10",
-  scheduled: "text-amber-400  border-amber-400/30   bg-amber-400/10",
+  scheduled: "text-emerald-300 border-emerald-400/40 bg-emerald-400/15",
   completed: "text-chart-2    border-chart-2/30     bg-chart-2/10",
   draft:     "text-slate-400  border-slate-600/60   bg-white/5",
-  pending:   "text-orange-400 border-orange-400/30  bg-orange-400/10",
+  pending:   "text-yellow-300 border-yellow-400/40  bg-yellow-400/15",
   rejected:  "text-rose-400   border-rose-400/30    bg-rose-400/10",
 };
 
@@ -71,8 +71,8 @@ const STATUS_LABEL: Record<CampaignProtoStatus, string> = {
 
 const PIPELINE_STAGE_CLASS: Record<string, string> = {
   Deployed:      "text-chart-2 font-semibold",
-  Scheduled:     "text-amber-400 font-semibold",
-  Approval:      "text-orange-400 font-semibold",
+  Scheduled:     "text-emerald-400 font-semibold",
+  Approval:      "text-yellow-400 font-semibold",
   "Guard Rails": "text-purple-400 font-semibold",
   Design:        "text-blue-400 font-semibold",
   Data:          "text-slate-400 font-semibold",
@@ -112,7 +112,6 @@ export function canDeleteCampaignByStatus(status: CampaignListStatus): boolean {
 
 export interface BuildCampaignColumnsParams {
   pausedById: Record<string, boolean>;
-  onView: (row: CampaignListItem) => void;
   onEdit: (row: CampaignListItem) => void;
   onPause: (row: CampaignListItem) => void;
   onHistory: (row: CampaignListItem) => void;
@@ -121,7 +120,6 @@ export interface BuildCampaignColumnsParams {
 
 export function buildCampaignColumns({
   pausedById,
-  onView,
   onEdit,
   onPause,
   onHistory,
@@ -131,7 +129,9 @@ export function buildCampaignColumns({
     {
       title: "Campaign",
       field: "name",
-      minWidth: 180,
+      minWidth: 220,
+      widthGrow: 1.25,
+      variableHeight: true,
       headerHozAlign: "left",
       hozAlign: "left",
       headerFilter: "input" as const,
@@ -146,7 +146,7 @@ export function buildCampaignColumns({
       formatter: (cell: DataTableCell<CampaignListItem>) => {
         const row = cell.getData();
         const name = escapeHtml(row.name);
-        return `<div class="min-w-0 text-left font-semibold leading-tight text-foreground">${name}</div>`;
+        return `<div class="min-w-0 text-left font-semibold leading-snug text-foreground [overflow-wrap:anywhere]">${name}</div>`;
       },
     },
     {
@@ -173,7 +173,8 @@ export function buildCampaignColumns({
     {
       title: "Pipeline Stage",
       field: "pipeline",
-      minWidth: 260,
+      minWidth: 620,
+      widthGrow: 2,
       headerFilter: "input" as const,
       headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
         const term = String(value ?? "").trim().toLowerCase();
@@ -188,7 +189,7 @@ export function buildCampaignColumns({
       formatter: (cell: DataTableCell<CampaignListItem>) => {
         const row = cell.getData();
         const pipeline = derivePipelineForRow(row);
-        return `<div class="flex flex-wrap items-center gap-1">${pipelineHtml(pipeline)}</div>`;
+        return `<div class="flex w-max min-w-max max-w-none flex-nowrap items-center gap-1 whitespace-nowrap">${pipelineHtml(pipeline)}</div>`;
       },
     },
     {
@@ -244,7 +245,7 @@ export function buildCampaignColumns({
       field: "actions",
       headerSort: false,
       headerFilter: false,
-      width: 220,
+      width: 176,
       hozAlign: "right",
       headerHozAlign: "right",
       formatter: (cell: DataTableCell<CampaignListItem>) => {
@@ -252,8 +253,6 @@ export function buildCampaignColumns({
         const proto = toPrototypeStatus(row.status);
         const paused = pausedById[row.id] ?? row.paused ?? false;
         const canDel = canDeleteCampaignByStatus(row.status);
-
-        const viewBtn = `<button type="button" data-action="view" class="inline-flex h-8 min-w-[52px] items-center justify-center rounded-md border border-sky-400/35 bg-sky-400/10 px-2 text-xs font-semibold text-sky-300 transition-all hover:border-sky-400/60 hover:bg-sky-400/20" aria-label="View campaign">View</button>`;
 
         const editBtn = proto === "draft"
           ? `<button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit campaign">
@@ -281,7 +280,7 @@ export function buildCampaignColumns({
           ? `<button type="button" data-action="delete" aria-label="Delete campaign" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
           : `<span title="Only Draft or Rejected campaigns can be deleted." class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md border border-slate-600/40 text-slate-600 opacity-50" aria-hidden="true"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>`;
 
-        return `<div class="flex flex-nowrap items-center justify-end gap-1">${viewBtn}${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
+        return `<div class="flex flex-nowrap items-center justify-end gap-1">${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
       },
       cellClick: (e: MouseEvent, cell: DataTableCell<CampaignListItem>) => {
         const action = findActionElement(e);
@@ -290,7 +289,6 @@ export function buildCampaignColumns({
         e.stopPropagation();
         const row = cell.getData();
         const a = action.dataset.action;
-        if (a === "view")     onView(row);
         if (a === "edit")    onEdit(row);
         if (a === "pause")   onPause(row);
         if (a === "history") onHistory(row);

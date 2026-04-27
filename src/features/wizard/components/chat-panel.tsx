@@ -1,5 +1,14 @@
-import { ArrowRight, Check, ChevronDown, Globe, MessageCircle, RotateCcw } from "lucide-react";
-import { memo, useEffect, useRef } from "react";
+import {
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Globe,
+  MessageCircle,
+  RotateCcw,
+} from "lucide-react";
+import { memo, useEffect, useRef, useState } from "react";
 
 import ChatMessages from "@/components/shared/chat-messages";
 import {
@@ -23,10 +32,13 @@ import type { ChatMessage } from "@/types/wizard";
 const SUGGESTIONS_INLINE = 3;
 
 const chipBtnClass =
-  "min-h-[3rem] rounded-lg border border-ithina-purple/25 bg-white/[0.04] px-2.5 py-2 text-left text-[13px] font-medium leading-snug text-slate-100 transition-all line-clamp-3 hover:border-ithina-purple/45 hover:bg-ithina-purple/10";
+  "min-h-[2.75rem] min-w-0 w-full rounded-lg border border-ithina-purple/25 bg-white/[0.04] px-2.5 py-2.5 text-left text-[13px] font-medium leading-normal text-slate-100 transition-all whitespace-normal [overflow-wrap:anywhere] hover:border-ithina-purple/45 hover:bg-ithina-purple/10";
+
+const suggestionArrowBtnClass =
+  "flex size-9 shrink-0 items-center justify-center self-center rounded-lg border border-ithina-border/80 bg-white/[0.04] text-slate-400 transition-colors hover:border-ithina-purple/45 hover:bg-ithina-purple/10 hover:text-ithina-purple disabled:pointer-events-none disabled:opacity-30";
 
 /**
- * Show up to three quick replies in a tight grid; overflow goes into a dropdown (no scrollbar).
+ * Up to three quick replies per view; prev/next arrows page through the full list.
  */
 function SuggestionChips({
   chips,
@@ -35,57 +47,59 @@ function SuggestionChips({
   chips: string[];
   onPick: (text: string) => void;
 }) {
-  const first = chips.slice(0, SUGGESTIONS_INLINE);
-  const rest = chips.slice(SUGGESTIONS_INLINE);
+  const totalPages = Math.max(1, Math.ceil(chips.length / SUGGESTIONS_INLINE));
+  const [page, setPage] = useState(0);
+
+  useEffect(() => {
+    setPage(0);
+  }, [chips]);
+
+  const safePage = Math.min(page, totalPages - 1);
+  const start = safePage * SUGGESTIONS_INLINE;
+  const visible = chips.slice(start, start + SUGGESTIONS_INLINE);
   const gridCols =
-    first.length === 1 ? "grid-cols-1" : first.length === 2 ? "grid-cols-2" : "grid-cols-3";
+    visible.length === 1 ? "grid-cols-1" : visible.length === 2 ? "grid-cols-2" : "grid-cols-3";
+  const showArrows = chips.length > SUGGESTIONS_INLINE;
 
   return (
     <div className="flex min-w-0 flex-col gap-1.5" role="group" aria-label="Quick reply suggestions">
-      <div className={cn("grid gap-1.5", gridCols)}>
-        {first.map((chip, i) => (
+      <div className="flex min-w-0 items-stretch gap-1">
+        {showArrows ? (
           <button
-            key={`inline-${i}-${chip.slice(0, 48)}`}
             type="button"
-            onClick={() => onPick(chip)}
-            title={chip}
-            className={chipBtnClass}
+            aria-label="Previous suggestions"
+            className={suggestionArrowBtnClass}
+            disabled={safePage <= 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
           >
-            {chip}
+            <ChevronLeft className="size-4" aria-hidden />
           </button>
-        ))}
-      </div>
-      {rest.length > 0 ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        ) : null}
+        <div className={cn("grid min-w-0 flex-1 items-start gap-1.5", gridCols)}>
+          {visible.map((chip, i) => (
             <button
+              key={`p${safePage}-${start + i}-${chip.slice(0, 48)}`}
               type="button"
-              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-ithina-purple/35 bg-white/[0.02] py-2 text-[13px] font-medium text-ithina-purple/90 transition-colors hover:border-ithina-purple/55 hover:bg-ithina-purple/10 hover:text-ithina-purple"
+              onClick={() => onPick(chip)}
+              title={chip}
+              className={chipBtnClass}
             >
-              <ChevronDown className="size-3.5 opacity-80" aria-hidden />
-              {rest.length} more {rest.length === 1 ? "suggestion" : "suggestions"}
+              {chip}
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="start"
-            sideOffset={4}
-            className="max-w-[min(20rem,calc(100vw-2rem))] max-h-60 overflow-y-auto p-1"
+          ))}
+        </div>
+        {showArrows ? (
+          <button
+            type="button"
+            aria-label="Next suggestions"
+            className={suggestionArrowBtnClass}
+            disabled={safePage >= totalPages - 1}
+            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
           >
-            <DropdownMenuLabel className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              More quick replies
-            </DropdownMenuLabel>
-            {rest.map((chip, i) => (
-              <DropdownMenuItem
-                key={`more-${i}-${chip.slice(0, 48)}`}
-                onSelect={() => onPick(chip)}
-                className="whitespace-normal text-[13px] leading-snug"
-              >
-                {chip}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+            <ChevronRight className="size-4" aria-hidden />
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -225,10 +239,17 @@ const ChatPanel = memo(function ChatPanel({
       )}
 
       {hasSplit && (
-        <ChatMessages messages={messages} isTyping={isTyping} className="p-2.5" />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <ChatMessages messages={messages} isTyping={isTyping} className="min-h-0 flex-1 p-2.5" />
+        </div>
       )}
 
-      <div className={cn("shrink-0 bg-ithina-bg/40", hasSplit ? "mt-auto border-t border-ithina-border/50 p-4" : "p-4")}>
+      <div
+        className={cn(
+          "shrink-0 bg-ithina-bg/40",
+          hasSplit ? "mt-auto border-t border-ithina-border/50 px-3 pb-4 pt-3 sm:px-4" : "p-4",
+        )}
+      >
         <form onSubmit={handleFormSubmit} className="flex flex-col gap-2">
           {suggestions && suggestions.length > 0 && !isTyping && !inputDisabled && (
             <SuggestionChips chips={suggestions} onPick={(c) => onSuggestionClick?.(c)} />

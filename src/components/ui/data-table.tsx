@@ -415,28 +415,31 @@ export function DataTable<T extends object>({
     const rows = data.map((row) => ({ ...row }));
     let cancelled = false;
     const gen = tableGenerationRef.current;
+    const table = tableRef.current;
+    const container = containerRef.current;
+    if (!table || !container?.isConnected) return;
 
-    const apply = () => {
-      if (cancelled || tableGenerationRef.current !== gen) return;
-      const table = tableRef.current;
-      const container = containerRef.current;
-      if (!table || !container?.isConnected) return;
-      try {
-        void Promise.resolve(table.setData(rows)).then(() => {
-          if (cancelled || tableGenerationRef.current !== gen) return;
-          if (tableRef.current !== table) return;
-          if (!containerRef.current?.isConnected) return;
-          requestAnimationFrame(() => {
-            if (cancelled || tableGenerationRef.current !== gen) return;
-            if (tableRef.current !== table) return;
-            try { table.redraw(true); } catch { /* ignore */ }
-          });
-        });
-      } catch { /* setData can throw on destroyed grid */ }
+    try {
+      void Promise.resolve(table.setData(rows)).then(() => {
+        if (cancelled || tableGenerationRef.current !== gen) return;
+        if (tableRef.current !== table) return;
+        if (!containerRef.current?.isConnected) return;
+        // Avoid redraw(true): it recalculates all column widths and reformats every cell —
+        // feels sluggish on large HTML-formatter grids (e.g. wizard SKU table). setData already
+        // refreshes row data; ResizeObserver + columnResized still schedule a debounced redraw.
+        try {
+          table.redraw(false);
+        } catch {
+          /* ignore */
+        }
+      });
+    } catch {
+      /* setData can throw on destroyed grid */
+    }
+
+    return () => {
+      cancelled = true;
     };
-
-    queueMicrotask(apply);
-    return () => { cancelled = true; };
   }, [data]);
 
   return (

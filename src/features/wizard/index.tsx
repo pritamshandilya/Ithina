@@ -1205,7 +1205,7 @@ export default function Wizard() {
                       className={
                         inputMode === "csv"
                           ? "flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto px-4 pb-4 pt-3 sm:px-5"
-                          : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-3 pt-2 sm:px-4"
+                          : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-4 pt-2 sm:px-4"
                       }
                     >
                       {inputMode === "csv" ? (
@@ -1230,7 +1230,7 @@ export default function Wizard() {
                         />
                       ) : (
                         <>
-                          <div className="flex min-h-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col">
+                          <div className="flex h-full min-h-0 min-w-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col overflow-hidden">
                             <ChatPanel
                               messages={messages}
                               isTyping={isTyping}

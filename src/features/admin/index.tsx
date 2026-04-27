@@ -1,4 +1,4 @@
-import { AlertCircle, Check, Loader2, Search, X } from "lucide-react";
+import { AlertCircle, Ban, Check, LayoutList, Loader2, Search, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "@tanstack/react-router";
 
@@ -31,6 +31,9 @@ const EMPTY_FORM: NewGuardRailForm = {
   active: true,
 };
 
+type GuardRailsPrimaryTab = "all" | "inactive";
+type GuardRailsStatusFilter = "all" | "active" | "inactive";
+
 export default function Admin() {
   const location = useLocation();
   const readOnly = location.pathname !== "/admin/settings";
@@ -39,6 +42,8 @@ export default function Admin() {
   const [form, setForm] = useState<NewGuardRailForm>(EMPTY_FORM);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [primaryTab, setPrimaryTab] = useState<GuardRailsPrimaryTab>("all");
+  const [statusFilter, setStatusFilter] = useState<GuardRailsStatusFilter>("all");
 
   const { data: rules = [], isLoading, isError, error } = useGuardrails();
   const createMutation = useCreateGuardrail();
@@ -59,18 +64,50 @@ export default function Admin() {
     return () => window.removeEventListener("promo:open-guard-rail-modal", onOpen);
   }, [openCreateModal, readOnly]);
 
+  const inactiveCount = useMemo(() => rules.filter((r) => !r.active).length, [rules]);
+
+  const statusFilters = useMemo(
+    () => [
+      {
+        id: "all" as const,
+        label: "All",
+        count: rules.length,
+      },
+      {
+        id: "active" as const,
+        label: "Active",
+        count: rules.filter((r) => r.active).length,
+      },
+      {
+        id: "inactive" as const,
+        label: "Inactive",
+        count: rules.filter((r) => !r.active).length,
+      },
+    ],
+    [rules],
+  );
+
   const filteredRules = useMemo<GuardRailRule[]>(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return rules;
-    return rules.filter(
-      (r) =>
-        r.name.toLowerCase().includes(q) ||
-        r.description.toLowerCase().includes(q) ||
-        r.id.toLowerCase().includes(q) ||
-        r.category.toLowerCase().includes(q) ||
-        r.severity.toLowerCase().includes(q),
-    );
-  }, [rules, search]);
+    const matchSearch = (r: GuardRailRule) =>
+      !q ||
+      r.name.toLowerCase().includes(q) ||
+      r.description.toLowerCase().includes(q) ||
+      r.id.toLowerCase().includes(q) ||
+      r.category.toLowerCase().includes(q) ||
+      r.severity.toLowerCase().includes(q);
+
+    let base = rules;
+    if (primaryTab === "inactive") {
+      base = rules.filter((r) => !r.active);
+    } else if (statusFilter === "active") {
+      base = rules.filter((r) => r.active);
+    } else if (statusFilter === "inactive") {
+      base = rules.filter((r) => !r.active);
+    }
+
+    return base.filter(matchSearch);
+  }, [rules, search, primaryTab, statusFilter]);
 
   const closeModal = useCallback(() => {
     setShowModal(false);
@@ -175,6 +212,74 @@ export default function Admin() {
                 View only. Contact an administrator to add or change guard rails.
               </p>
             ) : null}
+
+            <div className="flex shrink-0 flex-wrap items-center gap-3">
+              <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrimaryTab("all");
+                    setStatusFilter("all");
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    primaryTab === "all"
+                      ? "bg-ithina-purple text-white shadow-sm"
+                      : "text-slate-400 hover:text-white",
+                  )}
+                >
+                  <LayoutList className="size-3.5 shrink-0" aria-hidden />
+                  All Rules
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPrimaryTab("inactive");
+                    setStatusFilter("all");
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    primaryTab === "inactive"
+                      ? "bg-ithina-purple text-white shadow-sm"
+                      : "text-slate-400 hover:text-white",
+                  )}
+                >
+                  <Ban className="size-3.5 shrink-0" aria-hidden />
+                  Inactive
+                  <span
+                    className={cn(
+                      "rounded-full px-1.5 py-0.5 text-[9px] font-bold",
+                      primaryTab === "inactive"
+                        ? "bg-white/20 text-white"
+                        : "bg-slate-500/20 text-slate-400",
+                    )}
+                  >
+                    {inactiveCount}
+                  </span>
+                </button>
+              </div>
+
+              {primaryTab === "all" && (
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  {statusFilters.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setStatusFilter(f.id)}
+                      className={cn(
+                        "h-8 rounded-md border px-2.5 text-xs font-medium transition-all",
+                        statusFilter === f.id
+                          ? "border-ithina-purple/40 bg-ithina-purple/10 text-ithina-purple"
+                          : "border-ithina-border/60 text-slate-500 hover:border-slate-500 hover:text-white",
+                      )}
+                    >
+                      {f.label}
+                      <span className="ml-1 text-[9px] tabular-nums opacity-60">{f.count}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="group relative">
               <Search

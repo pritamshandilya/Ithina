@@ -31,6 +31,9 @@ function normalizeChatMarkdownSource(source: string): string {
     "$1- ",
   );
 
+  // After sentence-join fixes elsewhere, some blobs still have ". *   " mid-line — GFM needs `*` at line start.
+  s = s.replace(/([.!?])(\s+)(?=\*\s+)/g, "$1\n\n");
+
   s = s.replace(/^(\s*(?:[-*+]|\d+\.)\s+)([^\n]*?)\s\|\s/gm, "$1$2 · ");
 
   s = s.replace(/\u26A0\uFE0F?(?=[A-Za-z*]|-\d)/g, (m) => `${m} `);
@@ -38,8 +41,24 @@ function normalizeChatMarkdownSource(source: string): string {
   // "1) item" is not valid GFM — normalize to "1. item"
   s = s.replace(/^(\s*)(\d+)\)\s+(.+)$/gm, (_line, sp: string, n: string, rest: string) => `${sp}${n}. ${rest}`);
 
+  // "1.  **Item**" — collapse extra spaces after the ordered-list marker for reliable GFM
+  s = s.replace(/^(\s*\d+\.)\s{2,}/gm, "$1 ");
+
+  // Mid-line ordered list: "...sentence. 1. **Item**" needs a newline before `1.`
+  s = s.replace(/([.!?])(\s+)(?=\d+\.\s+)/g, "$1\n\n");
+
   // Standalone "•" mid-line (some models emit without newline)
   s = s.replace(/([.!?\u201d\u2019])\s*\u2022\s+/g, "$1\n- ");
+
+  // LLMs often break bold around numbered lists: "**1. **2." → "**1.** **2.**"
+  let prev: string;
+  do {
+    prev = s;
+    s = s.replace(/\*\*(\d+)\.\s*\*\*(\d+)\./g, "**$1.** **$2.**");
+  } while (s !== prev);
+
+  // "**1. **Word" — close bold before prose
+  s = s.replace(/\*\*(\d+)\.\s*\*\*(?=[A-Za-z])/g, "**$1.** ");
 
   return s;
 }
@@ -110,7 +129,7 @@ const chatMarkdownComponents: Partial<Components> = {
       return (
         <code
           className={cn(
-            "rounded px-1.5 py-px font-mono text-[0.82em] font-medium",
+            "rounded px-1.5 py-px font-mono text-[1em] font-medium",
             statusClass ?? "bg-white/10 text-slate-100",
           )}
           {...props}

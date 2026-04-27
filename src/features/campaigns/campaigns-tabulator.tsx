@@ -191,13 +191,12 @@ export default function CampaignsTabulator() {
     () =>
       buildCampaignColumns({
         pausedById,
-        onView: openCampaignDetail,
         onEdit: openEdit,
         onPause: togglePause,
         onHistory: setHistoryCampaign,
         onDelete: confirmDelete,
       }),
-    [pausedById, openCampaignDetail, openEdit, togglePause, confirmDelete],
+    [pausedById, openEdit, togglePause, confirmDelete],
   );
 
   return (
@@ -291,7 +290,7 @@ export default function CampaignsTabulator() {
             {activeTab === "all" && (
               <div className="ml-auto flex flex-wrap items-center gap-1.5">
                 {selectedIds.size > 0 && (
-                  <span className="mr-0.5 rounded bg-ithina-purple/10 px-2 py-1 text-[10px] font-semibold text-ithina-purple">
+                  <span className="mr-0.5 rounded-md border border-ithina-purple/45 bg-ithina-purple/25 px-3 py-1.5 text-xs font-bold tabular-nums text-white shadow-[0_0_12px_rgba(168,85,247,0.2)]">
                     {selectedIds.size} selected
                   </span>
                 )}

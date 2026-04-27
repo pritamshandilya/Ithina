@@ -17,7 +17,7 @@ import type { ChatSummaryEnrichment } from "@/types/wizard";
 function TypingDots() {
   return (
     <div
-      className="flex items-center gap-1.5 rounded-2xl rounded-tl-sm border border-ithina-purple/10 bg-ithina-purple/[0.04] px-3 py-2"
+      className="flex w-fit max-w-full items-center gap-1.5 self-start rounded-2xl rounded-tl-sm border border-ithina-purple/10 bg-ithina-purple/[0.04] px-3 py-2"
       aria-label="Ithina is typing"
       role="status"
     >
@@ -142,7 +142,7 @@ function SummaryCardView({
               >
                 <span className="shrink-0 text-[11px] text-slate-400">{row.label}</span>
                 {row.badge ? (
-                  <span className="shrink-0 rounded-full border border-ithina-purple/40 bg-ithina-purple/20 px-2.5 py-1 text-[11px] font-semibold leading-tight text-ithina-purple/90">
+                  <span className="shrink-0 rounded-full border border-white/25 bg-ithina-purple px-2.5 py-1 text-[11px] font-semibold leading-tight text-white shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
                     {row.value}
                   </span>
                 ) : (
@@ -192,33 +192,33 @@ function OptionGrid({ intro, options }: { intro: string; options: OptionItem[] }
 
   return (
     <div className="min-w-0">
-      {intro && (
-        <p className="mb-2.5 text-[13px] font-medium leading-snug text-slate-100">{intro}</p>
-      )}
-      <div className="rounded-xl border border-ithina-purple/20 bg-ithina-purple/[0.05] p-2.5">
-        <div className="grid grid-cols-2 gap-2">
-          {options.map((opt) => (
-            <button
-              key={opt.label}
-              type="button"
-              onClick={() => setSelected(opt.label)}
-              className={cn(
-                "rounded-xl border p-2.5 text-left transition-all",
-                selected === opt.label
-                  ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
-                  : "border-ithina-purple/25 bg-white/[0.04] hover:border-ithina-purple/45 hover:bg-ithina-purple/10",
-              )}
-            >
-              <span className="mb-1 block text-[17px] leading-none">{opt.icon}</span>
-              <span className="block text-[12px] font-semibold leading-tight text-slate-100">
-                {opt.label}
-              </span>
-              {opt.sub ? (
-                <span className="mt-0.5 block text-[10.5px] leading-snug text-slate-400">{opt.sub}</span>
-              ) : null}
-            </button>
-          ))}
+      {intro.trim() ? (
+        <div className="mb-2.5 min-w-0 text-[13px] font-medium leading-snug text-slate-100 [&_p]:mb-1 [&_p:last-child]:mb-0">
+          <ChatMarkdown content={intro} />
         </div>
+      ) : null}
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((opt) => (
+          <button
+            key={opt.label}
+            type="button"
+            onClick={() => setSelected(opt.label)}
+            className={cn(
+              "rounded-xl border p-2.5 text-left transition-all",
+              selected === opt.label
+                ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
+                : "border-ithina-purple/25 bg-white/[0.04] hover:border-ithina-purple/45 hover:bg-ithina-purple/10",
+            )}
+          >
+            <span className="mb-1 block text-[17px] leading-none">{opt.icon}</span>
+            <span className="block text-[12px] font-semibold leading-tight text-slate-100">
+              {opt.label}
+            </span>
+            {opt.sub ? (
+              <span className="mt-0.5 block text-[10.5px] leading-snug text-slate-400">{opt.sub}</span>
+            ) : null}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -369,7 +369,7 @@ const AssistantStaggeredBubbles = memo(function AssistantStaggeredBubbles({
   if (chunks.length === 0) return null;
 
   return (
-    <div className="flex max-w-[95%] flex-col items-start gap-1.5">
+    <div className="flex w-[95%] min-w-0 max-w-[95%] flex-col gap-1.5">
       {chunks.slice(0, visibleCount).map((chunk, chunkIdx) => (
         <ChunkBubble
           key={`${messageKey}-${chunkIdx}`}

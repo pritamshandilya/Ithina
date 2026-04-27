@@ -434,6 +434,11 @@
 
 /* Wizard SKU staging: default Tabulator uses width:max-content which breaks fitColumns
    in flex layouts and can collapse or “lose” the table when the panel resizes. */
+.data-table-wrapper.wizard-staging-table {
+  /* Dense header: make inactive sort chevrons easier to see on dark chrome */
+  --tabulator-sort-icon: color-mix(in srgb, var(--muted-foreground) 72%, white 28%);
+}
+
 .data-table-wrapper.wizard-staging-table .tabulator,
 .data-table-wrapper.wizard-staging-table .tabulator-tableholder,
 .data-table-wrapper.wizard-staging-table .tabulator-tableholder .tabulator-table {
@@ -669,12 +674,21 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
   text-overflow: clip;
 }
 
-/* Campaigns list: pipeline stages use larger type; allow wrap so steps stay visible. */
+/* Campaigns list: keep full breadcrumb on one row; column minWidth + nowrap (table may scroll horizontally). */
 .data-table-wrapper .tabulator-cell[tabulator-field="pipeline"] {
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+  vertical-align: middle;
+}
+
+/* Campaign names: default table cells use nowrap+ellipsis — allow wrap so titles aren’t cut mid-word. */
+.data-table-wrapper .tabulator-cell[tabulator-field="name"] {
   white-space: normal;
   overflow: visible;
   text-overflow: clip;
-  vertical-align: top;
+  word-break: break-word;
+  vertical-align: middle;
 }
 
 .data-table-wrapper .tabulator-cell.tabulator-frozen {

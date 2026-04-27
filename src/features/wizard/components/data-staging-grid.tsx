@@ -159,6 +159,10 @@ function DataStagingGrid({
   aiCampaignToolbar,
 }: DataStagingGridProps) {
   const csvInput = useRef<HTMLInputElement>(null);
+  /** Latest grid rows for formatters — avoids recreating Tabulator columns on every `included` toggle. */
+  const gridDataRef = useRef(data);
+  gridDataRef.current = data;
+
   const csvWarnings = csvRows.filter((r) => !r.safe).length;
 
   const aiIncludedCount = useMemo(() => data.filter((r) => r.included !== false).length, [data]);
@@ -289,12 +293,10 @@ function DataStagingGrid({
   }, []);
 
   const aiColumns = useMemo<DataTableColumn<StagedSku>[]>(() => {
-    const gridRows = data;
-
     const includeColumn: DataTableColumn<StagedSku> = {
       title: "",
       field: "included",
-      width: 44,
+      width: 40,
       cssClass: "wizard-staging-col-include",
       headerSort: false,
       headerFilter: false,
@@ -303,20 +305,25 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const checked = row.included !== false;
-        return `<button type="button" data-action="toggle-include" aria-pressed="${checked}" aria-label="Include in campaign" class="flex size-6 items-center justify-center rounded border-2 transition-colors ${checked ? "border-ithina-purple bg-ithina-purple/20" : "border-slate-600 hover:border-slate-500"}">${checked ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>" : ""}</button>`;
+        return `<input type="checkbox" data-action="toggle-include" aria-label="Include in campaign" ${checked ? "checked" : ""} />`;
       },
       cellClick: (_e: MouseEvent, cell: { getData: () => StagedSku }) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
-        if (target.closest?.("[data-action='toggle-include']")) {
+        const input = target.closest?.("[data-action='toggle-include']") as HTMLInputElement | null;
+        if (input) {
+          _e.preventDefault();
           _e.stopPropagation();
-          onToggleGridRowIncluded(cell.getData().sku);
+          const row = cell.getData();
+          const wasIncluded = row.included !== false;
+          input.checked = !wasIncluded;
+          onToggleGridRowIncluded(row.sku);
         }
       },
     };
 
     if (onSetAllGridRowsIncluded) {
       includeColumn.titleFormatter = function formatIncludeColumnHeader() {
-        return `<button type="button" data-action="toggle-all-include" aria-label="Include all SKUs in campaign" class="wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 border-slate-600 transition-colors hover:border-slate-500"></button>`;
+        return `<input type="checkbox" data-action="toggle-all-include" aria-label="Include all SKUs in campaign" />`;
       };
     }
 
@@ -343,6 +350,7 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const val = escapeCellText(row.name ?? "");
+        const gridRows = gridDataRef.current;
         const includedRows = gridRows.filter((r) => r.included !== false);
         const freeInGrid = includedRows.filter((r) => r.isFree);
         const bogo = isBogoLikeOffer(row);
@@ -373,7 +381,8 @@ function DataStagingGrid({
         const labelEsc = label ? escapeCellText(label) : "";
         const typeEsc = typeRaw ? escapeCellText(typeRaw) : "";
 
-        const includedRows = gridRows.filter((r) => r.included !== false);
+        const gridRowsOffer = gridDataRef.current;
+        const includedRows = gridRowsOffer.filter((r) => r.included !== false);
         const freeRows = includedRows.filter((r) => r.isFree);
         const bogo = isBogoLikeOffer(row);
 
@@ -502,7 +511,7 @@ function DataStagingGrid({
       },
     },
     ];
-  }, [data, onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
+  }, [onToggleGridRowIncluded, onDiscountChange, onSetAllGridRowsIncluded]);
 
   const aiRowFormatter = useMemo(() => (row: { getData: () => StagedSku; getElement: () => HTMLElement }) => {
     const d = row.getData();
@@ -522,8 +531,6 @@ function DataStagingGrid({
   }, []);
 
   const aiTableRef = useRef<HTMLDivElement>(null);
-  const gridDataRef = useRef(data);
-  gridDataRef.current = data;
   const setAllIncludedRef = useRef(onSetAllGridRowsIncluded);
   setAllIncludedRef.current = onSetAllGridRowsIncluded;
 
@@ -576,29 +583,18 @@ function DataStagingGrid({
     if (!root || !onSetAllGridRowsIncluded) return;
 
     const syncHeaderIncludeAll = () => {
-      const btn = root.querySelector<HTMLButtonElement>('[data-action="toggle-all-include"]');
-      if (!btn) return;
+      const input = root.querySelector<HTMLInputElement>('[data-action="toggle-all-include"]');
+      if (!input) return;
       const rows = gridDataRef.current;
       const all = rows.length > 0 && rows.every((r) => r.included !== false);
       const some = rows.some((r) => r.included !== false);
-      const checked = all;
       const partial = some && !all;
-      btn.setAttribute("aria-pressed", String(checked));
-      btn.setAttribute(
+      input.checked = all;
+      input.indeterminate = partial;
+      input.setAttribute(
         "aria-label",
-        checked ? "Clear all SKUs from campaign" : "Include all SKUs in campaign",
+        all ? "Clear all SKUs from campaign" : "Include all SKUs in campaign",
       );
-      btn.className = cn(
-        "wizard-staging-select-all-btn flex size-6 shrink-0 items-center justify-center rounded border-2 transition-colors",
-        checked && "border-ithina-purple bg-ithina-purple/20",
-        partial && !checked && "border-ithina-purple/50 bg-ithina-purple/5",
-        !checked && !partial && "border-slate-600 hover:border-slate-500",
-      );
-      btn.innerHTML = checked
-        ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple\">✓</span>"
-        : partial
-          ? "<span class=\"text-[10px] font-bold leading-none text-ithina-purple/70\">−</span>"
-          : "";
     };
 
     syncHeaderIncludeAll();

@@ -83,19 +83,19 @@ function WizardStepHeader({
                   type="button"
                   onClick={() => onStepClick?.(stepNum)}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-left transition-all",
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-left text-xs font-semibold transition-all",
                     isActive
-                      ? "border border-ithina-purple/30 bg-ithina-purple/15"
-                      : "border border-transparent hover:border-ithina-border/60 hover:bg-white/[0.04]",
+                      ? "bg-ithina-purple text-white shadow-sm"
+                      : "border border-transparent text-slate-400 hover:border-ithina-border/60 hover:bg-white/[0.04] hover:text-white",
                   )}
                 >
                   <div
                     className={cn(
                       "flex size-5 shrink-0 items-center justify-center rounded-full border-2 text-[9px] font-bold transition-all",
-                      isCompleted
-                        ? "border-ithina-purple bg-ithina-purple text-white"
-                        : isActive
-                          ? "border-ithina-purple text-ithina-purple"
+                      isActive
+                        ? "border-white/50 bg-white/20 text-white"
+                        : isCompleted
+                          ? "border-ithina-purple bg-ithina-purple text-white"
                           : "border-ithina-border text-slate-600",
                     )}
                   >
@@ -109,7 +109,7 @@ function WizardStepHeader({
                   </div>
                   <span
                     className={cn(
-                      "text-[11px] font-medium transition-colors",
+                      "transition-colors",
                       isActive ? "text-white" : isCompleted ? "text-ithina-purple" : "text-slate-600",
                     )}
                   >
@@ -119,8 +119,8 @@ function WizardStepHeader({
               ) : (
                 <div
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-2.5 py-1 transition-all",
-                    isActive ? "border border-ithina-purple/30 bg-ithina-purple/15" : "border border-transparent",
+                    "flex items-center gap-2 rounded-md px-3.5 py-1.5 text-xs font-semibold transition-all",
+                    isActive ? "bg-ithina-purple text-white shadow-sm" : "border border-transparent text-slate-600",
                   )}
                 >
                   <div
@@ -129,7 +129,7 @@ function WizardStepHeader({
                       isCompleted
                         ? "border-ithina-purple bg-ithina-purple text-white"
                         : isActive
-                          ? "border-ithina-purple text-ithina-purple"
+                          ? "border-white/50 bg-white/20 text-white"
                           : "border-ithina-border text-slate-600",
                     )}
                   >
@@ -143,7 +143,7 @@ function WizardStepHeader({
                   </div>
                   <span
                     className={cn(
-                      "text-[11px] font-medium transition-colors",
+                      "transition-colors",
                       isActive ? "text-white" : isCompleted ? "text-ithina-purple" : "text-slate-600",
                     )}
                   >

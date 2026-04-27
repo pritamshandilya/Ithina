@@ -99,6 +99,32 @@ function markdownChunk(source: string): AssistantMessageChunk {
   return { kind: "markdown", source };
 }
 
+/**
+ * `<p>` bodies from the API often contain Markdown (`**bold**`, lists) but were being
+ * injected as `html` chunks — asterisks rendered literally. When there is no real HTML
+ * (only `<br>`), route through the markdown renderer instead.
+ */
+function chunkFromHtmlParagraphBody(inner: string): AssistantMessageChunk {
+  const trimmed = inner.trim();
+  const withNewlines = trimmed.replace(/<br\s*\/?>/gi, "\n");
+  const withoutBrTags = withNewlines.replace(/<\s*br\s*\/?>/gi, "");
+  const hasStructuralHtml = /<\/?[a-z][a-z0-9]*\b/i.test(withoutBrTags);
+  const plain = withNewlines.replace(/<[^>]+>/g, "").trim();
+  if (!hasStructuralHtml && plain.length > 0) {
+    const looksLikeMarkdown =
+      /\*\*/.test(plain) ||
+      /`[^`\n]+`/.test(plain) ||
+      /^[-*+]\s/m.test(plain) ||
+      /^\d+\.\s/m.test(plain) ||
+      /^#{1,3}\s/m.test(plain) ||
+      /~~.+~~/.test(plain);
+    if (looksLikeMarkdown) {
+      return markdownChunk(plain);
+    }
+  }
+  return htmlChunk(sanitizeHtml(withNewlines.replace(/\n/g, "<br />")));
+}
+
 // ─── List extraction helpers ──────────────────────────────────────────────────
 
 /** Extract items from an HTML <ul> or <ol> block. */
@@ -112,8 +138,8 @@ function extractMarkdownListItems(text: string): string[] {
   return text
     .split("\n")
     .map((l) => l.trim())
-    .filter((l) => /^[-*•]\s/.test(l))
-    .map((l) => l.replace(/^[-*•]\s+/, "").trim())
+    .filter((l) => /^[-*•]\s/.test(l) || /^\d+\.\s/.test(l))
+    .map((l) => l.replace(/^[-*•]\s+/, "").replace(/^\d+\.\s+/, "").trim())
     .filter(Boolean);
 }
 
@@ -312,12 +338,16 @@ function parsePromoBulletLine(raw: string): OptionItem {
   let sub: string;
   const em = strippedBold.match(/^(.+?)\s*[—–]\s+([\s\S]+)$/);
   const spacedHyphen = strippedBold.match(/^(.+?)\s+-\s+([\s\S]+)$/);
+  const colonSep = strippedBold.match(/^([^:]+?):\s+([\s\S]+)$/);
   if (em) {
     label = em[1].trim();
     sub = em[2].trim();
   } else if (spacedHyphen) {
     label = spacedHyphen[1].trim();
     sub = spacedHyphen[2].trim();
+  } else if (colonSep) {
+    label = colonSep[1].trim();
+    sub = colonSep[2].trim();
   } else {
     label = strippedBold;
     sub = "";
@@ -337,7 +367,7 @@ function parsePromoBulletLine(raw: string): OptionItem {
 /** Text before the first markdown bullet line (intro paragraph for option-grid). */
 function introBeforeMarkdownBullets(text: string): string {
   const lines = text.split("\n");
-  const idx = lines.findIndex((l) => /^[-*•]\s/.test(l.trim()));
+  const idx = lines.findIndex((l) => /^[-*•]\s/.test(l.trim()) || /^\d+\.\s/.test(l.trim()));
   if (idx <= 0) return "";
   return lines.slice(0, idx).join("\n").trim();
 }
@@ -367,35 +397,58 @@ function tryBuildOptionGrid(text: string): AssistantMessageChunk | null {
 /**
  * Explains Discount / BOGO / Bundle / Clearance in bullets — must run BEFORE campaign-summary
  * detection so staged wizard enrichment does not steal the closing question or reorder chunks.
+ *
+ * When the same message also contains a campaign proposal (name + dates) in the text
+ * **after** the promo-type bullets, we keep the option-grid for the explainer part and
+ * build a summary-card + markdown chunks for the campaign part.
  */
-function tryBuildPromoTypesExplainerChunks(raw: string): AssistantMessageChunk[] | null {
+function tryBuildPromoTypesExplainerChunks(
+  raw: string,
+  summaryEnrichment?: ChatSummaryEnrichment | null,
+): AssistantMessageChunk[] | null {
   const trimmed = raw.replace(/\r\n/g, "\n").trim();
   const lines = trimmed.split("\n");
+
+  // Only consider bullets that appear in the FIRST bullet block (before any blank-line gap).
+  // This avoids pulling campaign-detail bullets (Runs:, Why:) into the promo grid.
   let firstBullet = -1;
   let lastBullet = -1;
   for (let i = 0; i < lines.length; i++) {
     const t = lines[i].trim();
-    if (/^[-*•]\s/.test(t)) {
+    if (/^[-*•]\s/.test(t) || /^\d+\.\s/.test(t)) {
       if (firstBullet < 0) firstBullet = i;
       lastBullet = i;
+    } else if (firstBullet >= 0 && t === "") {
+      break;
     }
   }
   if (firstBullet < 0) return null;
 
-  const items = extractMarkdownListItems(trimmed);
+  const bulletBlock = lines.slice(firstBullet, lastBullet + 1).join("\n");
+  const items = extractMarkdownListItems(bulletBlock);
   if (items.length < 2) return null;
 
-  const options = items.map(parsePromoBulletLine).filter((o) => o.label.length > 0);
-  if (options.length < 2) return null;
+  if (looksLikeCampaignDetailBullets(items)) return null;
 
-  const plain = trimmed.replace(/\*\*/g, "").toLowerCase();
-  const promoContext = /\b(promotion|promo)\b/.test(plain);
+  const plainLower = trimmed.replace(/\*\*/g, "").toLowerCase();
+  const promoContext = /\b(promotion|promo|campaign)\b/.test(plainLower);
   const explainsTypes =
-    /\b(types of promotions?|main types|three main types)\b/.test(plain) ||
-    /\bset up\b[\s\S]{0,48}\b(types|promotion)/i.test(plain) ||
-    (promoContext && /discount|bogo|bundle|clearance/i.test(plain));
+    /\b(types of (promotions?|campaigns?)|campaign types|(main|primary|three)\s+\w*\s*types)\b/.test(plainLower) ||
+    /\bset up\b[\s\S]{0,48}\b(types|promotion)/i.test(plainLower) ||
+    (promoContext && /discount|bogo|bundle|clearance/i.test(plainLower));
 
   if (!explainsTypes) return null;
+
+  const options: OptionItem[] = [];
+  for (const item of items) {
+    const line = item.replace(/\*\*/g, "").trim();
+    if (!PROMO_OPTION_MAP.some((opt) => opt.test.test(line))) continue;
+    const parsed = parsePromoBulletLine(item);
+    if (parsed.label.length > 0 && !options.some((m) => m.label === parsed.label)) {
+      options.push(parsed);
+    }
+  }
+  if (options.length < 2) return null;
 
   const intro = lines.slice(0, firstBullet).join("\n").trim();
   const closing = lines.slice(lastBullet + 1).join("\n").trim() || undefined;
@@ -407,7 +460,34 @@ function tryBuildPromoTypesExplainerChunks(raw: string): AssistantMessageChunk[]
       options,
     },
   ];
-  if (closing) out.push(markdownChunk(closing));
+
+  if (closing) {
+    const closingPlain = closing.replace(/\*\*/g, "").trim();
+    const closingHasProposal = looksLikeCampaignProposal(closingPlain);
+    if (closingHasProposal) {
+      const card = buildSummaryCard(closingPlain, summaryEnrichment);
+      if (card) {
+        const { lead, question, note } = extractSummaryNarrative(closing, card);
+        const part = partitionSummaryMarkdownTail(question, note);
+        const slimCard: SummaryCard = { ...card, intro: "" };
+        if (lead?.trim()) out.push(markdownChunk(lead.trim()));
+        out.push({
+          kind: "summary-card",
+          card: slimCard,
+          question: part.cardQuestion,
+          note: part.cardNote,
+        });
+        for (const piece of part.detailMarkdownPieces) {
+          if (piece.trim()) out.push(markdownChunk(piece.trim()));
+        }
+      } else {
+        out.push(markdownChunk(closing));
+      }
+    } else {
+      out.push(markdownChunk(closing));
+    }
+  }
+
   return out;
 }
 
@@ -441,7 +521,13 @@ function redundantWithCard(s: string, card: SummaryCard): boolean {
 }
 
 function isNoteToneSentence(s: string): boolean {
+  if (/^\s*[-*•]\s/m.test(s) || /^\s*\d+\.\s/m.test(s)) return false;
   return /\b(remember|usually|traffic|capture|constraint|up to \d+\s*days|days from today|policy|tip:|that way|make sure)\b/i.test(s);
+}
+
+/** Join fragments with paragraph breaks so `* `/`- ` list markers stay at line start for Markdown. */
+function joinMarkdownFragments(parts: string[]): string {
+  return parts.filter(Boolean).join("\n\n").trim();
 }
 
 /**
@@ -466,7 +552,7 @@ function extractSummaryNarrative(plainText: string, card: SummaryCard): {
   if (closingIdx < 0) {
     const nr = sentences.filter((s) => !redundantWithCard(s, card));
     if (nr.length === 0) return {};
-    const joined = nr.join(" ").trim();
+    const joined = joinMarkdownFragments(nr);
     if (joined.length > 280) {
       return { note: joined };
     }
@@ -482,13 +568,13 @@ function extractSummaryNarrative(plainText: string, card: SummaryCard): {
   const noteFromMiddle = nonRedundantBefore.filter((s) => isNoteToneSentence(s) || s.length > 100);
   const leadCandidates = nonRedundantBefore.filter((s) => !noteFromMiddle.includes(s));
 
-  let lead = leadCandidates.join(" ").trim() || undefined;
+  let lead = joinMarkdownFragments(leadCandidates) || undefined;
   if (lead && lead.length > 160) {
     lead = undefined;
   }
 
   const noteParts = [...noteFromMiddle, ...afterClosing].filter(Boolean);
-  let note = noteParts.join(" ").trim() || undefined;
+  let note = joinMarkdownFragments(noteParts) || undefined;
 
   if (question && redundantWithCard(question, card)) {
     question = undefined;
@@ -712,11 +798,24 @@ function tryBuildChipList(
  * Split "intro paragraph + bullet categories + closing question" (markdown) into parts.
  * Used so we never drop the trailing sentence and can stagger intro / chips / closing.
  */
+/** Bullets like "Runs:", "Why:", or "Category — … Discount: …" are campaign copy, not category names. */
+function looksLikeCampaignDetailBullets(items: string[]): boolean {
+  return items.some((raw) => {
+    const s = raw.replace(/\*\*/g, "").trim();
+    const discountSecondary =
+      /\bdiscount\s*:/i.test(s) && /[—–]/.test(s);
+    return /^runs\s*:/i.test(s) || /^why\s*:/i.test(s) || discountSecondary;
+  });
+}
+
 function extractCategoryListParts(text: string): {
   intro: string;
   items: string[];
   closing?: string;
 } | null {
+  const plainForProposal = text.replace(/\*\*/g, "").trim();
+  if (looksLikeCampaignProposal(plainForProposal)) return null;
+
   const lines = text.split("\n");
   let firstBullet = -1;
   let lastBullet = -1;
@@ -732,6 +831,7 @@ function extractCategoryListParts(text: string): {
   const items = extractMarkdownListItems(text);
   if (items.length < 3) return null;
   if (looksLikeProductList(items)) return null;
+  if (looksLikeCampaignDetailBullets(items)) return null;
 
   const intro = lines.slice(0, firstBullet).join("\n").trim();
   const closingRaw = lines.slice(lastBullet + 1).join("\n").trim();
@@ -751,7 +851,7 @@ function extractCategoryListParts(text: string): {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 const bubbleClass =
-  "max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/15 bg-gradient-to-br from-ithina-purple/[0.08] to-ithina-purple/[0.03] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm";
+  "w-full min-w-0 max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/15 bg-gradient-to-br from-ithina-purple/[0.08] to-ithina-purple/[0.03] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm";
 
 /** When the reply is only empty JSON, avoid showing raw `[]` / `{}` in the chat UI. */
 function isTrivialStructuredPayload(trimmed: string): boolean {
@@ -795,7 +895,7 @@ export function getAssistantMessageChunks(
 
   // Explains promo types (Discount / BOGO / …) — before campaign-summary so enrichment
   // does not merge unrelated draft_meta into this reply or reorder the closing question.
-  const promoTypesChunks = tryBuildPromoTypesExplainerChunks(trimmed);
+  const promoTypesChunks = tryBuildPromoTypesExplainerChunks(trimmed, summaryEnrichment);
   if (promoTypesChunks) return promoTypesChunks;
 
   // Category chip-list — must run before campaign-summary. Otherwise enrichment +
@@ -887,16 +987,19 @@ export function getAssistantMessageChunks(
         }
       }
 
-      return pMatches.map((m) =>
-        htmlChunk(sanitizeHtml(m[1].trim().replace(/\n/g, "<br />"))),
-      );
+      return pMatches.map((m) => chunkFromHtmlParagraphBody(m[1]));
     }
 
     // Single <p> — check for option-grid content
-    const singleText = pMatches[0]?.[1]?.replace(/<[^>]+>/g, "") ?? trimmed;
+    const singleBody = pMatches[0]?.[1]?.trim() ?? "";
+    const singleText =
+      singleBody.replace(/<[^>]+>/g, "").trim() || trimmed.replace(/<[^>]+>/g, "").trim();
     const optGrid = tryBuildOptionGrid(singleText);
     if (optGrid) return [optGrid];
 
+    if (singleBody) {
+      return [chunkFromHtmlParagraphBody(singleBody)];
+    }
     return [htmlChunk(sanitizeHtml(trimmed.replace(/\n/g, "<br />")))];
   }
 

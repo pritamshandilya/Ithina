@@ -67,9 +67,9 @@ export default function ChatMessages({
 
           className={cn(
 
-            "mb-2 flex flex-col animate-[slideUp_0.3s_ease-out]",
+            "mb-2 flex w-full min-w-0 flex-col animate-[slideUp_0.3s_ease-out]",
 
-            msg.role === "user" ? "items-end" : "items-start",
+            msg.role === "user" ? "items-end" : "items-stretch",
 
           )}
 

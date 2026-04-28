@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import type { ApiCampaignCSVDiscoverResponse } from "@/types/api/campaigns";
 import type { ChatMessage, StagedSku, WizardConstraints } from "@/types/wizard";
 import {
   DEFAULT_LANGUAGE_CODE,
@@ -31,6 +32,12 @@ interface WizardState {
   inputMode: InputMode;
   csvRows: CsvRow[];
   csvFileName: string;
+  /** Non-null after successful /campaigns/upload/discover — drives mapping modal. */
+  csvDiscoverResponse: ApiCampaignCSVDiscoverResponse | null;
+  /** User-editable column mapping (system field → CSV header). */
+  csvMapping: Record<string, string>;
+  /** Full file rows keyed by API discover headers — edited in mapping modal, re-uploaded on confirm. */
+  csvParsedRows: Record<string, string>[] | null;
   csvConfirmed: boolean;
   campaignNamed: boolean;
   /** Language the Promo Assistant AI should reply in (prepended to outgoing prompts). */
@@ -63,6 +70,9 @@ const initialState: WizardState = {
   inputMode: "ai",
   csvRows: [],
   csvFileName: "",
+  csvDiscoverResponse: null,
+  csvMapping: {},
+  csvParsedRows: null,
   csvConfirmed: false,
   campaignNamed: false,
   promoAssistantLanguage: readPersistedLanguage(),
@@ -159,6 +169,13 @@ const wizardSlice = createSlice({
 
       const marginFloor = parseFloat(state.constraints.marginFloor) || 15;
       row.safe = marginPct >= marginFloor;
+
+      const csvRow = state.csvRows.find((r) => r.sku === sku);
+      if (csvRow) {
+        csvRow.current = row.current.toFixed(2);
+        csvRow.proposed = row.proposed.toFixed(2);
+        csvRow.safe = row.safe;
+      }
     },
     setConstraints(state, action: PayloadAction<WizardConstraints>) {
       state.constraints = action.payload;
@@ -176,6 +193,34 @@ const wizardSlice = createSlice({
     setCsvFileName(state, action: PayloadAction<string>) {
       state.csvFileName = action.payload;
     },
+    setCsvDiscoverResponse(
+      state,
+      action: PayloadAction<ApiCampaignCSVDiscoverResponse | null>,
+    ) {
+      state.csvDiscoverResponse = action.payload;
+    },
+    setCsvMapping(state, action: PayloadAction<Record<string, string>>) {
+      state.csvMapping = action.payload;
+    },
+    setCsvParsedRows(state, action: PayloadAction<Record<string, string>[] | null>) {
+      state.csvParsedRows = action.payload;
+    },
+    updateCsvParsedCell(
+      state,
+      action: PayloadAction<{ rowIndex: number; columnKey: string; value: string }>,
+    ) {
+      const { rowIndex, columnKey, value } = action.payload;
+      const rows = state.csvParsedRows;
+      if (!rows || rowIndex < 0 || rowIndex >= rows.length) return;
+      const copy = { ...rows[rowIndex], [columnKey]: value };
+      state.csvParsedRows = rows.map((r, i) => (i === rowIndex ? copy : r));
+    },
+    removeCsvParsedRow(state, action: PayloadAction<number>) {
+      const idx = action.payload;
+      const rows = state.csvParsedRows;
+      if (!rows || idx < 0 || idx >= rows.length) return;
+      state.csvParsedRows = rows.filter((_, i) => i !== idx);
+    },
     setCsvConfirmed(state, action: PayloadAction<boolean>) {
       state.csvConfirmed = action.payload;
     },
@@ -187,6 +232,7 @@ const wizardSlice = createSlice({
     },
     removeAllCsvViolations(state) {
       state.csvRows = state.csvRows.filter((r) => r.safe);
+      state.gridData = state.gridData.filter((r) => r.safe);
     },
     /** Clears NL promo chat + staged SKUs while staying on the same wizard step. */
     resetPromoAssistantChat(state) {
@@ -224,6 +270,11 @@ export const {
   setInputMode,
   setCsvRows,
   setCsvFileName,
+  setCsvDiscoverResponse,
+  setCsvMapping,
+  setCsvParsedRows,
+  updateCsvParsedCell,
+  removeCsvParsedRow,
   setCsvConfirmed,
   setCampaignNamed,
   removeCsvRow,

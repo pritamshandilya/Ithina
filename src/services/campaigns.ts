@@ -31,6 +31,8 @@ import type {
   ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignChatResponse,
+  ApiCampaignCSVDiscoverResponse,
+  ApiCampaignCSVProcessRequest,
   ApiCampaignDraftRequest,
   ApiCampaignDraftResponse,
   ApiCampaignEventResponse,
@@ -300,6 +302,34 @@ export async function draftCampaignFromPrompt(
 ): Promise<ApiCampaignDraftResponse> {
   const { data } = await promoApiClient.post<ApiCampaignDraftResponse>(
     `${API_PREFIX}/campaigns/draft`,
+    payload,
+  );
+  return data;
+}
+
+/**
+ * CSV Step 1: upload file, receive headers + suggested column mapping + sample rows.
+ */
+export async function discoverCsvFields(
+  file: File,
+): Promise<ApiCampaignCSVDiscoverResponse> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const { data } = await promoApiClient.post<ApiCampaignCSVDiscoverResponse>(
+    `${API_PREFIX}/campaigns/upload/discover`,
+    formData,
+  );
+  return data;
+}
+
+/**
+ * CSV Step 2: confirm mapping → LangGraph session + staged SKUs (same shape as draft).
+ */
+export async function processCsvMapping(
+  payload: ApiCampaignCSVProcessRequest,
+): Promise<ApiCampaignDraftResponse> {
+  const { data } = await promoApiClient.post<ApiCampaignDraftResponse>(
+    `${API_PREFIX}/campaigns/upload/process`,
     payload,
   );
   return data;

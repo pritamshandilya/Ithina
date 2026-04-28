@@ -1,6 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
+  discoverCsvFields,
+  processCsvMapping,
+} from "@/services/campaigns";
+import {
   confirmHardwareSelection,
   getHardwareDevices,
   getWizardDurations,
@@ -8,6 +12,7 @@ import {
   getWizardStores,
   submitWizardIntent,
 } from "@/services/wizard";
+import type { ApiCampaignCSVProcessRequest } from "@/types/api/campaigns";
 import type { HardwareDeviceId, WizardConstraints } from "@/types/wizard";
 
 export const wizardKeys = {
@@ -71,6 +76,18 @@ export function useSubmitWizardIntent() {
 export function useConfirmHardwareSelection() {
   return useMutation({
     mutationFn: (deviceIds: HardwareDeviceId[]) => confirmHardwareSelection(deviceIds),
+  });
+}
+
+export function useDiscoverCsvFields() {
+  return useMutation({
+    mutationFn: (file: File) => discoverCsvFields(file),
+  });
+}
+
+export function useProcessCsvMapping() {
+  return useMutation({
+    mutationFn: (payload: ApiCampaignCSVProcessRequest) => processCsvMapping(payload),
   });
 }
 

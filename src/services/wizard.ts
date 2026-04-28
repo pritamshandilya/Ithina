@@ -43,6 +43,20 @@ function pickAgentSuggestScheduleLabel(s: ApiCampaignSKU): string | undefined {
   return raw || undefined;
 }
 
+/** Drop offer_label when it only repeats proposed price (legacy CSV import used "$X.XX"). */
+function meaningfulOfferLabel(
+  raw: string | undefined,
+  proposed: number,
+): string | undefined {
+  const t = raw?.trim();
+  if (!t) return undefined;
+  const numeric = Number(t.replace(/[$,\s]/g, ""));
+  if (!Number.isNaN(numeric) && Math.abs(numeric - proposed) < 0.02) {
+    return undefined;
+  }
+  return t;
+}
+
 function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta {
   const meta = response.campaign_meta;
   const themeRaw =
@@ -87,21 +101,15 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 
 // ─── Phase 1: NL prompt → real backend draft ────────────────────────────────
 
-export async function submitWizardIntent(
-  prompt: string,
-  _constraints: WizardConstraints,
-  options?: { sessionId?: string | null },
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
-  const response = await draftCampaignFromPrompt({
-    prompt,
-    source_type: "nl",
-    ...(options?.sessionId ? { session_id: options.sessionId } : {}),
-  });
+/** Maps draft API SKUs to staging grid rows (NL draft, CSV /upload/process, etc.). */
+export function mapDraftResponseSkusToStaged(
+  response: ApiCampaignDraftResponse,
+  draftMeta?: DraftCampaignMeta,
+): StagedSku[] {
+  const meta = draftMeta ?? extractDraftMeta(response);
+  const campaignWindowLabel = formatIsoRangeUsShort(meta.scheduleStartIso, meta.scheduleEndIso);
 
-  const draftMeta = extractDraftMeta(response);
-  const campaignWindowLabel = formatIsoRangeUsShort(draftMeta.scheduleStartIso, draftMeta.scheduleEndIso);
-
-  const skus: StagedSku[] = response.skus.map((s) => {
+  return response.skus.map((s) => {
     const current = s.current_price;
     const proposed = s.proposed_price;
     const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
@@ -110,8 +118,10 @@ export async function submitWizardIntent(
     const rowSchedule = pickAgentSuggestScheduleLabel(s) ?? campaignWindowLabel ?? undefined;
     const offerType =
       s.offer_type?.trim() || s.offerType?.trim() || undefined;
-    const offerLabel =
-      s.offer_label?.trim() || s.offerLabel?.trim() || undefined;
+    const offerLabel = meaningfulOfferLabel(
+      s.offer_label?.trim() || s.offerLabel?.trim() || undefined,
+      proposed,
+    );
     const stockRaw = s.stock_qty ?? s.stockQty;
     const stockQty =
       typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
@@ -135,6 +145,21 @@ export async function submitWizardIntent(
       ...(stockQty !== undefined ? { stockQty } : {}),
     };
   });
+}
+
+export async function submitWizardIntent(
+  prompt: string,
+  _constraints: WizardConstraints,
+  options?: { sessionId?: string | null },
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
+  const response = await draftCampaignFromPrompt({
+    prompt,
+    source_type: "nl",
+    ...(options?.sessionId ? { session_id: options.sessionId } : {}),
+  });
+
+  const draftMeta = extractDraftMeta(response);
+  const skus = mapDraftResponseSkusToStaged(response, draftMeta);
 
   return {
     aiReply: { role: "ai", text: response.message },

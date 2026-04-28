@@ -17,13 +17,17 @@ import {
   PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
   removeAllCsvViolations,
   mergeGridData,
+  setGridData,
   removeCsvRow,
   resetPromoAssistantChat,
   setAllGridRowsIncluded,
   resetWizard,
   setCampaignNamed,
   setCsvConfirmed,
+  setCsvDiscoverResponse,
   setCsvFileName,
+  setCsvMapping,
+  setCsvParsedRows,
   setCsvRows,
   setHasSplit,
   setInputMode as setWizardInputMode,
@@ -32,20 +36,29 @@ import {
   setWMode,
   setWStep,
   toggleGridRowIncluded,
+  updateCsvParsedCell,
+  removeCsvParsedRow,
   updateGridRowDiscount,
 } from "@/store/slices/wizard-slice";
 import {
   buildPromptWithLanguage,
   type LanguageCode,
 } from "./lib/promo-languages";
-import type { HardwareDeviceId } from "@/types/wizard";
+import type { HardwareDeviceId, StagedSku } from "@/types/wizard";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
 import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
-import { useConfirmHardwareSelection, useSubmitWizardIntent } from "@/hooks/use-wizard";
+import {
+  useConfirmHardwareSelection,
+  useDiscoverCsvFields,
+  useProcessCsvMapping,
+  useSubmitWizardIntent,
+} from "@/hooks/use-wizard";
 import { createCampaignFromWizard, generateCampaign } from "@/services/campaigns";
+import { mapDraftResponseSkusToStaged } from "@/services/wizard";
 import { mergeLayoutVariants } from "@/features/campaign-studio/types";
-import type { LayoutVariant } from "@/types/api/campaigns";
+import type { ApiCampaignSKU, LayoutVariant } from "@/types/api/campaigns";
 import { buildChatProductsLabel } from "@/lib/chat-products-label";
+import { parseCsvTextToKeyedRows, serializeCsv } from "@/lib/csv-parse";
 import { isPromoDiscoveryQuery } from "@/lib/promo-discovery-intent";
 import { datetimeLocalValueToParts, isoToDatetimeLocalValue } from "@/lib/wizard-datetime";
 import ChatPanel from "./components/chat-panel";
@@ -60,6 +73,7 @@ import GuardRailsStep, { type GuardRailsWizardHeaderApi } from "./components/gua
 import ScheduleStep from "./components/schedule-step";
 import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
 import CampaignStudioModal, { type AppliedDesignSelection } from "./components/campaign-studio-modal";
+import CsvColumnMappingModal from "./components/csv-column-mapping-modal";
 import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
 import { defaultPromoApiBase } from "./lib/preview-layout";
 import { isNlScreensStepComplete } from "./lib/nl-screens-readiness";
@@ -71,6 +85,26 @@ interface CsvRow {
   current: string;
   proposed: string;
   safe: boolean;
+}
+
+function mapApiSkuToCsvRow(s: ApiCampaignSKU): CsvRow {
+  return {
+    sku: s.sku,
+    name: s.product_name ?? s.name ?? s.sku,
+    current: Number(s.current_price).toFixed(2),
+    proposed: Number(s.proposed_price).toFixed(2),
+    safe: s.is_safe,
+  };
+}
+
+function stagedSkuToCsvRow(r: StagedSku): CsvRow {
+  return {
+    sku: r.sku,
+    name: r.name,
+    current: r.current.toFixed(2),
+    proposed: r.proposed.toFixed(2),
+    safe: r.safe,
+  };
 }
 
 // Step 0 = mode chooser, steps 1..N = actual steps
@@ -124,6 +158,9 @@ export default function Wizard() {
     inputMode,
     csvRows,
     csvFileName,
+    csvDiscoverResponse,
+    csvMapping,
+    csvParsedRows,
     csvConfirmed,
     campaignNamed,
     promoAssistantLanguage,
@@ -150,8 +187,11 @@ export default function Wizard() {
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
+  const discoverCsvMutation = useDiscoverCsvFields();
+  const processCsvMutation = useProcessCsvMapping();
   const chatMutation = usePostCampaignChat();
   const submitMutation = useSubmitCampaign();
+  const [csvPendingFileName, setCsvPendingFileName] = useState("");
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
@@ -553,6 +593,9 @@ export default function Wizard() {
       });
       if (skus.length > 0) {
         dispatch(mergeGridData(skus));
+        if (inputMode === "csv") {
+          dispatch(setCsvRows(skus.map(stagedSkuToCsvRow)));
+        }
       }
     } catch (err) {
       setIsTyping(false);
@@ -582,6 +625,7 @@ export default function Wizard() {
     schedule.endDate,
     schedule.endTime,
     promoAssistantLanguage,
+    inputMode,
   ]);
 
   const handleSuggestionClick = useCallback(
@@ -863,30 +907,180 @@ export default function Wizard() {
     (sku: string, discount: number) => dispatch(updateGridRowDiscount({ sku, discount })),
     [dispatch],
   );
-  const handleCsvParsed = useCallback(
-    (rows: CsvRow[], fileName: string) => {
-      dispatch(setCsvRows(rows));
-      dispatch(setCsvFileName(fileName));
-      dispatch(setCsvConfirmed(false));
-      dispatch(setHasSplit(true));
-      dispatch(setShowGrid(true));
+  const handleCsvFileSelected = useCallback(
+    async (file: File) => {
+      if (!file.name.toLowerCase().endsWith(".csv")) {
+        toast({
+          title: "Invalid file",
+          description: "Only CSV files are allowed.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setCsvPendingFileName(file.name);
+      try {
+        const data = await discoverCsvMutation.mutateAsync(file);
+        dispatch(setCsvDiscoverResponse(data));
+        dispatch(
+          setCsvMapping({
+            sku: data.suggested_mapping.sku ?? "",
+            product_name: data.suggested_mapping.product_name ?? "",
+            current_price: data.suggested_mapping.current_price ?? "",
+            proposed_price: data.suggested_mapping.proposed_price ?? "",
+            stock_qty: data.suggested_mapping.stock_qty ?? "",
+          }),
+        );
+        try {
+          const text = await file.text();
+          const rows = parseCsvTextToKeyedRows(text, data.headers);
+          dispatch(setCsvParsedRows(rows.length > 0 ? rows : null));
+          if (rows.length === 0) {
+            toast({
+              title: "No data rows in file",
+              description: "Preview may be limited; import still uses the uploaded file.",
+            });
+          }
+        } catch (parseErr) {
+          dispatch(setCsvParsedRows(null));
+          const msg =
+            parseErr instanceof Error ? parseErr.message : "Could not parse CSV for in-browser editing.";
+          toast({
+            title: "Editable preview unavailable",
+            description: `${msg} You can still map columns and import the original file.`,
+          });
+        }
+      } catch (err) {
+        setCsvPendingFileName("");
+        let description = "Could not read the CSV.";
+        if (axios.isAxiosError(err)) {
+          const raw = err.response?.data;
+          if (raw && typeof raw === "object" && "detail" in raw) {
+            const d = (raw as { detail: unknown }).detail;
+            description = typeof d === "string" ? d : JSON.stringify(d);
+          } else {
+            description = err.message;
+          }
+        }
+        toast({ title: "Upload failed", description, variant: "destructive" });
+      }
+    },
+    [discoverCsvMutation, dispatch],
+  );
+
+  /** Dismiss mapping UI or abandon discover step — does not clear already-imported rows. */
+  const handleCsvMappingModalReupload = useCallback(() => {
+    dispatch(setCsvDiscoverResponse(null));
+    dispatch(setCsvMapping({}));
+    dispatch(setCsvParsedRows(null));
+    setCsvPendingFileName("");
+  }, [dispatch]);
+
+  const handleCsvParsedCellChange = useCallback(
+    (rowIndex: number, columnKey: string, value: string) => {
+      dispatch(updateCsvParsedCell({ rowIndex, columnKey, value }));
     },
     [dispatch],
   );
+
+  const handleCsvParsedRowRemove = useCallback(
+    (rowIndex: number) => {
+      dispatch(removeCsvParsedRow(rowIndex));
+    },
+    [dispatch],
+  );
+
+  const handleCsvMappingReplace = useCallback((next: Record<string, string>) => {
+    dispatch(setCsvMapping(next));
+  }, [dispatch]);
+
+  const handleCsvAutoMap = useCallback(() => {
+    if (!csvDiscoverResponse) return;
+    const s = csvDiscoverResponse.suggested_mapping;
+    dispatch(
+      setCsvMapping({
+        sku: s.sku ?? "",
+        product_name: s.product_name ?? "",
+        current_price: s.current_price ?? "",
+        proposed_price: s.proposed_price ?? "",
+        stock_qty: s.stock_qty ?? "",
+      }),
+    );
+  }, [csvDiscoverResponse, dispatch]);
+
+  const handleCsvMappingConfirm = useCallback(async () => {
+    if (!csvDiscoverResponse) return;
+    try {
+      let fileId = csvDiscoverResponse.file_id;
+      if (csvParsedRows !== null) {
+        const bom = "\uFEFF";
+        const csvOut = bom + serializeCsv(csvDiscoverResponse.headers, csvParsedRows);
+        const blob = new Blob([csvOut], { type: "text/csv;charset=utf-8" });
+        const rawName = csvPendingFileName.trim() || "upload.csv";
+        const outName = rawName.toLowerCase().endsWith(".csv") ? rawName : `${rawName}.csv`;
+        const editedFile = new File([blob], outName, { type: "text/csv" });
+        const rediscovered = await discoverCsvMutation.mutateAsync(editedFile);
+        fileId = rediscovered.file_id;
+      }
+
+      const draft = await processCsvMutation.mutateAsync({
+        file_id: fileId,
+        mapping: csvMapping,
+      });
+      pipelineSessionIdRef.current = draft.session_id;
+      const staged = mapDraftResponseSkusToStaged(draft);
+      dispatch(setGridData(staged));
+      const rows = draft.skus.map(mapApiSkuToCsvRow);
+      dispatch(setCsvRows(rows));
+      dispatch(setCsvFileName(csvPendingFileName));
+      dispatch(setCsvConfirmed(true));
+      dispatch(setHasSplit(true));
+      dispatch(setShowGrid(true));
+      dispatch(setStagedSkus(rows));
+      dispatch(setCsvDiscoverResponse(null));
+      dispatch(setCsvMapping({}));
+      dispatch(setCsvParsedRows(null));
+      pushMessage({ role: "ai", text: draft.message });
+      setSuggestions(draft.suggestions ?? []);
+      setCsvPendingFileName("");
+    } catch (err) {
+      let description = "Import failed. Check your mapping and try again.";
+      if (axios.isAxiosError(err)) {
+        const raw = err.response?.data;
+        if (raw && typeof raw === "object" && "detail" in raw) {
+          const d = (raw as { detail: unknown }).detail;
+          description = typeof d === "string" ? d : JSON.stringify(d);
+        } else {
+          description = err.message;
+        }
+      }
+      toast({ title: "Import failed", description, variant: "destructive" });
+    }
+  }, [
+    csvDiscoverResponse,
+    csvMapping,
+    csvParsedRows,
+    csvPendingFileName,
+    discoverCsvMutation,
+    dispatch,
+    processCsvMutation,
+    pushMessage,
+    setSuggestions,
+  ]);
+
   const handleCsvClear = useCallback(() => {
     dispatch(setCsvRows([]));
+    dispatch(setGridData([]));
     dispatch(setCsvFileName(""));
     dispatch(setCsvConfirmed(false));
+    dispatch(setCsvDiscoverResponse(null));
+    dispatch(setCsvMapping({}));
+    dispatch(setCsvParsedRows(null));
+    setCsvPendingFileName("");
   }, [dispatch]);
   const handleCsvConfirm = useCallback(() => {
     dispatch(setCsvConfirmed(true));
     dispatch(setStagedSkus(csvRows));
-    const warningCount = csvRows.filter((r) => !r.safe).length;
-    pushMessage({
-      role: "ai",
-      text: `${csvRows.length} SKUs loaded from CSV and staged for creative. ${warningCount ? `<span class="text-amber-400">${warningCount} items have low margin — please review.</span>` : "All margin checks passed."}`,
-    });
-  }, [csvRows, dispatch, pushMessage]);
+  }, [csvRows, dispatch]);
   const handleCsvConfirmAndProceed = useCallback(() => {
     handleCsvConfirm();
     dispatch(setWStep(2));
@@ -896,8 +1090,6 @@ export default function Wizard() {
     [dispatch],
   );
   const handleRemoveAllViolations = useCallback(() => dispatch(removeAllCsvViolations()), [dispatch]);
-
-  const marginFloor = parseInt(constraints.marginFloor) / 100;
 
   // ── Studio: chat send handler ─────────────────────────────────────
   const handleStudioChatSend = useCallback(
@@ -1203,12 +1395,12 @@ export default function Wizard() {
                   {hasSplit && (
                     <div
                       className={
-                        inputMode === "csv"
+                        inputMode === "csv" && csvRows.length === 0
                           ? "flex min-h-0 flex-1 flex-col overflow-x-auto overflow-y-auto px-4 pb-4 pt-3 sm:px-5"
                           : "flex min-h-0 flex-1 gap-2 overflow-hidden px-3 pb-4 pt-2 sm:px-4"
                       }
                     >
-                      {inputMode === "csv" ? (
+                      {inputMode === "csv" && csvRows.length === 0 ? (
                         <DataStagingGrid
                           data={gridData}
                           isGenerating={hwConfirmMutation.isPending}
@@ -1219,15 +1411,57 @@ export default function Wizard() {
                           onDiscountChange={handleDiscountChange}
                           csvRows={csvRows}
                           csvFileName={csvFileName}
-                          onCsvParsed={handleCsvParsed}
+                          onFileSelected={handleCsvFileSelected}
+                          isUploading={discoverCsvMutation.isPending}
                           onCsvClear={handleCsvClear}
                           onCsvConfirm={handleCsvConfirm}
                           onCsvConfirmAndProceed={handleCsvConfirmAndProceed}
                           onRemoveCsvRow={handleRemoveCsvRow}
                           onRemoveAllViolations={handleRemoveAllViolations}
-                          marginFloor={marginFloor}
                           hideModeToggle
+                          aiCampaignToolbar={aiCampaignToolbarMemo}
                         />
+                      ) : inputMode === "csv" ? (
+                        <>
+                          <div className="flex h-full min-h-0 min-w-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col overflow-hidden">
+                            <ChatPanel
+                              messages={messages}
+                              isTyping={isTyping}
+                              inputText={inputText}
+                              onInputChange={setInputText}
+                              onSubmit={handleSubmit}
+                              onResetChat={handleResetPromoChat}
+                              inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
+                              hasSplit={true}
+                              suggestions={suggestions}
+                              onSuggestionClick={handleSuggestionClick}
+                              language={promoAssistantLanguage}
+                              onLanguageChange={handlePromoLanguageChange}
+                            />
+                          </div>
+                          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-staging-section>
+                            <DataStagingGrid
+                              data={gridData}
+                              isGenerating={hwConfirmMutation.isPending}
+                              inputMode={inputMode}
+                              onInputModeChange={handleInputModeChange}
+                              onToggleGridRowIncluded={handleToggleGridRowIncluded}
+                              onSetAllGridRowsIncluded={handleSetAllGridRowsIncluded}
+                              onDiscountChange={handleDiscountChange}
+                              csvRows={csvRows}
+                              csvFileName={csvFileName}
+                              onFileSelected={handleCsvFileSelected}
+                              isUploading={discoverCsvMutation.isPending}
+                              onCsvClear={handleCsvClear}
+                              onCsvConfirm={handleCsvConfirm}
+                              onCsvConfirmAndProceed={handleCsvConfirmAndProceed}
+                              onRemoveCsvRow={handleRemoveCsvRow}
+                              onRemoveAllViolations={handleRemoveAllViolations}
+                              hideModeToggle
+                              aiCampaignToolbar={aiCampaignToolbarMemo}
+                            />
+                          </div>
+                        </>
                       ) : (
                         <>
                           <div className="flex h-full min-h-0 min-w-0 w-[32%] min-w-[220px] max-w-[400px] shrink-0 flex-col overflow-hidden">
@@ -1258,12 +1492,12 @@ export default function Wizard() {
                                 onDiscountChange={handleDiscountChange}
                                 csvRows={csvRows}
                                 csvFileName={csvFileName}
-                                onCsvParsed={handleCsvParsed}
+                                onFileSelected={handleCsvFileSelected}
+                                isUploading={discoverCsvMutation.isPending}
                                 onCsvClear={handleCsvClear}
                                 onCsvConfirm={handleCsvConfirm}
                                 onRemoveCsvRow={handleRemoveCsvRow}
                                 onRemoveAllViolations={handleRemoveAllViolations}
-                                marginFloor={marginFloor}
                                 aiCampaignToolbar={aiCampaignToolbarMemo}
                               />
                             </div>
@@ -1393,6 +1627,22 @@ export default function Wizard() {
           </div>
         )}
       </div>
+
+      <CsvColumnMappingModal
+        open={csvDiscoverResponse !== null}
+        fileName={csvPendingFileName}
+        headers={csvDiscoverResponse?.headers ?? []}
+        sampleData={csvDiscoverResponse?.sample_data ?? []}
+        parsedRows={csvParsedRows}
+        onParsedCellChange={handleCsvParsedCellChange}
+        onParsedRowRemove={handleCsvParsedRowRemove}
+        mapping={csvMapping}
+        onMappingReplace={handleCsvMappingReplace}
+        onAutoMap={handleCsvAutoMap}
+        onConfirm={handleCsvMappingConfirm}
+        onReupload={handleCsvMappingModalReupload}
+        isProcessing={processCsvMutation.isPending || discoverCsvMutation.isPending}
+      />
 
       {/* ── Campaign Studio Modal ──────────────────────────────────── */}
       <CampaignStudioModal

@@ -1,9 +1,13 @@
-import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Zap } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef } from "react";
+import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Loader2, Zap } from "lucide-react";
+import { memo, useEffect, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { IthBadge, IthTable, type IthColumnDef } from "@/components/ui/ith-table";
 import { cn } from "@/lib/utils";
+import {
+  buildPromoSkuCsvTemplate,
+  PROMO_SKU_CSV_TEMPLATE_FILENAME,
+} from "@/features/wizard/lib/promo-csv-template";
 import type { StagedSku } from "@/types/wizard";
 
 function escapeCellText(raw: string): string {
@@ -132,14 +136,16 @@ interface DataStagingGridProps {
   onDiscountChange: (sku: string, discount: number) => void;
   csvRows: CsvRow[];
   csvFileName: string;
-  onCsvParsed: (rows: CsvRow[], fileName: string) => void;
+  /** Selected file is sent to POST /campaigns/upload/discover by the parent. */
+  onFileSelected: (file: File) => void;
+  /** True while discover request is in flight. */
+  isUploading?: boolean;
   onCsvClear: () => void;
   onCsvConfirm: () => void;
   /** When set (standalone CSV wizard), bottom CTA confirms and advances — matches index_3.1.html */
   onCsvConfirmAndProceed?: () => void;
   onRemoveCsvRow: (idx: number) => void;
   onRemoveAllViolations: () => void;
-  marginFloor: number;
   hideModeToggle?: boolean;
   /** Step 1 AI grid: campaign name + schedule on the left; toggles on the right. */
   aiCampaignToolbar?: {
@@ -162,13 +168,13 @@ function DataStagingGrid({
   onDiscountChange,
   csvRows,
   csvFileName,
-  onCsvParsed,
+  onFileSelected,
+  isUploading = false,
   onCsvClear,
   onCsvConfirm,
   onCsvConfirmAndProceed,
   onRemoveCsvRow,
   onRemoveAllViolations,
-  marginFloor,
   hideModeToggle = false,
   aiCampaignToolbar,
 }: DataStagingGridProps) {
@@ -181,39 +187,21 @@ function DataStagingGrid({
 
   const aiIncludedCount = useMemo(() => data.filter((r) => r.included !== false).length, [data]);
 
-  const parseCsvText = useCallback(
-    (text: string, filename: string) => {
-      const lines = text.trim().split(/\r?\n/);
-      const rows = lines
-        .slice(1)
-        .filter((l) => l.trim())
-        .map((line, i) => {
-          const cols = line.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-          const sku = cols[0] || `SKU-${i + 1}`;
-          const name = cols[1] || `Product ${i + 1}`;
-          const current = parseFloat(cols[2]) || 10.0;
-          const proposed = parseFloat(cols[3]) || 8.0;
-          const margin = current > 0 ? (current - proposed) / current : 0;
-          return { sku, name, current: current.toFixed(2), proposed: proposed.toFixed(2), safe: margin >= marginFloor };
-        });
-      onCsvParsed(rows, filename);
-    },
-    [marginFloor, onCsvParsed],
-  );
+  /** Match main layout / wizard header (ithina-bg) instead of panel card (#131C31). */
+  const isCsvEmptyFullBleed =
+    hideModeToggle && inputMode === "csv" && csvRows.length === 0 && data.length === 0;
 
   const handleFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (ev) => parseCsvText(ev.target?.result as string, file.name);
-    reader.readAsText(file);
+    onFileSelected(file);
   };
 
   const downloadTemplate = () => {
-    const csv = "SKU,Name,Current Price,Proposed Price\nSKU-001,Product Name,12.99,10.39\nSKU-002,Another Product,8.99,7.49";
-    const blob = new Blob([csv], { type: "text/csv" });
+    const csv = `\uFEFF${buildPromoSkuCsvTemplate()}`;
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "ithina_sku_template.csv";
+    a.download = PROMO_SKU_CSV_TEMPLATE_FILENAME;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -558,11 +546,15 @@ function DataStagingGrid({
     const container = aiTableRef.current;
     if (!container) return;
 
-    const commitDiscount = (input: HTMLInputElement) => {
+    const readRowSku = (input: HTMLInputElement) => {
       const row = input.closest(".tabulator-row");
-      if (!row) return;
+      if (!row) return "";
       const skuCell = row.querySelector(".tabulator-cell[tabulator-field='sku']");
-      const sku = skuCell?.textContent?.trim() ?? "";
+      return skuCell?.textContent?.trim() ?? "";
+    };
+
+    const commitDiscount = (input: HTMLInputElement) => {
+      const sku = readRowSku(input);
       if (!sku) return;
       const val = Math.max(0, Math.min(100, Math.round(Number(input.value) || 0)));
       input.value = String(val);
@@ -641,8 +633,8 @@ function DataStagingGrid({
     <div
       className={cn(
         "relative flex h-full min-h-0 min-w-0 flex-1 flex-col overflow-y-auto overflow-x-auto",
-        hideModeToggle
-          ? "bg-transparent"
+        isCsvEmptyFullBleed
+          ? "bg-ithina-bg"
           : "rounded-2xl border border-ithina-border bg-ithina-panel shadow-xl",
       )}
     >
@@ -727,31 +719,59 @@ function DataStagingGrid({
       )}
 
       {inputMode === "csv" && (
-        <div className={cn("flex flex-1 flex-col overflow-hidden", hideModeToggle && "overflow-y-auto p-8")}>
-          {csvRows.length === 0 ? (
+        <div
+          className={cn(
+            "flex flex-1 flex-col overflow-hidden",
+            hideModeToggle && csvRows.length === 0 && data.length === 0 && "overflow-y-auto p-8",
+          )}
+        >
+          {csvRows.length === 0 && data.length === 0 ? (
             <div className={cn("flex flex-1 flex-col items-center justify-center gap-6 p-10", hideModeToggle && "max-w-2xl mx-auto w-full p-0 gap-6")}>
               <div className="text-center">
                 <h3 className={cn("text-[34px] font-semibold text-white", hideModeToggle && "text-xl font-bold mb-1")}>Upload SKU Data</h3>
                 <p className="mt-1 text-sm text-slate-400">Upload a CSV with SKUs, names and prices.</p>
               </div>
               <div
-                onClick={() => csvInput.current?.click()}
+                onClick={() => !isUploading && csvInput.current?.click()}
                 onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (isUploading) return;
+                  const f = e.dataTransfer.files[0];
+                  if (f) handleFile(f);
+                }}
                 className={cn(
                   "group flex w-full max-w-lg cursor-pointer flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-ithina-border p-10 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/5",
                   hideModeToggle && "max-w-none p-12",
+                  isUploading && "pointer-events-none opacity-70",
                 )}
               >
                 <div className="flex size-14 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10 transition-transform group-hover:scale-110">
-                  <CloudUpload className="size-7 text-ithina-purple" />
+                  {isUploading ? (
+                    <Loader2 className="size-7 animate-spin text-ithina-purple" aria-hidden />
+                  ) : (
+                    <CloudUpload className="size-7 text-ithina-purple" />
+                  )}
                 </div>
                 <div className="text-center">
-                  <p className="mb-1 text-sm font-semibold text-white">Drop CSV or click to browse</p>
-                  <p className="text-xs text-slate-500 font-mono">SKU, Name, Current Price, Proposed Price</p>
+                  <p className="mb-1 text-sm font-semibold text-white">
+                    {isUploading ? "Uploading…" : "Drop CSV or click to browse"}
+                  </p>
+                  <p className="text-xs text-slate-500 font-mono">Server maps columns after upload — .csv only</p>
                 </div>
               </div>
-              <input ref={csvInput} type="file" accept=".csv,.tsv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
+              <input
+                ref={csvInput}
+                type="file"
+                accept=".csv"
+                className="hidden"
+                disabled={isUploading}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) handleFile(f);
+                  e.target.value = "";
+                }}
+              />
               <button
                 type="button"
                 onClick={downloadTemplate}
@@ -760,6 +780,123 @@ function DataStagingGrid({
                 {hideModeToggle ? <Download className="size-3.5" /> : <CloudUpload className="size-3.5" />}
                 {hideModeToggle ? "Download template" : "Download CSV Template"}
               </button>
+            </div>
+          ) : data.length > 0 ? (
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+              {hideModeToggle && aiCampaignToolbar ? (
+                <div className="shrink-0 border-b border-ithina-border bg-white/[0.01] px-4 py-2.5">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1 space-y-2 pr-2">
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="shrink-0 text-xs font-medium text-slate-400">Campaign Name:</span>
+                        <input
+                          id="wizard-csv-campaign-name"
+                          type="text"
+                          value={aiCampaignToolbar.campaignName}
+                          onChange={(e) => aiCampaignToolbar.onCampaignNameChange(e.target.value)}
+                          placeholder="e.g. Weekend Tech Event"
+                          autoComplete="off"
+                          className="min-h-8 min-w-[12rem] max-w-xl flex-1 rounded-lg border border-ithina-border bg-ithina-bg px-3 py-1.5 text-xs font-semibold text-white shadow-inner transition-colors focus:border-ithina-purple focus:outline-none"
+                        />
+                      </div>
+                      <div className="flex min-w-0 flex-wrap items-center gap-2">
+                        <span className="shrink-0 text-xs font-medium text-slate-400">Campaign schedule:</span>
+                        <input
+                          id="wizard-csv-schedule-start"
+                          type="datetime-local"
+                          value={aiCampaignToolbar.scheduleStartLocal}
+                          onChange={(e) => aiCampaignToolbar.onScheduleStartLocalChange(e.target.value)}
+                          aria-label="Campaign start"
+                          className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                        />
+                        <span className="shrink-0 text-xs font-medium text-slate-500">to</span>
+                        <input
+                          id="wizard-csv-schedule-end"
+                          type="datetime-local"
+                          value={aiCampaignToolbar.scheduleEndLocal}
+                          onChange={(e) => aiCampaignToolbar.onScheduleEndLocalChange(e.target.value)}
+                          aria-label="Campaign end"
+                          className="wizard-campaign-datetime min-h-8 min-w-0 rounded-lg border border-ithina-border bg-ithina-bg py-1.5 pl-2 pr-9 text-[11px] text-white transition-colors focus:border-ithina-purple focus:outline-none sm:w-[11rem]"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-2">
+                      <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
+                        <button
+                          type="button"
+                          onClick={() => onInputModeChange("ai")}
+                          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-400 transition-all hover:text-white"
+                        >
+                          <Zap className="size-3.5" />
+                          AI Assisted
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onInputModeChange("csv")}
+                          className="flex items-center gap-1.5 rounded-md bg-ithina-purple px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all"
+                        >
+                          <FileSpreadsheet className="size-3.5" />
+                          CSV Upload
+                        </button>
+                      </div>
+                      <span className="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:max-w-none sm:text-xs">
+                        {aiIncludedCount} of {data.length} SKUs included — Review proposals below
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-ithina-border bg-ithina-bg/30 px-4 py-2.5">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="truncate text-xs font-medium text-white">{csvFileName || "Imported products"}</span>
+                  <span className="shrink-0 rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[10px] text-emerald-400">
+                    {data.length} rows
+                  </span>
+                  {data.filter((r) => !r.safe).length > 0 && (
+                    <span className="shrink-0 rounded border border-amber-400/20 bg-amber-400/10 px-2 py-0.5 font-mono text-[10px] text-amber-400">
+                      {data.filter((r) => !r.safe).length} alerts
+                    </span>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {data.filter((r) => !r.safe).length > 0 && (
+                    <button
+                      type="button"
+                      onClick={onRemoveAllViolations}
+                      className="flex items-center gap-1.5 rounded-lg border border-amber-400/20 px-3 py-1.5 text-xs text-amber-400 transition-colors hover:bg-amber-400/10 hover:text-white"
+                    >
+                      Remove {data.filter((r) => !r.safe).length} alerts
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={onCsvClear}
+                    className="rounded-lg border border-ithina-border px-3 py-1.5 text-xs text-slate-400 transition-colors hover:text-white"
+                  >
+                    Replace File
+                  </button>
+                </div>
+              </div>
+              <div
+                ref={aiTableRef}
+                className={cn(
+                  "flex min-h-0 min-w-0 flex-1 flex-col overflow-auto px-2 pb-2 pt-0 sm:px-3",
+                  isGenerating && "pointer-events-none opacity-50 transition-opacity",
+                )}
+              >
+                <DataTable<StagedSku>
+                  columns={aiColumns}
+                  data={data}
+                  rowIdField="sku"
+                  emptyMessage="No SKUs staged"
+                  pagination={false}
+                  headerFilters={false}
+                  showRowNumber
+                  layout="fitColumns"
+                  rowFormatter={aiRowFormatter}
+                  className="wizard-staging-table min-h-0 flex-1"
+                />
+              </div>
             </div>
           ) : hideModeToggle ? (
             <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">

@@ -87,6 +87,21 @@ export interface ApiCampaignDraftMeta {
   schedule_notes?: string | null;
 }
 
+/** Step 1 CSV upload: headers + suggested column mapping + preview rows. */
+export interface ApiCampaignCSVDiscoverResponse {
+  file_id: string;
+  headers: string[];
+  /** System field name → CSV column header from the file */
+  suggested_mapping: Record<string, string>;
+  sample_data: Record<string, string>[];
+}
+
+/** Step 2 CSV upload: confirm mapping before LangGraph session is created. */
+export interface ApiCampaignCSVProcessRequest {
+  file_id: string;
+  mapping: Record<string, string>;
+}
+
 export interface ApiCampaignDraftResponse {
   status: "draft_staged";
   session_id: string;

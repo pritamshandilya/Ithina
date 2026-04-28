@@ -11,7 +11,7 @@ interface SubmitFixtureAnalysisParams {
   fixtureId: string;
   image: File;
   analysisType: AnalysisType;
-  complianceRuleSetId: string;
+  planogramId?: string | null;
 }
 
 interface MercureProgressEvent {
@@ -51,11 +51,14 @@ export function isTerminalAnalysisStatus(status: AnalysisJobStatus): boolean {
 export async function submitFixtureAnalysis(
   params: SubmitFixtureAnalysisParams,
 ): Promise<AnalysisJobResponse> {
-  const { fixtureId, image, analysisType, complianceRuleSetId } = params;
+  const { fixtureId, image, analysisType, planogramId } = params;
   const formData = new FormData();
   formData.append("image", image);
   formData.append("analysis_type", analysisType);
-  formData.append("compliance_rule_set_id", complianceRuleSetId);
+  if (planogramId) {
+    // Deprecated backend field, retained only for strict match validation.
+    formData.append("planogram_id", planogramId);
+  }
 
   return apiClient.post<AnalysisJobResponse>(
     `/fixtures/${fixtureId}/analyze`,
@@ -192,13 +195,15 @@ function parseDate(input: string | null): Date {
   return input ? new Date(input) : new Date();
 }
 
-function extractComplianceScore(result: Record<string, unknown> | null): number | undefined {
+function extractComplianceScore(result: AnalysisJobResponse["result"]): number | undefined {
   if (!result) return undefined;
   const scoreCandidates = [
-    result.compliance_score,
-    result.complianceScore,
-    (result.summary as Record<string, unknown> | undefined)?.compliance_score,
-    (result.summary as Record<string, unknown> | undefined)?.complianceScore,
+    (result as unknown as Record<string, unknown>).compliance_score,
+    (result as unknown as Record<string, unknown>).complianceScore,
+    (result.summary as unknown as Record<string, unknown> | undefined)
+      ?.compliance_score,
+    (result.summary as unknown as Record<string, unknown> | undefined)
+      ?.complianceScore,
   ];
   for (const candidate of scoreCandidates) {
     if (typeof candidate === "number" && Number.isFinite(candidate)) {

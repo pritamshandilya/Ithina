@@ -2,32 +2,55 @@
  * Planogram constants – category colors and shape mappings
  */
 
-/** Tailwind bg-* classes for product blocks by category */
-export const CATEGORY_COLORS: Record<string, string> = {
-  "Aperitif Snacks": "border-amber-100 dark:border-amber-900/40",
-  Chips: "border-orange-100 dark:border-orange-900/40",
-  Snacks: "border-yellow-100 dark:border-yellow-900/40",
-  "Kids Cereal": "border-lime-100 dark:border-lime-900/40",
-  Coffee: "border-amber-200 dark:border-amber-800/50",
-  "Baby Care": "border-pink-100 dark:border-pink-900/40",
-  "First Aid": "border-rose-100 dark:border-rose-900/40",
-  Grooming: "border-violet-100 dark:border-violet-900/40",
-  Water: "border-sky-100 dark:border-sky-900/40",
-  "Sparkling Water": "border-cyan-100 dark:border-cyan-900/40",
-  "Soft Drinks": "border-red-100 dark:border-red-900/40",
-  Juices: "border-orange-200 dark:border-orange-800/50",
-  Nectars: "border-amber-100 dark:border-amber-900/40",
-  Dairy: "border-blue-100 dark:border-blue-900/40",
-  Milk: "border-sky-50 dark:border-sky-950/50",
-  "Energy Drinks": "border-emerald-100 dark:border-emerald-900/40",
+/** Optional curated overrides for known flagship categories. */
+const CATEGORY_COLOR_OVERRIDES: Record<string, string> = {
+  "Soft Drinks": "border-red-700/55 dark:border-red-500/55",
+  Water: "border-sky-700/55 dark:border-sky-500/55",
+  "Energy Drinks": "border-emerald-700/55 dark:border-emerald-500/55",
 };
 
-/** Default for unknown categories */
-const DEFAULT_CATEGORY_COLOR = "bg-muted";
+/** Rotating border palette used for all unknown categories. */
+const CATEGORY_BORDER_PALETTE = [
+  "border-rose-700/55 dark:border-rose-500/55",
+  "border-orange-700/55 dark:border-orange-500/55",
+  "border-amber-700/55 dark:border-amber-500/55",
+  "border-yellow-700/55 dark:border-yellow-500/55",
+  "border-lime-700/55 dark:border-lime-500/55",
+  "border-emerald-700/55 dark:border-emerald-500/55",
+  "border-teal-700/55 dark:border-teal-500/55",
+  "border-cyan-700/55 dark:border-cyan-500/55",
+  "border-sky-700/55 dark:border-sky-500/55",
+  "border-blue-700/55 dark:border-blue-500/55",
+  "border-indigo-700/55 dark:border-indigo-500/55",
+  "border-violet-700/55 dark:border-violet-500/55",
+  "border-fuchsia-700/55 dark:border-fuchsia-500/55",
+  "border-pink-700/55 dark:border-pink-500/55",
+] as const;
+
+/** Default for empty/uncategorized values */
+const DEFAULT_CATEGORY_COLOR = "border-border/70";
+
+function normalizeCategoryKey(category: string): string {
+  return category.trim().toLowerCase();
+}
+
+function hashString(input: string): number {
+  let hash = 0;
+  for (let index = 0; index < input.length; index += 1) {
+    hash = (hash << 5) - hash + input.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
 
 /** Returns Tailwind bg class for a category; fallback for unknown */
 export function getCategoryColor(category: string): string {
-  return CATEGORY_COLORS[category] ?? DEFAULT_CATEGORY_COLOR;
+  const normalized = normalizeCategoryKey(category);
+  if (!normalized) return DEFAULT_CATEGORY_COLOR;
+  const override = CATEGORY_COLOR_OVERRIDES[category];
+  if (override) return override;
+  const toneIndex = hashString(normalized) % CATEGORY_BORDER_PALETTE.length;
+  return CATEGORY_BORDER_PALETTE[toneIndex];
 }
 
 /** Shape style: "box" = square, "bottle" = rounded (beverages, liquids) */
@@ -50,55 +73,56 @@ export function getProductShapeType(category: string): ProductShapeType {
   return BOTTLE_CATEGORIES.has(category) ? "bottle" : "box";
 }
 
-/** Hex colors for SVG fill (main body) – darker tones for visibility on light card backgrounds */
-const CATEGORY_FILL: Record<string, string> = {
-  "Aperitif Snacks": "#d97706",
-  Chips: "#ea580c",
-  Snacks: "#ca8a04",
-  "Kids Cereal": "#65a30d",
-  Coffee: "#b45309",
-  "Baby Care": "#db2777",
-  "First Aid": "#e11d48",
-  Grooming: "#7c3aed",
-  Water: "#0284c7",
-  "Sparkling Water": "#0891b2",
-  "Soft Drinks": "#dc2626",
-  Juices: "#c2410c",
-  Nectars: "#d97706",
-  Dairy: "#2563eb",
-  Milk: "#0ea5e9",
-  "Energy Drinks": "#059669",
-};
+/** Rotating SVG color palette used for unknown categories. */
+const CATEGORY_FILL_PALETTE = [
+  "#be123c",
+  "#c2410c",
+  "#b45309",
+  "#a16207",
+  "#4d7c0f",
+  "#047857",
+  "#0f766e",
+  "#0e7490",
+  "#0369a1",
+  "#1d4ed8",
+  "#3730a3",
+  "#5b21b6",
+  "#a21caf",
+  "#be185d",
+] as const;
 
-/** Hex colors for SVG accent (cap, label, stroke) – darker for definition */
-const CATEGORY_ACCENT: Record<string, string> = {
-  "Aperitif Snacks": "#92400e",
-  Chips: "#c2410c",
-  Snacks: "#a16207",
-  "Kids Cereal": "#4d7c0f",
-  Coffee: "#78350f",
-  "Baby Care": "#9d174d",
-  "First Aid": "#b91c1c",
-  Grooming: "#5b21b6",
-  Water: "#0369a1",
-  "Sparkling Water": "#0e7490",
-  "Soft Drinks": "#b91c1c",
-  Juices: "#9a3412",
-  Nectars: "#92400e",
-  Dairy: "#1d4ed8",
-  Milk: "#0284c7",
-  "Energy Drinks": "#047857",
-};
+const CATEGORY_ACCENT_PALETTE = [
+  "#881337",
+  "#9a3412",
+  "#92400e",
+  "#854d0e",
+  "#3f6212",
+  "#065f46",
+  "#115e59",
+  "#155e75",
+  "#075985",
+  "#1e40af",
+  "#312e81",
+  "#4c1d95",
+  "#86198f",
+  "#9d174d",
+] as const;
 
-const DEFAULT_FILL = "#6b7280";
-const DEFAULT_ACCENT = "#4b5563";
+const DEFAULT_FILL = "#1e3a8a";
+const DEFAULT_ACCENT = "#1e40af";
 
 /** Returns hex color for SVG fill */
 export function getCategoryFill(category: string): string {
-  return CATEGORY_FILL[category] ?? DEFAULT_FILL;
+  const normalized = normalizeCategoryKey(category);
+  if (!normalized) return DEFAULT_FILL;
+  const toneIndex = hashString(normalized) % CATEGORY_FILL_PALETTE.length;
+  return CATEGORY_FILL_PALETTE[toneIndex];
 }
 
 /** Returns hex color for SVG accent */
 export function getCategoryAccent(category: string): string {
-  return CATEGORY_ACCENT[category] ?? DEFAULT_ACCENT;
+  const normalized = normalizeCategoryKey(category);
+  if (!normalized) return DEFAULT_ACCENT;
+  const toneIndex = hashString(normalized) % CATEGORY_ACCENT_PALETTE.length;
+  return CATEGORY_ACCENT_PALETTE[toneIndex];
 }

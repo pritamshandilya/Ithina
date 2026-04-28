@@ -1,40 +1,71 @@
 import { cn } from "@/lib/utils";
-import type { ReportShelfCompliance } from "@/lib/analysis";
+import type { ReportSnippet, ReportShelfCompliance } from "@/lib/analysis";
 
-const PLACEHOLDER_SHELF_PRODUCTS: Record<
-  string,
-  Array<{ name: string; status: "matched" | "misplaced" | "missing" | "extra"; count: string }>
-> = {
-  "Shelf 1": [
-    { name: "Potato Chips 4/4", status: "matched", count: "D3" },
-    { name: "Tortilla Chips 2/2", status: "misplaced", count: "D3" },
-  ],
-  "Shelf 2": [
-    { name: "Coca-Cola 500ml 0/6", status: "missing", count: "D3" },
-    { name: "Water Bottle 1L 0/3", status: "extra", count: "D3" },
-    { name: "Energy Drink 0/6", status: "matched", count: "D3" },
-  ],
-  "Shelf 3": [
-    { name: "Orange Juice 1L 0/4", status: "missing", count: "D3" },
-    { name: "Sports Drink 2/2", status: "matched", count: "D3" },
-    { name: "Iced Tea 500ml 0/6", status: "missing", count: "D3" },
-  ],
-  "Shelf 4": [
-    { name: "Mineral Water 1L 0/3", status: "missing", count: "D3" },
-    { name: "Soft Drink 2L 0/4", status: "missing", count: "D3" },
-    { name: "Pretzels 2/2", status: "misplaced", count: "D3" },
-  ],
-};
+type ShelfItemStatus = "matched" | "misplaced" | "missing" | "extra";
+
+interface ShelfBreakdownItem {
+  name: string;
+  status: ShelfItemStatus;
+  count: string;
+}
+
+function normalizeLocation(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function mapIssueTypeToStatus(type: string): ShelfItemStatus {
+  const normalizedType = type.toLowerCase();
+  if (normalizedType.includes("missing")) return "missing";
+  if (normalizedType.includes("misplaced")) return "misplaced";
+  if (normalizedType.includes("unexpected") || normalizedType.includes("extra")) {
+    return "extra";
+  }
+  return "matched";
+}
+
+function buildShelfBreakdownMap(
+  shelfCompliance: ReportShelfCompliance[],
+  issuesToReview: ReportSnippet["issuesToReview"],
+): Map<string, ShelfBreakdownItem[]> {
+  const issuesByShelf = new Map<string, ShelfBreakdownItem[]>();
+  const normalizedShelfNames = shelfCompliance.map((shelf) => ({
+    key: shelf.shelfName,
+    normalized: normalizeLocation(shelf.shelfName),
+  }));
+
+  for (const issue of issuesToReview) {
+    const location = issue.location ? normalizeLocation(issue.location) : "";
+    const matchedShelf =
+      normalizedShelfNames.find(
+        (shelf) => location.includes(shelf.normalized) || shelf.normalized.includes(location),
+      )?.key ?? null;
+    if (!matchedShelf) continue;
+
+    const shelfIssues = issuesByShelf.get(matchedShelf) ?? [];
+    shelfIssues.push({
+      name: issue.skuName?.trim() || "Issue detected",
+      status: mapIssueTypeToStatus(issue.type),
+      count: issue.type.toUpperCase(),
+    });
+    issuesByShelf.set(matchedShelf, shelfIssues);
+  }
+
+  return issuesByShelf;
+}
 
 export function OverviewShelfBreakdown({
   shelfCompliance,
+  issuesToReview,
 }: {
   shelfCompliance: ReportShelfCompliance[];
+  issuesToReview: ReportSnippet["issuesToReview"];
 }) {
+  const shelfBreakdownMap = buildShelfBreakdownMap(shelfCompliance, issuesToReview);
+
   return (
     <div className="space-y-4">
       {shelfCompliance.map((shelf) => {
-        const products = PLACEHOLDER_SHELF_PRODUCTS[shelf.shelfName] ?? [];
+        const products = shelfBreakdownMap.get(shelf.shelfName) ?? [];
         const matchedCount = products.filter((p) => p.status === "matched").length;
         const misplacedCount = products.filter((p) => p.status === "misplaced").length;
         const missingCount = products.filter((p) => p.status === "missing").length;
@@ -75,46 +106,52 @@ export function OverviewShelfBreakdown({
                 {shelf.compliance}%
               </span>
             </div>
-            <div className="flex flex-wrap gap-2 mb-2">
-              {products.map((p, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                    p.status === "matched" &&
-                      "bg-chart-2/20 text-chart-2 border border-chart-2/40",
-                    p.status === "misplaced" &&
-                      "bg-action-warning/20 text-action-warning border border-action-warning/40",
-                    p.status === "missing" &&
-                      "bg-destructive/20 text-destructive border border-destructive/40",
-                    p.status === "extra" &&
-                      "bg-blue-500/20 text-blue-500 border border-blue-500/40",
-                  )}
-                >
+            {products.length > 0 ? (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {products.map((p, i) => (
                   <span
+                    key={`${p.name}-${i}`}
                     className={cn(
-                      "size-1.5 rounded-full shrink-0",
-                      p.status === "matched" && "bg-chart-2",
-                      p.status === "misplaced" && "bg-action-warning",
-                      p.status === "missing" && "bg-destructive",
-                      p.status === "extra" && "bg-blue-500",
-                    )}
-                  />
-                  {p.name}
-                  <span
-                    className={cn(
-                      "rounded px-1 text-[10px]",
-                      p.status === "matched" && "bg-chart-2/30",
-                      p.status === "misplaced" && "bg-action-warning/30",
-                      p.status === "missing" && "bg-destructive/30",
-                      p.status === "extra" && "bg-blue-500/30",
+                      "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
+                      p.status === "matched" &&
+                        "bg-chart-2/20 text-chart-2 border border-chart-2/40",
+                      p.status === "misplaced" &&
+                        "bg-action-warning/20 text-action-warning border border-action-warning/40",
+                      p.status === "missing" &&
+                        "bg-destructive/20 text-destructive border border-destructive/40",
+                      p.status === "extra" &&
+                        "bg-blue-500/20 text-blue-500 border border-blue-500/40",
                     )}
                   >
-                    {p.count}
+                    <span
+                      className={cn(
+                        "size-1.5 rounded-full shrink-0",
+                        p.status === "matched" && "bg-chart-2",
+                        p.status === "misplaced" && "bg-action-warning",
+                        p.status === "missing" && "bg-destructive",
+                        p.status === "extra" && "bg-blue-500",
+                      )}
+                    />
+                    {p.name}
+                    <span
+                      className={cn(
+                        "rounded px-1 text-[10px]",
+                        p.status === "matched" && "bg-chart-2/30",
+                        p.status === "misplaced" && "bg-action-warning/30",
+                        p.status === "missing" && "bg-destructive/30",
+                        p.status === "extra" && "bg-blue-500/30",
+                      )}
+                    >
+                      {p.count}
+                    </span>
                   </span>
-                </span>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground mb-2">
+                No shelf-level issues detected.
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">
               {matchedCount} matched {misplacedCount} misplaced {missingCount} missing
             </p>

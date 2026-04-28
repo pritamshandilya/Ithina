@@ -25,10 +25,8 @@ export interface ReportTabDef {
 export interface ComplianceReportTabsProps {
   activeTab: ReportTabId;
   onTabChange: (tab: ReportTabId) => void;
-  /** Count for All Issues tab (e.g. 93) */
-  issuesCount?: number;
-  /** Count for All Items tab (e.g. 96) */
-  itemsCount?: number;
+  /** Optional custom label for image tab */
+  imageTabLabel?: string;
   className?: string;
 }
 
@@ -42,17 +40,14 @@ const TABS: ReportTabDef[] = [
 export function ComplianceReportTabs({
   activeTab,
   onTabChange,
-  issuesCount,
-  itemsCount,
+  imageTabLabel,
   className,
 }: ComplianceReportTabsProps) {
-  const getLabel = (tab: ReportTabDef) => {
-    if (tab.id === "issues" && issuesCount != null)
-      return `${tab.label} (${issuesCount})`;
-    if (tab.id === "items" && itemsCount != null)
-      return `${tab.label} (${itemsCount})`;
-    return tab.label;
-  };
+  const tabs = TABS.map((tab) =>
+    tab.id === "image-comparison" && imageTabLabel
+      ? { ...tab, label: imageTabLabel }
+      : tab,
+  );
 
   return (
     <div
@@ -61,7 +56,7 @@ export function ComplianceReportTabs({
         className
       )}
     >
-      {TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
           <button
@@ -82,7 +77,7 @@ export function ComplianceReportTabs({
               )}
               aria-hidden
             />
-            {getLabel(tab)}
+            {tab.label}
             {isActive && (
               <div
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-t-full"

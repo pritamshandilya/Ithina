@@ -4,24 +4,23 @@
  * Side-by-side: Planogram (expected layout) vs Real Shelf (captured image).
  * Non-compliant items are highlighted with color-coded borders.
  */
-
 import { ImageIcon } from "lucide-react";
-import { MOCK_IMAGE_COMPARISON } from "@/lib/analysis/mock-image-comparison";
-import type {
-  ImageComparisonData,
-  DetectionOverlay,
-  DetectionOverlayStatus,
-} from "@/lib/analysis/image-comparison-types";
 import { Fragment } from "react";
-import type { PlanogramPayload } from "@/types/planogram";
+
+import { PlanogramExpectedPanel } from "./PlanogramExpectedPanel";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { PlanogramExpectedPanel } from "./PlanogramExpectedPanel";
-import { cn } from "@/lib/utils";
 import { mapPlanogramPayloadToImageComparisonData } from "@/lib/analysis";
+import type {
+  DetectionOverlay,
+  DetectionOverlayStatus,
+  ImageComparisonData,
+} from "@/lib/analysis/image-comparison-types";
+import { cn } from "@/lib/utils";
+import type { PlanogramPayload } from "@/types/planogram";
 
 const DETECTION_LEGEND: { color: string; label: string }[] = [
   { color: "bg-chart-2", label: "Compliant" },
@@ -45,12 +44,12 @@ function RealShelfWithOverlays({
   overlays?: DetectionOverlay[];
 }) {
   return (
-    <div className="relative w-full overflow-y-auto">
-      <div className="relative inline-block min-w-full">
+    <div className="relative h-full w-full overflow-auto">
+      <div className="relative mx-auto w-fit max-w-full">
         <img
           src={imageUrl}
           alt="Captured shelf"
-          className="block w-full h-auto"
+          className="block h-auto max-w-full object-contain"
         />
         {overlays.length > 0 && (
           <div className="absolute inset-0" aria-hidden>
@@ -58,8 +57,8 @@ function RealShelfWithOverlays({
               const box = (
                 <div
                   className={cn(
-                    "absolute border-2 bg-black/5 flex flex-col justify-end p-0.5",
-                    OVERLAY_BORDER[o.status]
+                    "absolute flex flex-col justify-end border-2 bg-black/5 p-0.5",
+                    OVERLAY_BORDER[o.status],
                   )}
                   style={{
                     left: `${o.xPercent}%`,
@@ -68,7 +67,7 @@ function RealShelfWithOverlays({
                     height: `${o.heightPercent}%`,
                   }}
                 >
-                  <span className="text-[10px] font-medium text-foreground truncate leading-tight">
+                  <span className="text-foreground truncate text-[10px] leading-tight font-medium">
                     {o.label}
                   </span>
                 </div>
@@ -92,60 +91,79 @@ function RealShelfWithOverlays({
 }
 
 export interface ImageComparisonTabProps {
-  /** Report data – defaults to mock */
-  data?: ImageComparisonData;
+  /** Report data */
+  data?: ImageComparisonData | null;
   /** Associated planogram payload for expected panel */
   planogramPayload?: PlanogramPayload | null;
   /** Captured shelf image URL – from analysis flow */
   imageUrl?: string | null;
+  /** Whether expected planogram panel should be shown */
+  showPlanogramPanel?: boolean;
   className?: string;
 }
 
 export function ImageComparisonTab({
-  data = MOCK_IMAGE_COMPARISON,
+  data = null,
   planogramPayload = null,
   imageUrl = null,
+  showPlanogramPanel = true,
   className,
 }: ImageComparisonTabProps) {
   const comparisonData = planogramPayload
     ? mapPlanogramPayloadToImageComparisonData(planogramPayload)
     : data;
+  const overlays = comparisonData?.detectionOverlays ?? [];
 
   return (
     <div className={cn("w-full min-w-0 space-y-4", className)}>
-      <p className="text-sm text-muted-foreground">
-        Side-by-side comparison: Planogram (expected layout) vs Real Shelf
-        (captured image). Non-compliant items are highlighted.
+      <p className="text-muted-foreground text-sm">
+        {showPlanogramPanel
+          ? "Side-by-side comparison: Planogram (expected layout) vs Real Shelf (captured image). Non-compliant items are highlighted."
+          : "Observed Fixture image with detected overlays from the analysis run."}
       </p>
 
-      <div className="grid lg:grid-cols-2 gap-4 h-[calc(100vh-14rem)] min-h-[480px] overflow-hidden">
-        {/* Left: Planogram (Expected) */}
-        <PlanogramExpectedPanel data={comparisonData} className="min-h-0" />
+      <div
+        className={cn(
+          "h-[calc(100vh-14rem)] min-h-[480px] gap-4 overflow-hidden",
+          showPlanogramPanel ? "grid lg:grid-cols-2" : "grid grid-cols-1",
+        )}
+      >
+        {showPlanogramPanel && (
+          <PlanogramExpectedPanel
+            data={
+              comparisonData ?? {
+                planogramShelves: [],
+                detectionOverlays: [],
+              }
+            }
+            className="min-h-0"
+          />
+        )}
 
         {/* Right: Real Shelf (Captured) */}
-        <section className="rounded-xl border border-border bg-card/60 overflow-hidden flex flex-col min-h-0">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-border shrink-0">
-            <ImageIcon className="size-4 text-accent shrink-0" aria-hidden />
-            <h3 className="text-sm font-semibold text-foreground">
+        <section className="border-border bg-card/60 flex min-h-0 flex-col overflow-hidden rounded-xl border">
+          <div className="border-border flex shrink-0 items-center gap-2 border-b px-4 py-3">
+            <ImageIcon className="text-accent size-4 shrink-0" aria-hidden />
+            <h3 className="text-foreground text-sm font-semibold">
               Real Shelf (Captured)
             </h3>
           </div>
-          <div className="flex-1 min-h-0 overflow-y-auto bg-muted/20">
+          <div className="bg-muted/20 min-h-0 flex-1 overflow-y-auto">
             {imageUrl ? (
-              <RealShelfWithOverlays
-                imageUrl={imageUrl}
-                overlays={comparisonData.detectionOverlays}
-              />
+              <RealShelfWithOverlays imageUrl={imageUrl} overlays={overlays} />
             ) : (
-              <div className="h-full min-h-[360px] flex flex-col items-center justify-center gap-4 p-6 text-center">
-                <div className="rounded-full bg-muted/50 p-4">
-                  <ImageIcon className="size-12 text-muted-foreground" aria-hidden />
+              <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-4 p-6 text-center">
+                <div className="bg-muted/50 rounded-full p-4">
+                  <ImageIcon
+                    className="text-muted-foreground size-12"
+                    aria-hidden
+                  />
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-foreground">
+                  <p className="text-foreground text-sm font-medium">
                     No shelf image available
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-[240px]">
+                  <p className="text-muted-foreground mt-1 max-w-[240px] text-xs">
                     Capture or upload a shelf image during analysis to see the
                     side-by-side comparison here.
                   </p>
@@ -153,11 +171,11 @@ export function ImageComparisonTab({
               </div>
             )}
           </div>
-          <div className="px-4 py-2 border-t border-border flex flex-wrap gap-4 text-[10px] text-muted-foreground">
+          <div className="border-border text-muted-foreground flex flex-wrap gap-4 border-t px-4 py-2 text-[10px]">
             {DETECTION_LEGEND.map((item) => (
               <span key={item.label} className="flex items-center gap-1.5">
                 <span
-                  className={cn("size-2 rounded-full shrink-0", item.color)}
+                  className={cn("size-2 shrink-0 rounded-full", item.color)}
                   aria-hidden
                 />
                 {item.label}

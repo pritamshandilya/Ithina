@@ -7,17 +7,22 @@
  *
  * Shared between Maker and Checker flows.
  */
-
 import { useState } from "react";
+
+import { AllIssuesTab } from "./AllIssuesTab";
+import { AllItemsTab } from "./AllItemsTab";
 import { ComplianceReportHeader } from "./ComplianceReportHeader";
 import { ComplianceReportMetrics } from "./ComplianceReportMetrics";
 import { ComplianceReportTabs } from "./ComplianceReportTabs";
-import { OverviewChartsTab } from "./OverviewChartsTab";
-import { AllItemsTab } from "./AllItemsTab";
-import { AllIssuesTab } from "./AllIssuesTab";
-import { ImageComparisonTab } from "./ImageComparisonTab";
-import type { ReportSnippet } from "@/lib/analysis";
 import type { ReportTabId } from "./ComplianceReportTabs";
+import { ImageComparisonTab } from "./ImageComparisonTab";
+import { OverviewChartsTab } from "./OverviewChartsTab";
+import type {
+  AllIssuesReportData,
+  AllItemsReportData,
+  ImageComparisonData,
+  ReportSnippet,
+} from "@/lib/analysis";
 import { cn } from "@/lib/utils";
 import type { PlanogramPayload } from "@/types/planogram";
 
@@ -28,6 +33,14 @@ export interface ComplianceReportFullProps {
   imageUrl?: string | null;
   /** Planogram associated with analyzed fixture */
   planogramPayload?: PlanogramPayload | null;
+  /** Optional detailed items payload */
+  allItems?: AllItemsReportData | null;
+  /** Optional detailed issues payload */
+  allIssues?: AllIssuesReportData | null;
+  /** Optional image comparison payload */
+  imageComparison?: ImageComparisonData | null;
+  /** Source analysis type */
+  analysisType?: "PLANOGRAM" | "ADHOC" | null;
   /** Back navigation target */
   backTo?: string;
   /** Callback when Export PDF is clicked */
@@ -42,12 +55,17 @@ export function ComplianceReportFull({
   report,
   imageUrl = null,
   planogramPayload = null,
+  allItems = null,
+  allIssues = null,
+  imageComparison = null,
+  analysisType = null,
   backTo,
   onExportPdf,
   isExportingPdf = false,
   className,
 }: ComplianceReportFullProps) {
   const [activeTab, setActiveTab] = useState<ReportTabId>("overview");
+  const isAdhoc = analysisType === "ADHOC";
 
   const subtitle = report.planogramName
     ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
@@ -57,11 +75,11 @@ export function ComplianceReportFull({
     <div
       className={cn(
         "compliance-report-full print-report flex min-h-0 flex-1 flex-col",
-        className
+        className,
       )}
     >
       {/* Static section: header, metrics, tabs - stays fixed when tab content scrolls */}
-      <div className="sticky top-0 z-10 shrink-0 space-y-4 bg-primary pb-4">
+      <div className="bg-primary sticky top-0 z-10 shrink-0 space-y-4 pb-4">
         <ComplianceReportHeader
           title="Combined Compliance & Analysis Report"
           subtitle={subtitle}
@@ -86,31 +104,29 @@ export function ComplianceReportFull({
         <ComplianceReportTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          issuesCount={
-            report.issuesToReview.length +
-            report.issueCategories.reduce((a, c) => a + c.count, 0)
-          }
-          itemsCount={report.detected + report.extra}
+          imageTabLabel={isAdhoc ? "Observed Fixture" : undefined}
         />
       </div>
 
       {/* Scrollable tab content - fixed width; overflow-x-hidden keeps width consistent; scrollbar-gutter prevents layout shift */}
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-gutter:stable]">
-        <div className="w-full min-w-0 max-w-full">
-          {activeTab === "overview" && (
-            <OverviewChartsTab report={report} />
-          )}
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]">
+        <div className="w-full max-w-full min-w-0">
+          {activeTab === "overview" && <OverviewChartsTab report={report} />}
 
           {activeTab === "image-comparison" && (
             <ImageComparisonTab
+              data={imageComparison}
               imageUrl={imageUrl}
               planogramPayload={planogramPayload}
+              showPlanogramPanel={!isAdhoc}
             />
           )}
 
-          {activeTab === "issues" && <AllIssuesTab />}
+          {activeTab === "issues" && <AllIssuesTab data={allIssues} />}
 
-          {activeTab === "items" && <AllItemsTab />}
+          {activeTab === "items" && (
+            <AllItemsTab data={allItems} showPlanogramItems={!isAdhoc} />
+          )}
         </div>
       </div>
     </div>

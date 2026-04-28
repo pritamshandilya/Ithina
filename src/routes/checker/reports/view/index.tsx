@@ -5,10 +5,14 @@
  * Uses mapped report payload from navigation state when available.
  */
 
-import { createFileRoute, useLocation } from "@tanstack/react-router";
+import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
+import { useState } from "react";
 import MainLayout from "@/components/layouts/main";
+import { Button } from "@/components/ui/button";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
-import { MOCK_REPORT_SNIPPET, type ReportSnippet } from "@/lib/analysis";
+import { type ReportSnippet } from "@/lib/analysis";
+import { exportReportToPdf } from "@/lib/reports/pdf-export";
+import { useToast } from "@/hooks/use-toast";
 
 export const Route = createFileRoute("/checker/reports/view/")({
   component: CheckerFullReportPage,
@@ -16,13 +20,59 @@ export const Route = createFileRoute("/checker/reports/view/")({
 
 function CheckerFullReportPage() {
   const location = useLocation();
-  const state = (location.state as { imageUrl?: string; report?: ReportSnippet } | undefined);
+  const { toast } = useToast();
+  const state = (location.state as {
+    imageUrl?: string;
+    report?: ReportSnippet;
+    backTo?: string;
+  } | undefined);
   const imageUrl = state?.imageUrl;
-  const report = state?.report ?? MOCK_REPORT_SNIPPET;
+  const report = state?.report;
+  const backTo = state?.backTo ?? "/checker/audit-review";
+  const [isExporting, setIsExporting] = useState(false);
 
-  const handleExportPdf = () => {
-    // TODO: Implement PDF export
+  const handleExportPdf = async () => {
+    if (!report || isExporting) return;
+    setIsExporting(true);
+    try {
+      await exportReportToPdf({
+        data: {
+          report,
+          imageUrl: imageUrl ?? null,
+        },
+        filename: "checker-compliance-report.pdf",
+      });
+      toast({
+        title: "PDF exported",
+        description:
+          "The report has been exported. A preview opened in a new tab and the file was downloaded.",
+      });
+    } catch {
+      toast({
+        title: "Export failed",
+        description: "Could not generate the PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
+
+  if (!report) {
+    return (
+      <MainLayout>
+        <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-primary p-6 text-center">
+          <p className="text-foreground text-base font-semibold">Full report is unavailable</p>
+          <p className="text-muted-foreground max-w-md text-sm">
+            Open this page from a report entry that includes analysis data.
+          </p>
+          <Button asChild variant="outline">
+            <Link to={backTo}>Back</Link>
+          </Button>
+        </div>
+      </MainLayout>
+    );
+  }
 
   return (
     <MainLayout>
@@ -31,7 +81,9 @@ function CheckerFullReportPage() {
           <ComplianceReportFull
             report={report}
             imageUrl={imageUrl}
+            backTo={backTo}
             onExportPdf={handleExportPdf}
+            isExportingPdf={isExporting}
           />
         </div>
       </div>

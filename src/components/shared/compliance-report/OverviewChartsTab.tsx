@@ -281,7 +281,10 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
 
       {/* Shelf-by-Shelf Breakdown */}
       <ReportCard title="Shelf-by-Shelf Breakdown" icon={Layers}>
-        <OverviewShelfBreakdown shelfCompliance={report.shelfCompliance} />
+        <OverviewShelfBreakdown
+          shelfCompliance={report.shelfCompliance}
+          issuesToReview={report.issuesToReview}
+        />
       </ReportCard>
     </div>
   );

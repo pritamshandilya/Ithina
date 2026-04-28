@@ -145,10 +145,15 @@ export function StoreFixtureDetailPage({
       planogramId: fixture.planogram_id ?? "",
       complianceRuleSetId:
         fixtureComplianceOverrides[fixture.id] ??
+        fixture.compliance_rule_set_id ??
         selectedStore?.default_compliance_rule_set_id ??
         "",
     });
-  }, [fixture, fixtureComplianceOverrides, selectedStore?.default_compliance_rule_set_id]);
+  }, [
+    fixture,
+    fixtureComplianceOverrides,
+    selectedStore?.default_compliance_rule_set_id,
+  ]);
 
   const planogramOptions = planogramList.map((item) => ({ id: item.id, name: item.name }));
   const isMissingPlanogram = !!preview && !resolvedPlanogramPayload;
@@ -220,18 +225,36 @@ export function StoreFixtureDetailPage({
     }
   }, [effectiveStoreId, fixture, fixtureDraft.planogramId, queryClient, toast]);
 
-  const handleSaveComplianceAssociation = useCallback(() => {
-    if (!fixture) return;
-    setFixtureComplianceOverrides((previous) => ({
-      ...previous,
-      [fixture.id]: fixtureDraft.complianceRuleSetId || null,
-    }));
-    toast({
-      title: "Compliance rule set saved",
-      description: "This association is currently stored on frontend only.",
-      variant: "success",
-    });
-  }, [fixture, fixtureDraft.complianceRuleSetId, toast]);
+  const handleSaveComplianceAssociation = useCallback(async () => {
+    if (!fixture || !effectiveStoreId) return;
+    try {
+      await updateStoreFixture(effectiveStoreId, fixture.id, {
+        compliance_rule_set_id: fixtureDraft.complianceRuleSetId || null,
+      });
+      await queryClient.invalidateQueries({ queryKey: ["maker", "fixtures", "list"] });
+      setFixtureComplianceOverrides((previous) => ({
+        ...previous,
+        [fixture.id]: fixtureDraft.complianceRuleSetId || null,
+      }));
+      toast({
+        title: "Compliance rule set saved",
+        description: "Fixture compliance override was updated.",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to save compliance rule set",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [
+    effectiveStoreId,
+    fixture,
+    fixtureDraft.complianceRuleSetId,
+    queryClient,
+    toast,
+  ]);
 
   const handleInlineShelfUpdate = useCallback(
     async (

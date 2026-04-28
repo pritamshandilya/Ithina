@@ -1,25 +1,33 @@
-import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Link,
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { LayoutGrid, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
 import { createMakerPlanogramTableColumns } from "@/components/planogram/planogram-maker-table-columns";
-import { PLANOGRAM_INITIAL_SORT, PlanogramActionsMenu } from "@/components/planogram/planogram-table-columns";
-import { DataTable } from "@/components/ui/data-table";
+import {
+  PLANOGRAM_INITIAL_SORT,
+  PlanogramActionsMenu,
+} from "@/components/planogram/planogram-table-columns";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { getShelfFixtureId } from "@/lib/fixtures/analysis";
+import { useStore } from "@/providers/store";
 import { fetchStoreFixtures as fetchCheckerStoreFixtures } from "@/queries/checker/api/fixtures";
 import { useComplianceRuleSets, useShelves } from "@/queries/maker";
-import { PageHeader } from "@/components/shared/page-header";
-import { useStore } from "@/providers/store";
-import { useToast } from "@/hooks/use-toast";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
-import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
-import { getShelfFixtureId } from "@/lib/fixtures/analysis";
+import type { PlanogramArrangement } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/adhoc/")({
   component: AdhocAnalysisPage,
@@ -31,8 +39,10 @@ function toPlanogramRow(
   fixturePlanogramId?: string | null,
 ): PlanogramShelfRow {
   const arrangement = shelf.arrangement as PlanogramArrangement | undefined;
-  const skuCount = arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ?? 0;
-  const issues = shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
+  const skuCount =
+    arrangement?.shelfOrder?.reduce((n, s) => n + s.productIds.length, 0) ?? 0;
+  const issues =
+    shelf.status === "returned" ? 2 : shelf.status === "draft" ? 1 : 0;
   return {
     ...shelf,
     planogramId: fixturePlanogramId ?? undefined,
@@ -58,15 +68,21 @@ function AdhocAnalysisPage() {
   });
   const { data: ruleSets = [] } = useComplianceRuleSets();
   const [searchQuery, setSearchQuery] = useState("");
-  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 50 });
+  const [tablePagination, setTablePagination] = useState({
+    page: 1,
+    pageSize: 50,
+  });
   const [actionsMenu, setActionsMenu] = useState<{
     row: PlanogramShelfRow;
     triggerEl: HTMLElement;
     anchorPoint: { x: number; y: number };
   } | null>(null);
   const [complianceSheetOpen, setComplianceSheetOpen] = useState(false);
-  const [complianceSheetRuleSet, setComplianceSheetRuleSet] = useState<ComplianceRuleSetSummary | null>(null);
-  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<string | null>(null);
+  const [complianceSheetRuleSet, setComplianceSheetRuleSet] =
+    useState<ComplianceRuleSetSummary | null>(null);
+  const [complianceSheetRuleSetName, setComplianceSheetRuleSetName] = useState<
+    string | null
+  >(null);
   const actionsMenuRef = useRef<HTMLDivElement>(null);
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const defaultRuleSetName = useMemo(
@@ -111,7 +127,8 @@ function AdhocAnalysisPage() {
         fixtureId: fixture.id,
         fixtureCode: fixture.code ?? "",
         fixtureShelvesCount: fixtureShelves.length,
-        aisleCode: fixture.physical_location.aisle || baseRow.aisleCode || undefined,
+        aisleCode:
+          fixture.physical_location.aisle || baseRow.aisleCode || undefined,
         zone: fixture.physical_location.zone || baseRow.zone,
         section: fixture.physical_location.section || baseRow.section,
         fixtureType: fixture.type || baseRow.fixtureType,
@@ -128,8 +145,12 @@ function AdhocAnalysisPage() {
       (r) =>
         r.shelfName.toLowerCase().includes(q) ||
         r.complianceRuleSet?.toLowerCase().includes(q) ||
-        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
-        String((r as { fixtureId?: string }).fixtureId ?? "").toLowerCase().includes(q) ||
+        String(r.aisleCode ?? "")
+          .toLowerCase()
+          .includes(q) ||
+        String((r as { fixtureId?: string }).fixtureId ?? "")
+          .toLowerCase()
+          .includes(q) ||
         r.fixtureCode?.toLowerCase().includes(q) ||
         r.zone?.toLowerCase().includes(q) ||
         r.section?.toLowerCase().includes(q) ||
@@ -148,14 +169,17 @@ function AdhocAnalysisPage() {
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [actionsMenu]);
 
-  const handleOpenMenu = useCallback((row: PlanogramShelfRow, triggerEl: HTMLElement) => {
-    const triggerRect = triggerEl.getBoundingClientRect();
-    setActionsMenu({
-      row,
-      triggerEl,
-      anchorPoint: { x: triggerRect.left, y: triggerRect.top },
-    });
-  }, []);
+  const handleOpenMenu = useCallback(
+    (row: PlanogramShelfRow, triggerEl: HTMLElement) => {
+      const triggerRect = triggerEl.getBoundingClientRect();
+      setActionsMenu({
+        row,
+        triggerEl,
+        anchorPoint: { x: triggerRect.left, y: triggerRect.top },
+      });
+    },
+    [],
+  );
 
   const handleRunAdhoc = useCallback(
     (row: PlanogramShelfRow) => {
@@ -242,9 +266,9 @@ function AdhocAnalysisPage() {
         </PageHeader>
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
+          <div className="mt-4 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
@@ -257,36 +281,46 @@ function AdhocAnalysisPage() {
           </div>
 
           {filteredRows.length > 0 && (
-            <p className="mt-4 shrink-0 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-4 shrink-0 text-sm">
               Showing{" "}
-              <span className="font-semibold text-foreground">
+              <span className="text-foreground font-semibold">
                 {Math.max(
                   0,
                   Math.min(
                     tablePagination.pageSize,
-                    filteredRows.length - (tablePagination.page - 1) * tablePagination.pageSize,
+                    filteredRows.length -
+                      (tablePagination.page - 1) * tablePagination.pageSize,
                   ),
                 )}
               </span>{" "}
-              of <span className="font-semibold text-foreground">{filteredRows.length}</span>{" "}
+              of{" "}
+              <span className="text-foreground font-semibold">
+                {filteredRows.length}
+              </span>{" "}
               fixture{filteredRows.length !== 1 ? "s" : ""}
             </p>
           )}
 
-          <div className="mt-4 flex-1 min-h-0 overflow-auto">
+          <div className="mt-4 min-h-0 flex-1 overflow-auto">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-64 w-full rounded-lg" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-card/50 p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                  <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
+              <div className="border-border bg-card/50 flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-12 text-center">
+                <div className="bg-muted mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+                  <LayoutGrid
+                    className="text-muted-foreground h-7 w-7"
+                    aria-hidden
+                  />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground">No fixtures found</h3>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Add fixtures first to run adhoc analysis and view compliance details.
+                <h3 className="text-foreground text-lg font-semibold">
+                  No fixtures found
+                </h3>
+                <p className="text-muted-foreground mt-2 max-w-sm text-sm">
+                  Add fixtures first to run adhoc analysis and view compliance
+                  details.
                 </p>
                 <Button asChild variant="success" className="mt-6">
                   <Link
@@ -299,9 +333,7 @@ function AdhocAnalysisPage() {
                 </Button>
               </div>
             ) : (
-              <div ref={tableWrapperRef}>
-                {fixtureTable}
-              </div>
+              <div ref={tableWrapperRef}>{fixtureTable}</div>
             )}
           </div>
         </div>

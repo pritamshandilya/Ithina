@@ -4,21 +4,15 @@
  * Renders the Combined Compliance & Analysis Report as a native PDF.
  * No DOM/canvas – direct PDF generation. Immune to oklch/oklab CSS issues.
  */
-
 import {
   Document,
-  Page,
-  View,
-  Text,
   Image,
+  Page,
   StyleSheet,
+  Text,
+  View,
 } from "@react-pdf/renderer";
-import type { ReportPdfData } from "@/types/reports";
-import {
-  MOCK_ALL_ITEMS_REPORT,
-  MOCK_ALL_ISSUES_REPORT,
-  MOCK_IMAGE_COMPARISON,
-} from "@/lib/analysis";
+
 import {
   severityBg,
   severityBorder,
@@ -28,6 +22,12 @@ import {
   variantBg,
   variantBorder,
 } from "./report-pdf-color-utils";
+import {
+  type AllIssuesReportData,
+  type AllItemsReportData,
+  type ImageComparisonData,
+} from "@/lib/analysis";
+import type { ReportPdfData } from "@/types/reports";
 
 const COLORS = {
   text: "#1a1a1a",
@@ -107,7 +107,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   table: { width: "100%", marginBottom: 12 },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  tableRow: {
+    flexDirection: "row",
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
   tableHeader: {
     flexDirection: "row",
     backgroundColor: "#e8e8e8",
@@ -145,9 +149,17 @@ export interface ReportPdfDocumentProps {
 
 export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
   const { report, imageUrl, allItems, allIssues, imageComparison } = data;
-  const items = allItems ?? MOCK_ALL_ITEMS_REPORT;
-  const issues = allIssues ?? MOCK_ALL_ISSUES_REPORT;
-  const imgData = imageComparison ?? MOCK_IMAGE_COMPARISON;
+  const items: AllItemsReportData = allItems ?? {
+    planogramItems: [],
+    skuFacings: [],
+  };
+  const issues: AllIssuesReportData = allIssues ?? {
+    categories: [],
+  };
+  const imgData: ImageComparisonData = imageComparison ?? {
+    planogramShelves: [],
+    detectionOverlays: [],
+  };
 
   const subtitle = report.planogramName
     ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
@@ -158,36 +170,60 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.section}>
-          <Text style={styles.title}>Combined Compliance & Analysis Report</Text>
+          <Text style={styles.title}>
+            Combined Compliance & Analysis Report
+          </Text>
           <Text style={styles.subtitle}>{subtitle}</Text>
         </View>
 
         {/* Metrics */}
         <View style={[styles.section, styles.metricsRow]}>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: report.complianceScore >= 80 ? COLORS.success : report.complianceScore > 0 ? COLORS.warning : COLORS.destructive }]}>
+            <Text
+              style={[
+                styles.metricValue,
+                {
+                  color:
+                    report.complianceScore >= 80
+                      ? COLORS.success
+                      : report.complianceScore > 0
+                        ? COLORS.warning
+                        : COLORS.destructive,
+                },
+              ]}
+            >
               {report.complianceScore}%
             </Text>
             <Text style={styles.metricLabel}>Compliance</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.success }]}>{report.matched}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.success }]}>
+              {report.matched}
+            </Text>
             <Text style={styles.metricLabel}>Matched</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.warning }]}>{report.misplaced}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.warning }]}>
+              {report.misplaced}
+            </Text>
             <Text style={styles.metricLabel}>Misplaced</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.destructive }]}>{report.missing}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.destructive }]}>
+              {report.missing}
+            </Text>
             <Text style={styles.metricLabel}>Missing</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.blue }]}>{report.extra}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.blue }]}>
+              {report.extra}
+            </Text>
             <Text style={styles.metricLabel}>Extra</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.warning }]}>{report.issues}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.warning }]}>
+              {report.issues}
+            </Text>
             <Text style={styles.metricLabel}>Issues</Text>
           </View>
           <View style={styles.metricCard}>
@@ -203,7 +239,9 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
             <Text style={styles.metricLabel}>Detected</Text>
           </View>
           <View style={styles.metricCard}>
-            <Text style={[styles.metricValue, { color: COLORS.destructive }]}>{report.gap}</Text>
+            <Text style={[styles.metricValue, { color: COLORS.destructive }]}>
+              {report.gap}
+            </Text>
             <Text style={styles.metricLabel}>Gap</Text>
           </View>
         </View>
@@ -213,8 +251,14 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
           <Text style={styles.heading}>Overview & Charts</Text>
           <View style={styles.twoCol}>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 6 }]}>Executive Summary</Text>
-              <Text style={{ fontSize: 10, color: COLORS.text, marginBottom: 8 }}>{report.executiveSummary}</Text>
+              <Text style={[styles.subtitle, { marginBottom: 6 }]}>
+                Executive Summary
+              </Text>
+              <Text
+                style={{ fontSize: 10, color: COLORS.text, marginBottom: 8 }}
+              >
+                {report.executiveSummary}
+              </Text>
               {report.keyFindings.map((f, i) => (
                 <View
                   key={i}
@@ -237,14 +281,21 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                           : "rgba(167, 139, 250, 0.3)",
                   }}
                 >
-                  <Text style={{ fontSize: 9, color: COLORS.text }}>{f.text}</Text>
+                  <Text style={{ fontSize: 9, color: COLORS.text }}>
+                    {f.text}
+                  </Text>
                 </View>
               ))}
             </View>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 6 }]}>AI Recommendations</Text>
+              <Text style={[styles.subtitle, { marginBottom: 6 }]}>
+                AI Recommendations
+              </Text>
               {report.aiRecommendations.map((rec, i) => (
-                <Text key={i} style={{ fontSize: 9, color: COLORS.text, marginBottom: 4 }}>
+                <Text
+                  key={i}
+                  style={{ fontSize: 9, color: COLORS.text, marginBottom: 4 }}
+                >
                   • {rec}
                 </Text>
               ))}
@@ -253,10 +304,14 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
 
           <View style={styles.threeCol}>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>Compliance by Shelf</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                Compliance by Shelf
+              </Text>
               {report.shelfCompliance.map((s) => (
                 <View key={s.shelfName} style={styles.row}>
-                  <Text style={{ width: 60, fontSize: 9, color: COLORS.text }}>{s.shelfName}</Text>
+                  <Text style={{ width: 60, fontSize: 9, color: COLORS.text }}>
+                    {s.shelfName}
+                  </Text>
                   <View style={styles.barBg}>
                     <View
                       style={[
@@ -264,38 +319,68 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                         {
                           width: `${s.compliance}%`,
                           backgroundColor:
-                            s.compliance >= 80 ? COLORS.success : s.compliance > 0 ? COLORS.warning : COLORS.destructive,
+                            s.compliance >= 80
+                              ? COLORS.success
+                              : s.compliance > 0
+                                ? COLORS.warning
+                                : COLORS.destructive,
                         },
                       ]}
                     />
                   </View>
-                  <Text style={{ fontSize: 9, fontWeight: 600, color: COLORS.text, width: 24, textAlign: "right" }}>
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: COLORS.text,
+                      width: 24,
+                      textAlign: "right",
+                    }}
+                  >
                     {s.compliance}%
                   </Text>
                 </View>
               ))}
             </View>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>Issue Distribution</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                Issue Distribution
+              </Text>
               <View style={styles.row}>
-                <Text style={{ fontSize: 9, color: COLORS.text }}>Matched: {report.issueDistribution.matched}</Text>
+                <Text style={{ fontSize: 9, color: COLORS.text }}>
+                  Matched: {report.issueDistribution.matched}
+                </Text>
               </View>
               <View style={styles.row}>
-                <Text style={{ fontSize: 9, color: COLORS.text }}>Misplaced: {report.issueDistribution.misplaced}</Text>
+                <Text style={{ fontSize: 9, color: COLORS.text }}>
+                  Misplaced: {report.issueDistribution.misplaced}
+                </Text>
               </View>
               <View style={styles.row}>
-                <Text style={{ fontSize: 9, color: COLORS.text }}>Missing: {report.issueDistribution.missing}</Text>
+                <Text style={{ fontSize: 9, color: COLORS.text }}>
+                  Missing: {report.issueDistribution.missing}
+                </Text>
               </View>
               <View style={styles.row}>
-                <Text style={{ fontSize: 9, color: COLORS.text }}>Extra: {report.issueDistribution.extra}</Text>
+                <Text style={{ fontSize: 9, color: COLORS.text }}>
+                  Extra: {report.issueDistribution.extra}
+                </Text>
               </View>
             </View>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>All Issues Breakdown</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                All Issues Breakdown
+              </Text>
               {report.issueCategories.map((cat) => (
                 <View key={cat.id} style={styles.row}>
-                  <Text style={{ width: 80, fontSize: 9, color: COLORS.text }}>{cat.title}</Text>
-                  <Text style={{ fontSize: 9, fontWeight: 600, color: COLORS.text }}>{cat.count}</Text>
+                  <Text style={{ width: 80, fontSize: 9, color: COLORS.text }}>
+                    {cat.title}
+                  </Text>
+                  <Text
+                    style={{ fontSize: 9, fontWeight: 600, color: COLORS.text }}
+                  >
+                    {cat.count}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -306,15 +391,26 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
         <View style={styles.section}>
           <Text style={styles.heading}>Image Comparison</Text>
           <Text style={[styles.subtitle, { marginBottom: 6 }]}>
-            Side-by-side comparison: Planogram (expected layout) vs Real Shelf (captured image).
+            Side-by-side comparison: Planogram (expected layout) vs Real Shelf
+            (captured image).
           </Text>
           <View style={styles.twoCol}>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>Planogram (Expected)</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                Planogram (Expected)
+              </Text>
               {imgData.planogramShelves.map((shelf) => (
                 <View key={shelf.shelfName} style={{ marginBottom: 10 }}>
-                  <Text style={{ fontSize: 9, fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>
-                    {shelf.shelfName}: {shelf.shelfLabel ?? ""} — {shelf.units} UNITS
+                  <Text
+                    style={{
+                      fontSize: 9,
+                      fontWeight: 600,
+                      color: COLORS.text,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {shelf.shelfName}: {shelf.shelfLabel ?? ""} — {shelf.units}{" "}
+                    UNITS
                   </Text>
                   <View style={{ flexDirection: "row", flexWrap: "wrap" }}>
                     {shelf.slots.map((slot) => (
@@ -330,7 +426,8 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                         ]}
                       >
                         <Text style={{ fontSize: 8, color: COLORS.text }}>
-                          {slot.shortName} {slot.detectedFacings}/{slot.expectedFacings} D{slot.depth}
+                          {slot.shortName} {slot.detectedFacings}/
+                          {slot.expectedFacings} D{slot.depth}
                         </Text>
                       </View>
                     ))}
@@ -339,11 +436,17 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
               ))}
             </View>
             <View style={[styles.card, styles.col]}>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>Real Shelf (Captured)</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                Real Shelf (Captured)
+              </Text>
               {imageUrl ? (
                 <Image
                   src={imageUrl}
-                  style={{ maxWidth: "100%", maxHeight: 200, objectFit: "contain" }}
+                  style={{
+                    maxWidth: "100%",
+                    maxHeight: 200,
+                    objectFit: "contain",
+                  }}
                 />
               ) : (
                 <View style={styles.noImage}>
@@ -368,16 +471,42 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                 },
               ]}
             >
-              <Text style={{ fontWeight: 600, color: COLORS.text, marginBottom: 4 }}>
+              <Text
+                style={{ fontWeight: 600, color: COLORS.text, marginBottom: 4 }}
+              >
                 {category.title} {category.issues.length}
               </Text>
-              <Text style={[styles.subtitle, { marginBottom: 8 }]}>{category.description}</Text>
+              <Text style={[styles.subtitle, { marginBottom: 8 }]}>
+                {category.description}
+              </Text>
               {category.issues.map((issue) => (
                 <View key={issue.id} style={styles.issueCard}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                    }}
+                  >
                     <View>
-                      <Text style={{ fontWeight: 600, color: COLORS.text, fontSize: 9 }}>{issue.productName}</Text>
-                      <Text style={{ fontSize: 9, color: COLORS.textMuted, marginTop: 2 }}>{issue.description}</Text>
+                      <Text
+                        style={{
+                          fontWeight: 600,
+                          color: COLORS.text,
+                          fontSize: 9,
+                        }}
+                      >
+                        {issue.productName}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 9,
+                          color: COLORS.textMuted,
+                          marginTop: 2,
+                        }}
+                      >
+                        {issue.description}
+                      </Text>
                     </View>
                     <View
                       style={{
@@ -389,7 +518,13 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
                         borderColor: severityBorder(issue.severity),
                       }}
                     >
-                      <Text style={{ fontSize: 8, color: severityColor(issue.severity), fontWeight: 600 }}>
+                      <Text
+                        style={{
+                          fontSize: 8,
+                          color: severityColor(issue.severity),
+                          fontWeight: 600,
+                        }}
+                      >
                         {issue.severity}
                       </Text>
                     </View>
@@ -403,7 +538,9 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
         {/* All Items */}
         <View style={styles.section}>
           <Text style={styles.heading}>All Items</Text>
-          <Text style={[styles.subtitle, { marginBottom: 6 }]}>SKU Facings & Depth Summary</Text>
+          <Text style={[styles.subtitle, { marginBottom: 6 }]}>
+            SKU Facings & Depth Summary
+          </Text>
           <PdfTable
             columns={[
               { key: "productName", header: "SKU / Product", flex: 2 },
@@ -416,10 +553,17 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
             ]}
             data={items.skuFacings}
             renderCell={(row, key) => {
-              if (key === "productName") return `${row.productName} (${row.sku})`;
+              if (key === "productName")
+                return `${row.productName} (${row.sku})`;
               if (key === "facingDiffVariant")
-                return row.facingDiffVariant === "ok" ? "OK" : row.facingDiffVariant === "extra" ? "Extra" : "Short";
-              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
+                return row.facingDiffVariant === "ok"
+                  ? "OK"
+                  : row.facingDiffVariant === "extra"
+                    ? "Extra"
+                    : "Short";
+              return String(
+                (row as unknown as Record<string, unknown>)[key] ?? "—",
+              );
             }}
           />
           <Text style={[styles.subtitle, { marginTop: 12, marginBottom: 6 }]}>
@@ -436,7 +580,9 @@ export function ReportPdfDocument({ data }: ReportPdfDocumentProps) {
             renderCell={(row, key) => {
               if (key === "productName") return `${row.productName} ${row.sku}`;
               if (key === "complianceLevel") return String(row.complianceLevel);
-              return String((row as unknown as Record<string, unknown>)[key] ?? "—");
+              return String(
+                (row as unknown as Record<string, unknown>)[key] ?? "—",
+              );
             }}
           />
         </View>
@@ -466,11 +612,16 @@ function PdfTable<T extends { id?: string }>({
       {data.map((row, i) => (
         <View
           key={(row.id as string) ?? i}
-          style={[styles.tableRow, { backgroundColor: i % 2 === 0 ? COLORS.bgCard : "#f5f5f5" }]}
+          style={[
+            styles.tableRow,
+            { backgroundColor: i % 2 === 0 ? COLORS.bgCard : "#f5f5f5" },
+          ]}
         >
           {columns.map((c) => (
             <View key={c.key} style={[styles.tableCell, { flex: c.flex }]}>
-              <Text style={{ fontSize: 8, color: COLORS.text }}>{renderCell(row, c.key)}</Text>
+              <Text style={{ fontSize: 8, color: COLORS.text }}>
+                {renderCell(row, c.key)}
+              </Text>
             </View>
           ))}
         </View>
@@ -478,4 +629,3 @@ function PdfTable<T extends { id?: string }>({
     </View>
   );
 }
-

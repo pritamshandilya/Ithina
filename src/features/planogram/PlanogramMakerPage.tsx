@@ -296,7 +296,11 @@ export function PlanogramMakerPage() {
       navigate({
         to: "/maker/audits/planogram/run/$shelfId",
         params: { shelfId: targetShelfId },
-        search: { from: location.pathname },
+        search: {
+          from: location.pathname,
+          fixtureId: row.fixtureId ?? row.id,
+          planogramId: row.planogramId ?? undefined,
+        },
       });
       setActionsMenu(null);
     },

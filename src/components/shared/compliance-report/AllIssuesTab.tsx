@@ -2,7 +2,7 @@
  * All Issues Tab
  *
  * Collapsible issue categories with search and filter.
- * Uses mock data – replace with API when available.
+ * Data is provided by report container.
  */
 
 import { useMemo, useState } from "react";
@@ -16,7 +16,6 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { MOCK_ALL_ISSUES_REPORT } from "@/lib/analysis/mock-all-issues-report";
 import type {
   AllIssuesReportData,
   IssueCategoryGroup,
@@ -91,15 +90,15 @@ function filterCategories(
 }
 
 export interface AllIssuesTabProps {
-  /** Report data – defaults to mock; pass from API when available */
-  data?: AllIssuesReportData;
+  /** Report data */
+  data?: AllIssuesReportData | null;
   /** PDF export mode: hide search/filters, expand all categories */
   pdfMode?: boolean;
   className?: string;
 }
 
 export function AllIssuesTab({
-  data = MOCK_ALL_ISSUES_REPORT,
+  data = null,
   pdfMode = false,
   className,
 }: AllIssuesTabProps) {
@@ -107,9 +106,11 @@ export function AllIssuesTab({
   const [activeFilter, setActiveFilter] = useState<IssueCategoryVariant | "all">("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
+  const categories = data?.categories ?? [];
+
   const filteredCategories = useMemo(
-    () => filterCategories(data.categories, activeFilter, searchQuery),
-    [data.categories, activeFilter, searchQuery]
+    () => filterCategories(categories, activeFilter, searchQuery),
+    [categories, activeFilter, searchQuery]
   );
 
   const toggleExpanded = (id: string) => {
@@ -121,27 +122,32 @@ export function AllIssuesTab({
     {
       key: "misplaced",
       label: "Misplaced",
-      count: data.categories.find((c) => c.variant === "misplaced")?.count ?? 0,
+      count: categories.find((c) => c.variant === "misplaced")?.count ?? 0,
     },
     {
       key: "missing",
       label: "Missing",
-      count: data.categories.find((c) => c.variant === "missing")?.count ?? 0,
+      count: categories.find((c) => c.variant === "missing")?.count ?? 0,
     },
     {
       key: "extra",
       label: "Extra",
-      count: data.categories.find((c) => c.variant === "extra")?.count ?? 0,
+      count: categories.find((c) => c.variant === "extra")?.count ?? 0,
     },
     {
       key: "analysis",
       label: "Analysis Issues",
-      count: data.categories.find((c) => c.variant === "analysis")?.count ?? 0,
+      count: categories.find((c) => c.variant === "analysis")?.count ?? 0,
     },
   ];
 
   return (
     <div className={cn("w-full min-w-0 space-y-4", className)}>
+      {!data && (
+        <div className="rounded-xl border border-border bg-card/60 p-6 text-center text-muted-foreground">
+          <p className="text-sm">No data available.</p>
+        </div>
+      )}
       {/* Search – hidden in PDF mode */}
       {!pdfMode && (
       <div className="relative">
@@ -285,7 +291,7 @@ export function AllIssuesTab({
 
       {filteredCategories.length === 0 && (
         <div className="rounded-xl border border-border bg-card/60 p-6 text-center text-muted-foreground">
-          <p className="text-sm">No issues match your search.</p>
+          <p className="text-sm">No data available.</p>
         </div>
       )}
     </div>

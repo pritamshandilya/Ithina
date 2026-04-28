@@ -5,6 +5,7 @@ export interface StoreFixtureApiModel {
   store_id: string;
   type: string;
   code?: string;
+  compliance_rule_set_id?: string | null;
   planogram_id?: string | null;
   current_planogram_assignment?: FixtureCurrentPlanogramAssignmentApiModel | null;
   dimensions: {
@@ -47,7 +48,6 @@ export interface FixturePlanogramAssignmentHistoryApiModel {
 export interface CreateStoreFixturePayload {
   type: string;
   code?: string;
-  planogram_id?: string;
   dimensions: {
     width: number;
     height: number;
@@ -61,10 +61,52 @@ export interface CreateStoreFixturePayload {
   };
 }
 
+export interface CreateStoreFixturesBulkPayload {
+  fixtures: Array<{
+    code: string;
+    type: string;
+    dimensions: {
+      width: number;
+      height: number;
+      depth: number;
+    };
+    dimension_unit: string;
+    physical_location: {
+      section: string;
+      aisle: string;
+      zone: string;
+    };
+    shelves: Array<{
+      code: string;
+      name: string;
+      width: number;
+      height: number;
+      vertical_position: number;
+    }>;
+  }>;
+}
+
+export interface CreateStoreFixturesBulkResponse {
+  fixtures: Array<
+    StoreFixtureApiModel & {
+      shelves: Array<{
+        id: string;
+        code: string;
+        name: string;
+        width: number;
+        height: number;
+        vertical_position: number;
+        created_at: string;
+        updated_at: string;
+      }>;
+    }
+  >;
+}
+
 export interface UpdateStoreFixturePayload {
   type?: string;
   code?: string;
-  planogram_id?: string | null;
+  compliance_rule_set_id?: string | null;
   dimensions?: {
     width?: number;
     height?: number;
@@ -107,6 +149,15 @@ export async function createStoreFixture(
     headers: { "X-Store-Id": storeId },
   });
   return normalizeFixture(fixture);
+}
+
+export async function createStoreFixturesBulk(
+  storeId: string,
+  payload: CreateStoreFixturesBulkPayload,
+): Promise<CreateStoreFixturesBulkResponse> {
+  return apiClient.post<CreateStoreFixturesBulkResponse>("/fixtures/bulk", payload, {
+    headers: { "X-Store-Id": storeId },
+  });
 }
 
 export async function updateStoreFixture(

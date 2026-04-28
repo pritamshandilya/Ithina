@@ -10,6 +10,9 @@ export { MOCK_REPORT_SNIPPET } from "./mock-report-snippets";
 export {
   mapAnalysisResultToReportSnippet,
   getAnnotatedImagePreview,
+  mapAnalysisResultToAllItemsReportData,
+  mapAnalysisResultToAllIssuesReportData,
+  mapPlanogramPayloadToAllItemsReportData,
 } from "./report-mapper";
 export { MOCK_ALL_ITEMS_REPORT } from "./mock-all-items-report";
 export { MOCK_ALL_ISSUES_REPORT } from "./mock-all-issues-report";

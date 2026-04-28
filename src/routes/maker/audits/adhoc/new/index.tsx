@@ -1,9 +1,7 @@
-import { createFileRoute, useLocation } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
-import { useShelves } from "@/queries/maker";
-import { groupShelvesByFixture } from "@/lib/fixtures/analysis";
+import { useStoreFixtures } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/adhoc/new/")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -26,34 +24,43 @@ function defaultBackPathForAdhocNew(pathname: string): string {
 }
 
 export function NewAdhocAnalysisPage() {
+  const navigate = useNavigate();
   const location = useLocation();
-  const search = (location.search ?? {}) as {
-    fixtureId?: string;
-    from?: string;
-  };
+  const search = Route.useSearch();
   const fixtureId = search.fixtureId;
   const fromState = (location.state as { from?: string } | undefined)?.from;
   const backTo =
     search.from ?? fromState ?? defaultBackPathForAdhocNew(location.pathname);
 
-  const { data: shelves } = useShelves();
-  const fixtureOptions = groupShelvesByFixture(shelves ?? []).map((fixture) => ({
-    id: fixture.fixtureId,
-    shelfName: fixture.fixtureName,
+  const { data: fixtures = [] } = useStoreFixtures();
+  const fixtureOptions = fixtures.map((fixture) => ({
+    id: fixture.id,
+    code: fixture.code,
+    fixtureName: fixture.type,
   }));
-  const [selectedFixtureId, setSelectedFixtureId] = useState<string>(fixtureId || "");
-  const isFixtureLocked = !!fixtureId;
+  const isFixtureLocked = Boolean(fixtureId && search.from);
+
+  const handleFixtureSelect = (nextFixtureId: string) => {
+    void navigate({
+      to: "/maker/audits/adhoc/new",
+      search: (prev: { fixtureId?: string; from?: string }) => ({
+        ...prev,
+        fixtureId: nextFixtureId || undefined,
+      }),
+      replace: true,
+    });
+  };
 
   return (
     <AnalysisFlowPage
       title="New Adhoc Analysis"
       backTo={backTo}
       analysisType="ADHOC"
-      showShelfSelection
-      selectedShelfId={selectedFixtureId}
-      onShelfSelect={setSelectedFixtureId}
-      shelves={fixtureOptions}
-      isShelfSelectionLocked={isFixtureLocked}
+      showFixtureSelection
+      selectedFixtureId={fixtureId ?? ""}
+      onFixtureSelect={handleFixtureSelect}
+      fixtures={fixtureOptions}
+      isFixtureSelectionLocked={isFixtureLocked}
     />
   );
 }

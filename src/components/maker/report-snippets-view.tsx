@@ -10,8 +10,6 @@
  * Compliance by shelf, planogram issue distribution, and issues to review
  * are available in the full report.
  */
-
-import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -24,16 +22,17 @@ import {
   Upload,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import { SendForApprovalModal } from "@/components/maker/send-for-approval-modal";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 import type {
-  ReportSnippet,
-  ReportKeyFinding,
   ReportIssueCategory,
+  ReportKeyFinding,
+  ReportSnippet,
 } from "@/lib/analysis";
+import { cn } from "@/lib/utils";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 
 export interface ReportSnippetsViewProps {
@@ -61,10 +60,12 @@ export interface ReportSnippetsViewProps {
 
 function KeyFindingIcon({ type }: { type: ReportKeyFinding["type"] }) {
   if (type === "error")
-    return <XCircle className="size-4 shrink-0 text-destructive" aria-hidden />;
+    return <XCircle className="text-destructive size-4 shrink-0" aria-hidden />;
   if (type === "warning")
-    return <AlertTriangle className="size-4 shrink-0 text-amber-500" aria-hidden />;
-  return <Info className="size-4 shrink-0 text-accent" aria-hidden />;
+    return (
+      <AlertTriangle className="size-4 shrink-0 text-amber-500" aria-hidden />
+    );
+  return <Info className="text-accent size-4 shrink-0" aria-hidden />;
 }
 
 function IssueCategoryVariant({
@@ -109,7 +110,8 @@ export function ReportSnippetsView({
       setSendForApprovalOpen(false);
       toast({
         title: "Sent for approval",
-        description: "This analysis has been sent to the Store Manager for review.",
+        description:
+          "This analysis has been sent to the Store Manager for review.",
       });
       navigate({ to: "/maker/audits/planogram" });
     }, 800);
@@ -132,17 +134,22 @@ export function ReportSnippetsView({
       <div className="flex flex-wrap items-center justify-between gap-4">
         {!isHistorical && (
           <div>
-            <h2 className="text-lg font-bold text-foreground">
+            <h2 className="text-foreground text-lg font-bold">
               Combined Compliance & Analysis Report
             </h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-muted-foreground mt-0.5 text-sm">
               {report.planogramName
                 ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
                 : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`}
             </p>
           </div>
         )}
-        <Button size="sm" variant="accent" asChild className={isHistorical ? "ml-auto" : undefined}>
+        <Button
+          size="sm"
+          variant="accent"
+          asChild
+          className={isHistorical ? "ml-auto" : undefined}
+        >
           <Link
             to={viewFullReportTo}
             preload="render"
@@ -159,16 +166,30 @@ export function ReportSnippetsView({
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr] lg:h-[min(640px,calc(100vh-14rem))] lg:items-stretch">
-        {/* Left: Observed Shelf */}
-        <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
-          <div className="border-b border-border px-4 py-3 flex items-center justify-between shrink-0">
-            <h3 className="text-sm font-semibold text-foreground">Observed Shelf</h3>
+      <div className="grid gap-4 lg:h-[min(640px,calc(100vh-14rem))] lg:grid-cols-[1fr_1fr] lg:items-stretch xl:grid-cols-[1.2fr_1fr]">
+        {/* Left: Observed Fixture */}
+        <section className="border-border bg-card/80 flex min-h-[320px] flex-col overflow-hidden rounded-xl border shadow-sm lg:min-h-0">
+          <div className="border-border flex shrink-0 items-center justify-between border-b px-4 py-3">
+            <h3 className="text-foreground text-sm font-semibold">
+              Observed Fixture
+            </h3>
             <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handleZoomIn} disabled={zoomLevel >= 2} aria-label="Zoom in">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomIn}
+                disabled={zoomLevel >= 2}
+                aria-label="Zoom in"
+              >
                 <Plus className="size-4" aria-hidden />
               </Button>
-              <Button variant="outline" size="sm" onClick={handleZoomOut} disabled={zoomLevel <= 0.5} aria-label="Zoom out">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleZoomOut}
+                disabled={zoomLevel <= 0.5}
+                aria-label="Zoom out"
+              >
                 <Minus className="size-4" aria-hidden />
               </Button>
               {!isHistorical && (
@@ -189,9 +210,9 @@ export function ReportSnippetsView({
               )}
             </div>
           </div>
-          <div className="flex-1 min-h-0 overflow-auto bg-muted/30">
+          <div className="bg-muted/30 min-h-0 flex-1 overflow-auto">
             {imagePreview ? (
-              <div className="p-4 flex items-center justify-center min-h-full">
+              <div className="flex min-h-full items-center justify-center p-4">
                 <img
                   src={imagePreview}
                   alt="Shelf analysis"
@@ -200,32 +221,35 @@ export function ReportSnippetsView({
                 />
               </div>
             ) : (
-              <div className="flex h-full min-h-[280px] items-center justify-center text-muted-foreground">
+              <div className="text-muted-foreground flex h-full min-h-[280px] items-center justify-center">
                 <p className="text-sm">No image</p>
               </div>
             )}
           </div>
-          <div className="border-t border-border px-4 py-2 flex flex-wrap gap-4 text-xs text-muted-foreground shrink-0">
+          <div className="border-border text-muted-foreground flex shrink-0 flex-wrap gap-4 border-t px-4 py-2 text-xs">
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-chart-2" aria-hidden />
+              <span className="bg-chart-2 h-3 w-3 rounded-sm" aria-hidden />
               Compliant
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm bg-destructive" aria-hidden />
+              <span className="bg-destructive h-3 w-3 rounded-sm" aria-hidden />
               Issue
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3 w-3 rounded-sm border border-dashed border-muted-foreground" aria-hidden />
+              <span
+                className="border-muted-foreground h-3 w-3 rounded-sm border border-dashed"
+                aria-hidden
+              />
               Empty space
             </span>
           </div>
         </section>
 
         {/* Right: Report snippets (scrollable) */}
-        <section className="rounded-xl border border-border bg-card/80 overflow-hidden shadow-sm flex flex-col min-h-[320px] lg:min-h-0">
-          <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
+        <section className="border-border bg-card/80 flex min-h-[320px] flex-col overflow-hidden rounded-xl border shadow-sm lg:min-h-0">
+          <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4">
             {/* Key metrics row */}
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-1 scrollbar-thin">
+            <div className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto pb-2">
               <MetricCard
                 label="Category"
                 value={`${report.complianceScore}%`}
@@ -243,23 +267,28 @@ export function ReportSnippetsView({
             </div>
 
             {/* Executive summary */}
-            <div className="rounded-lg border border-border bg-card/40 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Info className="size-4 text-accent" aria-hidden />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="border-border bg-card/40 rounded-lg border p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Info className="text-accent size-4" aria-hidden />
+                <h3 className="text-muted-foreground text-xs font-bold tracking-wider uppercase">
                   Executive Summary
                 </h3>
               </div>
-              <p className="text-sm text-foreground">{report.executiveSummary}</p>
+              <p className="text-foreground text-sm">
+                {report.executiveSummary}
+              </p>
               <div className="mt-3 space-y-2">
                 {report.keyFindings.map((f, i) => (
                   <div
                     key={i}
                     className={cn(
                       "flex gap-2 rounded-md px-3 py-2 text-sm",
-                      f.type === "error" && "bg-destructive/10 border border-destructive/30",
-                      f.type === "warning" && "bg-amber-500/10 border border-amber-500/30",
-                      f.type === "info" && "bg-accent/10 border border-accent/30"
+                      f.type === "error" &&
+                        "bg-destructive/10 border-destructive/30 border",
+                      f.type === "warning" &&
+                        "border border-amber-500/30 bg-amber-500/10",
+                      f.type === "info" &&
+                        "bg-accent/10 border-accent/30 border",
                     )}
                   >
                     <KeyFindingIcon type={f.type} />
@@ -270,14 +299,14 @@ export function ReportSnippetsView({
             </div>
 
             {/* AI recommendations */}
-            <div className="rounded-lg border border-accent/40 bg-accent/10 p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <Lightbulb className="size-4 text-accent" aria-hidden />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-accent">
+            <div className="border-accent/40 bg-accent/10 rounded-lg border p-4">
+              <div className="mb-2 flex items-center gap-2">
+                <Lightbulb className="text-accent size-4" aria-hidden />
+                <h3 className="text-accent text-xs font-bold tracking-wider uppercase">
                   AI Recommendations
                 </h3>
               </div>
-              <ul className="space-y-1.5 text-sm text-foreground">
+              <ul className="text-foreground space-y-1.5 text-sm">
                 {report.aiRecommendations.map((rec, i) => (
                   <li key={i} className="flex gap-2">
                     <span className="text-accent shrink-0">•</span>
@@ -294,14 +323,13 @@ export function ReportSnippetsView({
                   key={cat.id}
                   className={cn(
                     "rounded-lg border px-3 py-2 text-xs font-medium",
-                    IssueCategoryVariant({ variant: cat.variant })
+                    IssueCategoryVariant({ variant: cat.variant }),
                   )}
                 >
                   {cat.title} {cat.count}
                 </div>
               ))}
             </div>
-
           </div>
         </section>
       </div>
@@ -318,17 +346,20 @@ function MetricCard({
   value: number | string;
   variant?: "score" | "error";
 }) {
-  const score = variant === "score" && typeof value === "string" ? parseInt(value, 10) : null;
+  const score =
+    variant === "score" && typeof value === "string"
+      ? parseInt(value, 10)
+      : null;
   return (
     <div
       className={cn(
-        "shrink-0 rounded-lg border px-3 py-2 min-w-[72px] text-center flex flex-col items-center justify-center",
+        "flex min-w-[72px] shrink-0 flex-col items-center justify-center rounded-lg border px-3 py-2 text-center",
         variant === "error" && "border-destructive/50 bg-destructive/5",
-        !variant && "border-border bg-card/60"
+        !variant && "border-border bg-card/60",
       )}
     >
       {variant === "score" && score !== null ? (
-        <div className="relative size-10 mb-1">
+        <div className="relative mb-1 size-10">
           <svg viewBox="0 0 36 36" className="size-10 -rotate-90">
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -339,22 +370,27 @@ function MetricCard({
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
               fill="none"
-              stroke={score >= 80 ? "var(--chart-2)" : score > 0 ? "var(--amber-500)" : "var(--destructive)"}
+              stroke={
+                score >= 80
+                  ? "var(--chart-2)"
+                  : score > 0
+                    ? "var(--amber-500)"
+                    : "var(--destructive)"
+              }
               strokeWidth="3"
               strokeDasharray={`${(score / 100) * 100} 100`}
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">
+          <span className="text-foreground absolute inset-0 flex items-center justify-center text-xs font-bold">
             {value}
           </span>
         </div>
       ) : (
-        <p className="text-lg font-bold text-foreground">{value}</p>
+        <p className="text-foreground text-lg font-bold">{value}</p>
       )}
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
         {label}
       </p>
     </div>
   );
 }
-

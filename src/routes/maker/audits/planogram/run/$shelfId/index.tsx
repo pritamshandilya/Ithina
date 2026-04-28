@@ -15,23 +15,26 @@ export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
     z
       .object({
         from: z.string().optional(),
+        fixtureId: z.string().optional(),
+        planogramId: z.string().optional(),
       })
       .parse(search),
 });
 
 function NewPlanogramAnalysisPage() {
   const { shelfId } = Route.useParams();
-  const { from } = Route.useSearch();
+  const { from, fixtureId: fixtureIdFromSearch, planogramId: planogramIdFromSearch } = Route.useSearch();
   const { data: preview } = usePlanogramShelfPreview(shelfId);
   const { data: fixtures = [] } = useStoreFixtures();
   const backTo = from ?? "/maker/audits/planogram";
-  const fixtureId = preview?.shelf.fixtureId ?? null;
+  const fixtureId = preview?.shelf.fixtureId ?? fixtureIdFromSearch ?? null;
   const fixture = fixtures.find((item) => item.id === fixtureId) ?? null;
   const effectivePlanogramId = fixtureId
     ? (fixture?.planogram_id ??
       preview?.shelf.planogramId ??
+      planogramIdFromSearch ??
       null)
-    : (preview?.shelf.planogramId ?? null);
+    : (preview?.shelf.planogramId ?? planogramIdFromSearch ?? null);
   const { data: associatedPlanogramPayload } = usePlanogramById(effectivePlanogramId);
   const analysisPlanogramPayload =
     associatedPlanogramPayload ?? preview?.planogramPayload ?? null;
@@ -41,7 +44,7 @@ function NewPlanogramAnalysisPage() {
       title="New Planogram Based Analysis"
       backTo={backTo}
       analysisType="PLANOGRAM"
-      shelfName={preview?.shelf.shelfName}
+      fixtureName={fixture?.type}
       planogramName={analysisPlanogramPayload?.name}
       planogramPayload={analysisPlanogramPayload}
       fixedFixtureId={fixtureId ?? undefined}

@@ -28,7 +28,7 @@ export function ShelfProduct({
   shelfId,
   productId,
   widthFraction,
-  categoryColor = "border-muted",
+  categoryColor = "border-border/70",
   shapeClass = "rounded-md",
   editHandlers,
   className,
@@ -43,7 +43,8 @@ export function ShelfProduct({
   return (
     <div
       className={cn(
-        "group relative flex min-w-0 flex-col rounded-md border border-border/70 bg-card/30 px-1 py-0.5 transition-colors",
+        "group relative flex min-w-0 flex-col rounded-md border px-1 py-0.5 shadow-sm transition-[filter,box-shadow]",
+        "border-border/60 bg-card/75 hover:brightness-95 hover:shadow-md",
         shapeClass,
         categoryColor,
         className,
@@ -60,7 +61,10 @@ export function ShelfProduct({
           title="Remove product"
           aria-label={`Remove ${product.name}`}
         >
-          <X className="size-3 text-slate-600 hover:text-destructive dark:text-muted-foreground" aria-hidden />
+          <X
+            className="size-3 text-foreground/70 hover:text-destructive"
+            aria-hidden
+          />
         </button>
       )}
       <div className="flex items-end justify-center gap-0.5">
@@ -94,7 +98,7 @@ export function ShelfProduct({
       </div>
       <div
         className={cn(
-          "min-w-0 truncate text-[11px] font-medium leading-tight text-slate-900 dark:text-foreground",
+          "min-w-0 truncate text-[11px] font-medium leading-tight text-foreground",
           isEditable && "pr-8"
         )}
       >
@@ -109,7 +113,7 @@ export function ShelfProduct({
           <p title={product.name}>{product.name}</p>
         )}
       </div>
-      <div className="min-w-0 truncate text-[10px] leading-tight text-stone-200 dark:text-muted-foreground">
+      <div className="min-w-0 truncate text-[10px] leading-tight text-foreground/80">
         {isEditable ? (
           <InlineEdit
             value={product.category ?? "Uncategorized"}
@@ -130,10 +134,10 @@ export function ShelfProduct({
           onSave={(updates) =>
             editHandlers.onEditFacingsDepth(shelfId, productId, updates)
           }
-          className="text-stone-300 dark:text-muted-foreground"
+          className="text-foreground/80"
         />
       ) : (
-        <p className="mt-0.5 text-[10px] font-mono leading-tight text-stone-300 dark:text-muted-foreground">
+        <p className="mt-0.5 text-[10px] font-mono leading-tight text-foreground/80">
           ×{product.facings} D{product.depth_count} ={totalUnits}
         </p>
       )}

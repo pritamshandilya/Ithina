@@ -7,21 +7,16 @@
  *
  * Access at: /checker/audit-report/:auditId
  */
-
 import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 
-import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
 import MainLayout from "@/components/layouts/main";
-import { useToast } from "@/hooks/use-toast";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
-import {
-  MOCK_REPORT_SNIPPET,
-  MOCK_ALL_ITEMS_REPORT,
-  MOCK_ALL_ISSUES_REPORT,
-  MOCK_IMAGE_COMPARISON,
-} from "@/lib/analysis";
+import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
+import { useToast } from "@/hooks/use-toast";
+import type { ReportSnippet } from "@/lib/analysis";
 import { exportReportToPdf } from "@/lib/reports/pdf-export";
+import { useAuditDetail, useAuditViolations } from "@/queries/checker";
 
 export const Route = createFileRoute("/checker/audit-report/$auditId/")({
   component: AuditReportPage,
@@ -34,21 +29,83 @@ export function AuditReportPage() {
   const { auditId } = useParams({ strict: false });
   const routes = useStoreScopedCheckerRoutes();
   const { toast } = useToast();
+  const { data: audit } = useAuditDetail(auditId ?? "");
+  const { data: violations = [] } = useAuditViolations(auditId ?? "");
   const [isExporting, setIsExporting] = useState(false);
 
-  const backTo = auditId ? routes.reviewAuditHref(auditId) : "/checker/audit-review";
+  const backTo = auditId
+    ? routes.reviewAuditHref(auditId)
+    : "/checker/audit-review";
+  const report: ReportSnippet | null = audit
+    ? {
+        planogramName: audit.shelfInfo.shelfName,
+        productsDetected: 0,
+        analysisIssues: violations.length,
+        complianceScore: audit.complianceScore ?? 0,
+        matched: 0,
+        misplaced: violations.filter((v) => v.severity === "warning").length,
+        missing: violations.filter((v) => v.severity === "critical").length,
+        extra: violations.filter((v) => v.severity === "info").length,
+        issues: violations.length,
+        facings: 0,
+        units: 0,
+        detected: 0,
+        gap: 0,
+        executiveSummary:
+          violations.length > 0
+            ? `Checker review found ${violations.length} violation${violations.length === 1 ? "" : "s"} for this audit.`
+            : "No violations found in this checker review.",
+        keyFindings: [],
+        aiRecommendations: [],
+        shelfCompliance: [],
+        issueDistribution: {
+          matched: 0,
+          misplaced: violations.filter((v) => v.severity === "warning").length,
+          missing: violations.filter((v) => v.severity === "critical").length,
+          extra: violations.filter((v) => v.severity === "info").length,
+        },
+        issueCategories: [
+          {
+            id: "critical",
+            title: "Critical",
+            count: violations.filter((v) => v.severity === "critical").length,
+            description: "Critical violations requiring immediate correction.",
+            variant: "missing",
+          },
+          {
+            id: "warning",
+            title: "Warnings",
+            count: violations.filter((v) => v.severity === "warning").length,
+            description: "Warning-level violations to be addressed.",
+            variant: "misplaced",
+          },
+          {
+            id: "info",
+            title: "Info",
+            count: violations.filter((v) => v.severity === "info").length,
+            description: "Informational findings from checker review.",
+            variant: "analysis",
+          },
+        ],
+        issuesToReview: violations.slice(0, 10).map((v) => ({
+          id: v.id,
+          skuName: v.ruleName,
+          description: v.description,
+          type: v.severity.toUpperCase(),
+          location: undefined,
+        })),
+      }
+    : null;
 
   const handleExportPdf = async () => {
+    if (!report) return;
     if (isExporting) return;
     setIsExporting(true);
     try {
       await exportReportToPdf({
         data: {
-          report: MOCK_REPORT_SNIPPET,
+          report,
           imageUrl: null,
-          allItems: MOCK_ALL_ITEMS_REPORT,
-          allIssues: MOCK_ALL_ISSUES_REPORT,
-          imageComparison: MOCK_IMAGE_COMPARISON,
         },
         filename: `compliance-report-audit-${auditId}.pdf`,
       });
@@ -70,15 +127,23 @@ export function AuditReportPage() {
 
   return (
     <MainLayout>
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary flex h-full min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
-          <ComplianceReportFull
-            report={MOCK_REPORT_SNIPPET}
-            imageUrl={null}
-            backTo={backTo}
-            onExportPdf={handleExportPdf}
-            isExportingPdf={isExporting}
-          />
+          {report ? (
+            <ComplianceReportFull
+              report={report}
+              imageUrl={null}
+              backTo={backTo}
+              onExportPdf={handleExportPdf}
+              isExportingPdf={isExporting}
+            />
+          ) : (
+            <div className="flex h-full min-h-0 flex-1 items-center justify-center">
+              <p className="text-muted-foreground text-sm">
+                Unable to load checker report details.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </MainLayout>

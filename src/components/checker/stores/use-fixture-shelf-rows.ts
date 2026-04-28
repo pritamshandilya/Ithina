@@ -61,6 +61,10 @@ export function useFixtureShelfRows({
     () => ruleSets.find((set) => set.isDefault)?.name ?? "Default Rules",
     [ruleSets],
   );
+  const ruleSetNameById = useMemo(
+    () => new Map(ruleSets.map((set) => [set.id, set.name])),
+    [ruleSets],
+  );
 
   const fixtureById = useMemo(
     () => new Map(filteredFixtures.map((fixture) => [fixture.id, fixture])),
@@ -82,7 +86,10 @@ export function useFixtureShelfRows({
         ...shelf,
         fixtureId: fixture.id,
         planogramId: effectivePlanogramByFixtureId.get(fixture.id) ?? undefined,
-        complianceRuleSet: fixtureComplianceOverrides[fixture.id] ?? defaultRuleSetName,
+        complianceRuleSet:
+          ruleSetNameById.get(fixtureComplianceOverrides[fixture.id] ?? "") ??
+          ruleSetNameById.get(fixture.compliance_rule_set_id ?? "") ??
+          defaultRuleSetName,
         categorizeBy: fixtureCategorizeOverrides[fixture.id] ?? "By Category",
         fixtureType: fixture.type,
         zone: shelf.zone ?? fixture.physical_location.zone,
@@ -101,6 +108,7 @@ export function useFixtureShelfRows({
     filteredFixtures,
     fixtureCategorizeOverrides,
     fixtureComplianceOverrides,
+    ruleSetNameById,
     shelvesByFixtureId,
   ]);
 

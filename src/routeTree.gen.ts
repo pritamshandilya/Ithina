@@ -97,6 +97,7 @@ import { Route as AdminStoreIdPlanogramsPlanogramIdRouteImport } from './routes/
 import { Route as AdminStoreIdFixtureTypesShelfIdRouteImport } from './routes/admin/$storeId/fixture-types.$shelfId'
 import { Route as AdminStoreIdAuditReportAuditIdRouteImport } from './routes/admin/$storeId/audit-report.$auditId'
 import { Route as MakerShelvesShelfIdEditIndexRouteImport } from './routes/maker/shelves/$shelfId/edit/index'
+import { Route as MakerReportsViewAnalysisIdIndexRouteImport } from './routes/maker/reports/view/$analysisId/index'
 import { Route as MakerAuditsPlanogramNewIndexRouteImport } from './routes/maker/audits/planogram/new/index'
 import { Route as MakerAuditsPlanogramShelfIdIndexRouteImport } from './routes/maker/audits/planogram/$shelfId/index'
 import { Route as MakerAuditsAdhocNewIndexRouteImport } from './routes/maker/audits/adhoc/new/index'
@@ -584,6 +585,12 @@ const MakerShelvesShelfIdEditIndexRoute =
     path: '/$shelfId/edit/',
     getParentRoute: () => MakerShelvesRouteRoute,
   } as any)
+const MakerReportsViewAnalysisIdIndexRoute =
+  MakerReportsViewAnalysisIdIndexRouteImport.update({
+    id: '/view/$analysisId/',
+    path: '/view/$analysisId/',
+    getParentRoute: () => MakerReportsRouteRoute,
+  } as any)
 const MakerAuditsPlanogramNewIndexRoute =
   MakerAuditsPlanogramNewIndexRouteImport.update({
     id: '/new/',
@@ -734,6 +741,7 @@ export interface FileRoutesByFullPath {
   '/maker/audits/adhoc/new/': typeof MakerAuditsAdhocNewIndexRoute
   '/maker/audits/planogram/$shelfId/': typeof MakerAuditsPlanogramShelfIdIndexRoute
   '/maker/audits/planogram/new/': typeof MakerAuditsPlanogramNewIndexRoute
+  '/maker/reports/view/$analysisId/': typeof MakerReportsViewAnalysisIdIndexRoute
   '/maker/shelves/$shelfId/edit/': typeof MakerShelvesShelfIdEditIndexRoute
   '/maker/audits/planogram/run/$shelfId/': typeof MakerAuditsPlanogramRunShelfIdIndexRoute
 }
@@ -822,6 +830,7 @@ export interface FileRoutesByTo {
   '/maker/audits/adhoc/new': typeof MakerAuditsAdhocNewIndexRoute
   '/maker/audits/planogram/$shelfId': typeof MakerAuditsPlanogramShelfIdIndexRoute
   '/maker/audits/planogram/new': typeof MakerAuditsPlanogramNewIndexRoute
+  '/maker/reports/view/$analysisId': typeof MakerReportsViewAnalysisIdIndexRoute
   '/maker/shelves/$shelfId/edit': typeof MakerShelvesShelfIdEditIndexRoute
   '/maker/audits/planogram/run/$shelfId': typeof MakerAuditsPlanogramRunShelfIdIndexRoute
 }
@@ -922,6 +931,7 @@ export interface FileRoutesById {
   '/maker/audits/adhoc/new/': typeof MakerAuditsAdhocNewIndexRoute
   '/maker/audits/planogram/$shelfId/': typeof MakerAuditsPlanogramShelfIdIndexRoute
   '/maker/audits/planogram/new/': typeof MakerAuditsPlanogramNewIndexRoute
+  '/maker/reports/view/$analysisId/': typeof MakerReportsViewAnalysisIdIndexRoute
   '/maker/shelves/$shelfId/edit/': typeof MakerShelvesShelfIdEditIndexRoute
   '/maker/audits/planogram/run/$shelfId/': typeof MakerAuditsPlanogramRunShelfIdIndexRoute
 }
@@ -1022,6 +1032,7 @@ export interface FileRouteTypes {
     | '/maker/audits/adhoc/new/'
     | '/maker/audits/planogram/$shelfId/'
     | '/maker/audits/planogram/new/'
+    | '/maker/reports/view/$analysisId/'
     | '/maker/shelves/$shelfId/edit/'
     | '/maker/audits/planogram/run/$shelfId/'
   fileRoutesByTo: FileRoutesByTo
@@ -1110,6 +1121,7 @@ export interface FileRouteTypes {
     | '/maker/audits/adhoc/new'
     | '/maker/audits/planogram/$shelfId'
     | '/maker/audits/planogram/new'
+    | '/maker/reports/view/$analysisId'
     | '/maker/shelves/$shelfId/edit'
     | '/maker/audits/planogram/run/$shelfId'
   id:
@@ -1209,6 +1221,7 @@ export interface FileRouteTypes {
     | '/maker/audits/adhoc/new/'
     | '/maker/audits/planogram/$shelfId/'
     | '/maker/audits/planogram/new/'
+    | '/maker/reports/view/$analysisId/'
     | '/maker/shelves/$shelfId/edit/'
     | '/maker/audits/planogram/run/$shelfId/'
   fileRoutesById: FileRoutesById
@@ -1843,6 +1856,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MakerShelvesShelfIdEditIndexRouteImport
       parentRoute: typeof MakerShelvesRouteRoute
     }
+    '/maker/reports/view/$analysisId/': {
+      id: '/maker/reports/view/$analysisId/'
+      path: '/view/$analysisId'
+      fullPath: '/maker/reports/view/$analysisId/'
+      preLoaderRoute: typeof MakerReportsViewAnalysisIdIndexRouteImport
+      parentRoute: typeof MakerReportsRouteRoute
+    }
     '/maker/audits/planogram/new/': {
       id: '/maker/audits/planogram/new/'
       path: '/new'
@@ -2166,10 +2186,12 @@ const MakerHistoricalAnalysisRouteRouteWithChildren =
 
 interface MakerReportsRouteRouteChildren {
   MakerReportsViewIndexRoute: typeof MakerReportsViewIndexRoute
+  MakerReportsViewAnalysisIdIndexRoute: typeof MakerReportsViewAnalysisIdIndexRoute
 }
 
 const MakerReportsRouteRouteChildren: MakerReportsRouteRouteChildren = {
   MakerReportsViewIndexRoute: MakerReportsViewIndexRoute,
+  MakerReportsViewAnalysisIdIndexRoute: MakerReportsViewAnalysisIdIndexRoute,
 }
 
 const MakerReportsRouteRouteWithChildren =

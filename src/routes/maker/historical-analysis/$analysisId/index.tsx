@@ -4,35 +4,40 @@
  * Shows the analysis results (summary view) for a past adhoc or planogram run.
  * Replace and Send for Approval are hidden for historical runs.
  */
-
-import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
+import placeholderShelf from "@/assets/placeholder-shelf.jpg";
 import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  getAnnotatedImagePreview,
-  mapAnalysisResultToReportSnippet,
   type ReportSnippet,
+  mapAnalysisResultToReportSnippet,
 } from "@/lib/analysis";
-import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
-import { useHistoricalAnalyses } from "@/queries/maker";
 import { getRelativePath } from "@/lib/utils";
+import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
 
-import placeholderShelf from "@/assets/placeholder-shelf.jpg";
-
-export const Route = createFileRoute("/maker/historical-analysis/$analysisId/")({
-  component: HistoricalAnalysisDetailPage,
-  validateSearch: (
-    search: Record<string, unknown>
-  ): { type?: "adhoc" | "planogram"; backTo?: string } => ({
-    type: search.type === "adhoc" || search.type === "planogram" ? search.type : undefined,
-    backTo: typeof search.backTo === "string" ? search.backTo : undefined,
-  }),
-});
+export const Route = createFileRoute("/maker/historical-analysis/$analysisId/")(
+  {
+    component: HistoricalAnalysisDetailPage,
+    validateSearch: (
+      search: Record<string, unknown>,
+    ): { type?: "adhoc" | "planogram"; backTo?: string } => ({
+      type:
+        search.type === "adhoc" || search.type === "planogram"
+          ? search.type
+          : undefined,
+      backTo: typeof search.backTo === "string" ? search.backTo : undefined,
+    }),
+  },
+);
 
 function HistoricalAnalysisDetailPage() {
   const navigate = useNavigate();
@@ -40,7 +45,6 @@ function HistoricalAnalysisDetailPage() {
   const { analysisId } = Route.useParams();
   const { type, backTo: backToSearch } = Route.useSearch();
   const backTo = getRelativePath(backToSearch ?? "/maker/historical-analysis");
-  const { data: analyses } = useHistoricalAnalyses();
   const detailQuery = new URLSearchParams();
   if (type) detailQuery.set("type", type);
   if (backToSearch) detailQuery.set("backTo", backToSearch);
@@ -48,42 +52,43 @@ function HistoricalAnalysisDetailPage() {
     detailQuery.toString() ? `?${detailQuery.toString()}` : ""
   }`;
 
-  const analysis = useMemo(() => {
-    return analyses.find((a) => a.id === analysisId) ?? null;
-  }, [analyses, analysisId]);
-
   const [report, setReport] = useState<ReportSnippet | null>(null);
-  const [imageUrl, setImageUrl] = useState(analysis?.imageUrl ?? placeholderShelf);
+  const [imageUrl, setImageUrl] = useState(placeholderShelf);
+  const [planogramName, setPlanogramName] = useState<string | null>(null);
   const [planogramId, setPlanogramId] = useState<string | null>(null);
-  const [isReportLoading, setIsReportLoading] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(true);
   const [reportLoadError, setReportLoadError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!analysis || analysis.type !== "adhoc") {
-      setIsReportLoading(false);
-      setReportLoadError(null);
-      setReport(null);
-      setImageUrl(analysis?.imageUrl ?? placeholderShelf);
-      setPlanogramId(null);
-      return;
-    }
-
     let isMounted = true;
     const loadAnalysisResult = async () => {
       setIsReportLoading(true);
       setReportLoadError(null);
       try {
-        const job = await fetchAnalysisJob(analysis.id);
+        const job = await fetchAnalysisJob(analysisId);
         if (!isMounted) return;
-        setReport(mapAnalysisResultToReportSnippet(job.result));
+        if (!job.result) {
+          setReport(null);
+          setReportLoadError(
+            "Detailed report is unavailable for this historical analysis.",
+          );
+          setImageUrl(placeholderShelf);
+          setPlanogramId(job.planogram_id);
+          setPlanogramName(null);
+          return;
+        }
+
+        const mappedReport = mapAnalysisResultToReportSnippet(job.result);
+        setReport(mappedReport);
         setPlanogramId(job.planogram_id);
-        const annotated = getAnnotatedImagePreview(job.result, job.image_mime_type);
-        setImageUrl(annotated ?? analysis.imageUrl ?? placeholderShelf);
+        setPlanogramName(mappedReport.planogramName ?? null);
+        setImageUrl(job?.result?.annotated_image ?? placeholderShelf);
       } catch {
         if (!isMounted) return;
         setReport(null);
         setReportLoadError("Unable to load this historical report.");
-        setImageUrl(analysis.imageUrl ?? placeholderShelf);
+        setImageUrl(placeholderShelf);
+        setPlanogramName(null);
         setPlanogramId(null);
       } finally {
         if (isMounted) {
@@ -96,32 +101,19 @@ function HistoricalAnalysisDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [analysis]);
-
-  if (!analysis) {
-    return (
-      <MainLayout>
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 p-8">
-          <p className="text-muted-foreground">Analysis not found</p>
-          <Button variant="outline" asChild>
-            <Link to="/maker/historical-analysis">Back to Historical Analysis</Link>
-          </Button>
-        </div>
-      </MainLayout>
-    );
-  }
+  }, [analysisId]);
 
   const subtitle = report
-    ? analysis.planogramName
-      ? `Planogram "${analysis.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
+    ? planogramName
+      ? `Planogram "${planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
       : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
-    : analysis.planogramName
-      ? `Planogram "${analysis.planogramName}" • report details unavailable`
+    : planogramName
+      ? `Planogram "${planogramName}" • report details unavailable`
       : "Report details unavailable";
 
   return (
     <MainLayout>
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary flex h-full min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
           <header className="flex shrink-0 items-center gap-2 pb-4">
             <Button
@@ -133,14 +125,16 @@ function HistoricalAnalysisDetailPage() {
               <ArrowLeft className="size-4" aria-hidden />
             </Button>
             <div className="space-y-0.5">
-              <h1 className="text-xl font-bold text-foreground sm:text-2xl">
+              <h1 className="text-foreground text-xl font-bold sm:text-2xl">
                 Combined Compliance & Analysis Report
               </h1>
-              <p className="text-xs text-muted-foreground sm:text-sm">{subtitle}</p>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                {subtitle}
+              </p>
             </div>
           </header>
 
-          <div className="flex-1 min-h-0 overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto">
             {isReportLoading ? (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
@@ -148,7 +142,7 @@ function HistoricalAnalysisDetailPage() {
                   <Skeleton className="h-9 w-36" />
                 </div>
                 <div className="grid gap-4 lg:grid-cols-[1fr_1fr] xl:grid-cols-[1.2fr_1fr]">
-                  <section className="rounded-xl border border-border bg-card/80 p-4">
+                  <section className="border-border bg-card/80 rounded-xl border p-4">
                     <Skeleton className="h-4 w-32" />
                     <Skeleton className="mt-4 h-[320px] w-full" />
                     <div className="mt-4 flex gap-2">
@@ -157,7 +151,7 @@ function HistoricalAnalysisDetailPage() {
                       <Skeleton className="h-3 w-24" />
                     </div>
                   </section>
-                  <section className="rounded-xl border border-border bg-card/80 p-4">
+                  <section className="border-border bg-card/80 rounded-xl border p-4">
                     <div className="flex flex-wrap gap-2">
                       <Skeleton className="h-14 w-20" />
                       <Skeleton className="h-14 w-20" />
@@ -179,7 +173,7 @@ function HistoricalAnalysisDetailPage() {
                 imagePreview={imageUrl}
                 report={report}
                 isHistorical
-                viewFullReportTo="/maker/reports/view"
+                viewFullReportTo={`/maker/reports/view/${analysisId}`}
                 viewFullReportState={{
                   imageUrl,
                   analysisId,
@@ -189,9 +183,10 @@ function HistoricalAnalysisDetailPage() {
                 }}
               />
             ) : (
-              <div className="flex h-full min-h-0 flex-col items-center justify-center gap-2 text-center text-muted-foreground">
+              <div className="text-muted-foreground flex h-full min-h-0 flex-col items-center justify-center gap-2 text-center">
                 <p className="text-sm">
-                  {reportLoadError ?? "Detailed report is unavailable for this historical analysis."}
+                  {reportLoadError ??
+                    "Detailed report is unavailable for this historical analysis."}
                 </p>
               </div>
             )}

@@ -2,25 +2,62 @@
 
 const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
+function pad2(n: number): string {
+  return `${n}`.padStart(2, "0");
+}
+
+/**
+ * Parse backend `scheduled_time` (`09:00 AM`, `9:00`, `14:30`) to `HH:mm` for datetime-local.
+ */
+export function parseScheduledTimeToHm(raw: string | null | undefined): string | null {
+  const s = raw?.trim();
+  if (!s) return null;
+  const m12 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)\s*$/i);
+  if (m12) {
+    let h = parseInt(m12[1], 10);
+    const min = m12[2];
+    const ap = m12[3].toUpperCase();
+    if (ap === "PM" && h !== 12) h += 12;
+    if (ap === "AM" && h === 12) h = 0;
+    if (h < 0 || h > 23 || !/^\d{2}$/.test(min)) return null;
+    return `${pad2(h)}:${min}`;
+  }
+  const m24 = s.match(/^(\d{1,2}):(\d{2})$/);
+  if (m24) {
+    const h = parseInt(m24[1], 10);
+    const min = m24[2];
+    if (h < 0 || h > 23 || !/^\d{2}$/.test(min)) return null;
+    return `${pad2(h)}:${min}`;
+  }
+  return null;
+}
+
 /**
  * Draft API may return `YYYY-MM-DD` only. `Date` parses that as UTC midnight, which
  * shifts the calendar day in many local timezones. Expand to local interpretable
  * datetimes: start-of-day / end-of-day for end dates.
+ *
+ * For **start** date-only values, optional `scheduledTime` from `campaign_meta.scheduled_time`
+ * sets the clock (e.g. `09:00 AM` → `T09:00:00`); otherwise start-of-day `T00:00:00`.
  */
 export function normalizeDraftScheduleForParsing(
   value: string | null | undefined,
   role: "start" | "end",
+  scheduledTime?: string | null,
 ): string | null {
   const v = value?.trim();
   if (!v) return null;
   if (DATE_ONLY.test(v)) {
-    return role === "end" ? `${v}T23:59:00` : `${v}T00:00:00`;
+    if (role === "end") {
+      return `${v}T23:59:00`;
+    }
+    const hm = parseScheduledTimeToHm(scheduledTime ?? undefined);
+    if (hm) {
+      return `${v}T${hm}:00`;
+    }
+    return `${v}T00:00:00`;
   }
   return v;
-}
-
-function pad2(n: number): string {
-  return `${n}`.padStart(2, "0");
 }
 
 export function isoToDatetimeLocalValue(iso: string): string {

@@ -8,6 +8,7 @@ import {
   buildPromoSkuCsvTemplate,
   PROMO_SKU_CSV_TEMPLATE_FILENAME,
 } from "@/features/wizard/lib/promo-csv-template";
+import { formatSkuMarginPercent } from "@/services/wizard";
 import type { StagedSku } from "@/types/wizard";
 
 function escapeCellText(raw: string): string {
@@ -23,13 +24,21 @@ function stagingRowHasAlert(row: { safe: boolean }): boolean {
   return row.safe === false;
 }
 
-/** Short label for compliance pill when row is in alert state. */
+/** Subtext under ALERT: actual margin % when API flags margin; else violation copy. */
 function alertComplianceDetail(row: StagedSku): string {
-  const reason = row.violationReason?.trim();
+  const reason = row.violationReason?.trim() ?? "";
+  const marginLabel =
+    typeof row.marginPct === "number" && !Number.isNaN(row.marginPct)
+      ? formatSkuMarginPercent(row.marginPct)
+      : (row.margin?.trim() ?? "");
+  const marginViolation = !reason || /margin/i.test(reason);
+  if (marginViolation && marginLabel && marginLabel !== "—") {
+    return marginLabel.length > 22 ? `${marginLabel.slice(0, 22)}…` : marginLabel;
+  }
   if (reason) {
     return reason.length > 22 ? `${reason.slice(0, 22)}…` : reason;
   }
-  return row.margin ?? "—";
+  return marginLabel || "—";
 }
 
 /** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
@@ -491,10 +500,16 @@ function DataStagingGrid({
         const row = (cell as { getData: () => StagedSku }).getData();
         if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-1.5 py-0.5 font-mono text-[9px] leading-none text-emerald-400">PASS</span>`;
         const detail = escapeCellText(alertComplianceDetail(row));
-        const fullReason = row.violationReason?.trim()
-          ? escapeCellText(row.violationReason.trim())
-          : "";
-        const titleAttr = fullReason ? ` title="${fullReason}"` : "";
+        const rawReason = row.violationReason?.trim() ?? "";
+        const marginLine =
+          typeof row.marginPct === "number" && !Number.isNaN(row.marginPct)
+            ? formatSkuMarginPercent(row.marginPct)
+            : "";
+        const titleText =
+          rawReason && marginLine && /margin/i.test(rawReason) && rawReason !== marginLine
+            ? `${rawReason} (${marginLine})`
+            : rawReason || marginLine || detail;
+        const titleAttr = titleText ? ` title="${escapeCellText(titleText)}"` : "";
         return `<span class="inline-flex max-w-full flex-col gap-0.5 rounded border border-rose-400/35 bg-rose-400/12 px-1.5 py-0.5 font-mono text-[9px] leading-tight text-rose-300"${titleAttr}><span class="font-semibold tracking-wide text-rose-400">ALERT</span><span class="truncate text-[8px] text-rose-200/90">${detail}</span></span>`;
       },
     },

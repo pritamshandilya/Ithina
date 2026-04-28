@@ -162,13 +162,17 @@ const wizardSlice = createSlice({
       row.proposed = +(row.current * (1 - clamped / 100)).toFixed(2);
 
       const baseCost = row.baseCost ?? 0;
-      const marginPct = row.proposed > 0 && baseCost > 0
-        ? ((row.proposed - baseCost) / row.proposed) * 100
-        : 0;
-      row.margin = `${Math.round(marginPct)}%`;
+      const marginPctRaw =
+        row.proposed > 0 && baseCost > 0 ? ((row.proposed - baseCost) / row.proposed) * 100 : 0;
+      const marginPctRounded = Math.round(marginPctRaw * 10) / 10;
+      const marginText = Number.isInteger(marginPctRounded)
+        ? String(marginPctRounded)
+        : marginPctRounded.toFixed(1);
+      row.margin = `${marginText}%`;
+      row.marginPct = marginPctRounded;
 
       const marginFloor = parseFloat(state.constraints.marginFloor) || 15;
-      row.safe = marginPct >= marginFloor;
+      row.safe = marginPctRaw >= marginFloor;
 
       const csvRow = state.csvRows.find((r) => r.sku === sku);
       if (csvRow) {

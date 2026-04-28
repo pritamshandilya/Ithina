@@ -76,7 +76,11 @@ function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta
     null;
   return {
     campaignThemeName: themeRaw || null,
-    scheduleStartIso: normalizeDraftScheduleForParsing(scheduleStartRaw, "start"),
+    scheduleStartIso: normalizeDraftScheduleForParsing(
+      scheduleStartRaw,
+      "start",
+      meta?.scheduled_time,
+    ),
     scheduleEndIso: normalizeDraftScheduleForParsing(scheduleEndRaw, "end"),
   };
 }
@@ -100,6 +104,14 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 }
 
 // ─── Phase 1: NL prompt → real backend draft ────────────────────────────────
+
+/** One-decimal max; whole numbers stay integer (e.g. -20%, -58.3%). */
+export function formatSkuMarginPercent(pct: number | undefined | null): string {
+  if (typeof pct !== "number" || Number.isNaN(pct)) return "—";
+  const rounded = Math.round(pct * 10) / 10;
+  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return `${text}%`;
+}
 
 /** Maps draft API SKUs to staging grid rows (NL draft, CSV /upload/process, etc.). */
 export function mapDraftResponseSkusToStaged(
@@ -125,6 +137,8 @@ export function mapDraftResponseSkusToStaged(
     const stockRaw = s.stock_qty ?? s.stockQty;
     const stockQty =
       typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
+    const marginPct =
+      typeof s.margin_pct === "number" && !Number.isNaN(s.margin_pct) ? s.margin_pct : undefined;
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? "",
@@ -132,7 +146,8 @@ export function mapDraftResponseSkusToStaged(
       proposed,
       safe: s.is_safe,
       violationReason: s.violation_reason ?? null,
-      margin: `${s.margin_pct}%`,
+      margin: formatSkuMarginPercent(marginPct),
+      ...(marginPct !== undefined ? { marginPct } : {}),
       baseCost: s.base_cost,
       discount,
       included: true,

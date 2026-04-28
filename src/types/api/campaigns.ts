@@ -84,6 +84,8 @@ export interface ApiCampaignDraftMeta {
   campaign_name?: string | null;
   schedule_start?: string | null;
   schedule_end?: string | null;
+  /** Launch clock time from agent / save_campaign_meta, e.g. `09:00 AM`. */
+  scheduled_time?: string | null;
   schedule_notes?: string | null;
 }
 

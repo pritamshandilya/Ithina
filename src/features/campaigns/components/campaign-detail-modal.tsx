@@ -6,6 +6,7 @@ import { useCampaign } from "@/hooks/use-campaigns";
 import { useGuardrails } from "@/hooks/use-guardrails";
 import type { GuardRailRule } from "@/mocks/guard-rails";
 import { derivePipelineForRow } from "@/services/campaigns";
+import { formatSkuMarginPercent } from "@/services/wizard";
 import type { ApiCampaignSKU } from "@/types/api/campaigns";
 import type { CampaignListItem } from "@/types/campaigns";
 
@@ -18,6 +19,15 @@ function formatIso(iso: string | undefined): string {
 
 function skuName(s: ApiCampaignSKU): string {
   return (s.name ?? s.product_name ?? s.sku ?? "—").trim() || "—";
+}
+
+function skuMarginViolationLabel(s: ApiCampaignSKU): string {
+  const reason = s.violation_reason?.trim() ?? "";
+  const pct = s.margin_pct;
+  if (typeof pct === "number" && !Number.isNaN(pct) && (!reason || /margin/i.test(reason))) {
+    return formatSkuMarginPercent(pct);
+  }
+  return reason || "Below margin policy";
 }
 
 function offerLine(s: ApiCampaignSKU): string {
@@ -218,7 +228,7 @@ function GuardRailValidationRow({
           <ul className="mt-2 space-y-1 border-t border-ithina-border/40 pt-2" role="list">
             {failed.map((s) => (
               <li key={s.sku} className="font-mono text-[11px] text-rose-200/90">
-                {s.sku}: {s.violation_reason?.trim() || "Below margin policy"}
+                {s.sku}: {skuMarginViolationLabel(s)}
               </li>
             ))}
           </ul>

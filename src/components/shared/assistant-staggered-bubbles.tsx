@@ -187,6 +187,83 @@ function SummaryCardView({
   );
 }
 
+function OptionGridCard({
+  opt,
+  selected,
+  onSelect,
+}: {
+  opt: OptionItem;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const sub = opt.sub?.trim() ?? "";
+  const hasDetails = Boolean(sub);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={selected}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+      className={cn(
+        "min-w-0 cursor-pointer rounded-xl border p-2.5 text-left transition-all outline-none focus-visible:ring-2 focus-visible:ring-ithina-purple/55",
+        selected
+          ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
+          : "border-ithina-purple/25 bg-white/[0.04] hover:border-ithina-purple/45 hover:bg-ithina-purple/10",
+      )}
+    >
+      <span className="mb-1 block text-[17px] leading-none">{opt.icon}</span>
+      <span className="block text-[13px] font-semibold leading-tight text-slate-100">{opt.label}</span>
+      {hasDetails ? (
+        <div
+          className="mt-0.5 min-w-0"
+          onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {detailsOpen ? (
+            <p
+              className={cn(
+                "text-[13px] leading-relaxed text-slate-300",
+                "max-h-60 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]",
+              )}
+            >
+              {sub}
+            </p>
+          ) : null}
+          <button
+            type="button"
+            aria-expanded={detailsOpen}
+            onClick={(e) => {
+              e.stopPropagation();
+              setDetailsOpen((v) => !v);
+            }}
+            className="mt-1.5 inline-flex items-center gap-0.5 rounded-md px-0 py-0.5 text-[12px] font-semibold text-ithina-purple/90 transition-colors hover:text-ithina-purple"
+          >
+            {detailsOpen ? (
+              <>
+                Hide details
+                <ChevronUp className="size-3.5 shrink-0 opacity-90" aria-hidden />
+              </>
+            ) : (
+              <>
+                Show details
+                <ChevronDown className="size-3.5 shrink-0 opacity-90" aria-hidden />
+              </>
+            )}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function OptionGrid({ intro, options }: { intro: string; options: OptionItem[] }) {
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -197,27 +274,20 @@ function OptionGrid({ intro, options }: { intro: string; options: OptionItem[] }
           <ChatMarkdown content={intro} />
         </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-2">
+      {/* items-start: neighbor cards stay top-aligned and compact when another card expands (no stretch-to-row). */}
+      <div
+        className={cn(
+          "grid gap-2 items-start",
+          options.length === 1 ? "grid-cols-1" : "grid-cols-2",
+        )}
+      >
         {options.map((opt) => (
-          <button
+          <OptionGridCard
             key={opt.label}
-            type="button"
-            onClick={() => setSelected(opt.label)}
-            className={cn(
-              "rounded-xl border p-2.5 text-left transition-all",
-              selected === opt.label
-                ? "border-ithina-purple/70 bg-ithina-purple/15 shadow-[0_0_0_1px_theme(colors.ithina.purple/0.4)_inset]"
-                : "border-ithina-purple/25 bg-white/[0.04] hover:border-ithina-purple/45 hover:bg-ithina-purple/10",
-            )}
-          >
-            <span className="mb-1 block text-[17px] leading-none">{opt.icon}</span>
-            <span className="block text-[12px] font-semibold leading-tight text-slate-100">
-              {opt.label}
-            </span>
-            {opt.sub ? (
-              <span className="mt-0.5 block text-[10.5px] leading-snug text-slate-400">{opt.sub}</span>
-            ) : null}
-          </button>
+            opt={opt}
+            selected={selected === opt.label}
+            onSelect={() => setSelected(opt.label)}
+          />
         ))}
       </div>
     </div>

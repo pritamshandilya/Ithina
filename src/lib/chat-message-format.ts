@@ -32,14 +32,43 @@ function splitLongPlainText(s: string, maxLen: number): string[] {
   return out.length ? out : [s];
 }
 
+const CLOSING_QUESTION_MAX_LEN = 280;
+
+/**
+ * Two API paragraphs like "…categories…\n\nWhich would you like…?" should stay one bubble,
+ * not two staggered markdown chunks (backend often uses \\n\\n before the closing prompt).
+ */
+function mergeTrailingQuestionParagraphs(blocks: string[]): string[] {
+  if (blocks.length !== 2) return blocks;
+  const intro = blocks[0].trim();
+  const closing = blocks[1].trim();
+  if (!closing.endsWith("?") || closing.includes("\n")) return blocks;
+  if (closing.length > CLOSING_QUESTION_MAX_LEN) return blocks;
+  if (/^option\s+\d+\s*[—–-]/i.test(intro)) return blocks;
+  return [`${intro}\n\n${closing}`];
+}
+
+/** One markdown chunk: long intro + short closing question separated by \\n\\n — keep unsplit even if >280 chars. */
+function isIntroPlusClosingQuestionBlob(block: string): boolean {
+  const parts = block.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (parts.length !== 2) return false;
+  const closing = parts[1];
+  if (!closing.endsWith("?") || closing.includes("\n")) return false;
+  if (closing.length > CLOSING_QUESTION_MAX_LEN) return false;
+  if (/^option\s+\d+\s*[—–-]/i.test(parts[0])) return false;
+  return true;
+}
+
 /**
  * Prefer API `\n\n` blocks; otherwise split long single-line prose into sentence chunks.
  * Long sentences are packed into multiple smaller bubbles (max ~280 chars each).
  */
 function toDisplayBlocks(text: string): string[] {
   const normalized = text.replace(/\r\n/g, "\n");
-  const blocks = normalized.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  let blocks = normalized.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
   if (blocks.length === 0) return [];
+
+  blocks = mergeTrailingQuestionParagraphs(blocks);
 
   let primary: string[];
   if (blocks.length > 1) {
@@ -56,7 +85,7 @@ function toDisplayBlocks(text: string): string[] {
 
   const expanded: string[] = [];
   for (const b of primary) {
-    if (b.length <= 280 || looksLikeHtml(b)) {
+    if (b.length <= 280 || looksLikeHtml(b) || isIntroPlusClosingQuestionBlob(b)) {
       expanded.push(b);
     } else {
       expanded.push(...splitLongPlainText(b, 280));
@@ -212,49 +241,98 @@ function mergeSummaryEnrichment(
 
 // ─── Summary-card detection ───────────────────────────────────────────────────
 
+/** True when `**…**` looks like a campaign title, not a numeric badge or generic promo word. */
+function isLikelyMarkdownCampaignTitle(inner: string): boolean {
+  const t = inner.trim();
+  if (t.length < 3 || t.length > 80) return false;
+  if (/^[\d.%$€£,\s-]+$/i.test(t)) return false;
+  if (/^\d+%/.test(t)) return false;
+  if (/^(discount|bogo|bundle|clearance|flash\s*sale|promo|promotion|sale)$/i.test(t)) return false;
+  return true;
+}
+
 /**
  * Returns true when `text` looks like a campaign proposal — i.e. it mentions
  * a named campaign AND either a date range OR a promo offer type.
- * Works on the full raw string so sentence-split doesn't break detection.
+ * Pass `rawMarkdown` when available so **bold** campaign names survive analysis (plain text strips `**`).
  */
-function looksLikeCampaignProposal(text: string): boolean {
-  const hasName = /(?:call(?:ing)?(?:\s+it)?|campaign(?:\s+name)?|named?|title(?:d)?)[:\s]+['"]?[A-Z]/i.test(text)
-    || /['"][A-Z][^'"]{2,40}['"]/i.test(text);
+function looksLikeCampaignProposal(plainText: string, rawMarkdown?: string): boolean {
+  const raw = rawMarkdown?.trim();
+  const boldMatch = raw?.match(/\*\*([^\*\n]{2,80})\*\*/);
+  const hasBoldName = Boolean(boldMatch?.[1] && isLikelyMarkdownCampaignTitle(boldMatch[1]));
 
-  const hasDate = /\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b/i.test(text)
-    || /\b\d{4}-\d{2}-\d{2}\b/.test(text)
-    || /\b(?:this\s+(?:friday|saturday|sunday|monday|tuesday|wednesday|thursday)|next\s+\w+day)\b/i.test(text)
-    || /\bApril\s+\d{1,2}\b|\bkick\s+(?:it\s+)?off\b/i.test(text);
+  const hasName =
+    hasBoldName ||
+    /(?:call(?:ing)?(?:\s+it)?|campaign(?:\s+name)?|named?|title(?:d)?)[:\s]+['"]?[A-Z]/i.test(plainText) ||
+    /['"][A-Z][^'"]{2,40}['"]/i.test(plainText);
 
-  const hasOffer = /\b(?:bundle|bogo|buy.{0,10}get|discount|clearance|free\s+item|free\s+\w+)\b/i.test(text);
+  const hasDate =
+    /\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b/i.test(
+      plainText,
+    ) ||
+    /\b\d{4}-\d{2}-\d{2}\b/.test(plainText) ||
+    /\b(?:this\s+(?:friday|saturday|sunday|monday|tuesday|wednesday|thursday)|next\s+\w+day)\b/i.test(plainText) ||
+    /\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/i.test(plainText) ||
+    /\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/i.test(plainText) ||
+    /\b(?:tomorrow|today)\b/i.test(plainText) ||
+    /\b(?:the\s+)?next\s+\d+\s+days?\b/i.test(plainText) ||
+    /\bApril\s+\d{1,2}\b|\bkick\s+(?:it\s+)?off\b/i.test(plainText);
+
+  const hasOffer = /\b(?:bundle|bogo|buy.{0,10}get|discount|clearance|free\s+item|free\s+\w+)\b/i.test(plainText);
 
   return hasName && (hasDate || hasOffer);
 }
 
-/** Extract campaign name from quoted text or "call it …" patterns (no loose /i on trailing capture — avoids "name and schedule…"). */
-function extractCampaignName(text: string): string | null {
-  const quoted = text.match(/['"]([A-Z][^'"]{2,80})['"]/);
+/** Extract campaign name from **markdown**, quoted text, or "call it …" patterns. */
+function extractCampaignName(plainText: string, rawMarkdown?: string): string | null {
+  const raw = rawMarkdown?.trim();
+  if (raw) {
+    const boldM = raw.match(/\*\*([^\*\n]{2,80})\*\*/);
+    if (boldM?.[1] && isLikelyMarkdownCampaignTitle(boldM[1])) {
+      return boldM[1].trim();
+    }
+  }
+  const quoted = plainText.match(/['"]([A-Z][^'"]{2,80})['"]/);
   if (quoted) return quoted[1].trim();
-  const callQuoted = text.match(/call(?:ing)?(?:\s+it)?\s+['"]([^'"]+)['"]/i);
+  const callQuoted = plainText.match(/call(?:ing)?(?:\s+it)?\s+['"]([^'"]+)['"]/i);
   if (callQuoted?.[1]) return callQuoted[1].trim();
-  const campaignColon = text.match(/campaign\s+name\s*:\s*['"]?([A-Z][^\n.'"\!?]{2,60})/i);
+  const campaignColon = plainText.match(/campaign\s+name\s*:\s*['"]?([A-Z][^\n.'"\!?]{2,60})/i);
   if (campaignColon?.[1]) return campaignColon[1].replace(/['"]\s*$/, "").trim();
-  const bundleTitle = text.match(/\b((?:[A-Z][a-z]+\s+){1,4}Bundle)\b/);
+  const bundleTitle = plainText.match(/\b((?:[A-Z][a-z]+\s+){1,4}Bundle)\b/);
   if (bundleTitle) return bundleTitle[1].trim();
   return null;
 }
 
 /** Extract promo offer type from text. */
 function extractOfferType(text: string): string | null {
-  const m = text.match(/\b(buy\s*\d\s*get\s*\d\s*free|bogo(?:f)?|bundle(?:\s+deal)?|clearance|[\d]+%\s*(?:off|discount)|free\s+\w+(?:\s+\w+)?)\b/i);
+  const pct = text.match(/\b\d+(?:\.\d+)?%\s*(?:off|discount)\b/i);
+  if (pct) return pct[0].trim();
+  const m = text.match(
+    /\b(buy\s*\d\s*get\s*\d\s*free|bogo(?:f)?|bundle(?:\s+deal)?|clearance|discount|free\s+\w+(?:\s+\w+)?)\b/i,
+  );
   return m ? m[0].trim() : null;
 }
 
+/** Optional clock time after a date phrase (backend always uses concrete times like 08:00 AM). */
+const DATE_TIME_SUFFIX = String.raw`(?:\s*(?:,\s*)?(?:at\s+)?\d{1,2}:\d{2}\s*(?:AM|PM))?`;
+
 /** Extract a date from text that follows a trigger word like "kick it off", "Friday", etc. */
 function extractDateNear(text: string, triggers: RegExp): string | null {
-  const DATE_PATTERN = /(?:(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?|\d{4}-\d{2}-\d{2}|(?:this\s+)?(?:friday|saturday|sunday|monday|tuesday|wednesday|thursday)(?:\s*,\s*(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?)?)/i;
+  const DATE_PATTERN = new RegExp(
+    String.raw`(?:` +
+      String.raw`(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?(?:,?\s*\d{4})?|` +
+      String.raw`\d{4}-\d{2}-\d{2}|` +
+      String.raw`(?:this\s+)?(?:friday|saturday|sunday|monday|tuesday|wednesday|thursday)(?:\s*,\s*(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?)?|` +
+      String.raw`\btomorrow\b|` +
+      String.raw`\btoday\b|` +
+      String.raw`(?:the\s+)?next\s+\d+\s+days?` +
+      String.raw`)` +
+      DATE_TIME_SUFFIX,
+    "i",
+  );
 
-  const m = text.match(new RegExp(triggers.source + "[^.]*?" + DATE_PATTERN.source, "i"));
+  // Wrap triggers so `A|B|from\\b` does not split precedence from `[^.]*?` + date (otherwise `from` matches alone).
+  const m = text.match(new RegExp("(?:" + triggers.source + ")[^.]*?" + DATE_PATTERN.source, "i"));
   if (m) {
     const dateM = m[0].match(DATE_PATTERN);
     return dateM ? dateM[0].trim() : null;
@@ -262,24 +340,30 @@ function extractDateNear(text: string, triggers: RegExp): string | null {
   return null;
 }
 
-function buildSummaryCard(allText: string, enrichment?: ChatSummaryEnrichment | null): SummaryCard | null {
+function buildSummaryCard(
+  allTextPlain: string,
+  enrichment?: ChatSummaryEnrichment | null,
+  rawForExtraction?: string,
+): SummaryCard | null {
   let rows: SummaryCardRow[] = [];
 
-  // Campaign name
-  const name = extractCampaignName(allText);
+  // Campaign name (prefer **bold** from raw assistant markdown when plain text had markers stripped)
+  const name = extractCampaignName(allTextPlain, rawForExtraction);
   if (name) rows.push({ label: "Name", value: name });
 
   // Offer type
-  const offer = extractOfferType(allText);
+  const offer = extractOfferType(allTextPlain);
   if (offer) rows.push({ label: "Offer", value: offer, badge: true });
 
   // Products mentioned: pairing X with Y, or N items/products
-  const pairingMatch = allText.match(/(?:pair(?:ing)?\s+(?:the\s+)?(.{5,60}?)\s+with\s+(?:a\s+free\s+)?(.{5,60?})(?:\s+makes|\s+add|\s+would|\.|,))/i);
+  const pairingMatch = allTextPlain.match(
+    /(?:pair(?:ing)?\s+(?:the\s+)?(.{5,60}?)\s+with\s+(?:a\s+free\s+)?(.{5,60?})(?:\s+makes|\s+add|\s+would|\.|,))/i,
+  );
   if (pairingMatch) {
     rows.push({ label: "Main Item", value: pairingMatch[1].replace(/\*\*/g, "").trim() });
     rows.push({ label: "Free Item", value: pairingMatch[2].replace(/\*\*/g, "").trim() });
   } else {
-    const fromBullets = extractMainAndFreeFromBulletList(allText);
+    const fromBullets = extractMainAndFreeFromBulletList(allTextPlain);
     if (fromBullets.main) {
       rows.push({ label: "Main Item", value: fromBullets.main });
     }
@@ -287,7 +371,9 @@ function buildSummaryCard(allText: string, enrichment?: ChatSummaryEnrichment | 
       rows.push({ label: "Free Item", value: fromBullets.free });
     }
     if (!fromBullets.main && !fromBullets.free) {
-      const countMatch = allText.match(/\b(all\s+(?:three|two|four|five|\d+)|(\d+))\s+(?:food\s+)?(?:item|product|sku)s?\b/i);
+      const countMatch = allTextPlain.match(
+        /\b(all\s+(?:three|two|four|five|\d+)|(\d+))\s+(?:food\s+)?(?:item|product|sku)s?\b/i,
+      );
       if (countMatch) {
         rows.push({ label: "Products", value: countMatch[0].trim() });
       }
@@ -295,11 +381,17 @@ function buildSummaryCard(allText: string, enrichment?: ChatSummaryEnrichment | 
   }
 
   // Start date
-  const start = extractDateNear(allText, /kick\s+(?:it\s+)?off(?:\s+this)?|start(?:ing)?(?:\s+(?:on|this))?|from\b/i);
+  const start = extractDateNear(
+    allTextPlain,
+    /kick\s+(?:it\s+)?off(?:\s+this)?|start(?:ing)?(?:\s+(?:on|this))?|from\b|launch(?:ing|es)?/i,
+  );
   if (start) rows.push({ label: "Start", value: start });
 
   // End date
-  const end = extractDateNear(allText, /run(?:ning)?\s+(?:it\s+)?through|end(?:ing)?(?:\s+on)?|through\b|until\b|to\b(?!\s+catch)/i);
+  const end = extractDateNear(
+    allTextPlain,
+    /run(?:ning)?\s+(?:it\s+)?through|end(?:ing)?(?:\s+on)?|through\b|until\b|to\b(?!\s+catch)/i,
+  );
   if (end && end !== start) rows.push({ label: "End", value: end });
 
   rows = mergeSummaryEnrichment(rows, enrichment);
@@ -319,7 +411,7 @@ const PROMO_TYPE_KEYWORDS = /buy.{0,10}get|bogo|percent|discount|bundle|clearanc
 const PROMO_OPTION_MAP: Array<{ test: RegExp; icon: string; label: string; sub: string }> = [
   { test: /buy\s*\d\s*get\s*\d\s*free|bogo/i, icon: "🎁", label: "Buy 2 Get 1 Free", sub: "BOGO offer" },
   {
-    test: /\bdiscount\b|percentage\s+off|\bpercent\b|%\s*(?:off|discount)/i,
+    test: /\bdiscount\b|percentage\s+off|\bpercent\b|%\s*(?:off|discount)|flash\s*sale/i,
     icon: "💸",
     label: "% Discount",
     sub: "10–50% off",
@@ -327,6 +419,44 @@ const PROMO_OPTION_MAP: Array<{ test: RegExp; icon: string; label: string; sub: 
   { test: /bundle|free\s+gift/i, icon: "📦", label: "Bundle Deal", sub: "Buy together, save" },
   { test: /clearance/i, icon: "🏷️", label: "Clearance", sub: "Overstock & expiry" },
 ];
+
+const OPTION_PARAGRAPH_PREFIX = /^Option\s+\d+\s*[—–-]\s*/i;
+
+/**
+ * Paragraph-style options from the API: blocks separated by \\n\\n starting with
+ * "Option 1 — …", "Option 2 — …" (new backend prose vs markdown bullets).
+ */
+function extractOptionParagraphs(text: string): {
+  intro: string;
+  optionBodies: string[];
+  closing: string;
+} | null {
+  const paras = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length < 2) return null;
+
+  const firstIdx = paras.findIndex((p) => OPTION_PARAGRAPH_PREFIX.test(p));
+  if (firstIdx < 0) return null;
+
+  let lastIdx = -1;
+  for (let i = 0; i < paras.length; i++) {
+    if (OPTION_PARAGRAPH_PREFIX.test(paras[i])) lastIdx = i;
+  }
+
+  for (let i = firstIdx; i <= lastIdx; i++) {
+    if (!OPTION_PARAGRAPH_PREFIX.test(paras[i])) return null;
+  }
+
+  const optionBodies = paras
+    .slice(firstIdx, lastIdx + 1)
+    .map((p) => p.replace(OPTION_PARAGRAPH_PREFIX, "").trim())
+    .filter(Boolean);
+
+  if (optionBodies.length < 2) return null;
+
+  const intro = paras.slice(0, firstIdx).join("\n\n").trim();
+  const closing = paras.slice(lastIdx + 1).join("\n\n").trim();
+  return { intro, optionBodies, closing };
+}
 
 /**
  * Split `• **Title** — description...` (or `–` / hyphen) into card label + body from the API string.
@@ -362,6 +492,74 @@ function parsePromoBulletLine(raw: string): OptionItem {
     }
   }
   return { icon, label, sub };
+}
+
+/**
+ * Build option-grid (+ optional summary / markdown tail) from "Option N — Type: …" paragraphs.
+ */
+function tryBuildOptionGridFromParagraphs(
+  trimmed: string,
+  summaryEnrichment?: ChatSummaryEnrichment | null,
+): AssistantMessageChunk[] | null {
+  const extracted = extractOptionParagraphs(trimmed);
+  if (!extracted) return null;
+  const { intro, optionBodies, closing } = extracted;
+
+  if (!PROMO_TYPE_KEYWORDS.test(trimmed)) return null;
+
+  const options: OptionItem[] = [];
+  for (const body of optionBodies) {
+    const line = body.replace(/\*\*/g, "").trim();
+    if (!PROMO_OPTION_MAP.some((opt) => opt.test.test(line))) continue;
+    const parsed = parsePromoBulletLine(body);
+    if (parsed.label.length > 0 && !options.some((m) => m.label === parsed.label)) {
+      options.push(parsed);
+    }
+  }
+  if (options.length < 2) return null;
+
+  const plainLower = trimmed.replace(/\*\*/g, "").toLowerCase();
+  const promoContext =
+    /\b(promotion|promo|campaign|strateg(?:y|ies)|recommend|inventory)\b/.test(plainLower);
+  const explainsChoices = /option\s+\d+/i.test(trimmed) || /\b(discount|bogo|bundle)\b/.test(plainLower);
+  if (!promoContext && !explainsChoices) return null;
+
+  const out: AssistantMessageChunk[] = [
+    {
+      kind: "option-grid",
+      intro: intro || "Choose a promotion:",
+      options,
+    },
+  ];
+
+  if (closing) {
+    const closingPlain = closing.replace(/\*\*/g, "").trim();
+    const closingHasProposal = looksLikeCampaignProposal(closingPlain, closing);
+    if (closingHasProposal) {
+      const card = buildSummaryCard(closingPlain, summaryEnrichment, closing);
+      if (card) {
+        const { lead, question, note } = extractSummaryNarrative(closing, card);
+        const part = partitionSummaryMarkdownTail(question, note);
+        const slimCard: SummaryCard = { ...card, intro: "" };
+        if (lead?.trim()) out.push(markdownChunk(lead.trim()));
+        out.push({
+          kind: "summary-card",
+          card: slimCard,
+          question: part.cardQuestion,
+          note: part.cardNote,
+        });
+        for (const piece of part.detailMarkdownPieces) {
+          if (piece.trim()) out.push(markdownChunk(piece.trim()));
+        }
+      } else {
+        out.push(markdownChunk(closing));
+      }
+    } else {
+      out.push(markdownChunk(closing));
+    }
+  }
+
+  return out;
 }
 
 /** Text before the first markdown bullet line (intro paragraph for option-grid). */
@@ -463,9 +661,9 @@ function tryBuildPromoTypesExplainerChunks(
 
   if (closing) {
     const closingPlain = closing.replace(/\*\*/g, "").trim();
-    const closingHasProposal = looksLikeCampaignProposal(closingPlain);
+    const closingHasProposal = looksLikeCampaignProposal(closingPlain, closing);
     if (closingHasProposal) {
-      const card = buildSummaryCard(closingPlain, summaryEnrichment);
+      const card = buildSummaryCard(closingPlain, summaryEnrichment, closing);
       if (card) {
         const { lead, question, note } = extractSummaryNarrative(closing, card);
         const part = partitionSummaryMarkdownTail(question, note);
@@ -814,7 +1012,7 @@ function extractCategoryListParts(text: string): {
   closing?: string;
 } | null {
   const plainForProposal = text.replace(/\*\*/g, "").trim();
-  if (looksLikeCampaignProposal(plainForProposal)) return null;
+  if (looksLikeCampaignProposal(plainForProposal, text)) return null;
 
   const lines = text.split("\n");
   let firstBullet = -1;
@@ -845,6 +1043,122 @@ function extractCategoryListParts(text: string): {
     intro: intro || "Pick a category:",
     items,
     closing: closingRaw || undefined,
+  };
+}
+
+const INLINE_CATEGORY_MIN_ITEMS = 5;
+
+/** "Alcohol, Apparel, … and Toys" / Oxford comma → discrete chip labels. Strip bold markers. */
+function parseCommaCategoryListItems(listBody: string): string[] {
+  let s = listBody.trim();
+  s = s.replace(/,\s*and\s+/gi, ", ");
+  return s
+    .split(/,\s*/)
+    .map((x) => x.replace(/\*\*/g, "").trim())
+    .filter(Boolean);
+}
+
+function hasCategoryCue(text: string): boolean {
+  return CATEGORY_INTRO_RE.test(text) || /\bcategories?\b/i.test(text);
+}
+
+/**
+ * Extract extra category names from prose after the comma list, e.g.
+ * "You can also run campaigns for seasonal sections like Back to School or Seasonal Holiday."
+ */
+function extractExtraCategoryNames(remainder: string): string[] {
+  const m = remainder.match(/\b(?:like|such\s+as|including)\s+(.+?)\.?\s*$/i);
+  if (!m) return [];
+  return m[1]
+    .replace(/\*\*/g, "")
+    .replace(/\b(?:or|and)\b/gi, ",")
+    .split(/,\s*/)
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Backend often returns categories as one prose paragraph:
+ * "…categories…, including Alcohol, Apparel, …, and Toys.\n\nWhich…?"
+ * Render as chip-list like bullet-based category replies (no markdown bullets in message).
+ */
+function extractInlineCommaCategoryListParts(text: string): {
+  intro: string;
+  items: string[];
+  closing?: string;
+} | null {
+  const paras = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length === 0) return null;
+
+  const first = paras[0];
+  const closing = paras.length > 1 ? paras.slice(1).join("\n\n").trim() : undefined;
+
+  if (!hasCategoryCue(first)) return null;
+
+  const inc = first.match(/\bincluding\s+/i);
+  if (inc && inc.index !== undefined) {
+    const intro = first.slice(0, inc.index).trim();
+    let afterInc = first.slice(inc.index + inc[0].length).trim();
+
+    let listBody: string;
+    let remainder = "";
+    const sentenceBoundary = afterInc.match(/\.\s+[A-Z]/);
+    if (sentenceBoundary && sentenceBoundary.index !== undefined) {
+      listBody = afterInc.slice(0, sentenceBoundary.index).trim();
+      remainder = afterInc.slice(sentenceBoundary.index + 1).trim();
+    } else {
+      listBody = afterInc.replace(/\.\s*$/u, "").trim();
+    }
+
+    if (intro && listBody) {
+      const items = parseCommaCategoryListItems(listBody);
+      if (remainder) {
+        items.push(...extractExtraCategoryNames(remainder));
+      }
+      if (items.length >= INLINE_CATEGORY_MIN_ITEMS && !looksLikeProductList(items)) {
+        return { intro: intro || "Pick a category:", items, closing };
+      }
+    }
+  }
+
+  return null;
+}
+
+const BOLD_CATEGORY_MIN_ITEMS = 4;
+
+/**
+ * Fallback: when the backend returns shorter category lists with **bold** names
+ * scattered across one or more sentences (not all after "including"),
+ * collect every **BoldTerm** as a chip when a category cue is present.
+ */
+function extractBoldCategoryListParts(text: string): {
+  intro: string;
+  items: string[];
+  closing?: string;
+} | null {
+  const paras = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  if (paras.length === 0) return null;
+
+  const first = paras[0];
+  const closing = paras.length > 1 ? paras.slice(1).join("\n\n").trim() : undefined;
+
+  if (!hasCategoryCue(first)) return null;
+
+  const boldMatches = [...first.matchAll(/\*\*([^*\n]{1,60})\*\*/g)];
+  if (boldMatches.length < BOLD_CATEGORY_MIN_ITEMS) return null;
+
+  const items = boldMatches.map((m) => m[1].trim()).filter(Boolean);
+  if (looksLikeProductList(items)) return null;
+
+  const firstBoldIdx = boldMatches[0].index!;
+  let intro = first.slice(0, firstBoldIdx).trim();
+  intro = intro.replace(/,?\s*\bincluding\s*$/i, "").trim();
+  intro = intro.replace(/,\s*$/, "").trim();
+
+  return {
+    intro: intro || "Pick a category:",
+    items,
+    closing,
   };
 }
 
@@ -898,6 +1212,10 @@ export function getAssistantMessageChunks(
   const promoTypesChunks = tryBuildPromoTypesExplainerChunks(trimmed, summaryEnrichment);
   if (promoTypesChunks) return promoTypesChunks;
 
+  // Paragraph-style options: "Option 1 — Discount: …" (new backend format)
+  const paragraphOptionChunks = tryBuildOptionGridFromParagraphs(trimmed, summaryEnrichment);
+  if (paragraphOptionChunks) return paragraphOptionChunks;
+
   // Category chip-list — must run before campaign-summary. Otherwise enrichment +
   // `partitionSummaryMarkdownTail` turns the bullet block into plain markdown and
   // the UI shows a long list instead of pills inside assistant bubbles.
@@ -912,13 +1230,26 @@ export function getAssistantMessageChunks(
     }
   }
 
+  const inlineCommaCategories =
+    extractInlineCommaCategoryListParts(trimmed) ??
+    extractBoldCategoryListParts(trimmed);
+  if (inlineCommaCategories) {
+    const chip = tryBuildChipList(
+      inlineCommaCategories.intro.trim() || "Pick a category:",
+      inlineCommaCategories.items,
+      inlineCommaCategories.closing,
+      false,
+    );
+    if (chip) return [chip];
+  }
+
   // Strip markdown bold markers for plain-text analysis only
   const plainText = trimmed.replace(/\*\*/g, "");
 
   // ── Campaign summary detection (runs on the whole raw text) ─────────────────
   // This catches multi-sentence AI responses before they get split into bubbles.
   // Enrichment fills Start/End/Products when the model omits them on follow-up turns.
-  const proposalFromText = looksLikeCampaignProposal(plainText);
+  const proposalFromText = looksLikeCampaignProposal(plainText, trimmed);
   const proposalFromEnrichment = Boolean(
     summaryEnrichment?.campaignName?.trim() ||
       summaryEnrichment?.scheduleStartIso ||
@@ -926,7 +1257,7 @@ export function getAssistantMessageChunks(
       summaryEnrichment?.productsLabel?.trim(),
   );
   if (proposalFromText || (proposalFromEnrichment && /bundle|campaign|offer|promo/i.test(plainText))) {
-    const card = buildSummaryCard(plainText, summaryEnrichment);
+    const card = buildSummaryCard(plainText, summaryEnrichment, trimmed);
     if (card) {
       const { lead, question, note } = extractSummaryNarrative(trimmed, card);
       const part = partitionSummaryMarkdownTail(question, note);
@@ -950,11 +1281,12 @@ export function getAssistantMessageChunks(
   if (/<\s*p[\s>]/i.test(trimmed)) {
     const pMatches = [...trimmed.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)];
     if (pMatches.length > 1) {
+      const htmlCombined = pMatches.map((m) => m[1].trim().replace(/\n/g, "\n")).join("\n\n");
       const blocks = pMatches.map((m) => m[1].trim().replace(/\n/g, " ").replace(/\*\*/g, ""));
       const combined = blocks.join(" ");
 
       const combinedProposal =
-        looksLikeCampaignProposal(combined) ||
+        looksLikeCampaignProposal(combined, htmlCombined) ||
         (Boolean(
           summaryEnrichment?.campaignName?.trim() ||
             summaryEnrichment?.scheduleStartIso ||
@@ -963,9 +1295,8 @@ export function getAssistantMessageChunks(
         ) &&
           /bundle|campaign|offer|promo/i.test(combined));
       if (combinedProposal) {
-        const card = buildSummaryCard(combined, summaryEnrichment);
+        const card = buildSummaryCard(combined, summaryEnrichment, htmlCombined);
         if (card) {
-          const htmlCombined = pMatches.map((m) => m[1].trim().replace(/\n/g, "\n")).join("\n\n");
           const { lead, question, note } = extractSummaryNarrative(
             htmlCombined || combined,
             card,

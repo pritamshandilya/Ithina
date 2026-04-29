@@ -13,6 +13,16 @@ import { cn } from "@/lib/utils";
 
 const HIDE_FOR_PATHS = new Set<string>(["/admin/dashboard", "/admin/stores/new"]);
 
+/** Wizard renders its own title/shell — hide the global strip to avoid duplicate “New Campaign” headings. */
+function isWizardPath(pathname: string): boolean {
+  return (
+    pathname === "/maker/wizard" ||
+    pathname.startsWith("/maker/wizard/") ||
+    pathname === "/wizard" ||
+    pathname.startsWith("/wizard/")
+  );
+}
+
 /**
  * POG-style strip: title + description from nav config, with global actions.
  * Hidden for routes that render a full custom header (e.g. org overview).
@@ -54,6 +64,7 @@ export default function RoutePageHeader() {
 
   const nav = useMemo(() => navItemForPath(location.pathname), [location.pathname]);
 
+  if (isWizardPath(location.pathname)) return null;
   if (!nav) return null;
   if (HIDE_FOR_PATHS.has(location.pathname)) return null;
 
@@ -62,8 +73,12 @@ export default function RoutePageHeader() {
     location.pathname === "/checker/profile" ||
     location.pathname === "/admin/profile";
   const isAdminOrganizationSettingsPage = location.pathname === "/admin/organization-settings";
+  const isWizardRoute = isWizardPath(location.pathname);
   const showNewCampaign =
-    (role === "maker" || role === "admin") && !isProfilePage && !isAdminOrganizationSettingsPage;
+    (role === "maker" || role === "admin") &&
+    !isProfilePage &&
+    !isAdminOrganizationSettingsPage &&
+    !isWizardRoute;
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
   const isGuardRailsPage = location.pathname === "/admin/settings";

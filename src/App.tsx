@@ -6,6 +6,7 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import RoutePendingFallback from "@/components/shared/route-pending-fallback";
 import { Toaster } from "@/components/ui/toaster";
 
 import { promoQueryClient } from "@/lib/query-client";
@@ -36,6 +37,10 @@ const router = createRouter({
   defaultPreload: "intent",
   scrollRestoration: true,
   defaultPreloadStaleTime: 0,
+  /** Without this, Router defaults delay showing pending UI by ~1s — stale outlet + missing header flash on first lazy navigation. */
+  defaultPendingMs: 0,
+  defaultPendingMinMs: 0,
+  defaultPendingComponent: RoutePendingFallback,
   context: {
     queryClient: promoQueryClient,
     auth: undefined!,

@@ -1,6 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/lib/sanitize", () => ({
+jest.mock("@/lib/sanitize", () => ({
   sanitizeHtml: (html: string) => html,
 }));
 

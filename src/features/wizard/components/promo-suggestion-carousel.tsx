@@ -360,23 +360,27 @@ export default function PromoSuggestionCarousel({ chips, onPick }: PromoSuggesti
                   <X aria-hidden />
                 </button>
               </div>
-              {HELP_GUIDE_ORDER.map((kind) => {
-                const meta = SUGGESTION_META[kind];
-                const accents = POP_CLASSES_BY_ACCENT[meta.color];
-                return (
-                  <HelpRow
-                    key={kind}
-                    Icon={meta.Icon}
-                    className={accents.name}
-                    description={HELP_DESCRIPTIONS[kind]}
-                    iconClassName={accents.ico}
-                    title={meta.label.toUpperCase()}
-                  />
-                );
-              })}
-              <button type="button" className="psc-got-btn" onClick={() => setHelpOpen(false)}>
-                Got it
-              </button>
+              <div className="psc-pop-scroll">
+                {HELP_GUIDE_ORDER.map((kind) => {
+                  const meta = SUGGESTION_META[kind];
+                  const accents = POP_CLASSES_BY_ACCENT[meta.color];
+                  return (
+                    <HelpRow
+                      key={kind}
+                      Icon={meta.Icon}
+                      className={accents.name}
+                      description={HELP_DESCRIPTIONS[kind]}
+                      iconClassName={accents.ico}
+                      title={meta.label.toUpperCase()}
+                    />
+                  );
+                })}
+              </div>
+              <div className="psc-pop-foot">
+                <button type="button" className="psc-got-btn" onClick={() => setHelpOpen(false)}>
+                  Got it
+                </button>
+              </div>
             </div>
           </div>
         </div>

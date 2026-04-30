@@ -187,7 +187,7 @@ function DataStagingGrid({
   data,
   isGenerating,
   inputMode,
-  onInputModeChange,
+  onInputModeChange: _onInputModeChange,
   onToggleGridRowIncluded,
   onSetAllGridRowsIncluded,
   onDiscountChange,

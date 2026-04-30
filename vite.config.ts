@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   const httpsAgent = new https.Agent({ family: 4, rejectUnauthorized: false });
 
   return {
-    base: "/cbai/promo/",
+    base: "/",
     plugins: [
       devtools(),
       tanstackRouter({

@@ -140,7 +140,6 @@ function derivePipelineFromSignals(params: {
   hasAssets: boolean;
 }): string[] {
   const s = params.status;
-  const gr = params.guardrails;
   const hasAssets = params.hasAssets;
 
   if (s === "approved" || s === "active") {

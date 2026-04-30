@@ -140,23 +140,6 @@ export default function CampaignsTabulator() {
     updateCampaign({ id: editingId, form: modalForm }, { onSuccess: closeModal });
   }, [modalForm, modalMode, editingId, updateCampaign, closeModal]);
 
-  const confirmDelete = useCallback(
-    (id: string) => {
-      const campaign = campaigns.find((c) => c.id === id);
-      if (!campaign || !canDeleteCampaignByStatus(campaign.status)) {
-        toast({
-          title: "Delete not allowed",
-          description: "Only Draft or Rejected campaigns can be deleted.",
-          variant: "destructive",
-        });
-        return;
-      }
-      deleteCampaign(id);
-      setSelectedRows((prev) => prev.filter((r) => r.id !== id));
-    },
-    [campaigns, deleteCampaign, toast],
-  );
-
   const bulkPause = useCallback(() => {
     let pausedCount = 0;
     let skippedCount = 0;

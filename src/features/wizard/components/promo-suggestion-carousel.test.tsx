@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
 
 import PromoSuggestionCarousel from "./promo-suggestion-carousel";
 
@@ -14,7 +13,7 @@ const chips = [
 describe("PromoSuggestionCarousel", () => {
   it("should send the full suggestion text when a card is clicked", async () => {
     const user = userEvent.setup();
-    const onPick = vi.fn();
+    const onPick = jest.fn();
 
     render(<PromoSuggestionCarousel chips={chips} onPick={onPick} />);
 
@@ -25,7 +24,7 @@ describe("PromoSuggestionCarousel", () => {
 
   it("should page the fixed track and update arrow states", async () => {
     const user = userEvent.setup();
-    const onPick = vi.fn();
+    const onPick = jest.fn();
 
     render(<PromoSuggestionCarousel chips={chips} onPick={onPick} />);
 
@@ -46,7 +45,7 @@ describe("PromoSuggestionCarousel", () => {
 
   it("should toggle and close the quick action guide", async () => {
     const user = userEvent.setup();
-    const onPick = vi.fn();
+    const onPick = jest.fn();
 
     render(<PromoSuggestionCarousel chips={chips} onPick={onPick} />);
 

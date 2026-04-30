@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
 
 import WizardStepHeader from "./wizard-step-header";
 
@@ -8,7 +7,7 @@ describe("WizardStepHeader", () => {
   const steps = ["Products", "Screens", "Submit"];
 
   it("should render AI-assisted mode and step labels", () => {
-    render(<WizardStepHeader mode="nl" currentStep={2} steps={steps} onBack={vi.fn()} />);
+    render(<WizardStepHeader mode="nl" currentStep={2} steps={steps} onBack={jest.fn()} />);
 
     expect(screen.getByText("AI Assisted")).toBeInTheDocument();
     expect(screen.getByText("Products")).toBeInTheDocument();
@@ -17,14 +16,14 @@ describe("WizardStepHeader", () => {
   });
 
   it("should render CSV upload mode when NL mode uses CSV input", () => {
-    render(<WizardStepHeader mode="nl" inputMode="csv" currentStep={1} steps={steps} onBack={vi.fn()} />);
+    render(<WizardStepHeader mode="nl" inputMode="csv" currentStep={1} steps={steps} onBack={jest.fn()} />);
 
     expect(screen.getByText("CSV Upload")).toBeInTheDocument();
   });
 
   it("should call onBack when the back button is clicked", async () => {
     const user = userEvent.setup();
-    const onBack = vi.fn();
+    const onBack = jest.fn();
 
     render(<WizardStepHeader mode="manual" currentStep={1} steps={steps} onBack={onBack} />);
 
@@ -35,14 +34,14 @@ describe("WizardStepHeader", () => {
 
   it("should call onStepClick for current and completed steps only", async () => {
     const user = userEvent.setup();
-    const onStepClick = vi.fn();
+    const onStepClick = jest.fn();
 
     render(
       <WizardStepHeader
         mode="nl"
         currentStep={2}
         steps={steps}
-        onBack={vi.fn()}
+        onBack={jest.fn()}
         onStepClick={onStepClick}
       />,
     );
@@ -61,7 +60,7 @@ describe("WizardStepHeader", () => {
         mode="manual"
         currentStep={1}
         steps={steps}
-        onBack={vi.fn()}
+        onBack={jest.fn()}
         trailingSlot={<button type="button">Continue</button>}
       />,
     );

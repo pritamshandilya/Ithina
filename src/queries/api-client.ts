@@ -14,12 +14,11 @@
  *  import { apiClient } from "@/queries/shared";
  *  const data = await apiClient.get<UserResponse>("/users/me");
  */
-
 import { ApiError } from "@/exceptions/ApiError";
 import { getHttpConfig } from "@/lib/api/config";
+import { AuthSessionService } from "@/lib/auth/session";
 import store from "@/store";
 import { selectSelectedStore } from "@/store/selectors";
-import { AuthSessionService } from "@/lib/auth/session";
 
 export { ApiError };
 
@@ -75,6 +74,12 @@ async function parseResponse<T>(res: Response): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface ApiClientResponse<T> {
+  data: T;
+  headers: Headers;
+  status: number;
+}
+
 function buildHeaders(extra?: HeadersInit): HeadersInit {
   const baseExtras = extra ?? {};
   const headers: Record<string, string> = {
@@ -99,7 +104,9 @@ function buildHeaders(extra?: HeadersInit): HeadersInit {
   return headers;
 }
 
-function mergeHeadersWithoutContentTypeForFormData(extra?: HeadersInit): HeadersInit {
+function mergeHeadersWithoutContentTypeForFormData(
+  extra?: HeadersInit,
+): HeadersInit {
   const headers = buildHeaders(extra) as Record<string, string>;
   const normalizedEntries = Object.entries(headers).filter(
     ([key]) => key.toLowerCase() !== "content-type",
@@ -107,7 +114,7 @@ function mergeHeadersWithoutContentTypeForFormData(extra?: HeadersInit): Headers
   return Object.fromEntries(normalizedEntries);
 }
 
-async function request<T>(
+async function requestWithResponse<T>(
   method: string,
   path: string,
   options?: {
@@ -116,14 +123,17 @@ async function request<T>(
     headers?: HeadersInit;
     timeoutMs?: number;
   },
-): Promise<T> {
+): Promise<ApiClientResponse<T>> {
   const { baseUrl } = getHttpConfig();
 
   const normalizedPath = (() => {
     if (/^https?:\/\//i.test(path)) return path;
 
     const withLeadingSlash = path.startsWith("/") ? path : `/${path}`;
-    if (withLeadingSlash === API_V1_PREFIX || withLeadingSlash.startsWith(`${API_V1_PREFIX}/`)) {
+    if (
+      withLeadingSlash === API_V1_PREFIX ||
+      withLeadingSlash.startsWith(`${API_V1_PREFIX}/`)
+    ) {
       return withLeadingSlash;
     }
 
@@ -167,15 +177,34 @@ async function request<T>(
         ? options.body
         : options?.body instanceof FormData
           ? options.body
-        : options?.body !== undefined
-          ? JSON.stringify(options.body)
-          : undefined,
+          : options?.body !== undefined
+            ? JSON.stringify(options.body)
+            : undefined,
     signal: controller.signal,
   }).finally(() => {
     clearTimeout(timer);
   });
 
-  return parseResponse<T>(res);
+  const data = await parseResponse<T>(res);
+  return {
+    data,
+    headers: res.headers,
+    status: res.status,
+  };
+}
+
+async function request<T>(
+  method: string,
+  path: string,
+  options?: {
+    body?: unknown;
+    params?: Record<string, string | number | boolean | undefined | null>;
+    headers?: HeadersInit;
+    timeoutMs?: number;
+  },
+): Promise<T> {
+  const response = await requestWithResponse<T>(method, path, options);
+  return response.data;
 }
 
 export interface RequestOptions {
@@ -191,6 +220,12 @@ export const apiClient = {
 
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>("POST", path, { body, ...options }),
+
+  postWithResponse: <T>(
+    path: string,
+    body?: unknown,
+    options?: RequestOptions,
+  ) => requestWithResponse<T>("POST", path, { body, ...options }),
 
   put: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>("PUT", path, { body, ...options }),

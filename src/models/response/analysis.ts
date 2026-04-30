@@ -1,8 +1,4 @@
-export type AnalysisJobStatus =
-  | "PENDING"
-  | "RUNNING"
-  | "COMPLETED"
-  | "FAILED";
+export type AnalysisJobStatus = "PENDING" | "RUNNING" | "COMPLETED" | "FAILED";
 
 export type AnalysisType = "PLANOGRAM" | "ADHOC";
 

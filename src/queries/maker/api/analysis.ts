@@ -1,11 +1,15 @@
+import { fetchStoreFixtures } from "./fixtures";
+import {
+  createMercureClient,
+  parseMercureLinkHeader,
+} from "@/hooks/use-mercure";
 import type {
   AnalysisJobResponse,
   AnalysisJobStatus,
   AnalysisType,
 } from "@/models/response/analysis";
-import type { AdhocAnalysis } from "@/types/maker";
 import { apiClient } from "@/queries/shared";
-import { fetchStoreFixtures } from "./fixtures";
+import type { AdhocAnalysis } from "@/types/maker";
 
 interface SubmitFixtureAnalysisParams {
   fixtureId: string;
@@ -34,6 +38,12 @@ interface RunFixtureAnalysisOptions {
   pollIntervalMs?: number;
 }
 
+interface SubmitFixtureAnalysisResult {
+  job: AnalysisJobResponse;
+  mercureHubUrl: string | null;
+  mercureAuthorization: string | null;
+}
+
 const TERMINAL_ANALYSIS_STATUSES: AnalysisJobStatus[] = ["COMPLETED", "FAILED"];
 const DEFAULT_ANALYSIS_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_ANALYSIS_POLL_INTERVAL_MS = 1800;
@@ -50,7 +60,7 @@ export function isTerminalAnalysisStatus(status: AnalysisJobStatus): boolean {
 
 export async function submitFixtureAnalysis(
   params: SubmitFixtureAnalysisParams,
-): Promise<AnalysisJobResponse> {
+): Promise<SubmitFixtureAnalysisResult> {
   const { fixtureId, image, analysisType, planogramId } = params;
   const formData = new FormData();
   formData.append("image", image);
@@ -60,27 +70,27 @@ export async function submitFixtureAnalysis(
     formData.append("planogram_id", planogramId);
   }
 
-  return apiClient.post<AnalysisJobResponse>(
+  const response = await apiClient.postWithResponse<AnalysisJobResponse>(
     `/fixtures/${fixtureId}/analyze`,
     formData,
   );
+  return {
+    job: response.data,
+    mercureHubUrl: parseMercureLinkHeader(response.headers.get("Link")),
+    mercureAuthorization: response.headers.get("Mercure-Authorization"),
+  };
 }
 
 export function fetchFixtureAnalysisJobs(
   fixtureId: string,
 ): Promise<AnalysisJobResponse[]> {
-  return apiClient.get<AnalysisJobResponse[]>(`/fixtures/${fixtureId}/analysis`);
+  return apiClient.get<AnalysisJobResponse[]>(
+    `/fixtures/${fixtureId}/analysis`,
+  );
 }
 
 export function fetchAnalysisJob(jobId: string): Promise<AnalysisJobResponse> {
   return apiClient.get<AnalysisJobResponse>(`/analysis/${jobId}`);
-}
-
-function getMercureHubUrl(topic: string): string {
-  const mercureBaseUrl =
-    import.meta.env.VITE_MERCURE_HUB_URL ?? "http://localhost:3000/.well-known/mercure";
-  const encodedTopic = encodeURIComponent(topic);
-  return `${mercureBaseUrl}?topic=${encodedTopic}`;
 }
 
 function emitProgress(
@@ -100,7 +110,8 @@ async function waitForTerminalByPolling(
   options?: RunFixtureAnalysisOptions,
 ): Promise<AnalysisJobResponse> {
   const timeoutMs = options?.timeoutMs ?? DEFAULT_ANALYSIS_TIMEOUT_MS;
-  const pollIntervalMs = options?.pollIntervalMs ?? DEFAULT_ANALYSIS_POLL_INTERVAL_MS;
+  const pollIntervalMs =
+    options?.pollIntervalMs ?? DEFAULT_ANALYSIS_POLL_INTERVAL_MS;
   const deadline = Date.now() + timeoutMs;
   let currentJob = await fetchAnalysisJob(jobId);
   emitProgress(currentJob, options?.onProgress);
@@ -119,23 +130,28 @@ async function waitForTerminalByPolling(
 
 async function waitForTerminalByMercure(
   topic: string,
+  mercureToken: string,
+  mercureHubUrl: string,
   fallbackJobId: string,
   options?: RunFixtureAnalysisOptions,
 ): Promise<AnalysisJobResponse> {
   const timeoutMs = options?.timeoutMs ?? DEFAULT_ANALYSIS_TIMEOUT_MS;
+  const mercure = createMercureClient();
   return new Promise<AnalysisJobResponse>((resolve, reject) => {
-    const eventSource = new EventSource(getMercureHubUrl(topic));
+    let subscription: { close: () => void } | null = null;
     let finished = false;
 
     const timeoutId = window.setTimeout(() => {
-      finish(() => reject(new Error("Timed out waiting for analysis updates.")));
+      finish(() =>
+        reject(new Error("Timed out waiting for analysis updates.")),
+      );
     }, timeoutMs);
 
     const finish = (cb: () => void) => {
       if (finished) return;
       finished = true;
       window.clearTimeout(timeoutId);
-      eventSource.close();
+      subscription?.close();
       cb();
     };
 
@@ -149,26 +165,37 @@ async function waitForTerminalByMercure(
       }
     };
 
-    eventSource.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data) as MercureProgressEvent;
-        options?.onProgress?.({
-          jobId: payload.job_id ?? fallbackJobId,
-          status: payload.status ?? "RUNNING",
-          progressMessage: payload.progress_message ?? null,
-          progressPercent: payload.progress_pct ?? null,
-        });
-        if (payload.status && isTerminalAnalysisStatus(payload.status)) {
-          void resolveWithLatestJob(payload.job_id ?? fallbackJobId);
-        }
-      } catch {
-        // Ignore malformed events.
-      }
-    };
-
-    eventSource.onerror = () => {
-      finish(() => reject(new Error("Mercure stream disconnected before completion.")));
-    };
+    void mercure
+      .subscribe<MercureProgressEvent>({
+        hubUrl: mercureHubUrl,
+        topics: topic,
+        authorization: mercureToken,
+        timeoutMs,
+        shouldClose: (payload) =>
+          Boolean(payload.status && isTerminalAnalysisStatus(payload.status)),
+        onMessage: (payload) => {
+          options?.onProgress?.({
+            jobId: payload.job_id ?? fallbackJobId,
+            status: payload.status ?? "RUNNING",
+            progressMessage: payload.progress_message ?? null,
+            progressPercent: payload.progress_pct ?? null,
+          });
+          if (payload.status && isTerminalAnalysisStatus(payload.status)) {
+            void resolveWithLatestJob(payload.job_id ?? fallbackJobId);
+          }
+        },
+        onError: () => {
+          finish(() =>
+            reject(new Error("Mercure stream disconnected before completion.")),
+          );
+        },
+      })
+      .then((createdSubscription) => {
+        subscription = createdSubscription;
+      })
+      .catch((error) => {
+        finish(() => reject(error));
+      });
   });
 }
 
@@ -177,17 +204,22 @@ export async function runFixtureAnalysis(
   options?: RunFixtureAnalysisOptions,
 ): Promise<AnalysisJobResponse> {
   const submitted = await submitFixtureAnalysis(params);
-  const submittedJob = await fetchAnalysisJob(submitted.id);
-  emitProgress(submittedJob, options?.onProgress);
+  emitProgress(submitted.job, options?.onProgress);
 
-  if (!submittedJob.mercure_topic) {
-    return waitForTerminalByPolling(submitted.id, options);
+  if (!submitted.mercureHubUrl || !submitted.mercureAuthorization) {
+    return waitForTerminalByPolling(submitted.job.id, options);
   }
 
   try {
-    return await waitForTerminalByMercure(submittedJob.mercure_topic, submitted.id, options);
+    return await waitForTerminalByMercure(
+      submitted.job.mercure_topic,
+      submitted.mercureAuthorization,
+      submitted.mercureHubUrl,
+      submitted.job.id,
+      options,
+    );
   } catch {
-    return waitForTerminalByPolling(submitted.id, options);
+    return waitForTerminalByPolling(submitted.job.id, options);
   }
 }
 
@@ -195,7 +227,9 @@ function parseDate(input: string | null): Date {
   return input ? new Date(input) : new Date();
 }
 
-function extractComplianceScore(result: AnalysisJobResponse["result"]): number | undefined {
+function extractComplianceScore(
+  result: AnalysisJobResponse["result"],
+): number | undefined {
   if (!result) return undefined;
   const scoreCandidates = [
     (result as unknown as Record<string, unknown>).compliance_score,
@@ -245,7 +279,7 @@ export async function fetchAdhocAnalysesForStore(
       const complianceScore = extractComplianceScore(job.result);
       const fixtureName = fixture?.code
         ? `${fixture.code} (${fixture.type})`
-        : fixture?.type ?? `Fixture ${job.fixture_id.slice(0, 8)}`;
+        : (fixture?.type ?? `Fixture ${job.fixture_id.slice(0, 8)}`);
 
       return {
         id: job.id,

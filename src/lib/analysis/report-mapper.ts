@@ -43,6 +43,19 @@ function normalizeIssueName(value: string | null | undefined): string {
   return value?.trim().toLowerCase() ?? "";
 }
 
+function isMissingIssueType(type: string | undefined): boolean {
+  const normalized = (type ?? "").trim().toUpperCase();
+  return normalized === "MISSING_PRODUCT" || normalized === "FACING_SHORTAGE";
+}
+
+function isMisplacedIssueType(type: string | undefined): boolean {
+  return (type ?? "").trim().toUpperCase() === "MISPLACED_PRODUCT";
+}
+
+function isUnexpectedIssueType(type: string | undefined): boolean {
+  return (type ?? "").trim().toUpperCase() === "UNEXPECTED_PRODUCT";
+}
+
 function shelfNumberFromIssue(issue: PlanogramDiffIssue): number | null {
   if (typeof issue.row === "number" && Number.isFinite(issue.row)) {
     return issue.row;
@@ -52,10 +65,21 @@ function shelfNumberFromIssue(issue: PlanogramDiffIssue): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function estimateIssueWeight(issue: PlanogramDiffIssue): number {
+  const payload = issue as Record<string, unknown>;
+  if (isMissingIssueType(issue.type)) {
+    const expectedFacings = parseNumericValue(payload.expected_facings);
+    const detectedFacings = parseNumericValue(payload.detected_facings);
+    return Math.max(expectedFacings - detectedFacings, 1);
+  }
+  const detectedFacings = parseNumericValue(payload.detected_facings);
+  return Math.max(detectedFacings, 1);
+}
 export function getAnnotatedImagePreview(
   result: AnalysisJobResult | null,
   _imageMimeType?: string | null,
 ): string | null {
+  void _imageMimeType;
   if (!result) return null;
   return typeof result.annotated_image === "string"
     ? result.annotated_image
@@ -95,13 +119,13 @@ export function mapAnalysisResultToReportSnippet(
     parseNumericValue(result.detections.length);
   const expectedTotal = parseNumericValue(planogramDiff?.expected_total);
   const missingFromDiff = diffIssues.filter(
-    (issue) => issue.type === "MISSING_PRODUCT",
+    (issue) => isMissingIssueType(issue.type),
   ).length;
   const misplaced = diffIssues.filter(
-    (issue) => issue.type === "MISPLACED_PRODUCT",
+    (issue) => isMisplacedIssueType(issue.type),
   ).length;
   const extra = diffIssues.filter(
-    (issue) => issue.type === "UNEXPECTED_PRODUCT",
+    (issue) => isUnexpectedIssueType(issue.type),
   ).length;
   const diffIssueCount = diffIssues.length;
   const missing =
@@ -130,23 +154,50 @@ export function mapAnalysisResultToReportSnippet(
     ),
   );
 
-  const shelfCompliance = rows.map((row, index) => ({
-    shelfName: `Shelf ${row.row_number ?? index + 1}`,
-    compliance: complianceScore,
-    units: parseNumericValue(row.count),
-    skuCount: parseNumericValue(row.count),
-  }));
+  const shelfPenaltyByNumber = new Map<number, number>();
+  for (const issue of diffIssues) {
+    const shelfNumber = shelfNumberFromIssue(issue);
+    if (shelfNumber === null) continue;
+    const currentPenalty = shelfPenaltyByNumber.get(shelfNumber) ?? 0;
+    shelfPenaltyByNumber.set(
+      shelfNumber,
+      currentPenalty + estimateIssueWeight(issue),
+    );
+  }
+
+  const shelfCompliance = rows.map((row, index) => {
+    const shelfNumber = parseNumericValue(row.row_number) || index + 1;
+    const shelfUnits = parseNumericValue(row.count);
+    const shelfPenalty = shelfPenaltyByNumber.get(shelfNumber) ?? 0;
+    const shelfDenominator = Math.max(shelfUnits + shelfPenalty, 1);
+    const shelfScore = Math.max(
+      0,
+      Math.min(100, Math.round(((shelfDenominator - shelfPenalty) / shelfDenominator) * 100)),
+    );
+
+    return {
+      shelfName: `Shelf ${shelfNumber}`,
+      compliance: shelfScore,
+      units: shelfUnits,
+      skuCount: shelfUnits,
+    };
+  });
 
   const issuesToReview =
     diffIssueCount > 0
-      ? diffIssues.slice(0, 6).map((issue, index) => ({
-          id: `${issue.type ?? "ISSUE"}-${index}`,
-          skuName: issue.name ?? undefined,
-          description: issue.detail ?? "Detected planogram compliance issue.",
-          type: issue.type ?? "ANALYSIS",
-          location:
-            issue.shelf_name ?? (issue.row ? `Row ${issue.row}` : undefined),
-        }))
+      ? diffIssues.map((issue, index) => {
+          const shelfNumber = shelfNumberFromIssue(issue);
+          return {
+            id: `${issue.type ?? "ISSUE"}-${index}`,
+            skuName: issue.name ?? undefined,
+            description: issue.detail ?? "Detected planogram compliance issue.",
+            type: issue.type ?? "ANALYSIS",
+            location:
+              shelfNumber !== null
+                ? `Shelf ${shelfNumber}`
+                : issue.shelf_name ?? undefined,
+          };
+      })
       : baselineRuleFailures.slice(0, 6).map((rule, index) => ({
           id: `${rule.id}-${index}`,
           skuName: rule.name,
@@ -254,9 +305,11 @@ export function mapAnalysisResultToReportSnippet(
     issuesToReview,
     keyFindings: keyFindings.map((finding) => ({ ...finding })),
     executiveSummary:
-      analysisIssues > 0
+      (planogramDiff?.summary as string | undefined) ??
+      ((summary as unknown as { executive_summary?: string }).executive_summary ??
+      (analysisIssues > 0
         ? `Detected ${detected} products with ${analysisIssues} issue${analysisIssues === 1 ? "" : "s"} and ${parseNumericValue(result.empty_count)} empty-space gap${parseNumericValue(result.empty_count) === 1 ? "" : "s"}.`
-        : "No data available.",
+        : DEFAULT_REPORT_SNIPPET.executiveSummary)),
     aiRecommendations: finalRecommendations,
   };
 }
@@ -328,28 +381,31 @@ export function mapAnalysisResultToAllIssuesReportData(
           count: baselineRuleFailures.length,
           description: "Issues reported by compliance rule evaluation.",
           variant: "analysis",
-          issues: baselineRuleFailures.map((rule, index) => ({
-            id: `analysis-${rule.id}-${index + 1}`,
-            productName: rule.name || "Compliance Rule",
-            description: rule.reason || "Compliance rule evaluation failed.",
-            detail: rule.description || undefined,
-            why: rule.category || undefined,
-            severity:
-              rule.severity >= 80
-                ? "HIGH"
-                : rule.severity >= 50
-                  ? "MEDIUM"
-                  : "LOW",
-          })),
+          issues: baselineRuleFailures.map((rule, index) => {
+            const severity = parseNumericValue(rule.severity);
+            return {
+              id: `analysis-${rule.id}-${index + 1}`,
+              productName: rule.name || "Compliance Rule",
+              description: rule.reason || "Compliance rule evaluation failed.",
+              detail: rule.description || undefined,
+              why: rule.category || undefined,
+              severity:
+                severity >= 80
+                  ? "HIGH"
+                  : severity >= 50
+                    ? "MEDIUM"
+                    : "LOW",
+            };
+          }),
         },
       ],
     };
   }
 
   const byType = {
-    missing: diffIssues.filter((i) => i.type === "MISSING_PRODUCT"),
-    misplaced: diffIssues.filter((i) => i.type === "MISPLACED_PRODUCT"),
-    extra: diffIssues.filter((i) => i.type === "UNEXPECTED_PRODUCT"),
+    missing: diffIssues.filter((i) => isMissingIssueType(i.type)),
+    misplaced: diffIssues.filter((i) => isMisplacedIssueType(i.type)),
+    extra: diffIssues.filter((i) => isUnexpectedIssueType(i.type)),
   };
 
   return {

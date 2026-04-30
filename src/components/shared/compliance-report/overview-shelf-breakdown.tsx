@@ -66,9 +66,15 @@ export function OverviewShelfBreakdown({
     <div className="space-y-4">
       {shelfCompliance.map((shelf) => {
         const products = shelfBreakdownMap.get(shelf.shelfName) ?? [];
-        const matchedCount = products.filter((p) => p.status === "matched").length;
+        const explicitMatchedCount = products.filter((p) => p.status === "matched").length;
         const misplacedCount = products.filter((p) => p.status === "misplaced").length;
         const missingCount = products.filter((p) => p.status === "missing").length;
+        const extraCount = products.filter((p) => p.status === "extra").length;
+        const inferredMatchedCount = Math.max(
+          0,
+          (shelf.skuCount ?? shelf.units ?? 0) - misplacedCount - missingCount - extraCount,
+        );
+        const matchedCount = Math.max(explicitMatchedCount, inferredMatchedCount);
 
         return (
           <div

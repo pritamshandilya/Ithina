@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 interface AnalysisProcessingOverlayProps {
@@ -11,10 +12,19 @@ export function AnalysisProcessingOverlay({
   progressMessage,
   showMercureMessage = true,
 }: AnalysisProcessingOverlayProps) {
-  const clampedProgress = Math.max(
+  const normalizedProgress = Math.max(
     0,
     Math.min(100, Math.round(progressPercent)),
   );
+  const [displayProgress, setDisplayProgress] = useState(normalizedProgress);
+
+  useEffect(() => {
+    setDisplayProgress((currentProgress) =>
+      Math.max(currentProgress, normalizedProgress),
+    );
+  }, [normalizedProgress]);
+
+  const clampedProgress = displayProgress;
 
   return (
     <div className="border-border bg-card/95 w-full max-w-2xl rounded-2xl border p-6 shadow-[0_24px_55px_rgba(3,8,20,0.34)]">

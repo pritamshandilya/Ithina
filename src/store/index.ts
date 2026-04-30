@@ -1,46 +1,56 @@
 import { combineReducers, configureStore } from "@reduxjs/toolkit";
 import {
-  persistReducer,
-  persistStore,
   FLUSH,
-  REHYDRATE,
   PAUSE,
   PERSIST,
   PURGE,
   REGISTER,
+  REHYDRATE,
+  persistReducer,
+  persistStore,
 } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import sessionStorage from "redux-persist/lib/storage/session";
+
 import {
   authReducer,
+  profileReducer,
   storeContextReducer,
   uiReducer,
-  profileReducer,
 } from "./reducers";
-import { shelvesReducer } from "./slices/shelvesSlice";
 import { planogramPreviewReducer } from "./slices/planogramPreviewSlice";
+import { shelvesReducer } from "./slices/shelvesSlice";
+
+type PersistStorageModule = typeof storage | { default: typeof storage };
+
+function resolvePersistStorage(module: PersistStorageModule): typeof storage {
+  return "getItem" in module ? module : module.default;
+}
+
+const localPersistStorage = resolvePersistStorage(storage);
+const sessionPersistStorage = resolvePersistStorage(sessionStorage);
 
 const authPersistConfig = {
   key: "auth",
-  storage: sessionStorage,
+  storage: sessionPersistStorage,
   whitelist: ["token", "tokenExpiry", "user"],
 };
 
 const storeContextPersistConfig = {
   key: "storeContext",
-  storage,
+  storage: localPersistStorage,
   whitelist: ["selectedStore"],
 };
 
 const uiPersistConfig = {
   key: "ui",
-  storage,
+  storage: localPersistStorage,
   whitelist: ["sidebarOpen"],
 };
 
 const profilePersistConfig = {
   key: "profile",
-  storage,
+  storage: localPersistStorage,
   whitelist: ["firstName", "lastName", "profilePictureUrl"],
 };
 

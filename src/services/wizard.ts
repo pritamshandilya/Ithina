@@ -43,6 +43,20 @@ function pickAgentSuggestScheduleLabel(s: ApiCampaignSKU): string | undefined {
   return raw || undefined;
 }
 
+/** Drop offer_label when it only repeats proposed price (legacy CSV import used "$X.XX"). */
+function meaningfulOfferLabel(
+  raw: string | undefined,
+  proposed: number,
+): string | undefined {
+  const t = raw?.trim();
+  if (!t) return undefined;
+  const numeric = Number(t.replace(/[$,\s]/g, ""));
+  if (!Number.isNaN(numeric) && Math.abs(numeric - proposed) < 0.02) {
+    return undefined;
+  }
+  return t;
+}
+
 function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta {
   const meta = response.campaign_meta;
   const themeRaw =
@@ -62,7 +76,11 @@ function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta
     null;
   return {
     campaignThemeName: themeRaw || null,
-    scheduleStartIso: normalizeDraftScheduleForParsing(scheduleStartRaw, "start"),
+    scheduleStartIso: normalizeDraftScheduleForParsing(
+      scheduleStartRaw,
+      "start",
+      meta?.scheduled_time,
+    ),
     scheduleEndIso: normalizeDraftScheduleForParsing(scheduleEndRaw, "end"),
   };
 }
@@ -87,21 +105,23 @@ export async function getHardwareDevices(): Promise<HardwareDevice[]> {
 
 // ─── Phase 1: NL prompt → real backend draft ────────────────────────────────
 
-export async function submitWizardIntent(
-  prompt: string,
-  _constraints: WizardConstraints,
-  options?: { sessionId?: string | null },
-): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
-  const response = await draftCampaignFromPrompt({
-    prompt,
-    source_type: "nl",
-    ...(options?.sessionId ? { session_id: options.sessionId } : {}),
-  });
+/** One-decimal max; whole numbers stay integer (e.g. -20%, -58.3%). */
+export function formatSkuMarginPercent(pct: number | undefined | null): string {
+  if (typeof pct !== "number" || Number.isNaN(pct)) return "—";
+  const rounded = Math.round(pct * 10) / 10;
+  const text = Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+  return `${text}%`;
+}
 
-  const draftMeta = extractDraftMeta(response);
-  const campaignWindowLabel = formatIsoRangeUsShort(draftMeta.scheduleStartIso, draftMeta.scheduleEndIso);
+/** Maps draft API SKUs to staging grid rows (NL draft, CSV /upload/process, etc.). */
+export function mapDraftResponseSkusToStaged(
+  response: ApiCampaignDraftResponse,
+  draftMeta?: DraftCampaignMeta,
+): StagedSku[] {
+  const meta = draftMeta ?? extractDraftMeta(response);
+  const campaignWindowLabel = formatIsoRangeUsShort(meta.scheduleStartIso, meta.scheduleEndIso);
 
-  const skus: StagedSku[] = response.skus.map((s) => {
+  return response.skus.map((s) => {
     const current = s.current_price;
     const proposed = s.proposed_price;
     const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
@@ -110,18 +130,24 @@ export async function submitWizardIntent(
     const rowSchedule = pickAgentSuggestScheduleLabel(s) ?? campaignWindowLabel ?? undefined;
     const offerType =
       s.offer_type?.trim() || s.offerType?.trim() || undefined;
-    const offerLabel =
-      s.offer_label?.trim() || s.offerLabel?.trim() || undefined;
+    const offerLabel = meaningfulOfferLabel(
+      s.offer_label?.trim() || s.offerLabel?.trim() || undefined,
+      proposed,
+    );
     const stockRaw = s.stock_qty ?? s.stockQty;
     const stockQty =
       typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
+    const marginPct =
+      typeof s.margin_pct === "number" && !Number.isNaN(s.margin_pct) ? s.margin_pct : undefined;
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? "",
       current,
       proposed,
       safe: s.is_safe,
-      margin: `${s.margin_pct}%`,
+      violationReason: s.violation_reason ?? null,
+      margin: formatSkuMarginPercent(marginPct),
+      ...(marginPct !== undefined ? { marginPct } : {}),
       baseCost: s.base_cost,
       discount,
       included: true,
@@ -134,6 +160,24 @@ export async function submitWizardIntent(
       ...(stockQty !== undefined ? { stockQty } : {}),
     };
   });
+}
+
+export async function submitWizardIntent(
+  prompt: string,
+  _constraints: WizardConstraints,
+  options?: { sessionId?: string | null; signal?: AbortSignal },
+): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
+  const response = await draftCampaignFromPrompt(
+    {
+      prompt,
+      source_type: "nl",
+      ...(options?.sessionId ? { session_id: options.sessionId } : {}),
+    },
+    options?.signal,
+  );
+
+  const draftMeta = extractDraftMeta(response);
+  const skus = mapDraftResponseSkusToStaged(response, draftMeta);
 
   return {
     aiReply: { role: "ai", text: response.message },

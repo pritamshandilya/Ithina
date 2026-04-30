@@ -1,7 +1,8 @@
-import { Bell, Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
+import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { NAV_ITEMS_FLAT, type NavItemFlat } from "@/constants/navigation";
 import { UserFormModal } from "@/features/admin-users/components/UserFormModal";
 import type { UserFormData } from "@/features/admin-users/types";
@@ -12,6 +13,16 @@ import { wizardEntryPathFromPathname } from "@/lib/wizard-route";
 import { cn } from "@/lib/utils";
 
 const HIDE_FOR_PATHS = new Set<string>(["/admin/dashboard", "/admin/stores/new"]);
+
+/** Wizard renders its own title/shell — hide the global strip to avoid duplicate “New Campaign” headings. */
+function isWizardPath(pathname: string): boolean {
+  return (
+    pathname === "/maker/wizard" ||
+    pathname.startsWith("/maker/wizard/") ||
+    pathname === "/wizard" ||
+    pathname.startsWith("/wizard/")
+  );
+}
 
 /**
  * POG-style strip: title + description from nav config, with global actions.
@@ -54,6 +65,7 @@ export default function RoutePageHeader() {
 
   const nav = useMemo(() => navItemForPath(location.pathname), [location.pathname]);
 
+  if (isWizardPath(location.pathname)) return null;
   if (!nav) return null;
   if (HIDE_FOR_PATHS.has(location.pathname)) return null;
 
@@ -62,8 +74,12 @@ export default function RoutePageHeader() {
     location.pathname === "/checker/profile" ||
     location.pathname === "/admin/profile";
   const isAdminOrganizationSettingsPage = location.pathname === "/admin/organization-settings";
+  const isWizardRoute = isWizardPath(location.pathname);
   const showNewCampaign =
-    (role === "maker" || role === "admin") && !isProfilePage && !isAdminOrganizationSettingsPage;
+    (role === "maker" || role === "admin") &&
+    !isProfilePage &&
+    !isAdminOrganizationSettingsPage &&
+    !isWizardRoute;
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
   const isGuardRailsPage = location.pathname === "/admin/settings";
@@ -125,16 +141,7 @@ export default function RoutePageHeader() {
             </button>
           ) : null}
           <div className="flex h-9 items-center border-l border-border/60 pl-3">
-            <button
-              type="button"
-              className="relative rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Notifications"
-            >
-              <Bell className="size-[18px]" />
-              <span className="absolute right-0 top-0 flex size-3.5 items-center justify-center rounded-full border border-background bg-destructive text-[9px] font-bold text-destructive-foreground">
-                3
-              </span>
-            </button>
+            <HeaderNotificationsTrigger />
           </div>
         </div>
       </div>

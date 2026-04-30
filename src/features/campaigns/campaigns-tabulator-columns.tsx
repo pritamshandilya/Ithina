@@ -115,7 +115,6 @@ export interface BuildCampaignColumnsParams {
   onEdit: (row: CampaignListItem) => void;
   onPause: (row: CampaignListItem) => void;
   onHistory: (row: CampaignListItem) => void;
-  onDelete: (id: string) => void;
 }
 
 export function buildCampaignColumns({
@@ -123,7 +122,6 @@ export function buildCampaignColumns({
   onEdit,
   onPause,
   onHistory,
-  onDelete,
 }: BuildCampaignColumnsParams): DataTableColumn<CampaignListItem>[] {
   return [
     {
@@ -245,14 +243,13 @@ export function buildCampaignColumns({
       field: "actions",
       headerSort: false,
       headerFilter: false,
-      width: 176,
+      width: 140,
       hozAlign: "right",
       headerHozAlign: "right",
       formatter: (cell: DataTableCell<CampaignListItem>) => {
         const row = cell.getData();
         const proto = toPrototypeStatus(row.status);
         const paused = pausedById[row.id] ?? row.paused ?? false;
-        const canDel = canDeleteCampaignByStatus(row.status);
 
         const editBtn = proto === "draft"
           ? `<button type="button" data-action="edit" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" aria-label="Edit campaign">
@@ -276,11 +273,7 @@ export function buildCampaignColumns({
           <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         </button>`;
 
-        const deleteBtn = canDel
-          ? `<button type="button" data-action="delete" aria-label="Delete campaign" class="delete-btn inline-flex size-8 items-center justify-center rounded-md border border-rose-400/25 bg-transparent text-rose-400 transition-all hover:border-rose-500 hover:bg-rose-500 hover:text-white"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
-          : `<span title="Only Draft or Rejected campaigns can be deleted." class="inline-flex size-8 cursor-not-allowed items-center justify-center rounded-md border border-slate-600/40 text-slate-600 opacity-50" aria-hidden="true"><svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>`;
-
-        return `<div class="flex flex-nowrap items-center justify-end gap-1">${editBtn}${pauseBtn}${historyBtn}${deleteBtn}</div>`;
+        return `<div class="flex flex-nowrap items-center justify-end gap-1">${editBtn}${pauseBtn}${historyBtn}</div>`;
       },
       cellClick: (e: MouseEvent, cell: DataTableCell<CampaignListItem>) => {
         const action = findActionElement(e);
@@ -292,7 +285,6 @@ export function buildCampaignColumns({
         if (a === "edit")    onEdit(row);
         if (a === "pause")   onPause(row);
         if (a === "history") onHistory(row);
-        if (a === "delete")  onDelete(row.id);
       },
     },
   ];

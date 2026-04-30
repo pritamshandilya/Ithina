@@ -7,7 +7,7 @@
  * The request interceptor automatically injects the `X-Store-Id` header
  * for every request when an active store has been selected via StoreContext.
  */
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import { getAuthToken } from "@/lib/auth/session";
 import { StoreContext } from "@/lib/store-context";
 
@@ -22,6 +22,18 @@ export const promoApiClient = axios.create({
 });
 
 promoApiClient.interceptors.request.use((config) => {
+  // Default `Content-Type: application/json` breaks multipart uploads: FormData is
+  // JSON-serialized to `{"file":{}}` and FastAPI never receives the file field.
+  if (config.data instanceof FormData) {
+    if (config.headers instanceof AxiosHeaders) {
+      config.headers.delete("Content-Type");
+    } else {
+      const h = config.headers as Record<string, unknown>;
+      delete h["Content-Type"];
+      delete h["content-type"];
+    }
+  }
+
   const token = getAuthToken();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

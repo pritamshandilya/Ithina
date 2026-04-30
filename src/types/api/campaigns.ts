@@ -84,7 +84,24 @@ export interface ApiCampaignDraftMeta {
   campaign_name?: string | null;
   schedule_start?: string | null;
   schedule_end?: string | null;
+  /** Launch clock time from agent / save_campaign_meta, e.g. `09:00 AM`. */
+  scheduled_time?: string | null;
   schedule_notes?: string | null;
+}
+
+/** Step 1 CSV upload: headers + suggested column mapping + preview rows. */
+export interface ApiCampaignCSVDiscoverResponse {
+  file_id: string;
+  headers: string[];
+  /** System field name → CSV column header from the file */
+  suggested_mapping: Record<string, string>;
+  sample_data: Record<string, string>[];
+}
+
+/** Step 2 CSV upload: confirm mapping before LangGraph session is created. */
+export interface ApiCampaignCSVProcessRequest {
+  file_id: string;
+  mapping: Record<string, string>;
 }
 
 export interface ApiCampaignDraftResponse {

@@ -1,0 +1,469 @@
+/* Full-width outer shell — transparent, blends with the chat panel */
+.psc-shell {
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+}
+
+.psc-shell *,
+.psc-shell *::before,
+.psc-shell *::after {
+  box-sizing: border-box;
+}
+
+/* Fills the full width of the chat panel form */
+.psc-body {
+  position: relative;
+  width: 100%;
+  padding: 4px 0 8px;
+}
+
+/* Arrows live in flex slots beside the viewport — they never sit on top of cards */
+.psc-carousel-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.psc-arrow-slot {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+}
+
+.psc-viewport {
+  position: relative;
+  flex: 1 1 0%;
+  min-width: 0;
+  height: 110px;
+  overflow: hidden;
+}
+
+.psc-track {
+  display: flex;
+  height: 110px;
+  gap: 8px;
+  padding: 2px 4px;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* transform is applied via inline style computed from measured stage width */
+
+.psc-card {
+  display: flex;
+  /* flex/width set via inline style — computed from measured stage width */
+  cursor: pointer;
+  flex-direction: column;
+  /* Tight stacking: icon sits close to PROMOTE / ACTION labels (gap was visually too large before) */
+  gap: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+  background: #1a1828;
+  padding: 7px;
+  text-align: left;
+  transition:
+    background 0.15s,
+    transform 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.psc-card:hover {
+  background: #211f35;
+}
+
+.psc-card:active {
+  transform: scale(0.96);
+}
+
+.psc-card:focus-visible,
+.psc-arrow:focus-visible,
+.psc-dot:focus-visible,
+.psc-help-btn:focus-visible,
+.psc-pop-x:focus-visible,
+.psc-got-btn:focus-visible {
+  outline: 2px solid var(--ring, #a855f7);
+  outline-offset: 2px;
+}
+
+.psc-card-purple {
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+.psc-card-teal {
+  border-color: rgba(52, 211, 153, 0.24);
+}
+
+.psc-card-coral {
+  border-color: rgba(248, 113, 113, 0.24);
+}
+
+.psc-card-amber {
+  border-color: rgba(251, 191, 36, 0.24);
+}
+
+.psc-card-blue {
+  border-color: rgba(99, 179, 237, 0.24);
+}
+
+.psc-ico,
+.psc-pop-ico {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.psc-ico {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.psc-ico svg {
+  width: 14px;
+  height: 14px;
+  color: #ffffff;
+}
+
+.psc-ico-purple {
+  background: #a78bfa;
+}
+
+.psc-ico-teal {
+  background: #34d399;
+}
+
+.psc-ico-coral {
+  background: #f87171;
+}
+
+.psc-ico-amber {
+  background: #fbbf24;
+}
+
+.psc-ico-blue {
+  background: #63b3ed;
+}
+
+.psc-card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.psc-tag {
+  margin-bottom: 2px;
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.psc-card-purple .psc-tag { color: #a78bfa; }
+.psc-card-teal .psc-tag { color: #34d399; }
+.psc-card-coral .psc-tag { color: #f87171; }
+.psc-card-amber .psc-tag { color: #fbbf24; }
+.psc-card-blue .psc-tag { color: #63b3ed; }
+
+.psc-title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #e2deff;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.26;
+  overflow-wrap: break-word;
+  -webkit-box-orient: vertical;
+  /* Was 2 lines — wasted vertical space in the fixed-height row; show a third line in the same box */
+  -webkit-line-clamp: 3;
+}
+
+.psc-arrow {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(20, 18, 38, 0.82);
+  color: rgba(220, 210, 255, 0.85);
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    transform 0.12s;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.psc-arrow:hover:not(:disabled) {
+  border-color: rgba(167, 139, 250, 0.5);
+  background: rgba(167, 139, 250, 0.28);
+}
+
+.psc-arrow:active:not(:disabled) {
+  transform: scale(0.9);
+}
+
+.psc-arrow:disabled {
+  cursor: default;
+  opacity: 0.25;
+}
+
+.psc-arrow svg {
+  width: 12px;
+  height: 12px;
+  stroke-width: 2.4;
+}
+
+.psc-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 8px;
+}
+
+.psc-dot {
+  width: 5px;
+  height: 5px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 0;
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+.psc-dot-active {
+  background: #7c5cfc;
+  transform: scale(1.3);
+}
+
+.psc-help-wrap {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+}
+
+.psc-help-btn {
+  display: flex;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #a78bfa;
+  border-radius: 50%;
+  background: #7c5cfc;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.psc-help-btn:hover {
+  background: #9b7ffe;
+}
+
+/* Popup opens upward so it stays inside the Promo Assistant panel (composer sits at bottom —
+   downward growth was clipped by the card’s overflow:hidden). */
+.psc-popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  top: auto;
+  right: 0;
+  z-index: 100;
+  width: min(272px, calc(100vw - 2rem));
+  max-height: min(520px, 72vh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border: 0.5px solid #7c5cfc;
+  border-radius: 12px;
+  background: #1c1a30;
+  padding: 13px 13px 11px;
+  transform-origin: bottom right;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
+}
+
+.psc-popup-hidden {
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.96) translateY(6px);
+}
+
+.psc-popup::after {
+  position: absolute;
+  top: auto;
+  bottom: -5px;
+  right: 7px;
+  width: 8px;
+  height: 8px;
+  border-top: none;
+  border-left: none;
+  border-bottom: 0.5px solid #7c5cfc;
+  border-right: 0.5px solid #7c5cfc;
+  background: #1c1a30;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.psc-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 9px;
+}
+
+.psc-pop-title {
+  color: #eeeaff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.psc-pop-x {
+  display: flex;
+  width: 17px;
+  height: 17px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(238, 234, 255, 0.45);
+}
+
+.psc-pop-x svg {
+  width: 7px;
+  height: 7px;
+  stroke-width: 1.8;
+}
+
+.psc-pop-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  border-bottom: 0.5px solid rgba(255, 255, 255, 0.07);
+  padding: 6px 0;
+}
+
+.psc-pop-row:last-of-type {
+  border-bottom: 0;
+}
+
+.psc-pop-ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+}
+
+.psc-pop-ico svg {
+  width: 15px;
+  height: 15px;
+  color: #ffffff;
+}
+
+.psc-pop-ico-g {
+  background: #34d399;
+}
+
+.psc-pop-ico-r {
+  background: #f87171;
+}
+
+.psc-pop-ico-v {
+  background: #a78bfa;
+}
+
+.psc-pop-name {
+  margin-bottom: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.psc-pop-name-g { color: #34d399; }
+.psc-pop-name-r { color: #f87171; }
+.psc-pop-name-v { color: #a78bfa; }
+
+.psc-pop-ico-teal {
+  background: #34d399;
+}
+
+.psc-pop-name-teal {
+  color: #34d399;
+}
+
+.psc-pop-ico-amber {
+  background: #fbbf24;
+}
+
+.psc-pop-name-amber {
+  color: #fbbf24;
+}
+
+.psc-pop-ico-blue {
+  background: #63b3ed;
+}
+
+.psc-pop-name-blue {
+  color: #63b3ed;
+}
+
+.psc-pop-desc {
+  color: rgba(238, 234, 255, 0.42);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.psc-got-btn {
+  width: 100%;
+  margin-top: 10px;
+  cursor: pointer;
+  border: 0;
+  border-radius: 8px;
+  background: #7c5cfc;
+  padding: 7px;
+  color: #ffffff;
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.psc-got-btn:hover {
+  opacity: 0.85;
+}
+
+.psc-tooltip {
+  max-width: 240px;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  background: #1c1a30 !important;
+  color: #eeeaff !important;
+  font-size: 10.5px;
+  line-height: 1.4;
+}
+
+/* Portaled tooltip — sit above carousel, chat strips, and input */
+.psc-tooltip-card,
+.psc-tooltip-help {
+  z-index: 80;
+}
+
+/* Shadcn/Radix arrow is a direct sibling of text; hides weird placement when side=top */
+.psc-tooltip-card > svg:last-of-type {
+  display: none;
+}

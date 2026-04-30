@@ -451,6 +451,39 @@
   opacity: 0.5;
 }
 
+/* Post-offer margin below 0%: dark rose wash (no left-edge bars) */
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-negative-margin {
+  background-color: color-mix(in srgb, var(--destructive) 46%, var(--tabulator-bg)) !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-row.tabulator-row-even.wizard-staging-row-negative-margin {
+  background-color: color-mix(in srgb, var(--destructive) 46%, var(--tabulator-row-even)) !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-row.wizard-staging-row-negative-margin:hover,
+.data-table-wrapper.wizard-staging-table .tabulator-row.tabulator-row-even.wizard-staging-row-negative-margin:hover {
+  background-color: color-mix(in srgb, var(--destructive) 52%, var(--tabulator-row-hover)) !important;
+}
+
+/* Negative-margin rows: discount input — restore consistent dark bg + visible border so it
+   looks identical in size to inputs on non-tinted rows */
+.data-table-wrapper.wizard-staging-table
+  .tabulator-row.wizard-staging-row-negative-margin
+  .tabulator-cell[tabulator-field="discount"]
+  input[data-action="discount-input"] {
+  background-color: rgb(15 21 35 / 0.85) !important;
+  border-color: rgb(255 255 255 / 0.22) !important;
+}
+
+/* Negative-margin rows: margin % value — white text for strong contrast on rose bg */
+.data-table-wrapper.wizard-staging-table
+  .tabulator-row.wizard-staging-row-negative-margin
+  .tabulator-cell[tabulator-field="marginPct"]
+  span {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+
 /* Include column: align header “select all” with row checkboxes (same vertical axis). */
 .data-table-wrapper.wizard-staging-table .tabulator-header .tabulator-col.wizard-staging-col-include .tabulator-col-content {
   display: flex;
@@ -473,26 +506,43 @@
   justify-content: center;
 }
 
-/* Wizard staging: denser rows and header to match split-view layout proportions */
+/* Wizard staging: uniform row height — variableHeight removed from columns so every
+   row is the same. Height accommodates 2 lines of product text. No left accent bars. */
 .data-table-wrapper.wizard-staging-table .tabulator-row {
-  min-height: 1.625rem;
+  border-left: none !important;
+  height: 2.375rem !important;
+  min-height: 2.375rem !important;
+  max-height: 2.375rem !important;
 }
 
 .data-table-wrapper.wizard-staging-table .tabulator-cell {
   padding: 0.1875rem 0.5rem;
   font-size: 0.75rem;
   line-height: 1.25;
+  overflow: hidden !important;
 }
 
-/* Long product / offer copy: Tabulator defaults to nowrap + ellipsis — allow wrap. */
+/* Product / offer copy: allow wrapping but clip at fixed row height */
 .data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="name"],
 .data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="offerLabel"] {
   white-space: normal !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   text-overflow: clip !important;
   vertical-align: top;
   word-break: break-word;
   overflow-wrap: anywhere;
+}
+
+/* Discount input: fixed pixel size so it looks identical on every row */
+.data-table-wrapper.wizard-staging-table
+  .tabulator-cell[tabulator-field="discount"]
+  input[data-action="discount-input"] {
+  width: 2.75rem !important;
+  min-width: 2.75rem !important;
+  max-width: 2.75rem !important;
+  height: 1.375rem !important;
+  flex-shrink: 0;
+  box-sizing: border-box;
 }
 
 .data-table-wrapper.wizard-staging-table.min-h-0 {
@@ -698,6 +748,12 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
 .data-table-wrapper .tabulator-cell.tabulator-frozen.tabulator-frozen-right {
   border-right: none !important;
   border-left: 2px dotted var(--tabulator-border) !important;
+}
+
+/* Pinned columns: header must stay opaque above the scrolling body */
+.data-table-wrapper .tabulator-header .tabulator-col.tabulator-frozen {
+  z-index: 12;
+  background-color: var(--tabulator-header-bg) !important;
 }
 
 .data-table-wrapper .tabulator-placeholder {

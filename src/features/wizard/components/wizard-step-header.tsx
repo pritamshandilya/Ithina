@@ -1,6 +1,7 @@
-import { ChevronLeft, CloudUpload, Zap } from "lucide-react";
+import { ChevronLeft, CloudUpload, Loader2, Save, Zap } from "lucide-react";
 import { memo, type ReactNode } from "react";
 
+import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { cn } from "@/lib/utils";
 
 import type { WizardMode } from "./mode-chooser";
@@ -15,6 +16,9 @@ interface WizardStepHeaderProps {
   trailingSlot?: ReactNode;
   /** Navigate to a step; only called for steps at or before the current step. */
   onStepClick?: (step: number) => void;
+  /** When provided, shows a Save button in the header. */
+  onSave?: () => void;
+  isSaving?: boolean;
 }
 
 function WizardStepHeader({
@@ -25,6 +29,8 @@ function WizardStepHeader({
   onBack,
   trailingSlot,
   onStepClick,
+  onSave,
+  isSaving = false,
 }: WizardStepHeaderProps) {
   const isNl = mode === "nl";
   const isCsvNl = isNl && inputMode === "csv";
@@ -164,14 +170,25 @@ function WizardStepHeader({
         })}
       </div>
 
-      {trailingSlot ? <div className="flex shrink-0 items-center">{trailingSlot}</div> : null}
-
-      {isNl ? (
-        <div className="flex shrink-0 items-center gap-2 text-[10px] font-mono text-slate-500">
-          <span className="inline-block size-1.5 rounded-full bg-amber-400" />
-          Draft, auto-saved
-        </div>
-      ) : null}
+      <div className="ml-auto flex shrink-0 items-center gap-2">
+        {onSave && (
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving}
+            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-ithina-border px-3 py-1.5 text-xs font-semibold text-slate-300 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/10 hover:text-white disabled:opacity-50"
+          >
+            {isSaving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Save className="size-3.5" />
+            )}
+            {isSaving ? "Saving…" : "Save"}
+          </button>
+        )}
+        <HeaderNotificationsTrigger />
+        {trailingSlot ? <div className="flex shrink-0 items-center">{trailingSlot}</div> : null}
+      </div>
     </div>
   );
 }

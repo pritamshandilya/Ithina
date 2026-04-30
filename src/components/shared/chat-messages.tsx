@@ -77,7 +77,7 @@ export default function ChatMessages({
 
           {msg.role === "user" ? (
 
-            <div className="max-w-[90%] rounded-2xl rounded-tr-sm border border-white/[0.08] bg-white/[0.04] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm backdrop-blur-sm">
+            <div className="max-w-[90%] rounded-2xl rounded-tr-sm border border-white/[0.11] bg-white/[0.07] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-[0_4px_20px_rgba(0,0,0,0.32),0_1px_3px_rgba(0,0,0,0.18)] backdrop-blur-md">
 
               <ChatMarkdown content={msg.text} />
 

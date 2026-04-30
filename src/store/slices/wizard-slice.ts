@@ -97,6 +97,9 @@ const wizardSlice = createSlice({
     pushMessage(state, action: PayloadAction<ChatMessage>) {
       state.messages.push(action.payload);
     },
+    loadChatHistory(state, action: PayloadAction<ChatMessage[]>) {
+      state.messages = action.payload;
+    },
     setGridData(state, action: PayloadAction<StagedSku[]>) {
       const rows = action.payload;
       if (!Array.isArray(rows)) return;
@@ -263,6 +266,7 @@ export const {
   setHasSplit,
   setShowGrid,
   pushMessage,
+  loadChatHistory,
   setGridData,
   mergeGridData,
   appendGridRow,

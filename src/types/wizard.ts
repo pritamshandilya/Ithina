@@ -60,7 +60,7 @@ export interface StagedSku {
   isFree?: boolean;
 }
 
-export type ChatRole = "user" | "ai";
+export type ChatRole = "user" | "ai" | "system";
 
 /** Fills summary-card rows when the AI reply omits dates/products (follow-up turns). */
 export interface ChatSummaryEnrichment {

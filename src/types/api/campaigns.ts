@@ -218,3 +218,9 @@ export interface ApiCampaignChatMessageRequest {
   message: string;
   variant_id?: string | null;
 }
+
+// ─── Chat history item (GET /campaigns/{id}/chat) ────────────────────────────
+export interface ApiCampaignChatHistoryItem {
+  role: "user" | "assistant";
+  content: string;
+}

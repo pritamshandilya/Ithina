@@ -19,6 +19,8 @@ interface WizardStepHeaderProps {
   /** When provided, shows a Save button in the header. */
   onSave?: () => void;
   isSaving?: boolean;
+  /** When true, shows an unsaved-changes indicator on the Save button. */
+  hasUnsaved?: boolean;
 }
 
 function WizardStepHeader({
@@ -31,6 +33,7 @@ function WizardStepHeader({
   onStepClick,
   onSave,
   isSaving = false,
+  hasUnsaved = false,
 }: WizardStepHeaderProps) {
   const isNl = mode === "nl";
   const isCsvNl = isNl && inputMode === "csv";
@@ -172,19 +175,27 @@ function WizardStepHeader({
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
         {onSave && (
-          <button
-            type="button"
-            onClick={onSave}
-            disabled={isSaving}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg border border-ithina-border px-3 py-1.5 text-xs font-semibold text-slate-300 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/10 hover:text-white disabled:opacity-50"
-          >
-            {isSaving ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Save className="size-3.5" />
+          <div className="relative">
+            <button
+              type="button"
+              onClick={onSave}
+              disabled={isSaving}
+              className="flex shrink-0 items-center gap-1.5 rounded-lg border border-ithina-border px-3 py-1.5 text-xs font-semibold text-slate-300 transition-all hover:border-ithina-purple/50 hover:bg-ithina-purple/10 hover:text-white disabled:opacity-50"
+            >
+              {isSaving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Save className="size-3.5" />
+              )}
+              {isSaving ? "Saving…" : "Save"}
+            </button>
+            {hasUnsaved && !isSaving && (
+              <span className="absolute -right-1 -top-1 flex size-2.5">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-60" />
+                <span className="relative inline-flex size-2.5 rounded-full bg-amber-400" />
+              </span>
             )}
-            {isSaving ? "Saving…" : "Save"}
-          </button>
+          </div>
         )}
         <HeaderNotificationsTrigger />
         {trailingSlot ? <div className="flex shrink-0 items-center">{trailingSlot}</div> : null}

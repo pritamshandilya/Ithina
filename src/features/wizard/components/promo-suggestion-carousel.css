@@ -286,15 +286,15 @@
   right: 0;
   z-index: 100;
   display: flex;
-  width: min(272px, calc(100vw - 2rem));
-  max-height: min(520px, 72vh);
+  width: min(248px, calc(100vw - 2rem));
+  max-height: min(380px, 55vh);
   flex-direction: column;
   overflow: hidden;
   overscroll-behavior: contain;
   border: 0.5px solid #7c5cfc;
   border-radius: 12px;
   background: #1c1a30;
-  padding: 13px 13px 11px;
+  padding: 11px 11px 10px;
   transform-origin: bottom right;
   transition:
     opacity 0.2s,

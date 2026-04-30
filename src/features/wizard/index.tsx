@@ -16,6 +16,7 @@ import {
 } from "@/store/slices/campaign-slice";
 import { resetStudio } from "@/store/slices/studio-slice";
 import {
+  loadChatHistory,
   pushMessage as pushWizardMessage,
   PROMO_ASSISTANT_LANGUAGE_STORAGE_KEY,
   removeAllCsvViolations,
@@ -62,6 +63,7 @@ import {
   deleteCampaign,
   generateCampaign,
   getCampaign,
+  getCampaignChatHistory,
   newPipelineSessionId,
 } from "@/services/campaigns";
 import {
@@ -716,7 +718,8 @@ export default function Wizard() {
     draftAbortControllerRef.current?.abort();
     draftAbortControllerRef.current = null;
     setIsTyping(false);
-  }, []);
+    dispatch(pushWizardMessage({ role: "system", text: "Response stopped by user" }));
+  }, [dispatch]);
 
   const handleSuggestionClick = useCallback(
     (text: string) => {
@@ -769,8 +772,13 @@ export default function Wizard() {
     let cancelled = false;
     setIsResuming(true);
 
-    getCampaign(resumeId.trim())
-      .then((campaign) => {
+    const trimmedId = resumeId.trim();
+
+    Promise.all([
+      getCampaign(trimmedId),
+      getCampaignChatHistory(trimmedId).catch(() => [] as { role: "user" | "assistant"; content: string }[]),
+    ])
+      .then(([campaign, chatHistory]) => {
         if (cancelled) return;
         dispatch(setWMode("nl"));
         dispatch(setHasSplit(true));
@@ -801,8 +809,6 @@ export default function Wizard() {
             }));
           }
         }
-        // Resume hardware selection from persisted backend targets so step 2
-        // can read the same selectedDevices/sizeByDevice that the user picked.
         const targets = (campaign.hardware ?? [])
           .map((h) => String(h ?? "").trim().toLowerCase())
           .filter(Boolean);
@@ -838,6 +844,20 @@ export default function Wizard() {
             progress?.sessionId ?? newPipelineSessionId();
         }
         hasJustSavedRef.current = true;
+
+        if (chatHistory.length > 0) {
+          const languagePrefixRe = /^\[Reply in .+?Keep product names and SKUs as given\.\]\s*/s;
+          dispatch(
+            loadChatHistory(
+              chatHistory.map((item) => ({
+                role: item.role === "assistant" ? "ai" as const : "user" as const,
+                text: item.role === "user"
+                  ? item.content.replace(languagePrefixRe, "")
+                  : item.content,
+              })),
+            ),
+          );
+        }
       })
       .catch(() => {
         if (cancelled) return;
@@ -1683,6 +1703,7 @@ export default function Wizard() {
               trailingSlot={wizardHeaderTrailing}
               onSave={wMode === "nl" && pipelineSessionIdRef.current && !campaignAlreadyGeneratedRef.current ? handleSaveDraft : undefined}
               isSaving={saveDraftMutation.isPending}
+              hasUnsaved={hasUnsavedWork}
             />
 
             {/* ── NL Step 1: Intent & Data Staging ── */}
@@ -1756,7 +1777,7 @@ export default function Wizard() {
                       {inputMode === "csv" && csvRows.length === 0 ? (
                         <DataStagingGrid
                           data={gridData}
-                          isGenerating={hwConfirmMutation.isPending}
+                          isGenerating={hwConfirmMutation.isPending || intentMutation.isPending}
                           inputMode={inputMode}
                           onInputModeChange={handleInputModeChange}
                           onToggleGridRowIncluded={handleToggleGridRowIncluded}
@@ -1796,7 +1817,7 @@ export default function Wizard() {
                           <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-staging-section>
                             <DataStagingGrid
                               data={gridData}
-                              isGenerating={hwConfirmMutation.isPending}
+                              isGenerating={hwConfirmMutation.isPending || intentMutation.isPending}
                               inputMode={inputMode}
                               onInputModeChange={handleInputModeChange}
                               onToggleGridRowIncluded={handleToggleGridRowIncluded}
@@ -1839,7 +1860,7 @@ export default function Wizard() {
                             <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" data-staging-section>
                               <DataStagingGrid
                                 data={gridData}
-                                isGenerating={hwConfirmMutation.isPending}
+                                isGenerating={hwConfirmMutation.isPending || intentMutation.isPending}
                                 inputMode={inputMode}
                                 onInputModeChange={handleInputModeChange}
                                 onToggleGridRowIncluded={handleToggleGridRowIncluded}

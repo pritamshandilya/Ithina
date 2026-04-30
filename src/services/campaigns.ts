@@ -32,6 +32,7 @@ import {
 } from "@/mocks/campaigns";
 import type {
   ApiCampaignApproveRequest,
+  ApiCampaignChatHistoryItem,
   ApiCampaignChatMessageRequest,
   ApiCampaignChatRequest,
   ApiCampaignChatResponse,
@@ -429,6 +430,15 @@ export async function getCampaign(id: string): Promise<CampaignListItem> {
     `${API_PREFIX}/campaigns/${id}`,
   );
   return adaptApiCampaign(data);
+}
+
+export async function getCampaignChatHistory(
+  campaignId: string,
+): Promise<ApiCampaignChatHistoryItem[]> {
+  const { data } = await promoApiClient.get<ApiCampaignChatHistoryItem[]>(
+    `${API_PREFIX}/${campaignId}/chat`,
+  );
+  return data;
 }
 
 export async function saveDraftCampaign(payload: {

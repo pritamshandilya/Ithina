@@ -79,13 +79,6 @@ export default function UnsavedChangesDialog({
             Leave without saving
           </button>
 
-          <button
-            type="button"
-            onClick={onStay}
-            className="w-full rounded-lg px-4 py-2 text-xs font-medium text-slate-500 transition-colors hover:text-white"
-          >
-            Stay
-          </button>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react";
+import { StopCircle } from "lucide-react";
 
 
 
@@ -70,6 +71,7 @@ export default function ChatMessages({
             "mb-2 flex w-full min-w-0 flex-col animate-[slideUp_0.3s_ease-out]",
 
             msg.role === "user" ? "items-end" : "items-stretch",
+            msg.role === "system" ? "items-center" : "",
 
           )}
 
@@ -81,6 +83,13 @@ export default function ChatMessages({
 
               <ChatMarkdown content={msg.text} />
 
+            </div>
+
+          ) : msg.role === "system" ? (
+
+            <div className="flex items-center gap-1.5 rounded-full border border-slate-700/60 bg-slate-800/50 px-3 py-1 text-[11px] text-slate-500">
+              <StopCircle className="size-3 shrink-0 text-slate-500" aria-hidden />
+              <span>{msg.text}</span>
             </div>
 
           ) : (

@@ -941,35 +941,44 @@ function DataStagingGrid({
       )}
 
       {inputMode === "ai" && (
-        <div
-          className={cn(
-            "flex min-h-0 flex-1 flex-col overflow-hidden",
-            isGenerating && "pointer-events-none opacity-50 transition-opacity",
-          )}
-        >
-          {data.length === 0 && (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">
-              <div className="flex size-12 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10">
-                <Zap className="size-6 text-ithina-purple" />
+        <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div
+            className={cn(
+              "flex min-h-0 flex-1 flex-col overflow-hidden transition-opacity duration-300",
+              isGenerating && "pointer-events-none opacity-40",
+            )}
+          >
+            {data.length === 0 && (
+              <div className="flex flex-1 flex-col items-center justify-center gap-4 p-10 text-center">
+                <div className="flex size-12 items-center justify-center rounded-full border border-ithina-purple/20 bg-ithina-purple/10">
+                  <Zap className="size-6 text-ithina-purple" />
+                </div>
+                <p className="text-sm text-slate-400">Describe your promotion in the chat — the AI will fetch and stage SKUs here.</p>
               </div>
-              <p className="text-sm text-slate-400">Describe your promotion in the chat — the AI will fetch and stage SKUs here.</p>
-            </div>
-          )}
-          {data.length > 0 && (
-            <div ref={aiTableRef} className="flex min-h-0 flex-1 flex-col overflow-auto px-2 pb-2 pt-0 sm:px-3">
-              <DataTable<StagedSku>
-                columns={aiColumns}
-                data={data}
-                rowIdField="sku"
-                emptyMessage="No SKUs staged"
-                pagination={false}
-                headerFilters={false}
-                showRowNumber
-                freezeLeadingColumns={2}
-                layout="fitColumns"
-                rowFormatter={aiRowFormatter}
-                className="wizard-staging-table min-h-0 flex-1"
-              />
+            )}
+            {data.length > 0 && (
+              <div ref={aiTableRef} className="flex min-h-0 flex-1 flex-col overflow-auto px-2 pb-2 pt-0 sm:px-3">
+                <DataTable<StagedSku>
+                  columns={aiColumns}
+                  data={data}
+                  rowIdField="sku"
+                  emptyMessage="No SKUs staged"
+                  pagination={false}
+                  headerFilters={false}
+                  showRowNumber
+                  freezeLeadingColumns={2}
+                  layout="fitColumns"
+                  rowFormatter={aiRowFormatter}
+                  className="wizard-staging-table min-h-0 flex-1"
+                />
+              </div>
+            )}
+          </div>
+
+          {isGenerating && data.length > 0 && (
+            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2.5 backdrop-blur-[1px]">
+              <Loader2 className="size-5 animate-spin text-ithina-purple" />
+              <span className="text-xs font-medium text-slate-400">Updating results...</span>
             </div>
           )}
         </div>

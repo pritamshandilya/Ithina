@@ -1,13 +1,16 @@
 import { AlertTriangle, ArrowRight, Loader2, Shield } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useBlocker, useNavigate, useSearch } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
+import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   activateCampaign,
   activateCampaignWithId,
+  deactivateCampaign,
+  setCampaignId,
   setCampaignName,
   setStagedSkus,
 } from "@/store/slices/campaign-slice";
@@ -51,9 +54,21 @@ import {
   useConfirmHardwareSelection,
   useDiscoverCsvFields,
   useProcessCsvMapping,
+  useSaveDraftCampaign,
   useSubmitWizardIntent,
 } from "@/hooks/use-wizard";
-import { createCampaignFromWizard, generateCampaign } from "@/services/campaigns";
+import {
+  createCampaignFromWizard,
+  deleteCampaign,
+  generateCampaign,
+  getCampaign,
+  newPipelineSessionId,
+} from "@/services/campaigns";
+import {
+  clearDraftProgress,
+  getDraftProgress,
+  setDraftProgress,
+} from "@/lib/wizard-draft-progress";
 import { mapDraftResponseSkusToStaged } from "@/services/wizard";
 import { mergeLayoutVariants } from "@/features/campaign-studio/types";
 import type { ApiCampaignSKU, LayoutVariant } from "@/types/api/campaigns";
@@ -74,6 +89,7 @@ import ScheduleStep from "./components/schedule-step";
 import SubmitReviewStep, { type SubmitDisplayTag } from "./components/submit-review-step";
 import CampaignStudioModal, { type AppliedDesignSelection } from "./components/campaign-studio-modal";
 import CsvColumnMappingModal from "./components/csv-column-mapping-modal";
+import UnsavedChangesDialog from "./components/unsaved-changes-dialog";
 import type { EslPlaceholders } from "@/features/campaign-studio/esl-svg-renderer";
 import { defaultPromoApiBase } from "./lib/preview-layout";
 import { isNlScreensStepComplete } from "./lib/nl-screens-readiness";
@@ -107,6 +123,30 @@ function stagedSkuToCsvRow(r: StagedSku): CsvRow {
   };
 }
 
+function mapCampaignSkusToStaged(skus: ApiCampaignSKU[]): StagedSku[] {
+  return skus.map((s) => {
+    const current = Number(s.current_price);
+    const proposed = Number(s.proposed_price);
+    const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
+    return {
+      sku: s.sku,
+      name: s.product_name ?? s.name ?? s.sku,
+      current,
+      proposed,
+      safe: s.is_safe,
+      violationReason: s.violation_reason,
+      marginPct: typeof s.margin_pct === "number" ? s.margin_pct : undefined,
+      baseCost: typeof s.base_cost === "number" ? s.base_cost : undefined,
+      discount,
+      included: true,
+      offerType: s.offer_type?.trim() || s.offerType?.trim() || undefined,
+      offerLabel: s.offer_label?.trim() || s.offerLabel?.trim() || undefined,
+      stockQty: typeof (s.stock_qty ?? s.stockQty) === "number" ? (s.stock_qty ?? s.stockQty) ?? undefined : undefined,
+      isFree: s.is_free ?? s.isFree ?? undefined,
+    };
+  });
+}
+
 // Step 0 = mode chooser, steps 1..N = actual steps
 // NL runtime currently implements first 2 steps, but header follows the new 5-step flow shell.
 const NL_STEPS = ["Select Products", "Select Screens & Design", "Guard Rails", "Schedule", "Submit"];
@@ -123,6 +163,32 @@ export default function Wizard() {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
+  const searchParams = useSearch({ strict: false }) as { resumeId?: string };
+  const saveDraftMutation = useSaveDraftCampaign();
+
+  const [isResuming, setIsResuming] = useState(false);
+  const hasJustSavedRef = useRef(false);
+  /** Original campaign id from which we resumed. Used to clean up the old draft
+   *  after /campaigns/generate creates a replacement campaign. */
+  const resumedFromCampaignIdRef = useRef<string | null>(null);
+  /** Set to true after /campaigns/generate succeeds. At that point the campaign
+   *  is already persisted on the backend so calling POST /draft/save would
+   *  create a duplicate row. Used to suppress the Save button and the unsaved
+   *  changes blocker after generation. */
+  const campaignAlreadyGeneratedRef = useRef(false);
+
+  // ── Fresh start: reset ALL wizard/campaign state on mount when not resuming ─
+  const didMountResetRef = useRef(false);
+  useEffect(() => {
+    if (didMountResetRef.current) return;
+    didMountResetRef.current = true;
+    if (!searchParams.resumeId) {
+      dispatch(resetWizard());
+      dispatch(resetStudio());
+      dispatch(deactivateCampaign());
+      campaignAlreadyGeneratedRef.current = false;
+    }
+  }, [searchParams.resumeId, dispatch]);
 
   // ── Device / upload state (local — not in redux) ───────────────────
   const [selectedDevices, setSelectedDevices] = useState<HardwareDeviceId[]>([]);
@@ -195,6 +261,9 @@ export default function Wizard() {
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
   const pipelineSessionIdRef = useRef<string | null>(null);
+
+  /** Holds the AbortController for the currently in-flight draft request, or null when idle. */
+  const draftAbortControllerRef = useRef<AbortController | null>(null);
 
   /**
    * IDs of all events we already knew about at the moment polling was (re-)started.
@@ -376,6 +445,9 @@ export default function Wizard() {
     });
     setSelectedDevices([]);
     pipelineSessionIdRef.current = null;
+    hasJustSavedRef.current = false;
+    campaignAlreadyGeneratedRef.current = false;
+    resumedFromCampaignIdRef.current = null;
   }, [dispatch]);
 
   const handleBack = useCallback(() => {
@@ -502,11 +574,15 @@ export default function Wizard() {
 
     if (!hasSplit) dispatch(setHasSplit(true));
     setError(null);
+    hasJustSavedRef.current = false;
 
     pushMessage({ role: "user", text });
     setInputText("");
     setSuggestions([]);
     setIsTyping(true);
+
+    const abortController = new AbortController();
+    draftAbortControllerRef.current = abortController;
 
     try {
       const existingSessionId = pipelineSessionIdRef.current;
@@ -516,6 +592,7 @@ export default function Wizard() {
       const { aiReply, skus, sessionId, draftMeta, suggestions: newSuggestions } = await intentMutation.mutateAsync({
         text: promptForApi,
         constraints,
+        signal: abortController.signal,
         ...(existingSessionId ? { sessionId: existingSessionId } : {}),
       });
       pipelineSessionIdRef.current = sessionId;
@@ -599,12 +676,19 @@ export default function Wizard() {
       }
     } catch (err) {
       setIsTyping(false);
+      draftAbortControllerRef.current = null;
+      // User hit Stop — treat as a silent cancellation, not an error
+      if (axios.isCancel(err) || (err instanceof DOMException && err.name === "AbortError") || (axios.isAxiosError(err) && err.code === "ERR_CANCELED")) {
+        return;
+      }
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         pipelineSessionIdRef.current = null;
         setError("Session expired. Your next message will start a fresh draft.");
       } else {
         setError("Failed to process intent. Please try again.");
       }
+    } finally {
+      draftAbortControllerRef.current = null;
     }
   }, [
     inputText,
@@ -627,6 +711,12 @@ export default function Wizard() {
     promoAssistantLanguage,
     inputMode,
   ]);
+
+  const handleStop = useCallback(() => {
+    draftAbortControllerRef.current?.abort();
+    draftAbortControllerRef.current = null;
+    setIsTyping(false);
+  }, []);
 
   const handleSuggestionClick = useCallback(
     (text: string) => {
@@ -668,6 +758,196 @@ export default function Wizard() {
     }
   }, [promoAssistantLanguage]);
 
+  // ── Resume draft campaign from URL param ──────────────────────────
+  useEffect(() => {
+    const resumeId = searchParams.resumeId;
+    if (!resumeId?.trim()) {
+      setIsResuming(false);
+      return;
+    }
+
+    let cancelled = false;
+    setIsResuming(true);
+
+    getCampaign(resumeId.trim())
+      .then((campaign) => {
+        if (cancelled) return;
+        dispatch(setWMode("nl"));
+        dispatch(setHasSplit(true));
+        dispatch(setShowGrid(true));
+        dispatch(setGridData(mapCampaignSkusToStaged(campaign.rawSkus ?? [])));
+        dispatch(activateCampaignWithId({ id: campaign.id, name: campaign.name }));
+        dispatch(setCampaignNamed(true));
+        resumedFromCampaignIdRef.current = campaign.id;
+        if (campaign.scheduledAt) {
+          const startLocal = isoToDatetimeLocalValue(campaign.scheduledAt);
+          const startParts = datetimeLocalValueToParts(startLocal);
+          if (startParts) {
+            setSchedule((prev) => ({
+              ...prev,
+              startDate: startParts.date,
+              startTime: startParts.time,
+            }));
+          }
+        }
+        if (campaign.scheduledEndAt) {
+          const endLocal = isoToDatetimeLocalValue(campaign.scheduledEndAt);
+          const endParts = datetimeLocalValueToParts(endLocal);
+          if (endParts) {
+            setSchedule((prev) => ({
+              ...prev,
+              endDate: endParts.date,
+              endTime: endParts.time,
+            }));
+          }
+        }
+        // Resume hardware selection from persisted backend targets so step 2
+        // can read the same selectedDevices/sizeByDevice that the user picked.
+        const targets = (campaign.hardware ?? [])
+          .map((h) => String(h ?? "").trim().toLowerCase())
+          .filter(Boolean);
+        if (targets.length > 0) {
+          const eslSizeMap: Record<string, string> = {
+            chroma15: '1.54"',
+            chroma21: '2.13"',
+            chroma29: '2.9"',
+            chroma42: '4.2"',
+            chroma58: '5.83"',
+            chroma75: '7.5"',
+          };
+          const eslSizes = Array.from(
+            new Set(
+              targets
+                .map((t) => eslSizeMap[t])
+                .filter((s): s is string => Boolean(s)),
+            ),
+          );
+          const devices: HardwareDeviceId[] = [];
+          if (eslSizes.length > 0) devices.push("chroma42");
+          if (targets.includes("lcd")) devices.push("lcd");
+          if (devices.length > 0) setSelectedDevices(devices);
+          if (eslSizes.length > 0) {
+            setSizeByDevice((prev) => ({ ...prev, chroma42: eslSizes }));
+          }
+        }
+        const progress = getDraftProgress(campaign.id);
+        const stepToRestore = Math.min(Math.max(progress?.step ?? 1, 1), 5);
+        dispatch(setWStep(stepToRestore));
+        if (!pipelineSessionIdRef.current) {
+          pipelineSessionIdRef.current =
+            progress?.sessionId ?? newPipelineSessionId();
+        }
+        hasJustSavedRef.current = true;
+      })
+      .catch(() => {
+        if (cancelled) return;
+        toast({
+          title: "Could not resume draft",
+          description: "The campaign could not be loaded. It may have been deleted.",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setIsResuming(false);
+      });
+
+    return () => {
+      cancelled = true;
+      setIsResuming(false);
+    };
+  }, [searchParams.resumeId, dispatch]);
+
+  // ── Save draft handler ────────────────────────────────────────────
+  const handleSaveDraft = useCallback(async () => {
+    // After /campaigns/generate the campaign already exists on the backend.
+    // Calling POST /draft/save again with the same session would create a
+    // duplicate row, so we skip and just acknowledge.
+    if (campaignAlreadyGeneratedRef.current) {
+      hasJustSavedRef.current = true;
+      toast({
+        title: "Campaign already saved",
+        description: "Your campaign was saved when layouts were generated.",
+      });
+      return;
+    }
+
+    const sessionId = pipelineSessionIdRef.current;
+    if (!sessionId) {
+      toast({
+        title: "Nothing to save",
+        description: "Start a conversation with the AI first to create a saveable draft.",
+      });
+      return;
+    }
+    try {
+      const result = await saveDraftMutation.mutateAsync({
+        session_id: sessionId,
+        hardware_targets: buildHardwareTargetsForApi().length > 0 ? buildHardwareTargetsForApi() : ["chroma29"],
+        name: campaignName?.trim() || undefined,
+        scheduled_start: schedule.startDate?.trim()
+          ? new Date(`${schedule.startDate}T${schedule.startTime || "08:00"}:00`).toISOString()
+          : null,
+        scheduled_end: schedule.endDate?.trim()
+          ? new Date(`${schedule.endDate}T${(schedule.endTime || schedule.startTime || "08:00")}:00`).toISOString()
+          : null,
+        scheduled_time: schedule.startTime ? schedule.startTime.slice(0, 10) : null,
+      });
+      dispatch(setCampaignId(result.id));
+      setDraftProgress(result.id, wStep, "nl", pipelineSessionIdRef.current);
+      hasJustSavedRef.current = true;
+      await queryClient.invalidateQueries({ queryKey: campaignKeys.listPrefix });
+      toast({
+        title: "Draft saved",
+        description: `"${result.name}" saved. You can resume it from All Campaigns.`,
+      });
+    } catch {
+      toast({
+        title: "Save failed",
+        description: "Could not save the draft. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [
+    saveDraftMutation,
+    buildHardwareTargetsForApi,
+    campaignName,
+    schedule.startDate,
+    schedule.startTime,
+    schedule.endDate,
+    schedule.endTime,
+    dispatch,
+    queryClient,
+    wStep,
+  ]);
+
+  // ── Navigation blocker ────────────────────────────────────────────
+  // After generate the campaign is already persisted — no unsaved work.
+  const hasUnsavedWork =
+    wStep >= 1 &&
+    pipelineSessionIdRef.current !== null &&
+    !hasJustSavedRef.current &&
+    !campaignAlreadyGeneratedRef.current;
+
+  const blocker = useBlocker({
+    shouldBlockFn: () => hasUnsavedWork,
+    enableBeforeUnload: () => hasUnsavedWork,
+    withResolver: true,
+  });
+
+  const handleBlockerSaveAndLeave = useCallback(async () => {
+    await handleSaveDraft();
+    blocker.proceed?.();
+  }, [handleSaveDraft, blocker]);
+
+  const handleBlockerLeave = useCallback(() => {
+    hasJustSavedRef.current = true;
+    blocker.proceed?.();
+  }, [blocker]);
+
+  const handleBlockerStay = useCallback(() => {
+    blocker.reset?.();
+  }, [blocker]);
+
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
   }, [dispatch]);
@@ -685,19 +965,32 @@ export default function Wizard() {
       return;
     }
 
-    // Re-open studio for an already-generated campaign
-    if (campaignIdFromStore) {
+    // Short-circuit only when we already have generated layouts loaded for this
+    // campaign in the current session. Plain `campaignIdFromStore` is not enough
+    // because a *resumed* draft also has an id but its generate call has not run
+    // yet — falling through to the generate branch is what the user expects.
+    if (campaignIdFromStore && generatedVariants.length > 0) {
       setShowStudio(true);
       return;
     }
 
+    // Resumed drafts lose the original LangGraph session, so generate one on the
+    // fly. The id is also auto-allocated for a fresh wizard run that somehow
+    // skipped Step 1 (defensive — handleSubmit normally seeds it).
     if (!pipelineSessionIdRef.current) {
-      setError("Complete Step 1 chat first so a draft session exists, then try again.");
-      return;
+      pipelineSessionIdRef.current = newPipelineSessionId();
     }
 
     setDesignGeneratePending(true);
     setError(null);
+    // If we're resuming a draft, remember its id so we can remove the old row
+    // after generate creates a replacement campaign.
+    const oldDraftId =
+      resumedFromCampaignIdRef.current &&
+      resumedFromCampaignIdRef.current === campaignIdFromStore
+        ? resumedFromCampaignIdRef.current
+        : null;
+
     try {
       const name = campaignName?.trim() || undefined;
       const created = await generateCampaign({
@@ -706,6 +999,23 @@ export default function Wizard() {
         ...(name ? { name } : {}),
       });
       dispatch(activateCampaignWithId({ id: created.id, name: created.name }));
+
+      // Clean up the old draft that was superseded by the newly generated campaign.
+      if (oldDraftId && oldDraftId !== created.id) {
+        clearDraftProgress(oldDraftId);
+        resumedFromCampaignIdRef.current = null;
+        deleteCampaign(oldDraftId).catch(() => {
+          // Best-effort — the old draft row may linger but the user's flow is
+          // unaffected. A page refresh will show the correct list.
+        });
+      }
+
+      // The campaign is now persisted on the backend via /campaigns/generate.
+      // Mark it so the Save button and navigation blocker don't trigger a
+      // redundant POST /draft/save which would create a duplicate campaign.
+      campaignAlreadyGeneratedRef.current = true;
+      hasJustSavedRef.current = true;
+
       await queryClient.invalidateQueries({ queryKey: campaignKeys.listPrefix });
 
       // Open the modal in "generating" mode — event polling starts immediately.
@@ -715,8 +1025,14 @@ export default function Wizard() {
       setStudioGenerating(true);
       setShowStudio(true);
       startStudioPolling();
-    } catch {
-      setError("Failed to generate layouts. Check your connection and try again.");
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 404) {
+        setError(
+          "The wizard session has expired. Please start a new campaign or re-chat with the AI to create a fresh session.",
+        );
+      } else {
+        setError("Failed to generate layouts. Check your connection and try again.");
+      }
     } finally {
       setDesignGeneratePending(false);
     }
@@ -725,6 +1041,7 @@ export default function Wizard() {
     campaignIdFromStore,
     campaignName,
     dispatch,
+    generatedVariants.length,
     queryClient,
     startStudioPolling,
   ]);
@@ -834,6 +1151,9 @@ export default function Wizard() {
       },
       {
         onSuccess: async () => {
+          // Local draft progress hint no longer applies after submission — the
+          // backend now drives the pipeline (pending_approval → ...).
+          clearDraftProgress(campaignIdFromStore);
           // Ensure list is fresh before leave so the new row appears on All Campaigns.
           await queryClient.refetchQueries({ queryKey: campaignKeys.listPrefix });
           toast({
@@ -842,6 +1162,7 @@ export default function Wizard() {
           });
           dispatch(resetWizard());
           dispatch(resetStudio());
+          hasJustSavedRef.current = true;
           navigate({ to: "/maker/dashboard" });
         },
         onError: () => {
@@ -1316,7 +1637,13 @@ export default function Wizard() {
   return (
     <>
 
-      <div className="relative flex flex-1 flex-col overflow-y-auto">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+        {wStep === 0 ? (
+          <div className="absolute right-4 top-4 z-20">
+            <HeaderNotificationsTrigger />
+          </div>
+        ) : null}
+
         {/* Error toast */}
         {error && (
           <div className="absolute left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-900/90 px-4 py-2 text-xs text-rose-400 shadow-xl" role="alert">
@@ -1325,13 +1652,26 @@ export default function Wizard() {
           </div>
         )}
 
+        {/* ── Resuming draft: covers main column only (sidebar stays visible) ── */}
+        {isResuming && (
+          <div
+            className="absolute inset-0 z-40 flex flex-col items-center justify-center gap-3 bg-ithina-bg/92 backdrop-blur-sm"
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+          >
+            <Loader2 className="size-8 animate-spin text-ithina-purple" aria-hidden />
+            <span className="text-sm font-medium text-slate-300">Resuming draft…</span>
+          </div>
+        )}
+
         {/* ── STEP 0: Mode Chooser ── */}
-        {wStep === 0 && (
+        {wStep === 0 && !isResuming && (
           <ModeChooser onSelect={handleSelectMode} />
         )}
 
-        {/* ── STEPS 1+: step header + step content ── */}
-        {wStep > 0 && wMode !== "" && (
+        {/* ── STEPS 1+: step header + step content (hidden until resume fetch settles) ── */}
+        {wStep > 0 && wMode !== "" && !isResuming && (
           <div className="flex flex-1 flex-col min-h-0">
             <WizardStepHeader
               mode={wMode}
@@ -1341,6 +1681,8 @@ export default function Wizard() {
               onBack={handleBack}
               onStepClick={handleWizardStepClick}
               trailingSlot={wizardHeaderTrailing}
+              onSave={wMode === "nl" && pipelineSessionIdRef.current && !campaignAlreadyGeneratedRef.current ? handleSaveDraft : undefined}
+              isSaving={saveDraftMutation.isPending}
             />
 
             {/* ── NL Step 1: Intent & Data Staging ── */}
@@ -1376,15 +1718,26 @@ export default function Wizard() {
                               className="w-full bg-transparent py-4 pl-5 pr-12 text-sm text-white placeholder:text-slate-500 focus:outline-none"
                               autoComplete="off"
                             />
-                            <button
-                              type="submit"
-                              disabled={isTyping}
-                              className="absolute right-2 rounded-lg bg-white/5 p-2 text-white transition-all hover:bg-ithina-purple disabled:opacity-50"
-                            >
-                              <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                              </svg>
-                            </button>
+                            {isTyping ? (
+                              <button
+                                type="button"
+                                aria-label="Stop generation"
+                                onClick={handleStop}
+                                className="absolute right-2 rounded-lg border border-ithina-border bg-white/5 p-2 text-slate-300 transition-all hover:border-ithina-rose/50 hover:bg-ithina-rose/10 hover:text-ithina-rose"
+                              >
+                                <svg className="size-4 fill-current" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2" /></svg>
+                              </button>
+                            ) : (
+                              <button
+                                type="submit"
+                                disabled={isTyping}
+                                className="absolute right-2 rounded-lg bg-white/5 p-2 text-white transition-all hover:bg-ithina-purple disabled:opacity-50"
+                              >
+                                <svg className="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                              </button>
+                            )}
                           </div>
                         </form>
                       </div>
@@ -1430,6 +1783,7 @@ export default function Wizard() {
                               inputText={inputText}
                               onInputChange={setInputText}
                               onSubmit={handleSubmit}
+                              onStop={handleStop}
                               onResetChat={handleResetPromoChat}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
@@ -1471,6 +1825,7 @@ export default function Wizard() {
                               inputText={inputText}
                               onInputChange={setInputText}
                               onSubmit={handleSubmit}
+                              onStop={handleStop}
                               onResetChat={handleResetPromoChat}
                               inputDisabled={intentMutation.isPending || hwConfirmMutation.isPending}
                               hasSplit={true}
@@ -1642,6 +1997,15 @@ export default function Wizard() {
         onConfirm={handleCsvMappingConfirm}
         onReupload={handleCsvMappingModalReupload}
         isProcessing={processCsvMutation.isPending || discoverCsvMutation.isPending}
+      />
+
+      {/* ── Unsaved Changes Dialog ─────────────────────────────────── */}
+      <UnsavedChangesDialog
+        open={blocker.status === "blocked"}
+        isSaving={saveDraftMutation.isPending}
+        onSaveAndLeave={handleBlockerSaveAndLeave}
+        onLeave={handleBlockerLeave}
+        onStay={handleBlockerStay}
       />
 
       {/* ── Campaign Studio Modal ──────────────────────────────────── */}

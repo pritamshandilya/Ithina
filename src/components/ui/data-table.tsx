@@ -112,6 +112,17 @@ export interface DataTableProps<T = object> {
   dataTreeElementColumn?: string;
   /** Shrink wrapper height to content (no default min-heights; for compact admin lists) */
   fitContent?: boolean;
+
+  /**
+   * Pin the first N columns (including bulk-select and row number when enabled) so they stay visible during horizontal scroll.
+   * Uses Tabulator `frozen` columns (`responsiveLayout` is false on this wrapper).
+   */
+  freezeLeadingColumns?: number;
+  /**
+   * Row rendering: Tabulator defaults to `"virtual"` (only visible rows in DOM).
+   * Use `"basic"` for paginated admin tables so all rows on the current page are rendered and match the page-size control.
+   */
+  renderVertical?: "virtual" | "basic";
 }
 
 /** Tabulator's bundled types omit some runtime instance APIs */
@@ -169,6 +180,8 @@ export function DataTable<T extends object>({
   dataTreeStartExpanded = false,
   dataTreeElementColumn,
   fitContent = false,
+  freezeLeadingColumns = 0,
+  renderVertical,
 }: DataTableProps<T>) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -243,11 +256,18 @@ export function DataTable<T extends object>({
         }
       : null;
 
-    const finalColumns = [
+    const columnLayout = [
       ...(selectionColumn ? [selectionColumn] : []),
       ...(showRowNumber ? [serialColumn] : []),
       ...tabulatorColumns,
     ];
+    const freezeN = Math.min(
+      Math.max(0, freezeLeadingColumns),
+      columnLayout.length,
+    );
+    const finalColumns = columnLayout.map((col, idx) =>
+      idx < freezeN ? { ...col, frozen: true } : col,
+    );
 
     const options: Record<string, unknown> = {
       data: data.map((row) => ({ ...row })),
@@ -260,6 +280,10 @@ export function DataTable<T extends object>({
       placeholder: emptyMessage,
       index: rowIdKey,
     };
+
+    if (renderVertical) {
+      options.renderVertical = renderVertical;
+    }
 
     if (dataTree) {
       options.dataTree = true;
@@ -408,6 +432,8 @@ export function DataTable<T extends object>({
     dataTreeStartExpanded,
     dataTreeElementColumn,
     bulkSelectRowRange,
+    freezeLeadingColumns,
+    renderVertical,
   ]);
 
   // Keep row data updates cheap — separate from the column/options effect.

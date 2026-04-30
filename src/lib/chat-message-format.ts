@@ -1165,7 +1165,7 @@ function extractBoldCategoryListParts(text: string): {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 const bubbleClass =
-  "w-full min-w-0 max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/15 bg-gradient-to-br from-ithina-purple/[0.08] to-ithina-purple/[0.03] px-3 py-2 text-[13px] leading-snug text-slate-200 shadow-sm";
+  "w-full min-w-0 max-w-full rounded-2xl rounded-tl-sm border border-ithina-purple/[0.22] bg-gradient-to-br from-ithina-purple/[0.10] to-ithina-purple/[0.03] backdrop-blur-sm px-3 py-2 text-[13px] leading-snug text-slate-100 shadow-[0_4px_24px_rgba(168,85,247,0.13),0_1px_4px_rgba(0,0,0,0.22)]";
 
 /** When the reply is only empty JSON, avoid showing raw `[]` / `{}` in the chat UI. */
 function isTrivialStructuredPayload(trimmed: string): boolean {

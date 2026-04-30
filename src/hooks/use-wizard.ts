@@ -3,6 +3,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   discoverCsvFields,
   processCsvMapping,
+  saveDraftCampaign,
 } from "@/services/campaigns";
 import {
   confirmHardwareSelection,
@@ -65,11 +66,13 @@ export function useSubmitWizardIntent() {
       text,
       constraints,
       sessionId,
+      signal,
     }: {
       text: string;
       constraints: WizardConstraints;
       sessionId?: string | null;
-    }) => submitWizardIntent(text, constraints, { sessionId }),
+      signal?: AbortSignal;
+    }) => submitWizardIntent(text, constraints, { sessionId, signal }),
   });
 }
 
@@ -88,6 +91,19 @@ export function useDiscoverCsvFields() {
 export function useProcessCsvMapping() {
   return useMutation({
     mutationFn: (payload: ApiCampaignCSVProcessRequest) => processCsvMapping(payload),
+  });
+}
+
+export function useSaveDraftCampaign() {
+  return useMutation({
+    mutationFn: (payload: {
+      session_id: string;
+      hardware_targets: string[];
+      name?: string;
+      scheduled_start?: string | null;
+      scheduled_end?: string | null;
+      scheduled_time?: string | null;
+    }) => saveDraftCampaign(payload),
   });
 }
 

@@ -1,5 +1,6 @@
 import { AlertCircle, Calendar, LayoutList, Pause, Search, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 
 import { DataTable } from "@/components/ui/data-table";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,6 +38,7 @@ export default function CampaignsTabulator() {
   const updateMutation = useUpdateCampaign();
   const deleteMutation = useDeleteCampaign();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // React Query's `useMutation` returns a NEW object on every render, while
   // `mutate` itself is a stable reference. Destructuring the functions keeps
@@ -113,8 +115,12 @@ export default function CampaignsTabulator() {
   }, []);
 
   const openCampaignDetail = useCallback((c: CampaignListItem) => {
+    if (c.apiStatus === "draft") {
+      navigate({ to: "/wizard", search: { resumeId: c.id } });
+      return;
+    }
     setDetailCampaignId(c.id);
-  }, []);
+  }, [navigate]);
 
   const openEdit = useCallback((c: CampaignListItem) => {
     setModalForm({
@@ -194,9 +200,8 @@ export default function CampaignsTabulator() {
         onEdit: openEdit,
         onPause: togglePause,
         onHistory: setHistoryCampaign,
-        onDelete: confirmDelete,
       }),
-    [pausedById, openEdit, togglePause, confirmDelete],
+    [pausedById, openEdit, togglePause],
   );
 
   return (
@@ -372,6 +377,8 @@ export default function CampaignsTabulator() {
                 columns={columns}
                 rowIdField="id"
                 isBulkEnabled
+                freezeLeadingColumns={3}
+                renderVertical="basic"
                 onSelectionChange={setSelectedRows}
                 onRowClick={openCampaignDetail}
                 pagination

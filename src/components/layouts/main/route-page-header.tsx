@@ -1,7 +1,8 @@
-import { Bell, Plus, UserPlus } from "lucide-react";
+import { Plus, UserPlus } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "@tanstack/react-router";
 
+import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { NAV_ITEMS_FLAT, type NavItemFlat } from "@/constants/navigation";
 import { UserFormModal } from "@/features/admin-users/components/UserFormModal";
 import type { UserFormData } from "@/features/admin-users/types";
@@ -140,16 +141,7 @@ export default function RoutePageHeader() {
             </button>
           ) : null}
           <div className="flex h-9 items-center border-l border-border/60 pl-3">
-            <button
-              type="button"
-              className="relative rounded-md p-1.5 text-muted-foreground transition-colors hover:text-foreground"
-              aria-label="Notifications"
-            >
-              <Bell className="size-[18px]" />
-              <span className="absolute right-0 top-0 flex size-3.5 items-center justify-center rounded-full border border-background bg-destructive text-[9px] font-bold text-destructive-foreground">
-                3
-              </span>
-            </button>
+            <HeaderNotificationsTrigger />
           </div>
         </div>
       </div>

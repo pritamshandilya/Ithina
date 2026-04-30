@@ -17,7 +17,7 @@ import type { ChatSummaryEnrichment } from "@/types/wizard";
 function TypingDots() {
   return (
     <div
-      className="flex w-fit max-w-full items-center gap-1.5 self-start rounded-2xl rounded-tl-sm border border-ithina-purple/10 bg-ithina-purple/[0.04] px-3 py-2"
+      className="flex w-fit max-w-full items-center gap-1.5 self-start rounded-2xl rounded-tl-sm border border-ithina-purple/[0.22] bg-gradient-to-br from-ithina-purple/[0.10] to-ithina-purple/[0.03] px-3 py-2 shadow-[0_4px_24px_rgba(168,85,247,0.13),0_1px_4px_rgba(0,0,0,0.22)] backdrop-blur-sm"
       aria-label="Ithina is typing"
       role="status"
     >
@@ -319,11 +319,15 @@ function ChunkBubble({
   chunkIdx: number;
   messageKey: number;
 }) {
+  // Plain text/markdown shrinks to content; structured blocks need full width for tables/grids.
+  const isInline = chunk.kind === "markdown" || chunk.kind === "html";
+
   return (
     <div
       key={`${messageKey}-${chunkIdx}`}
       className={cn(
         assistantBubbleClassName,
+        isInline ? "w-fit" : "w-full",
         chunk.kind === "html" && "[&_a]:text-ithina-purple [&_a]:underline",
       )}
     >

@@ -19,6 +19,10 @@
 
 import { promoApiClient } from "@/lib/promo-api-client";
 import {
+  getDraftProgress,
+  pipelineFromDraftProgress,
+} from "@/lib/wizard-draft-progress";
+import {
   MOCK_CALENDAR_WEEKDAYS,
   MOCK_CAMPAIGN_FILTERS,
   MOCK_CAMPAIGN_STAT_DEFINITIONS,
@@ -53,11 +57,31 @@ import type {
 
 const API_PREFIX = "/api/v1";
 
-function newPipelineSessionId(): string {
+export function newPipelineSessionId(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
   }
   return `${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
+/**
+ * For `draft` campaigns, compare the backend-derived pipeline with the wizard
+ * step the user was on when they last saved (mirrored in localStorage). If the
+ * stored progress is more advanced, return that breadcrumb instead so the
+ * All Campaigns table reflects where the user actually exited (e.g. Guard Rails
+ * vs the backend default of "Design").
+ */
+function applyDraftProgressOverride(
+  basePipeline: string[],
+  apiStatus: string,
+  campaignId: string | null | undefined,
+): string[] {
+  if (apiStatus !== "draft") return basePipeline;
+  const progress = getDraftProgress(campaignId);
+  if (!progress) return basePipeline;
+  const stepPipeline = pipelineFromDraftProgress(progress.step);
+  if (!stepPipeline) return basePipeline;
+  return stepPipeline.length > basePipeline.length ? stepPipeline : basePipeline;
 }
 
 /** Maps wizard schedule fields to API generate payload (nullable when unscheduled). */
@@ -135,11 +159,7 @@ function derivePipelineFromSignals(params: {
     return ["Data", "Design"];
   }
   if (s === "draft") {
-    if (gr === "pass" || gr === "warn") {
-      return ["Data", "Design", "Guard Rails"];
-    }
     if (hasAssets) {
-      // guardrails failed or not yet run — still at Design step
       return ["Data", "Design"];
     }
     return ["Data"];
@@ -150,11 +170,12 @@ function derivePipelineFromSignals(params: {
 function derivePipelineFromApi(api: ApiCampaignResponse): string[] {
   const hasAssets =
     (api.skus?.length ?? 0) > 0 || (api.hardware_targets?.length ?? 0) > 0;
-  return derivePipelineFromSignals({
+  const base = derivePipelineFromSignals({
     status: api.status,
     guardrails: api.guardrails_status,
     hasAssets,
   });
+  return applyDraftProgressOverride(base, api.status, api.id);
 }
 
 /** Fallback when `apiStatus` is missing (legacy mocks). */
@@ -177,13 +198,16 @@ function legacyDerivePipelineFromUiStatus(status: CampaignListStatus): string[] 
 }
 
 export function derivePipelineForRow(row: CampaignListItem): string[] {
-  if (row.pipeline?.length) return row.pipeline;
+  if (row.pipeline?.length) {
+    return applyDraftProgressOverride(row.pipeline, row.apiStatus ?? "", row.id);
+  }
   if (row.apiStatus) {
-    return derivePipelineFromSignals({
+    const base = derivePipelineFromSignals({
       status: row.apiStatus,
       guardrails: row.guardrailsStatus ?? "fail",
       hasAssets: row.skus > 0 || (row.hardware?.length ?? 0) > 0,
     });
+    return applyDraftProgressOverride(base, row.apiStatus, row.id);
   }
   return legacyDerivePipelineFromUiStatus(row.status);
 }
@@ -296,13 +320,16 @@ export async function chatCampaign(
 
 /**
  * Phase 1 of the wizard: send NL prompt → get back staged SKUs.
+ * Pass an AbortSignal to allow the caller to cancel an in-flight request.
  */
 export async function draftCampaignFromPrompt(
   payload: ApiCampaignDraftRequest,
+  signal?: AbortSignal,
 ): Promise<ApiCampaignDraftResponse> {
   const { data } = await promoApiClient.post<ApiCampaignDraftResponse>(
     `${API_PREFIX}/campaigns/draft`,
     payload,
+    signal ? { signal } : undefined,
   );
   return data;
 }
@@ -403,6 +430,21 @@ export async function getCampaign(id: string): Promise<CampaignListItem> {
     `${API_PREFIX}/campaigns/${id}`,
   );
   return adaptApiCampaign(data);
+}
+
+export async function saveDraftCampaign(payload: {
+  session_id: string;
+  hardware_targets: string[];
+  name?: string;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
+  scheduled_time?: string | null;
+}): Promise<{ id: string; name: string; status: string }> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/draft/save`,
+    payload,
+  );
+  return { id: data.id, name: data.name, status: data.status };
 }
 
 /**

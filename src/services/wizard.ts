@@ -165,13 +165,16 @@ export function mapDraftResponseSkusToStaged(
 export async function submitWizardIntent(
   prompt: string,
   _constraints: WizardConstraints,
-  options?: { sessionId?: string | null },
+  options?: { sessionId?: string | null; signal?: AbortSignal },
 ): Promise<{ aiReply: ChatMessage; skus: StagedSku[]; sessionId: string; draftMeta: DraftCampaignMeta; suggestions: string[] }> {
-  const response = await draftCampaignFromPrompt({
-    prompt,
-    source_type: "nl",
-    ...(options?.sessionId ? { session_id: options.sessionId } : {}),
-  });
+  const response = await draftCampaignFromPrompt(
+    {
+      prompt,
+      source_type: "nl",
+      ...(options?.sessionId ? { session_id: options.sessionId } : {}),
+    },
+    options?.signal,
+  );
 
   const draftMeta = extractDraftMeta(response);
   const skus = mapDraftResponseSkusToStaged(response, draftMeta);

@@ -4,6 +4,7 @@ import type { ToastActionElement, ToastProps } from "@/components/ui/toast";
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;
+const NOTIFICATION_LIMIT = 20;
 
 type ToasterToast = ToastProps & {
   id: string;
@@ -12,12 +13,10 @@ type ToasterToast = ToastProps & {
   action?: ToastActionElement;
 };
 
-const actionTypes = {
-  ADD_TOAST: "ADD_TOAST",
-  UPDATE_TOAST: "UPDATE_TOAST",
-  DISMISS_TOAST: "DISMISS_TOAST",
-  REMOVE_TOAST: "REMOVE_TOAST",
-} as const;
+export type HeaderNotification = Pick<ToasterToast, "id" | "title" | "description" | "variant"> & {
+  createdAt: number;
+  readAt?: number;
+};
 
 let count = 0;
 
@@ -26,7 +25,13 @@ function genId() {
   return count.toString();
 }
 
-type ActionType = typeof actionTypes;
+type ActionType = {
+  ADD_TOAST: "ADD_TOAST";
+  UPDATE_TOAST: "UPDATE_TOAST";
+  DISMISS_TOAST: "DISMISS_TOAST";
+  REMOVE_TOAST: "REMOVE_TOAST";
+  MARK_NOTIFICATIONS_READ: "MARK_NOTIFICATIONS_READ";
+};
 
 type Action =
   | {
@@ -44,10 +49,15 @@ type Action =
   | {
       type: ActionType["REMOVE_TOAST"];
       toastId?: ToasterToast["id"];
+    }
+  | {
+      type: ActionType["MARK_NOTIFICATIONS_READ"];
+      readAt: number;
     };
 
 interface State {
   toasts: ToasterToast[];
+  notifications: HeaderNotification[];
 }
 
 const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
@@ -72,6 +82,16 @@ export const reducer = (state: State, action: Action): State => {
       return {
         ...state,
         toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+        notifications: [
+          {
+            id: action.toast.id,
+            title: action.toast.title,
+            description: action.toast.description,
+            variant: action.toast.variant,
+            createdAt: Date.now(),
+          },
+          ...state.notifications,
+        ].slice(0, NOTIFICATION_LIMIT),
       };
 
     case "UPDATE_TOAST":
@@ -79,6 +99,16 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.map((t) =>
           t.id === action.toast.id ? { ...t, ...action.toast } : t,
+        ),
+        notifications: state.notifications.map((notification) =>
+          notification.id === action.toast.id
+            ? {
+                ...notification,
+                title: action.toast.title ?? notification.title,
+                description: action.toast.description ?? notification.description,
+                variant: action.toast.variant ?? notification.variant,
+              }
+            : notification,
         ),
       };
 
@@ -117,12 +147,20 @@ export const reducer = (state: State, action: Action): State => {
         ...state,
         toasts: state.toasts.filter((t) => t.id !== action.toastId),
       };
+
+    case "MARK_NOTIFICATIONS_READ":
+      return {
+        ...state,
+        notifications: state.notifications.map((notification) =>
+          notification.readAt ? notification : { ...notification, readAt: action.readAt },
+        ),
+      };
   }
 };
 
 const listeners: Array<(state: State) => void> = [];
 
-let memoryState: State = { toasts: [] };
+let memoryState: State = { toasts: [], notifications: [] };
 
 function dispatch(action: Action) {
   memoryState = reducer(memoryState, action);
@@ -172,12 +210,20 @@ function useToast() {
       const index = listeners.indexOf(setState);
       if (index > -1) listeners.splice(index, 1);
     };
-  }, [state]);
+  }, []);
+
+  const unreadCount = state.notifications.filter((notification) => !notification.readAt).length;
 
   return {
     ...state,
+    unreadCount,
     toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+    markNotificationsRead: () =>
+      dispatch({
+        type: "MARK_NOTIFICATIONS_READ",
+        readAt: Date.now(),
+      }),
   };
 }
 

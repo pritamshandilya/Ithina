@@ -1,4 +1,4 @@
-import { ArrowRight, CircleCheck, CloudUpload, Download, FileSpreadsheet, Loader2, Zap } from "lucide-react";
+import { ArrowRight, CircleCheck, CloudUpload, Download, Loader2, Zap } from "lucide-react";
 import { memo, useEffect, useMemo, useRef } from "react";
 
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
@@ -24,21 +24,37 @@ function stagingRowHasAlert(row: { safe: boolean }): boolean {
   return row.safe === false;
 }
 
-/** Subtext under ALERT: actual margin % when API flags margin; else violation copy. */
-function alertComplianceDetail(row: StagedSku): string {
-  const reason = row.violationReason?.trim() ?? "";
-  const marginLabel =
-    typeof row.marginPct === "number" && !Number.isNaN(row.marginPct)
-      ? formatSkuMarginPercent(row.marginPct)
-      : (row.margin?.trim() ?? "");
-  const marginViolation = !reason || /margin/i.test(reason);
-  if (marginViolation && marginLabel && marginLabel !== "—") {
-    return marginLabel.length > 22 ? `${marginLabel.slice(0, 22)}…` : marginLabel;
+/** Post-offer margin strictly below zero — drives row tint in staging grid */
+function stagingRowNegativeMargin(row: { marginPct?: number | null }): boolean {
+  const m = row.marginPct;
+  return typeof m === "number" && !Number.isNaN(m) && m < 0;
+}
+
+/** Post-offer margin % — color aligns with SKU economics (see `marginPct` on staging row). */
+function marginAccentClasses(pct: number): string {
+  if (pct > 8) return "font-semibold text-emerald-400";
+  if (pct < 0) return "font-semibold text-rose-400";
+  if (pct >= 0 && pct <= 5) return "font-medium text-slate-400";
+  return "font-medium text-amber-400";
+}
+
+/** Staging AI column — shows margin % with tone; optional tooltip when API flags violation. */
+function marginCellHtml(row: StagedSku): string {
+  const m = row.marginPct;
+  const reason = row.violationReason?.trim();
+
+  if (typeof m !== "number" || Number.isNaN(m)) {
+    if (reason) {
+      const t = ` title="${escapeCellText(reason)}"`;
+      return `<span class="font-mono text-[11px] font-medium text-rose-400"${t}>—</span>`;
+    }
+    return `<span class="font-mono text-[11px] text-slate-500">—</span>`;
   }
-  if (reason) {
-    return reason.length > 22 ? `${reason.slice(0, 22)}…` : reason;
-  }
-  return marginLabel || "—";
+  const label = escapeCellText(formatSkuMarginPercent(m));
+  const accent = marginAccentClasses(m);
+  const tooltip =
+    !row.safe && reason ? ` title="${escapeCellText(reason)}"` : "";
+  return `<span class="font-mono text-xs tabular-nums tracking-tight ${accent}"${tooltip}>${label}</span>`;
 }
 
 /** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
@@ -84,13 +100,13 @@ const CSV_PREVIEW_COLS: IthColumnDef<CsvRow>[] = [
   },
   {
     key: "current",
-    label: "Current",
+    label: "Current Cost",
     align: "right",
     render: (row) => <span className="font-mono text-xs text-slate-500 line-through">${row.current}</span>,
   },
   {
     key: "proposed",
-    label: "Proposed",
+    label: "Proposed Cost",
     align: "right",
     render: (row) => (
       <span className={`font-mono text-xs font-bold ${row.safe ? "text-emerald-400" : "text-rose-400"}`}>
@@ -100,7 +116,7 @@ const CSV_PREVIEW_COLS: IthColumnDef<CsvRow>[] = [
   },
   {
     key: "safe",
-    label: "Check",
+    label: "Margin",
     align: "center",
     render: (row) => (
       <IthBadge label={row.safe ? "Pass" : "Alert"} variant={row.safe ? "emerald" : "rose"} />
@@ -245,7 +261,7 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Current Price",
+      title: "Current Cost",
       field: "current",
       width: 110,
       hozAlign: "right",
@@ -256,7 +272,7 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Proposed Price",
+      title: "Proposed Cost",
       field: "proposed",
       width: 120,
       hozAlign: "right",
@@ -267,7 +283,7 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Margin Check",
+      title: "Margin",
       field: "safe",
       width: 120,
       formatter: (cell: unknown) => {
@@ -353,7 +369,6 @@ function DataStagingGrid({
       hozAlign: "left",
       headerHozAlign: "left",
       vertAlign: "top",
-      variableHeight: true,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const val = escapeCellText(row.name ?? "");
@@ -380,7 +395,6 @@ function DataStagingGrid({
       hozAlign: "left",
       headerHozAlign: "left",
       vertAlign: "top",
-      variableHeight: true,
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const label = (row.offerLabel ?? "").trim();
@@ -432,7 +446,7 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Current",
+      title: "Current Cost",
       field: "current",
       width: 100,
       minWidth: 92,
@@ -454,13 +468,25 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const val = row.discount ?? 0;
-        return `<div class="flex items-center justify-center gap-1"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" class="w-12 rounded border border-slate-600 bg-slate-800 px-1 py-0.5 text-center font-mono text-[11px] leading-tight text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-[10px] text-slate-400">%</span></div>`;
+        return `<div style="display:flex;align-items:center;justify-content:center;gap:4px"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" style="width:2.75rem;min-width:2.75rem;max-width:2.75rem;height:1.375rem;flex-shrink:0" class="rounded border border-slate-600 bg-slate-800 px-1 text-center font-mono text-[11px] leading-none text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-[10px] text-slate-400">%</span></div>`;
       },
       cellClick: (_e: MouseEvent) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;
         if (target.tagName === "INPUT") {
           _e.stopPropagation();
         }
+      },
+    },
+    {
+      title: "Proposed Cost",
+      field: "proposed",
+      width: 110,
+      sorter: "number",
+      hozAlign: "right",
+      headerHozAlign: "right",
+      formatter: (cell: unknown) => {
+        const val = (cell as { getValue: () => number }).getValue();
+        return `<span class="font-mono text-sm font-bold leading-tight text-white">$${val.toFixed(2)}</span>`;
       },
     },
     {
@@ -481,51 +507,16 @@ function DataStagingGrid({
       },
     },
     {
-      title: "Proposed",
-      field: "proposed",
-      width: 110,
+      title: "Margin",
+      field: "marginPct",
+      width: 120,
+      minWidth: 104,
       sorter: "number",
       hozAlign: "right",
       headerHozAlign: "right",
       formatter: (cell: unknown) => {
-        const val = (cell as { getValue: () => number }).getValue();
-        return `<span class="font-mono text-sm font-bold leading-tight text-white">$${val.toFixed(2)}</span>`;
-      },
-    },
-    {
-      title: "Compliance",
-      field: "safe",
-      width: 130,
-      formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
-        if (row.safe) return `<span class="rounded border border-emerald-400/20 bg-emerald-900/40 px-1.5 py-0.5 font-mono text-[9px] leading-none text-emerald-400">PASS</span>`;
-        const detail = escapeCellText(alertComplianceDetail(row));
-        const rawReason = row.violationReason?.trim() ?? "";
-        const marginLine =
-          typeof row.marginPct === "number" && !Number.isNaN(row.marginPct)
-            ? formatSkuMarginPercent(row.marginPct)
-            : "";
-        const titleText =
-          rawReason && marginLine && /margin/i.test(rawReason) && rawReason !== marginLine
-            ? `${rawReason} (${marginLine})`
-            : rawReason || marginLine || detail;
-        const titleAttr = titleText ? ` title="${escapeCellText(titleText)}"` : "";
-        return `<span class="inline-flex max-w-full flex-col gap-0.5 rounded border border-rose-400/35 bg-rose-400/12 px-1.5 py-0.5 font-mono text-[9px] leading-tight text-rose-300"${titleAttr}><span class="font-semibold tracking-wide text-rose-400">ALERT</span><span class="truncate text-[8px] text-rose-200/90">${detail}</span></span>`;
-      },
-    },
-    {
-      title: "Suggest dates",
-      field: "agentSuggestSchedule",
-      minWidth: 118,
-      widthGrow: 0.65,
-      sorter: "string",
-      hozAlign: "left",
-      headerHozAlign: "left",
-      formatter: (cell: unknown) => {
-        const row = (cell as { getData: () => StagedSku }).getData();
-        const raw = (row.agentSuggestSchedule ?? "").trim() || "—";
-        const esc = escapeCellText(raw);
-        return `<span class="text-[11px] leading-snug text-slate-300">${esc}</span>`;
+        return marginCellHtml(row);
       },
     },
     ];
@@ -536,13 +527,16 @@ function DataStagingGrid({
     const el = row.getElement();
     el.classList.toggle("wizard-staging-row-excluded", d.included === false);
     el.classList.toggle("wizard-staging-row-free", d.isFree === true);
+    const negMargin = stagingRowNegativeMargin(d);
     const alert = stagingRowHasAlert(d);
-    el.classList.toggle("wizard-staging-row-alert", alert);
-    if (alert) {
+    el.classList.toggle("wizard-staging-row-negative-margin", negMargin);
+    /* wizard-staging-row-alert retained for hooks/tests; no row border stripe in CSS */
+    el.classList.toggle("wizard-staging-row-alert", alert && !negMargin);
+    if (negMargin || alert) {
       el.style.borderLeft = "";
       el.style.backgroundColor = "";
     } else if (d.isFree) {
-      el.style.borderLeft = "3px solid var(--color-ithina-purple)";
+      el.style.borderLeft = "";
       el.style.backgroundColor = "color-mix(in srgb, var(--color-ithina-purple) 12%, transparent)";
     } else {
       el.style.borderLeft = "";
@@ -695,33 +689,9 @@ function DataStagingGrid({
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
-            <button
-              type="button"
-              onClick={() => onInputModeChange("ai")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                inputMode === "ai" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              <Zap className="size-3.5" />
-              AI Assisted
-            </button>
-            <button
-              type="button"
-              onClick={() => onInputModeChange("csv")}
-              className={cn(
-                "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all",
-                inputMode === "csv" ? "bg-ithina-purple text-white shadow-sm" : "text-slate-400 hover:text-white",
-              )}
-            >
-              <FileSpreadsheet className="size-3.5" />
-              CSV Upload
-            </button>
-          </div>
           {inputMode === "ai" && data.length > 0 && (
             <span className="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:max-w-none sm:text-xs">
-              {aiIncludedCount} of {data.length} SKUs included — Review proposals below
+              {aiIncludedCount} of {data.length} SKUs selected
             </span>
           )}
           {inputMode === "csv" && csvRows.length > 0 && (
@@ -836,26 +806,8 @@ function DataStagingGrid({
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-2">
-                      <div className="flex items-center gap-0.5 rounded-lg border border-ithina-border bg-ithina-bg p-0.5">
-                        <button
-                          type="button"
-                          onClick={() => onInputModeChange("ai")}
-                          className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-slate-400 transition-all hover:text-white"
-                        >
-                          <Zap className="size-3.5" />
-                          AI Assisted
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onInputModeChange("csv")}
-                          className="flex items-center gap-1.5 rounded-md bg-ithina-purple px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all"
-                        >
-                          <FileSpreadsheet className="size-3.5" />
-                          CSV Upload
-                        </button>
-                      </div>
                       <span className="max-w-[14rem] text-right text-[11px] leading-snug text-slate-400 sm:max-w-none sm:text-xs">
-                        {aiIncludedCount} of {data.length} SKUs included — Review proposals below
+                        {aiIncludedCount} of {data.length} SKUs selected
                       </span>
                     </div>
                   </div>
@@ -907,6 +859,7 @@ function DataStagingGrid({
                   pagination={false}
                   headerFilters={false}
                   showRowNumber
+                  freezeLeadingColumns={2}
                   layout="fitColumns"
                   rowFormatter={aiRowFormatter}
                   className="wizard-staging-table min-h-0 flex-1"
@@ -1012,6 +965,7 @@ function DataStagingGrid({
                 pagination={false}
                 headerFilters={false}
                 showRowNumber
+                freezeLeadingColumns={2}
                 layout="fitColumns"
                 rowFormatter={aiRowFormatter}
                 className="wizard-staging-table min-h-0 flex-1"

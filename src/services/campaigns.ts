@@ -44,7 +44,9 @@ import type {
   ApiCampaignGenerateRequest,
   ApiCampaignResponse,
   ApiCampaignSubmitRequest,
+  ApiCampaignUpdateRequest,
   ApiGuardrailsStatus,
+  ApiValidateGuardrailsResponse,
 } from "@/types/api/campaigns";
 import type {
   CampaignCreateForm,
@@ -118,8 +120,11 @@ function mapApiStatusToUi(apiStatus: string): CampaignListStatus {
     case "publishing":
       return "Scheduled";
     case "pending_approval":
-    case "generating":
       return "Pending";
+    case "generating":
+    case "processing":
+    case "guardrails_review":
+      return "Draft";
     case "rejected":
       return "Rejected";
     case "draft":
@@ -155,8 +160,8 @@ function derivePipelineFromSignals(params: {
   if (s === "pending_approval") {
     return ["Data", "Design", "Guard Rails", "Approval"];
   }
-  if (s === "generating") {
-    return ["Data", "Design"];
+  if (s === "guardrails_review" || s === "processing" || s === "generating") {
+    return ["Data", "Design", "Guard Rails"];
   }
   if (s === "draft") {
     if (hasAssets) {
@@ -272,6 +277,35 @@ export async function getCampaignList(): Promise<CampaignListItem[]> {
     `${API_PREFIX}/campaigns`,
   );
   return data.map(adaptApiCampaign);
+}
+
+export async function enterGuardrailsReview(id: string): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.post<ApiCampaignResponse>(
+    `${API_PREFIX}/${id}/guardrails/enter`,
+  );
+  return adaptApiCampaign(data);
+}
+
+export async function validateCampaignGuardrails(
+  id: string,
+  guardrailIds: string[],
+): Promise<ApiValidateGuardrailsResponse> {
+  const { data } = await promoApiClient.post<ApiValidateGuardrailsResponse>(
+    `${API_PREFIX}/${id}/validate`,
+    { guardrail_ids: guardrailIds },
+  );
+  return data;
+}
+
+export async function patchCampaign(
+  id: string,
+  payload: ApiCampaignUpdateRequest,
+): Promise<CampaignListItem> {
+  const { data } = await promoApiClient.patch<ApiCampaignResponse>(
+    `${API_PREFIX}/campaigns/${id}`,
+    payload,
+  );
+  return adaptApiCampaign(data);
 }
 
 export async function submitCampaign(

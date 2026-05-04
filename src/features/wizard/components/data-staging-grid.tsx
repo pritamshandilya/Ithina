@@ -468,7 +468,7 @@ function DataStagingGrid({
       formatter: (cell: unknown) => {
         const row = (cell as { getData: () => StagedSku }).getData();
         const val = row.discount ?? 0;
-        return `<div style="display:flex;align-items:center;justify-content:center;gap:4px"><input type="number" data-action="discount-input" min="0" max="100" step="1" value="${val}" style="width:2.75rem;min-width:2.75rem;max-width:2.75rem;height:1.375rem;flex-shrink:0" class="rounded border border-slate-600 bg-slate-800 px-1 text-center font-mono text-[11px] leading-none text-white outline-none focus:border-ithina-purple focus:ring-1 focus:ring-ithina-purple [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" /><span class="font-mono text-[10px] text-slate-400">%</span></div>`;
+        return `<div class="wizard-staging-discount-wrap"><input type="number" data-action="discount-input" class="wizard-staging-discount-input" min="0" max="100" step="1" value="${val}" /><span class="wizard-staging-discount-suffix">%</span></div>`;
       },
       cellClick: (_e: MouseEvent) => {
         const target = (_e as unknown as { target: HTMLElement }).target as HTMLElement;

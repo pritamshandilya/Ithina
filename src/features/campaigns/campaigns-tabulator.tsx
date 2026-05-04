@@ -115,7 +115,8 @@ export default function CampaignsTabulator() {
   }, []);
 
   const openCampaignDetail = useCallback((c: CampaignListItem) => {
-    if (c.apiStatus === "draft") {
+    const resumableStatuses = new Set(["draft", "generating", "processing", "guardrails_review"]);
+    if (c.apiStatus && resumableStatuses.has(c.apiStatus)) {
       navigate({ to: "/wizard", search: { resumeId: c.id } });
       return;
     }

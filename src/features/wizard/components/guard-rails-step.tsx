@@ -1,10 +1,16 @@
-import { AlertTriangle, Check, Loader2, Shield, Zap } from "lucide-react";
+import { AlertTriangle, Check, Info, Loader2, Shield, ShieldOff, X, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { useEnterGuardrailsReview, useValidateCampaignGuardrails } from "@/hooks/use-campaigns";
 import { useGuardrails } from "@/hooks/use-guardrails";
+import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
+import type { ApiGuardrailValidateRuleResult } from "@/types/api/campaigns";
 import { useAppSelector } from "@/store/hooks";
+
+const EMPTY_GUARDRAILS_MESSAGE =
+  "None are set up for your organization yet. Ask an administrator to add rules.";
 
 /** Pushes Check & Validate / running state up to {@link WizardStepHeader} trailing slot. */
 export type GuardRailsWizardHeaderApi =
@@ -12,6 +18,7 @@ export type GuardRailsWizardHeaderApi =
   | { mode: "running" };
 
 interface GuardRailsStepProps {
+  campaignId?: string;
   onNext: () => void;
   /** Fires when the step-advancing action becomes available (validation passed). */
   onProceedAvailableChange?: (canProceed: boolean) => void;
@@ -21,15 +28,7 @@ interface GuardRailsStepProps {
   onWizardHeaderActionChange?: (api: GuardRailsWizardHeaderApi | null) => void;
 }
 
-type ValidationState = "idle" | "running" | "passed";
-
-const VALIDATION_STEPS = [
-  "Loading campaign data",
-  "Running margin checks",
-  "Verifying brand compliance",
-  "Checking regulatory rules",
-  "Finalising report",
-] as const;
+type ValidationState = "idle" | "running" | "passed" | "failed";
 
 function severityBadgeClass(sev: GuardRailSeverity) {
   return sev === "Hard"
@@ -82,6 +81,7 @@ function RuleCheckboxRow({
 }
 
 export default function GuardRailsStep({
+  campaignId,
   onNext,
   onProceedAvailableChange,
   hideFooterProceed = false,
@@ -93,13 +93,33 @@ export default function GuardRailsStep({
     [gridData],
   );
   const skuCount = includedLen > 0 ? includedLen : gridData.length > 0 ? 0 : 1;
-  const { data: rules = [], isLoading, isError } = useGuardrails();
+  const { data: rules = [], isLoading, isError, isSuccess } = useGuardrails();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [state, setState] = useState<ValidationState>("idle");
-  const [activeValidationStep, setActiveValidationStep] = useState(0);
-  const validationTimerRef = useRef<number | null>(null);
+  const [complianceScore, setComplianceScore] = useState<number | null>(null);
+  const [validateResults, setValidateResults] = useState<ApiGuardrailValidateRuleResult[]>([]);
   const initializedSelectionRef = useRef(false);
+  const emptyListToastShownRef = useRef(false);
+  const enteredGuardrailsRef = useRef(false);
+
+  const enterMutation = useEnterGuardrailsReview();
+  const validateMutation = useValidateCampaignGuardrails();
+
+  useEffect(() => {
+    if (!campaignId || enteredGuardrailsRef.current) return;
+    enteredGuardrailsRef.current = true;
+    enterMutation.mutate(campaignId);
+  }, [campaignId]);
+
+  useEffect(() => {
+    if (!isSuccess || isLoading || isError || rules.length > 0) return;
+    if (emptyListToastShownRef.current) return;
+    emptyListToastShownRef.current = true;
+    toast({
+      description: EMPTY_GUARDRAILS_MESSAGE,
+    });
+  }, [isSuccess, isLoading, isError, rules.length]);
 
   useEffect(() => {
     if (initializedSelectionRef.current) return;
@@ -122,60 +142,46 @@ export default function GuardRailsStep({
     });
   }, []);
 
-  const runValidation = useCallback(() => {
-    if (state === "running") return;
+  const runValidation = useCallback(async () => {
+    if (state === "running" || !campaignId) return;
     setState("running");
-    setActiveValidationStep(0);
-  }, [state]);
-
-  useEffect(() => {
-    if (state !== "running") return;
-
-    if (activeValidationStep >= VALIDATION_STEPS.length) {
-      setState("passed");
-      return;
+    setValidateResults([]);
+    setComplianceScore(null);
+    try {
+      const result = await validateMutation.mutateAsync({
+        id: campaignId,
+        guardrailIds: [...selected],
+      });
+      setComplianceScore(result.compliance_score);
+      setValidateResults(result.results);
+      if (result.overall_passed) {
+        setState("passed");
+      } else {
+        setState("failed");
+      }
+    } catch {
+      toast({
+        title: "Validation failed",
+        description: "Could not run compliance checks. Please try again.",
+        variant: "destructive",
+      });
+      setState("idle");
     }
+  }, [state, campaignId, selected, validateMutation]);
 
-    validationTimerRef.current = window.setTimeout(() => {
-      setActiveValidationStep((prev) => prev + 1);
-    }, 650);
-
-    return () => {
-      if (validationTimerRef.current) {
-        window.clearTimeout(validationTimerRef.current);
-      }
-    };
-  }, [activeValidationStep, state]);
-
-  useEffect(
-    () => () => {
-      if (validationTimerRef.current) {
-        window.clearTimeout(validationTimerRef.current);
-      }
-    },
-    [],
+  const passedCount = useMemo(
+    () => validateResults.filter((r) => r.passed).length,
+    [validateResults],
   );
-
-  useEffect(() => {
-    if (state === "idle") {
-      setActiveValidationStep(0);
-    }
-  }, [state]);
-
-  const stepStatus = useCallback(
-    (index: number): "done" | "running" | "pending" => {
-      if (state === "passed") return "done";
-      if (state !== "running") return "pending";
-      if (index < activeValidationStep) return "done";
-      if (index === activeValidationStep) return "running";
-      return "pending";
-    },
-    [activeValidationStep, state],
+  const failedCount = useMemo(
+    () => validateResults.filter((r) => !r.passed).length,
+    [validateResults],
   );
 
   const resetValidation = () => {
     setState("idle");
-    setActiveValidationStep(0);
+    setValidateResults([]);
+    setComplianceScore(null);
   };
 
   useEffect(() => {
@@ -184,11 +190,11 @@ export default function GuardRailsStep({
 
   useEffect(() => {
     if (!onWizardHeaderActionChange) return;
-    if (state === "idle") {
+    if (state === "idle" || state === "failed") {
       onWizardHeaderActionChange({
         mode: "check",
         onCheckValidate: runValidation,
-        checkDisabled: selectedRules.length === 0,
+        checkDisabled: selectedRules.length === 0 || rules.length === 0 || !campaignId,
       });
     } else if (state === "running") {
       onWizardHeaderActionChange({ mode: "running" });
@@ -196,7 +202,9 @@ export default function GuardRailsStep({
       onWizardHeaderActionChange(null);
     }
     return () => onWizardHeaderActionChange(null);
-  }, [state, onWizardHeaderActionChange, runValidation, selectedRules.length]);
+  }, [state, onWizardHeaderActionChange, runValidation, selectedRules.length, rules.length, campaignId]);
+
+  const scoreDisplay = complianceScore != null ? `${Math.round(complianceScore)}%` : "—";
 
   return (
     <div className="flex min-h-0 flex-1 animate-[fadeIn_0.3s_ease-out] overflow-hidden">
@@ -219,31 +227,6 @@ export default function GuardRailsStep({
                 Validating {selectedRules.length} rule{selectedRules.length !== 1 ? "s" : ""} against {skuCount} SKUs
               </p>
             </div>
-            <div className="flex w-64 flex-col gap-1.5">
-              {VALIDATION_STEPS.map((label, index) => {
-                const status = stepStatus(index);
-                return (
-                  <div
-                    key={label}
-                    className={cn(
-                      "flex items-center gap-2 text-xs",
-                      status === "done" && "text-emerald-400",
-                      status === "running" && "text-ithina-purple",
-                      status === "pending" && "text-slate-600",
-                    )}
-                  >
-                    {status === "done" ? (
-                      <Check className="size-3.5 shrink-0" strokeWidth={3} />
-                    ) : status === "running" ? (
-                      <Loader2 className="size-3.5 shrink-0 animate-spin" strokeWidth={2} />
-                    ) : (
-                      <div className="size-3.5 shrink-0 rounded-full border border-slate-700" />
-                    )}
-                    {label}
-                  </div>
-                );
-              })}
-            </div>
           </div>
         )}
 
@@ -258,7 +241,7 @@ export default function GuardRailsStep({
                   <div>
                     <p className="text-sm font-bold text-emerald-300">All Checks Passed</p>
                     <p className="text-[10px] text-slate-500">
-                      {selectedRules.length} passed, 0 failed, 0 warnings
+                      {passedCount} passed, {failedCount} failed, 0 warnings
                     </p>
                   </div>
                 </div>
@@ -272,30 +255,37 @@ export default function GuardRailsStep({
               </div>
               <div className="overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
                 <div className="divide-y divide-ithina-border/40">
-                  {selectedRules.map((rule) => (
-                    <div key={rule.id} className="flex items-start gap-3 px-5 py-3.5">
-                      <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-400/10">
-                        <Check className="size-3.5 text-emerald-400" strokeWidth={2.5} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="mb-0.5 flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-white">{rule.name}</span>
-                          <span
-                            className={cn(
-                              "rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase",
-                              severityBadgeClass(rule.severity),
-                            )}
-                          >
-                            {rule.severity === "Hard" ? "HARD" : "SOFT"}
-                          </span>
+                  {validateResults.map((result) => {
+                    const rule = rules.find((r) => r.id === result.guardrail_id);
+                    return (
+                      <div key={result.guardrail_id} className="flex items-start gap-3 px-5 py-3.5">
+                        <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-400/10">
+                          <Check className="size-3.5 text-emerald-400" strokeWidth={2.5} />
                         </div>
-                        <p className="text-[11px] leading-relaxed text-slate-500">{rule.description}</p>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{result.rule_name}</span>
+                            {rule && (
+                              <span
+                                className={cn(
+                                  "rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase",
+                                  severityBadgeClass(rule.severity),
+                                )}
+                              >
+                                {rule.severity === "Hard" ? "HARD" : "SOFT"}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] leading-relaxed text-slate-500">
+                            {result.skus_checked} SKUs checked
+                          </p>
+                        </div>
+                        <span className="shrink-0 font-mono text-[9px] font-bold uppercase text-emerald-400">
+                          pass
+                        </span>
                       </div>
-                      <span className="shrink-0 font-mono text-[9px] font-bold uppercase text-emerald-400">
-                        pass
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -313,6 +303,86 @@ export default function GuardRailsStep({
                 </button>
               </div>
             )}
+          </>
+        )}
+
+        {state === "failed" && (
+          <>
+            <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-7 items-center justify-center rounded-lg bg-rose-400/10">
+                    <X className="size-4 text-rose-400" strokeWidth={2} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-rose-300">Validation Failed</p>
+                    <p className="text-[10px] text-slate-500">
+                      {passedCount} passed, {failedCount} failed
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={resetValidation}
+                  className="rounded-lg border border-ithina-border px-3 py-1.5 text-[10px] text-slate-500 transition-colors hover:text-white"
+                >
+                  Re-select
+                </button>
+              </div>
+              <div className="overflow-hidden rounded-2xl border border-ithina-border bg-ithina-panel">
+                <div className="divide-y divide-ithina-border/40">
+                  {validateResults.map((result) => {
+                    const rule = rules.find((r) => r.id === result.guardrail_id);
+                    const passed = result.passed;
+                    return (
+                      <div key={result.guardrail_id} className="flex items-start gap-3 px-5 py-3.5">
+                        <div
+                          className={cn(
+                            "mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full",
+                            passed ? "bg-emerald-400/10" : "bg-rose-400/10",
+                          )}
+                        >
+                          {passed ? (
+                            <Check className="size-3.5 text-emerald-400" strokeWidth={2.5} />
+                          ) : (
+                            <X className="size-3.5 text-rose-400" strokeWidth={2.5} />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-0.5 flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-semibold text-white">{result.rule_name}</span>
+                            {rule && (
+                              <span
+                                className={cn(
+                                  "rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase",
+                                  severityBadgeClass(rule.severity),
+                                )}
+                              >
+                                {rule.severity === "Hard" ? "HARD" : "SOFT"}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] leading-relaxed text-slate-500">
+                            {result.skus_checked} SKUs checked
+                            {!passed && result.skus_failed > 0 && (
+                              <span className="text-rose-400"> · {result.skus_failed} failed</span>
+                            )}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 font-mono text-[9px] font-bold uppercase",
+                            passed ? "text-emerald-400" : "text-rose-400",
+                          )}
+                        >
+                          {passed ? "pass" : "fail"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -341,32 +411,48 @@ export default function GuardRailsStep({
                       Failed to load guard rails. Please retry.
                     </div>
                   )}
-                  {!isLoading && !isError && rules.map((rule) => (
-                    <RuleCheckboxRow
-                      key={rule.id}
-                      rule={rule}
-                      checked={selected.has(rule.id)}
-                      onToggle={() => toggleRule(rule.id)}
-                    />
-                  ))}
+                  {!isLoading && !isError && rules.length === 0 && (
+                    <div className="flex flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+                      <div className="flex size-14 items-center justify-center rounded-full border border-ithina-border bg-ithina-bg">
+                        <ShieldOff className="size-7 text-slate-500" strokeWidth={1.5} aria-hidden />
+                      </div>
+                      <div>
+                        <p className="mx-auto max-w-sm text-xs leading-relaxed text-slate-500">
+                          {EMPTY_GUARDRAILS_MESSAGE}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  {!isLoading && !isError &&
+                    rules.length > 0 &&
+                    rules.map((rule) => (
+                      <RuleCheckboxRow
+                        key={rule.id}
+                        rule={rule}
+                        checked={selected.has(rule.id)}
+                        onToggle={() => toggleRule(rule.id)}
+                      />
+                    ))}
                 </div>
-                <div className="flex shrink-0 gap-2 border-t border-ithina-border/60 px-5 py-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelected(new Set(rules.map((r) => r.id)))}
-                    className="text-[10px] text-ithina-purple transition-colors hover:text-white"
-                  >
-                    Select All
-                  </button>
-                  <span className="text-slate-700">·</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelected(new Set())}
-                    className="text-[10px] text-slate-500 transition-colors hover:text-white"
-                  >
-                    Clear
-                  </button>
-                </div>
+                {rules.length > 0 && (
+                  <div className="flex shrink-0 gap-2 border-t border-ithina-border/60 px-5 py-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelected(new Set(rules.map((r) => r.id)))}
+                      className="text-[10px] text-ithina-purple transition-colors hover:text-white"
+                    >
+                      Select All
+                    </button>
+                    <span className="text-slate-700">·</span>
+                    <button
+                      type="button"
+                      onClick={() => setSelected(new Set())}
+                      className="text-[10px] text-slate-500 transition-colors hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </>
@@ -376,18 +462,32 @@ export default function GuardRailsStep({
       <aside className="flex w-72 shrink-0 flex-col gap-4 overflow-y-auto bg-ithina-bg/30 px-5 py-6">
         <div className="rounded-2xl border border-ithina-border bg-ithina-panel p-5">
           <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-slate-500">Compliance Score</p>
-          {state === "passed" ? (
+          {(state === "passed" || state === "failed") && complianceScore != null ? (
             <div className="flex items-center gap-4">
-              <div className="relative flex size-16 shrink-0 items-center justify-center rounded-full border-4 border-emerald-400 bg-ithina-bg/40">
-                <span className="text-sm font-bold text-emerald-400">100%</span>
+              <div
+                className={cn(
+                  "relative flex size-16 shrink-0 items-center justify-center rounded-full border-4 bg-ithina-bg/40",
+                  state === "passed" ? "border-emerald-400" : "border-rose-400",
+                )}
+              >
+                <span className={cn("text-sm font-bold", state === "passed" ? "text-emerald-400" : "text-rose-400")}>
+                  {scoreDisplay}
+                </span>
               </div>
               <div>
                 <p className="text-base font-bold text-white">
-                  {selectedRules.length}/{selectedRules.length}
+                  {passedCount}/{validateResults.length}
                 </p>
                 <p className="mt-0.5 text-xs text-slate-400">checks passed</p>
-                <span className="mt-1 inline-block rounded border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 font-mono text-[9px] font-bold text-emerald-400">
-                  ALL CLEAR
+                <span
+                  className={cn(
+                    "mt-1 inline-block rounded border px-2 py-0.5 font-mono text-[9px] font-bold",
+                    state === "passed"
+                      ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
+                      : "border-rose-400/20 bg-rose-400/10 text-rose-400",
+                  )}
+                >
+                  {state === "passed" ? "ALL CLEAR" : "FAILED"}
                 </span>
               </div>
             </div>
@@ -411,24 +511,34 @@ export default function GuardRailsStep({
             </div>
           ) : (
             <div className="divide-y divide-ithina-border/40">
-              {selectedRules.map((rule) => (
-                <div key={rule.id} className="flex items-center gap-2 px-4 py-2.5">
-                  {state === "passed" ? (
-                    <Check className="size-3 shrink-0 text-emerald-400" strokeWidth={3} />
-                  ) : (
-                    <div className="size-2 shrink-0 rounded-full bg-ithina-purple" />
-                  )}
-                  <span className="flex-1 truncate text-xs text-slate-300">{rule.name}</span>
-                  <span
-                    className={cn(
-                      "shrink-0 font-mono text-[9px]",
-                      rule.severity === "Hard" ? "text-rose-400" : "text-amber-400",
+              {selectedRules.map((rule) => {
+                const result = validateResults.find((r) => r.guardrail_id === rule.id);
+                const passed = result?.passed;
+                return (
+                  <div key={rule.id} className="flex items-center gap-2 px-4 py-2.5">
+                    {state === "passed" || state === "failed" ? (
+                      passed ? (
+                        <Check className="size-3 shrink-0 text-emerald-400" strokeWidth={3} />
+                      ) : passed === false ? (
+                        <X className="size-3 shrink-0 text-rose-400" strokeWidth={3} />
+                      ) : (
+                        <div className="size-2 shrink-0 rounded-full bg-ithina-purple" />
+                      )
+                    ) : (
+                      <div className="size-2 shrink-0 rounded-full bg-ithina-purple" />
                     )}
-                  >
-                    {rule.severity === "Hard" ? "HARD" : "SOFT"}
-                  </span>
-                </div>
-              ))}
+                    <span className="flex-1 truncate text-xs text-slate-300">{rule.name}</span>
+                    <span
+                      className={cn(
+                        "shrink-0 font-mono text-[9px]",
+                        rule.severity === "Hard" ? "text-rose-400" : "text-amber-400",
+                      )}
+                    >
+                      {rule.severity === "Hard" ? "HARD" : "SOFT"}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
@@ -449,17 +559,28 @@ export default function GuardRailsStep({
                 "rounded border px-2 py-0.5 font-mono text-[10px] font-bold",
                 state === "passed"
                   ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-400"
-                  : state === "running"
-                    ? "border-ithina-border/40 text-slate-300"
-                    : "border-ithina-border/40 text-slate-600",
+                  : state === "failed"
+                    ? "border-rose-400/20 bg-rose-400/10 text-rose-400"
+                    : state === "running"
+                      ? "border-ithina-border/40 text-slate-300"
+                      : "border-ithina-border/40 text-slate-600",
               )}
             >
-              {state === "passed" ? "PASSED" : state === "running" ? "RUNNING" : "PENDING"}
+              {state === "passed" ? "PASSED" : state === "failed" ? "FAILED" : state === "running" ? "RUNNING" : "PENDING"}
             </span>
           </div>
         </div>
 
-        {state === "idle" && selectedRules.length === 0 && (
+        {state === "idle" && rules.length === 0 && !isLoading && !isError && (
+          <div className="flex items-start gap-2.5 rounded-2xl border border-ithina-border bg-ithina-panel p-4">
+            <Info className="mt-0.5 size-4 shrink-0 text-slate-400" strokeWidth={2} aria-hidden />
+            <div>
+              <p className="text-[11px] leading-relaxed text-slate-500">{EMPTY_GUARDRAILS_MESSAGE}</p>
+            </div>
+          </div>
+        )}
+
+        {state === "idle" && rules.length > 0 && selectedRules.length === 0 && (
           <div className="flex items-start gap-2.5 rounded-2xl border border-rose-400/20 bg-rose-400/5 p-4">
             <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-400" strokeWidth={2} aria-hidden />
             <div>
@@ -472,7 +593,7 @@ export default function GuardRailsStep({
           </div>
         )}
 
-        {state === "idle" && selectedRules.length > 0 && (
+        {state === "idle" && rules.length > 0 && selectedRules.length > 0 && (
           <div className="flex items-start gap-2.5 rounded-2xl border border-ithina-purple/20 bg-ithina-purple/5 p-4">
             <Zap className="mt-0.5 size-4 shrink-0 text-ithina-purple" strokeWidth={2} aria-hidden />
             <div>
@@ -492,6 +613,19 @@ export default function GuardRailsStep({
               <p className="mb-0.5 text-xs font-semibold text-emerald-300">All Clear</p>
               <p className="text-[11px] leading-relaxed text-slate-400">
                 All checks passed. Click Proceed to Scheduling.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {state === "failed" && (
+          <div className="flex items-start gap-2.5 rounded-2xl border border-rose-400/20 bg-rose-400/5 p-4">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-400" strokeWidth={2} aria-hidden />
+            <div>
+              <p className="mb-0.5 text-xs font-semibold text-rose-300">Checks Failed</p>
+              <p className="text-[11px] leading-relaxed text-slate-400">
+                {failedCount} rule{failedCount !== 1 ? "s" : ""} failed. Fix the issues and re-validate, or re-select
+                rules.
               </p>
             </div>
           </div>

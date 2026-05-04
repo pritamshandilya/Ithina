@@ -50,7 +50,7 @@ import {
 } from "./lib/promo-languages";
 import type { HardwareDeviceId, StagedSku } from "@/types/wizard";
 import { useCampaignEvents } from "@/hooks/use-campaign-events";
-import { campaignKeys, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
+import { campaignKeys, usePatchCampaign, usePostCampaignChat, useSubmitCampaign } from "@/hooks/use-campaigns";
 import {
   useConfirmHardwareSelection,
   useDiscoverCsvFields,
@@ -252,6 +252,8 @@ export default function Wizard() {
   const [imageCacheBuster, setImageCacheBuster] = useState(0);
   const [guardRailsCanProceed, setGuardRailsCanProceed] = useState(false);
   const [guardRailsHeaderApi, setGuardRailsHeaderApi] = useState<GuardRailsWizardHeaderApi | null>(null);
+  /** True when the back button requested leave while an NL draft is unsaved (shows same modal as route blocker). */
+  const [backConfirmOpen, setBackConfirmOpen] = useState(false);
 
   const intentMutation = useSubmitWizardIntent();
   const hwConfirmMutation = useConfirmHardwareSelection();
@@ -259,6 +261,7 @@ export default function Wizard() {
   const processCsvMutation = useProcessCsvMapping();
   const chatMutation = usePostCampaignChat();
   const submitMutation = useSubmitCampaign();
+  const patchMutation = usePatchCampaign();
   const [csvPendingFileName, setCsvPendingFileName] = useState("");
 
   /** LangGraph thread id from POST /campaigns/draft; required for follow-up turns and generate. */
@@ -452,7 +455,14 @@ export default function Wizard() {
     resumedFromCampaignIdRef.current = null;
   }, [dispatch]);
 
-  const handleBack = useCallback(() => {
+  // After generate the campaign is already persisted — no unsaved work (same rule as navigation blocker below).
+  const hasUnsavedWork =
+    wStep >= 1 &&
+    pipelineSessionIdRef.current !== null &&
+    !hasJustSavedRef.current &&
+    !campaignAlreadyGeneratedRef.current;
+
+  const performWizardBack = useCallback(() => {
     if (wStep <= 1) {
       dispatch(setWMode(""));
       dispatch(setWStep(0));
@@ -462,6 +472,14 @@ export default function Wizard() {
       dispatch(setWStep(wStep - 1));
     }
   }, [wStep, dispatch]);
+
+  const handleBack = useCallback(() => {
+    if (hasUnsavedWork) {
+      setBackConfirmOpen(true);
+      return;
+    }
+    performWizardBack();
+  }, [hasUnsavedWork, performWizardBack]);
 
   const handleWizardStepClick = useCallback(
     (step: number) => {
@@ -837,7 +855,9 @@ export default function Wizard() {
           }
         }
         const progress = getDraftProgress(campaign.id);
-        const stepToRestore = Math.min(Math.max(progress?.step ?? 1, 1), 5);
+        const guardrailStatuses = new Set(["generating", "processing", "guardrails_review"]);
+        const fallbackStep = campaign.apiStatus && guardrailStatuses.has(campaign.apiStatus) ? 3 : 1;
+        const stepToRestore = Math.min(Math.max(progress?.step ?? fallbackStep, 1), 5);
         dispatch(setWStep(stepToRestore));
         if (!pipelineSessionIdRef.current) {
           pipelineSessionIdRef.current =
@@ -941,32 +961,42 @@ export default function Wizard() {
   ]);
 
   // ── Navigation blocker ────────────────────────────────────────────
-  // After generate the campaign is already persisted — no unsaved work.
-  const hasUnsavedWork =
-    wStep >= 1 &&
-    pipelineSessionIdRef.current !== null &&
-    !hasJustSavedRef.current &&
-    !campaignAlreadyGeneratedRef.current;
-
   const blocker = useBlocker({
     shouldBlockFn: () => hasUnsavedWork,
     enableBeforeUnload: () => hasUnsavedWork,
     withResolver: true,
   });
 
-  const handleBlockerSaveAndLeave = useCallback(async () => {
-    await handleSaveDraft();
-    blocker.proceed?.();
-  }, [handleSaveDraft, blocker]);
+  const unsavedDialogOpen = blocker.status === "blocked" || backConfirmOpen;
 
-  const handleBlockerLeave = useCallback(() => {
+  const handleUnsavedSaveAndLeave = useCallback(async () => {
+    if (backConfirmOpen) {
+      await handleSaveDraft();
+      setBackConfirmOpen(false);
+      performWizardBack();
+    } else {
+      await handleSaveDraft();
+      blocker.proceed?.();
+    }
+  }, [backConfirmOpen, handleSaveDraft, performWizardBack, blocker]);
+
+  const handleUnsavedLeave = useCallback(() => {
     hasJustSavedRef.current = true;
-    blocker.proceed?.();
-  }, [blocker]);
+    if (backConfirmOpen) {
+      setBackConfirmOpen(false);
+      performWizardBack();
+    } else {
+      blocker.proceed?.();
+    }
+  }, [backConfirmOpen, performWizardBack, blocker]);
 
-  const handleBlockerStay = useCallback(() => {
-    blocker.reset?.();
-  }, [blocker]);
+  const handleUnsavedStay = useCallback(() => {
+    if (backConfirmOpen) {
+      setBackConfirmOpen(false);
+    } else {
+      blocker.reset?.();
+    }
+  }, [backConfirmOpen, blocker]);
 
   const handleNlNextFromScreens = useCallback(() => {
     dispatch(setWStep(3));
@@ -1150,31 +1180,49 @@ export default function Wizard() {
   }, [wStep, wMode, messages]);
 
   // ── Step 5: Send for Approval ─────────────────────────────────────
-  const handleNlSubmit = useCallback(() => {
+  const handleNlSubmit = useCallback(async () => {
     if (!campaignIdFromStore) {
       setError("No campaign found. Please complete the wizard from the beginning.");
       return;
     }
+
+    const hwTargets = buildHardwareTargetsForApi();
+    try {
+      await patchMutation.mutateAsync({
+        id: campaignIdFromStore,
+        payload: {
+          name: campaignName?.trim() || undefined,
+          scheduled_start: schedule.startDate?.trim()
+            ? new Date(`${schedule.startDate}T${schedule.startTime || "08:00"}:00`).toISOString()
+            : null,
+          scheduled_end: schedule.endDate?.trim()
+            ? new Date(`${schedule.endDate}T${(schedule.endTime || schedule.startTime || "08:00")}:00`).toISOString()
+            : null,
+          scheduled_time: schedule.startTime || null,
+          hardware_targets: hwTargets.length > 0 ? hwTargets : undefined,
+        },
+      });
+    } catch {
+      toast({
+        title: "Update failed",
+        description: "Could not update campaign details. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const scheduleType = schedule.startDate?.trim() ? "scheduled" : "immediate";
-    const nameForSubmit =
-      import.meta.env.VITE_SUBMIT_NAME_ON_CAMPAIGN === "true"
-        ? campaignName?.trim()
-        : undefined;
     submitMutation.mutate(
       {
         id: campaignIdFromStore,
         payload: {
           selected_variant_id: selectedVariant,
           schedule_type: scheduleType,
-          ...(nameForSubmit ? { name: nameForSubmit } : {}),
         },
       },
       {
         onSuccess: async () => {
-          // Local draft progress hint no longer applies after submission — the
-          // backend now drives the pipeline (pending_approval → ...).
           clearDraftProgress(campaignIdFromStore);
-          // Ensure list is fresh before leave so the new row appears on All Campaigns.
           await queryClient.refetchQueries({ queryKey: campaignKeys.listPrefix });
           toast({
             title: "Sent for Approval",
@@ -1198,8 +1246,10 @@ export default function Wizard() {
     campaignIdFromStore,
     campaignName,
     selectedVariant,
-    schedule.startDate,
+    schedule,
     submitMutation,
+    patchMutation,
+    buildHardwareTargetsForApi,
     queryClient,
     dispatch,
     navigate,
@@ -1614,10 +1664,10 @@ export default function Wizard() {
           <button
             type="button"
             onClick={handleNlSubmit}
-            disabled={submitMutation.isPending}
+            disabled={patchMutation.isPending || submitMutation.isPending}
             className={headerPrimaryClass}
           >
-            {submitMutation.isPending ? "Submitting…" : "Send for Approval"}
+            {patchMutation.isPending ? "Updating…" : submitMutation.isPending ? "Submitting…" : "Send for Approval"}
             <ArrowRight className="size-3.5 shrink-0" aria-hidden />
           </button>
         );
@@ -1926,6 +1976,7 @@ export default function Wizard() {
 
             {wStep === 3 && wMode === "nl" && (
               <GuardRailsStep
+                campaignId={campaignIdFromStore ?? undefined}
                 onNext={handleNlNextFromGuardRails}
                 onProceedAvailableChange={setGuardRailsCanProceed}
                 onWizardHeaderActionChange={setGuardRailsHeaderApi}
@@ -1945,7 +1996,7 @@ export default function Wizard() {
             {wStep === 5 && wMode === "nl" && (
               <SubmitReviewStep
                 onSubmit={handleNlSubmit}
-                isSubmitting={submitMutation.isPending}
+                isSubmitting={patchMutation.isPending || submitMutation.isPending}
                 showFooterSubmit={false}
                 dataSourceLabel={inputMode === "csv" ? "CSV Upload" : "NL / AI Assisted"}
                 skuCount={inputMode === "csv" ? csvRows.length : includedGridSkuCount}
@@ -2022,11 +2073,11 @@ export default function Wizard() {
 
       {/* ── Unsaved Changes Dialog ─────────────────────────────────── */}
       <UnsavedChangesDialog
-        open={blocker.status === "blocked"}
+        open={unsavedDialogOpen}
         isSaving={saveDraftMutation.isPending}
-        onSaveAndLeave={handleBlockerSaveAndLeave}
-        onLeave={handleBlockerLeave}
-        onStay={handleBlockerStay}
+        onSaveAndLeave={handleUnsavedSaveAndLeave}
+        onLeave={handleUnsavedLeave}
+        onStay={handleUnsavedStay}
       />
 
       {/* ── Campaign Studio Modal ──────────────────────────────────── */}

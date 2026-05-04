@@ -30,8 +30,11 @@ import {
   getMonthNames,
   postCampaignChat,
   rejectCampaign,
+  enterGuardrailsReview,
+  patchCampaign,
   submitCampaign,
   updateCampaign,
+  validateCampaignGuardrails,
 } from "@/services/campaigns";
 import type { CampaignCreateForm } from "@/types/campaigns";
 import type {
@@ -41,6 +44,7 @@ import type {
   ApiCampaignDraftRequest,
   ApiCampaignGenerateRequest,
   ApiCampaignSubmitRequest,
+  ApiCampaignUpdateRequest,
 } from "@/types/api/campaigns";
 
 export type {
@@ -172,6 +176,34 @@ export function useDeleteCampaign() {
           variant: "destructive",
         });
       }
+    },
+  });
+}
+
+export function useEnterGuardrailsReview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => enterGuardrailsReview(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
+    },
+  });
+}
+
+export function useValidateCampaignGuardrails() {
+  return useMutation({
+    mutationFn: ({ id, guardrailIds }: { id: string; guardrailIds: string[] }) =>
+      validateCampaignGuardrails(id, guardrailIds),
+  });
+}
+
+export function usePatchCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: ApiCampaignUpdateRequest }) =>
+      patchCampaign(id, payload),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: campaignKeys.listPrefix });
     },
   });
 }

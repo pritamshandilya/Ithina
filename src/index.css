@@ -465,14 +465,18 @@
   background-color: color-mix(in srgb, var(--destructive) 52%, var(--tabulator-row-hover)) !important;
 }
 
-/* Negative-margin rows: discount input — restore consistent dark bg + visible border so it
-   looks identical in size to inputs on non-tinted rows */
+/* Negative-margin rows: discount input — only override surface/border for contrast on rose wash */
 .data-table-wrapper.wizard-staging-table
   .tabulator-row.wizard-staging-row-negative-margin
-  .tabulator-cell[tabulator-field="discount"]
-  input[data-action="discount-input"] {
+  .wizard-staging-discount-input {
   background-color: rgb(15 21 35 / 0.85) !important;
   border-color: rgb(255 255 255 / 0.22) !important;
+}
+
+.data-table-wrapper.wizard-staging-table
+  .tabulator-row.wizard-staging-row-negative-margin
+  .wizard-staging-discount-suffix {
+  color: rgb(255 255 255 / 0.8);
 }
 
 /* Negative-margin rows: margin % value — white text for strong contrast on rose bg */
@@ -533,16 +537,56 @@
   overflow-wrap: anywhere;
 }
 
-/* Discount input: fixed pixel size so it looks identical on every row */
-.data-table-wrapper.wizard-staging-table
-  .tabulator-cell[tabulator-field="discount"]
-  input[data-action="discount-input"] {
+/* ── Discount column: wrapper, input, suffix ─────────────────────────────── */
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input {
   width: 2.75rem !important;
   min-width: 2.75rem !important;
   max-width: 2.75rem !important;
   height: 1.375rem !important;
   flex-shrink: 0;
   box-sizing: border-box;
+  padding: 0 0.25rem;
+  border: 1px solid var(--color-ithina-border);
+  border-radius: 0.25rem;
+  background-color: var(--color-ithina-sidebar);
+  color: #fff;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.6875rem;
+  line-height: 1;
+  text-align: center;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input::-webkit-inner-spin-button,
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input:hover {
+  border-color: color-mix(in srgb, var(--color-ithina-border) 60%, white 40%);
+}
+
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input:focus,
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-input:focus-visible {
+  border-color: var(--color-ithina-purple);
+  box-shadow: 0 0 0 1px var(--color-ithina-purple);
+}
+
+.data-table-wrapper.wizard-staging-table .wizard-staging-discount-suffix {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.625rem;
+  color: rgb(148 163 184);
 }
 
 .data-table-wrapper.wizard-staging-table.min-h-0 {

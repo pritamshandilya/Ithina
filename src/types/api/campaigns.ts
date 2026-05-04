@@ -8,6 +8,8 @@
 export type ApiCampaignStatus =
   | "draft"
   | "generating"
+  | "processing"
+  | "guardrails_review"
   | "pending_approval"
   | "approved"
   | "scheduled"
@@ -135,6 +137,33 @@ export interface ApiCampaignSubmitRequest {
   schedule_type?: string;
   /** Shown in review step; sent so the server saves the final title (not in DB until submit). */
   name?: string | null;
+}
+
+// ─── Update campaign metadata (PATCH before submit) ─────────────────────────
+export interface ApiCampaignUpdateRequest {
+  name?: string | null;
+  scheduled_start?: string | null;
+  scheduled_end?: string | null;
+  scheduled_time?: string | null;
+  hardware_targets?: string[] | null;
+}
+
+// ─── Guard Rails validate response ──────────────────────────────────────────
+export interface ApiGuardrailValidateRuleResult {
+  guardrail_id: string;
+  rule_name: string;
+  passed: boolean;
+  skus_checked: number;
+  skus_failed: number;
+}
+
+export interface ApiValidateGuardrailsResponse {
+  campaign_id: string;
+  compliance_score: number;
+  overall_passed: boolean;
+  status: string;
+  rules_checked: number;
+  results: ApiGuardrailValidateRuleResult[];
 }
 
 // ─── Approve (Checker confirms variant + triggers batch render) ─────────────

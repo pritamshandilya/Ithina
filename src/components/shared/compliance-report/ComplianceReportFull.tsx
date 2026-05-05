@@ -104,7 +104,7 @@ export function ComplianceReportFull({
         <ComplianceReportTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          imageTabLabel={isAdhoc ? "Observed Fixture" : undefined}
+          imageTabLabel={isAdhoc ? "Observed Display Unit" : undefined}
         />
       </div>
 

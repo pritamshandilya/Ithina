@@ -5,8 +5,9 @@
  * Reusable for full report pages (Maker and Checker).
  */
 
-import { ArrowLeft, Download } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { Download } from "lucide-react";
+
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -37,23 +38,16 @@ export function ComplianceReportHeader({
     <header
       className={cn(
         "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4",
-        className
+        className,
       )}
     >
       <div className="flex items-center gap-4">
-        {backTo && (
-          <Button variant="accent" size="sm" asChild>
-            <Link to={backTo}>
-              <ArrowLeft className="size-4" aria-hidden />
-              Back
-            </Link>
-          </Button>
-        )}
+        {backTo ? <DetailBackButton to={backTo} /> : null}
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
+          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {title}
           </h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="text-muted-foreground mt-0.5 text-sm">{subtitle}</p>
         </div>
       </div>
       <Button
@@ -61,7 +55,7 @@ export function ComplianceReportHeader({
         size="sm"
         onClick={onExportPdf}
         disabled={isExporting}
-        className="gap-2 border-accent/50 text-foreground hover:bg-accent/10 shrink-0"
+        className="text-foreground hover:bg-accent/10 shrink-0 gap-2 border-accent/50"
       >
         <Download className="size-4" aria-hidden />
         {isExporting ? "Generating…" : "Export PDF"}

@@ -38,7 +38,7 @@ export function useFixtureShelfRows({
     const query = searchQuery.trim().toLowerCase();
     if (!query) return fixtures;
     return fixtures.filter((fixture) => {
-      const code = fixture.code?.toLowerCase() ?? "";
+      const code = fixture.code.toLowerCase();
       const type = fixture.type.toLowerCase();
       const section = fixture.physical_location.section.toLowerCase();
       const aisle = fixture.physical_location.aisle.toLowerCase();

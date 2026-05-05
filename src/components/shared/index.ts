@@ -10,6 +10,7 @@ export {
   type RuleStatusBadgeProps,
 } from "./rule-status-badge";
 export { PageHeader } from "./page-header";
+export { DetailBackButton, type DetailBackButtonProps, type DetailBackLinkProps } from "./detail-back-button";
 export { SectionPillTabs, type SectionPillTabDef, type SectionPillTabsProps } from "./section-pill-tabs";
 export { ReportPage } from "./report-page";
 export * from "./compliance-report";

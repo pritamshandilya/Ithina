@@ -72,7 +72,3 @@ export function isActiveItem(pathname: string, hash: string, item: NavItem): boo
   if (!item.hash) return hash.length === 0;
   return hash === `#${item.hash}`;
 }
-
-export function isMyAuditsActive(pathname: string): boolean {
-  return pathname.startsWith("/maker/audits");
-}

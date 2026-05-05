@@ -6,6 +6,7 @@ import type {
 
 export const DEFAULT_ONBOARDING_FIXTURES: FixtureConfig[] = [
   {
+    code: "GOND-STD-A1",
     type: "Gondola (standard)",
     width: "120",
     height: "200",
@@ -16,6 +17,7 @@ export const DEFAULT_ONBOARDING_FIXTURES: FixtureConfig[] = [
     zone: "General",
   },
   {
+    code: "END-A1",
     type: "Endcap",
     width: "100",
     height: "190",
@@ -26,6 +28,7 @@ export const DEFAULT_ONBOARDING_FIXTURES: FixtureConfig[] = [
     zone: "Front",
   },
   {
+    code: "COOL-A2",
     type: "Cooler/Chiller",
     width: "120",
     height: "200",
@@ -36,6 +39,7 @@ export const DEFAULT_ONBOARDING_FIXTURES: FixtureConfig[] = [
     zone: "Dairy",
   },
   {
+    code: "CHK-C1",
     type: "Checkout Lane",
     width: "90",
     height: "140",
@@ -46,6 +50,7 @@ export const DEFAULT_ONBOARDING_FIXTURES: FixtureConfig[] = [
     zone: "Front",
   },
   {
+    code: "WALL-W1",
     type: "Wall Unit",
     width: "120",
     height: "220",

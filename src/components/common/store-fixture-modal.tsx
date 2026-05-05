@@ -9,8 +9,7 @@ import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 
 export type StoreFixtureModalValues = {
   type: string;
-  /** Optional unique fixture identifier (backend will generate if omitted). */
-  code?: string;
+  code: string;
   /** Optional planogram associated with this fixture. */
   planogramId?: string;
   width: string;
@@ -24,7 +23,7 @@ export type StoreFixtureModalValues = {
 
 const DEFAULT_VALUES: StoreFixtureModalValues = {
   type: "",
-  code: undefined,
+  code: "",
   planogramId: "",
   width: "",
   height: "",
@@ -62,17 +61,10 @@ export function StoreFixtureModal({
     return trimmed;
   };
 
-  const normalizeOptionalText = (
-    value: string | undefined,
-  ): string | undefined => {
-    const normalized = normalizeText(value);
-    return normalized ? normalized : undefined;
-  };
-
   const [form, setForm] = useState<StoreFixtureModalValues>({
     ...DEFAULT_VALUES,
     type: normalizeText(initialValues?.type),
-    code: normalizeOptionalText(initialValues?.code),
+    code: normalizeText(initialValues?.code),
     planogramId: normalizeText(initialValues?.planogramId),
     width: normalizeText(initialValues?.width),
     height: normalizeText(initialValues?.height),
@@ -89,7 +81,7 @@ export function StoreFixtureModal({
     setForm({
       ...DEFAULT_VALUES,
       type: normalizeText(initialValues?.type),
-      code: normalizeOptionalText(initialValues?.code),
+      code: normalizeText(initialValues?.code),
       planogramId: normalizeText(initialValues?.planogramId),
       width: normalizeText(initialValues?.width),
       height: normalizeText(initialValues?.height),
@@ -123,7 +115,17 @@ export function StoreFixtureModal({
 
         <div className="space-y-5 p-6">
           <div className="grid gap-2">
-            <Label htmlFor="fixture-type">Fixture Type</Label>
+            <Label htmlFor="fixture-code">Fixture code</Label>
+            <Input
+              id="fixture-code"
+              value={form.code}
+              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
+              placeholder="e.g. FG-001"
+            />
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="fixture-type">Fixture type</Label>
             <Input
               id="fixture-type"
               value={form.type}
@@ -131,32 +133,6 @@ export function StoreFixtureModal({
               placeholder="e.g. Gondola"
             />
           </div>
-
-          <div className="grid gap-2">
-            <Label htmlFor="fixture-code">Fixture Code (optional)</Label>
-            <Input
-              id="fixture-code"
-              value={form.code ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
-              placeholder="e.g. FG-001"
-            />
-          </div>
-
-          {/* <div className="grid gap-2">
-            <Label htmlFor="fixture-planogram">Associated planogram (optional)</Label>
-            <Select
-              id="fixture-planogram"
-              value={form.planogramId ?? ""}
-              onChange={(e) => setForm((f) => ({ ...f, planogramId: e.target.value }))}
-            >
-              <option value="">No associated planogram</option>
-              {planogramOptions.map((planogram) => (
-                <option key={planogram.id} value={planogram.id}>
-                  {planogram.name} ({planogram.id})
-                </option>
-              ))}
-            </Select>
-          </div> */}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="grid gap-2">

@@ -1,6 +1,6 @@
-import { ChevronsUpDown, LogOut, User } from "lucide-react";
-import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useRouter } from "@tanstack/react-router";
+import { ChevronsUpDown, LogOut, User } from "lucide-react";
 import { useSyncExternalStore } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,28 +65,27 @@ export default function SidenavFooter() {
               size="lg"
               className={cn(
                 "data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground",
-                isCollapsed && "justify-center rounded-xl p-0"
+                isCollapsed && "justify-center rounded-xl p-0",
               )}
             >
               <Avatar className="h-9 w-9 rounded-xl border border-white/6">
-                <AvatarImage
-                  src={undefined}
-                  alt={firstName}
-                />
+                <AvatarImage src={undefined} alt={firstName} />
 
-                <AvatarFallback className="rounded-xl bg-accent/10 text-accent">
+                <AvatarFallback className="bg-accent/10 text-accent rounded-xl">
                   {firstName.charAt(0)}
                   {lastName.charAt(0)}
                 </AvatarFallback>
               </Avatar>
 
               <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                <span className="truncate font-medium text-sidebar-foreground">
+                <span className="text-sidebar-foreground truncate font-medium">
                   {firstName} {lastName}
                 </span>
 
-                <span className="truncate font-mono text-[10px] text-muted-foreground">{user.email}</span>
-                <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                <span className="text-muted-foreground truncate font-mono text-[10px]">
+                  {user.email}
+                </span>
+                <span className="text-muted-foreground truncate font-mono text-[10px] tracking-[0.14em] uppercase">
                   {user.organization.name}
                 </span>
               </div>
@@ -104,12 +103,9 @@ export default function SidenavFooter() {
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                 <Avatar className="h-9 w-9 rounded-xl border border-white/6">
-                  <AvatarImage
-                    src={undefined}
-                    alt={firstName}
-                  />
+                  <AvatarImage src={undefined} alt={firstName} />
 
-                  <AvatarFallback className="rounded-xl bg-accent/10 text-accent">
+                  <AvatarFallback className="bg-accent/10 text-accent rounded-xl">
                     {firstName.charAt(0)}
                     {lastName.charAt(0)}
                   </AvatarFallback>
@@ -120,8 +116,10 @@ export default function SidenavFooter() {
                     {firstName} {lastName}
                   </span>
 
-                  <span className="truncate font-mono text-[10px] text-muted-foreground">{user.email}</span>
-                  <span className="truncate font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  <span className="text-muted-foreground truncate font-mono text-[10px]">
+                    {user.email}
+                  </span>
+                  <span className="text-muted-foreground truncate font-mono text-[10px] tracking-[0.14em] uppercase">
                     {user.organization.name}
                   </span>
                 </div>

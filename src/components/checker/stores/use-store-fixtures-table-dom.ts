@@ -93,7 +93,7 @@ export function useStoreFixturesTableDom({
       const row: PlanogramShelfRow = {
         ...(firstShelf ?? {
           id: `fixture-${fixture.id}`,
-          shelfName: fixture.type,
+          shelfName: `${fixture.code.trim()} (${fixture.type.trim()})`,
           status: "never-audited",
         }),
         fixtureId,

@@ -1,21 +1,36 @@
-import { createFileRoute, Link, useLocation, useParams } from "@tanstack/react-router";
-import { ArrowLeft, Edit3, Play, Scan, Settings, Info, Save, X } from "lucide-react";
+import {
+  Link,
+  createFileRoute,
+  useLocation,
+  useParams,
+} from "@tanstack/react-router";
+import {
+  ArrowLeft,
+  Edit3,
+  Info,
+  Play,
+  Save,
+  Scan,
+  Settings,
+  X,
+} from "lucide-react";
 import { useState } from "react";
 
+import { EditableField } from "@/components/common";
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { PageHeader } from "@/components/shared/page-header";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { useShelf } from "@/queries/maker";
-import { useStoreFixtureTypes } from "@/queries/checker";
-import { cn } from "@/lib/utils";
-import { EditableField } from "@/components/common";
-import { useUpdateShelf } from "@/queries/maker/hooks/useUpdateShelf";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import { useStoreFixtureTypes } from "@/queries/checker";
+import { useShelf } from "@/queries/maker";
+import { useUpdateShelf } from "@/queries/maker/hooks/useUpdateShelf";
 
 export const Route = createFileRoute("/checker/shelf/$shelfId/")({
   component: ShelfDetailPage,
@@ -28,7 +43,7 @@ export function ShelfDetailPage() {
   };
   const shelfId = params.shelfId;
   const storeId = params.storeId;
-  
+
   const location = useLocation();
   const { toast } = useToast();
   const updateShelfMutation = useUpdateShelf();
@@ -52,29 +67,25 @@ export function ShelfDetailPage() {
 
   const backToShelvesPath =
     isAdmin && storeId ? `/admin/${storeId}/shelf/` : "/checker/shelf/";
-  
+
   const { data: shelf, isLoading, error } = useShelf(shelfId);
 
   const backButton = (
-    <Button variant="ghost" size="icon" className="shrink-0" asChild>
-      <Link to={backToShelvesPath as never} aria-label="Back to shelves">
-        <ArrowLeft className="size-4" aria-hidden />
-      </Link>
-    </Button>
+    <DetailBackButton to={backToShelvesPath} aria-label="Back to shelves" />
   );
 
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="border-b border-border px-3 py-3 sm:px-4 lg:px-6">
+        <div className="border-border border-b px-3 py-3 sm:px-4 lg:px-6">
           <div className="mx-auto flex max-w-screen-2xl items-center gap-2">
             {backButton}
-            <Skeleton className="h-9 flex-1 max-w-md" />
+            <Skeleton className="h-9 max-w-md flex-1" />
           </div>
         </div>
-        <div className="p-6 space-y-6">
+        <div className="space-y-6 p-6">
           <Skeleton className="h-12 w-1/3" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
             <Skeleton className="h-48 rounded-xl" />
             <Skeleton className="h-48 rounded-xl" />
             <Skeleton className="h-48 rounded-xl" />
@@ -87,16 +98,20 @@ export function ShelfDetailPage() {
   if (error || !shelf) {
     return (
       <MainLayout>
-        <div className="border-b border-border px-3 py-3 sm:px-4 lg:px-6">
+        <div className="border-border border-b px-3 py-3 sm:px-4 lg:px-6">
           <div className="mx-auto flex max-w-screen-2xl items-center gap-2">
             {backButton}
-            <span className="text-sm font-medium text-muted-foreground">Shelf detail</span>
+            <span className="text-muted-foreground text-sm font-medium">
+              Shelf detail
+            </span>
           </div>
         </div>
-        <div className="flex flex-col items-center justify-center p-12 text-center h-[60vh]">
-          <Info className="size-12 text-muted-foreground mb-4" />
+        <div className="flex h-[60vh] flex-col items-center justify-center p-12 text-center">
+          <Info className="text-muted-foreground mb-4 size-12" />
           <h2 className="text-xl font-semibold">Shelf not found</h2>
-          <p className="text-muted-foreground mt-2">The shelf you're looking for doesn't exist or you don't have access.</p>
+          <p className="text-muted-foreground mt-2">
+            The shelf you're looking for doesn't exist or you don't have access.
+          </p>
           <Button asChild className="mt-6 gap-2" variant="outline">
             <Link to={backToShelvesPath as never}>
               <ArrowLeft className="size-4" aria-hidden />
@@ -114,7 +129,10 @@ export function ShelfDetailPage() {
     aisle ??
     shelf.aisleCode ??
     (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : "");
-  const effectiveBay = bay ?? shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : "");
+  const effectiveBay =
+    bay ??
+    shelf.bayCode ??
+    (shelf.bayNumber != null ? String(shelf.bayNumber) : "");
   const effectiveZone = zone ?? shelf.zone ?? "";
   const effectiveSection = section ?? shelf.section ?? "";
   const effectiveFixtureType = fixtureType ?? shelf.fixtureType ?? "";
@@ -146,9 +164,12 @@ export function ShelfDetailPage() {
     setShelfName(shelf.shelfName);
     setShelfCode(shelf.shelfCode);
     setAisle(
-      shelf.aisleCode ?? (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : ""),
+      shelf.aisleCode ??
+        (shelf.aisleNumber != null ? `A${shelf.aisleNumber}` : ""),
     );
-    setBay(shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : ""));
+    setBay(
+      shelf.bayCode ?? (shelf.bayNumber != null ? String(shelf.bayNumber) : ""),
+    );
     setZone(shelf.zone ?? "");
     setSection(shelf.section ?? "");
     setFixtureType(shelf.fixtureType ?? "");
@@ -272,7 +293,7 @@ export function ShelfDetailPage() {
           <div className="flex gap-2">
             {!isEditing ? (
               <Button variant="outline" size="sm" onClick={handleStartEditing}>
-                <Edit3 className="size-4 mr-2" />
+                <Edit3 className="mr-2 size-4" />
                 Edit Details
               </Button>
             ) : (
@@ -283,7 +304,7 @@ export function ShelfDetailPage() {
                   onClick={handleCancelEditing}
                   disabled={isSavingDetails}
                 >
-                  <X className="size-4 mr-1" />
+                  <X className="mr-1 size-4" />
                   Cancel
                 </Button>
                 <Button
@@ -294,7 +315,7 @@ export function ShelfDetailPage() {
                   }}
                   disabled={isSavingDetails}
                 >
-                  <Save className="size-4 mr-1" />
+                  <Save className="mr-1 size-4" />
                   {isSavingDetails ? "Saving..." : "Save"}
                 </Button>
               </>
@@ -303,24 +324,26 @@ export function ShelfDetailPage() {
         </PageHeader>
       }
     >
-      <div className="p-6 space-y-8 w-full mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="mx-auto w-full space-y-8 p-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <div className="p-1.5 rounded-md bg-accent/20 text-accent mr-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="bg-accent/20 text-accent mr-3 rounded-md p-1.5">
                     <Scan className="size-4" />
                   </div>
                   Physical Location
                 </CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px]">LOC</Badge>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  LOC
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                     Aisle
                   </p>
                   <EditableField
@@ -332,7 +355,7 @@ export function ShelfDetailPage() {
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                  <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                     Bay
                   </p>
                   <EditableField
@@ -366,18 +389,20 @@ export function ShelfDetailPage() {
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <div className="p-1.5 rounded-md bg-chart-1/20 text-chart-1 mr-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="bg-chart-1/20 text-chart-1 mr-3 rounded-md p-1.5">
                     <Settings className="size-4" />
                   </div>
                   Fixture Details
                 </CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px]">SPEC</Badge>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  SPEC
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Type
                 </p>
                 {!isEditing ? (
@@ -400,18 +425,26 @@ export function ShelfDetailPage() {
                 )}
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Dimensions (WxH)
                 </p>
                 {!isEditing ? (
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Width</p>
-                      <p className="text-sm font-medium font-mono tabular-nums">{baseWidth || "—"}</p>
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                        Width
+                      </p>
+                      <p className="font-mono text-sm font-medium tabular-nums">
+                        {baseWidth || "—"}
+                      </p>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Height</p>
-                      <p className="text-sm font-medium font-mono tabular-nums">{baseHeight || "—"}</p>
+                      <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                        Height
+                      </p>
+                      <p className="font-mono text-sm font-medium tabular-nums">
+                        {baseHeight || "—"}
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -430,11 +463,11 @@ export function ShelfDetailPage() {
                 )}
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
                   Vertical Position
                 </p>
                 {!isEditing ? (
-                  <p className="text-sm font-medium font-mono tabular-nums">
+                  <p className="font-mono text-sm font-medium tabular-nums">
                     {baseVerticalPosition || "0"}
                   </p>
                 ) : (
@@ -453,43 +486,60 @@ export function ShelfDetailPage() {
           <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium flex items-center">
-                  <div className="p-1.5 rounded-md bg-chart-2/20 text-chart-2 mr-3">
+                <CardTitle className="flex items-center text-sm font-medium">
+                  <div className="bg-chart-2/20 text-chart-2 mr-3 rounded-md p-1.5">
                     <Play className="size-4" />
                   </div>
                   Current Status
                 </CardTitle>
-                <Badge variant="outline" className="font-mono text-[10px]">STATE</Badge>
+                <Badge variant="outline" className="font-mono text-[10px]">
+                  STATE
+                </Badge>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Last Audit</p>
-                <p className="text-sm font-medium">{shelf.lastAuditDate ? shelf.lastAuditDate.toLocaleDateString() : "Never Audited"}</p>
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  Last Audit
+                </p>
+                <p className="text-sm font-medium">
+                  {shelf.lastAuditDate
+                    ? shelf.lastAuditDate.toLocaleDateString()
+                    : "Never Audited"}
+                </p>
               </div>
               <div>
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Compliance Score</p>
+                <p className="text-muted-foreground text-[10px] font-semibold tracking-wider uppercase">
+                  Compliance Score
+                </p>
                 {shelf.complianceScore != null ? (
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="h-2 flex-1 bg-muted rounded-full overflow-hidden">
-                      <div 
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                      <div
                         className={cn(
                           "h-full rounded-full transition-all",
-                          shelf.complianceScore >= 90 ? "bg-chart-2" : shelf.complianceScore >= 75 ? "bg-accent" : "bg-destructive"
+                          shelf.complianceScore >= 90
+                            ? "bg-chart-2"
+                            : shelf.complianceScore >= 75
+                              ? "bg-accent"
+                              : "bg-destructive",
                         )}
                         style={{ width: `${shelf.complianceScore}%` }}
                       />
                     </div>
-                    <span className="text-lg font-bold tabular-nums">{shelf.complianceScore}%</span>
+                    <span className="text-lg font-bold tabular-nums">
+                      {shelf.complianceScore}%
+                    </span>
                   </div>
                 ) : (
-                  <p className="text-sm font-medium text-muted-foreground italic">No score available</p>
+                  <p className="text-muted-foreground text-sm font-medium italic">
+                    No score available
+                  </p>
                 )}
               </div>
             </CardContent>
           </Card>
         </div>
-
       </div>
     </MainLayout>
   );

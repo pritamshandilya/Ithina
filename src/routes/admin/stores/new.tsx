@@ -1,10 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  ArrowLeft,
-  Globe,
-  Store as StoreIcon,
-  Users as UsersIcon,
-} from "lucide-react";
+import { Globe, Store as StoreIcon, Users as UsersIcon } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
 import { StoreOnboardingBasicStep } from "@/components/admin/stores/store-onboarding-basic-step";
@@ -12,8 +7,8 @@ import { StoreOnboardingConfigStep } from "@/components/admin/stores/store-onboa
 import { StoreOnboardingTeamStep } from "@/components/admin/stores/store-onboarding-team-step";
 import { StoreOnboardingStepper } from "@/components/admin/stores/store-onboarding-stepper";
 import { useStoreOnboarding } from "@/components/admin/stores/useStoreOnboarding";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/admin/stores/new")({
   component: StoreOnboardingPage,
 });
@@ -23,14 +18,10 @@ function StoreOnboardingPage() {
   const o = useStoreOnboarding();
 
   const backButton = (
-    <Button
-      variant="ghost"
-      size="icon"
+    <DetailBackButton
       onClick={() => navigate({ to: "/admin/stores" })}
       aria-label="Back to Stores"
-    >
-      <ArrowLeft className="size-4" aria-hidden />
-    </Button>
+    />
   );
 
   return (

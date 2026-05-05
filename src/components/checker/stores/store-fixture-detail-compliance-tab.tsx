@@ -1,17 +1,86 @@
-import { FileText } from "lucide-react";
+import { FileText, Pencil, Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRulesByRuleSetId } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { ComplianceRule, RuleSeverity } from "@/types/checker";
+import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+
+interface ComplianceAssociationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  ruleSetOptions: ComplianceRuleSetSummary[];
+  ruleSetId: string;
+  onRuleSetIdChange: (value: string) => void;
+  onSaveAssociation: () => void;
+}
+
+function ComplianceAssociationModal({
+  isOpen,
+  onClose,
+  ruleSetOptions,
+  ruleSetId,
+  onRuleSetIdChange,
+  onSaveAssociation,
+}: ComplianceAssociationModalProps) {
+  const handleSave = () => {
+    onSaveAssociation();
+    onClose();
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-lg"
+      showCloseButton
+    >
+      <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
+        <h3 className="text-foreground text-lg font-semibold">
+          Associate Compliance Rule Set
+        </h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Select a compliance rule set to assign to this fixture.
+        </p>
+        <div className="mt-4 space-y-2">
+          <Label htmlFor="fixture-compliance-association">
+            Compliance rule set
+          </Label>
+          <Select
+            id="fixture-compliance-association"
+            value={ruleSetId}
+            onChange={(e) => onRuleSetIdChange(e.target.value)}
+          >
+            <option value="">None</option>
+            {ruleSetOptions.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="success" onClick={handleSave}>
+            Save
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
 export interface StoreFixtureDetailComplianceTabProps {
   ruleSets: ComplianceRuleSetSummary[];
+  /** Resolved selection (fixture, override, or store default) — same source as rule details. */
   selectedRuleSetId: string;
   onRuleSetChange: (value: string) => void;
   onSaveRuleSet: () => void;
@@ -45,16 +114,20 @@ function statusClass(status: string): string {
 
 function RuleCard({ rule }: { rule: ComplianceRule }) {
   return (
-    <details className="rounded-lg border border-border bg-muted/20 p-3 open:bg-muted/30">
+    <details className="border-border bg-muted/20 open:bg-muted/30 rounded-lg border p-3">
       <summary className="flex cursor-pointer list-none items-start justify-between gap-2">
         <div className="min-w-0 space-y-1">
-          <p className="truncate text-sm font-medium text-foreground">{rule.ruleName}</p>
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="text-foreground truncate text-sm font-medium">
+            {rule.ruleName}
+          </p>
+          <p className="text-muted-foreground truncate text-xs">
             {rule.ruleType} · {rule.shelfType} · Expected {rule.expectedValue}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          <span className={`text-xs font-medium ${severityClass(rule.severity)}`}>
+          <span
+            className={`text-xs font-medium ${severityClass(rule.severity)}`}
+          >
             {rule.severity}
           </span>
           <span
@@ -64,7 +137,7 @@ function RuleCard({ rule }: { rule: ComplianceRule }) {
           </span>
         </div>
       </summary>
-      <div className="mt-3 grid gap-1.5 border-t border-border/70 pt-2 text-xs">
+      <div className="border-border/70 mt-3 grid gap-1.5 border-t pt-2 text-xs">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Type</span>
           <span className="text-foreground">{rule.ruleType}</span>
@@ -75,7 +148,9 @@ function RuleCard({ rule }: { rule: ComplianceRule }) {
         </div>
         <div className="flex justify-between">
           <span className="text-muted-foreground">Expected</span>
-          <span className="font-medium text-foreground">{rule.expectedValue}</span>
+          <span className="text-foreground font-medium">
+            {rule.expectedValue}
+          </span>
         </div>
         {rule.tolerance != null && (
           <div className="flex justify-between">
@@ -85,7 +160,9 @@ function RuleCard({ rule }: { rule: ComplianceRule }) {
         )}
         <div className="flex justify-between">
           <span className="text-muted-foreground">Severity</span>
-          <span className={`font-medium ${severityClass(rule.severity)}`}>{rule.severity}</span>
+          <span className={`font-medium ${severityClass(rule.severity)}`}>
+            {rule.severity}
+          </span>
         </div>
       </div>
     </details>
@@ -98,11 +175,23 @@ export function StoreFixtureDetailComplianceTab({
   onRuleSetChange,
   onSaveRuleSet,
 }: StoreFixtureDetailComplianceTabProps) {
-  const selectedRuleSet = ruleSets.find((set) => set.id === selectedRuleSetId) ?? null;
-  const { data: rules, isLoading, isError } = useRulesByRuleSetId(selectedRuleSetId || null);
+  const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false);
+  const selectedRuleSet =
+    ruleSets.find((set) => set.id === selectedRuleSetId) ?? null;
+  const hasAssociatedCompliance = !!selectedRuleSetId;
+  const associatedRuleSetName = selectedRuleSet?.name ?? selectedRuleSetId;
+  const {
+    data: rules,
+    isLoading,
+    isError,
+  } = useRulesByRuleSetId(selectedRuleSetId || null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [severityFilter, setSeverityFilter] = useState<"all" | RuleSeverity>("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "Active" | "Draft" | "Retired">("all");
+  const [severityFilter, setSeverityFilter] = useState<"all" | RuleSeverity>(
+    "all",
+  );
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "Active" | "Draft" | "Retired"
+  >("all");
 
   const filteredRules = useMemo(() => {
     if (!rules) return [];
@@ -116,64 +205,114 @@ export function StoreFixtureDetailComplianceTab({
         String(rule.expectedValue).toLowerCase().includes(query);
       const matchesSeverity =
         severityFilter === "all" || rule.severity === severityFilter;
-      const matchesStatus = statusFilter === "all" || rule.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "all" || rule.status === statusFilter;
       return matchesSearch && matchesSeverity && matchesStatus;
     });
   }, [rules, searchTerm, severityFilter, statusFilter]);
 
   return (
     <div className="space-y-3">
-      <Card className="border-border bg-card/80">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm">
-            <FileText className="size-4 text-chart-2" aria-hidden />
-            Compliance Rule Set
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <Select value={selectedRuleSetId} onChange={(e) => onRuleSetChange(e.target.value)}>
-            <option value="">No rule set selected</option>
-            {ruleSets.map((ruleSet) => (
-              <option key={ruleSet.id} value={ruleSet.id}>
-                {ruleSet.name}
-              </option>
-            ))}
-          </Select>
-          <Button type="button" variant="outline" className="w-full" onClick={onSaveRuleSet}>
-            Save Compliance Rule Set
-          </Button>
-          <p className="text-xs text-muted-foreground">
-            Current selection: {selectedRuleSet?.name ?? "None"}
-          </p>
-        </CardContent>
-      </Card>
+      {!hasAssociatedCompliance ? (
+        <Card className="border-border bg-card/80">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm">
+              Compliance Rule Set Association
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-muted-foreground text-sm">
+              No compliance rule set is in use for this Display Unit.
+            </p>
+            <Button
+              type="button"
+              variant="success"
+              className="items-center gap-1.5"
+              onClick={() => setIsAssociationModalOpen(true)}
+            >
+              <Plus className="size-4" aria-hidden />
+              Associate Compliance Rule Set
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-border bg-card/80">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-sm">
+                Associated Compliance Rule Set
+              </CardTitle>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="items-center gap-1.5"
+                onClick={() => setIsAssociationModalOpen(true)}
+              >
+                <Pencil className="size-4" aria-hidden />
+                Edit
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="text-foreground text-sm">
+              {associatedRuleSetName}
+            </div>
+            {selectedRuleSet?.description ? (
+              <div className="text-muted-foreground text-sm">
+                {selectedRuleSet.description}
+              </div>
+            ) : null}
+            {selectedRuleSet ? (
+              <div className="text-muted-foreground text-sm">
+                {selectedRuleSet.rulesCount} rules ·{" "}
+                {selectedRuleSet.enabledCount} enabled
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      )}
+
+      <ComplianceAssociationModal
+        isOpen={isAssociationModalOpen}
+        onClose={() => setIsAssociationModalOpen(false)}
+        ruleSetOptions={ruleSets}
+        ruleSetId={selectedRuleSetId}
+        onRuleSetIdChange={onRuleSetChange}
+        onSaveAssociation={onSaveRuleSet}
+      />
 
       {selectedRuleSet ? (
         <Card className="border-border bg-card/80">
           <CardHeader className="space-y-2">
-            <CardTitle className="text-base">{selectedRuleSet.name}</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FileText className="text-chart-2 size-4" aria-hidden />
+              {selectedRuleSet.name}
+            </CardTitle>
             {selectedRuleSet.description && (
-              <p className="text-sm text-muted-foreground">{selectedRuleSet.description}</p>
+              <p className="text-muted-foreground text-sm">
+                {selectedRuleSet.description}
+              </p>
             )}
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="grid gap-2 rounded-lg border border-border bg-muted/30 p-3 sm:grid-cols-2">
+            <div className="border-border bg-muted/30 grid gap-2 rounded-lg border p-3 sm:grid-cols-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Rules in set</span>
-                <span className="font-medium tabular-nums text-foreground">
+                <span className="text-foreground font-medium tabular-nums">
                   {selectedRuleSet.rulesCount}
                 </span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Enabled rules</span>
-                <span className="font-medium tabular-nums text-foreground">
+                <span className="text-foreground font-medium tabular-nums">
                   {selectedRuleSet.enabledCount}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              <h4 className="text-muted-foreground text-xs font-medium tracking-wider uppercase">
                 Rules in this set
               </h4>
               {isLoading ? (
@@ -183,12 +322,12 @@ export function StoreFixtureDetailComplianceTab({
                   <Skeleton className="h-24 w-full rounded-lg" />
                 </div>
               ) : isError ? (
-                <p className="py-2 text-sm text-destructive">
+                <p className="text-destructive py-2 text-sm">
                   Could not load rules for this set.
                 </p>
               ) : rules && rules.length > 0 ? (
                 <div className="space-y-2">
-                  <div className="sticky top-0 z-10 space-y-2 rounded-md border border-border bg-card/95 p-2 backdrop-blur-sm">
+                  <div className="border-border bg-card/95 sticky top-0 z-10 space-y-2 rounded-md border p-2 backdrop-blur-sm">
                     <Input
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -199,7 +338,9 @@ export function StoreFixtureDetailComplianceTab({
                       <Select
                         value={severityFilter}
                         onChange={(e) =>
-                          setSeverityFilter(e.target.value as "all" | RuleSeverity)
+                          setSeverityFilter(
+                            e.target.value as "all" | RuleSeverity,
+                          )
                         }
                         aria-label="Filter rules by severity"
                       >
@@ -212,7 +353,11 @@ export function StoreFixtureDetailComplianceTab({
                         value={statusFilter}
                         onChange={(e) =>
                           setStatusFilter(
-                            e.target.value as "all" | "Active" | "Draft" | "Retired",
+                            e.target.value as
+                              | "all"
+                              | "Active"
+                              | "Draft"
+                              | "Retired",
                           )
                         }
                         aria-label="Filter rules by status"
@@ -223,29 +368,34 @@ export function StoreFixtureDetailComplianceTab({
                         <option value="Retired">Retired</option>
                       </Select>
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Showing {filteredRules.length} of {rules.length} rules
                     </p>
                   </div>
                   <div className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
                     {filteredRules.length > 0 ? (
-                      filteredRules.map((rule) => <RuleCard key={rule.ruleId} rule={rule} />)
+                      filteredRules.map((rule) => (
+                        <RuleCard key={rule.ruleId} rule={rule} />
+                      ))
                     ) : (
-                      <p className="py-2 text-sm text-muted-foreground">
+                      <p className="text-muted-foreground py-2 text-sm">
                         No rules match the selected filters.
                       </p>
                     )}
                   </div>
                 </div>
               ) : (
-                <p className="py-2 text-sm text-muted-foreground">No rules in this set.</p>
+                <p className="text-muted-foreground py-2 text-sm">
+                  No rules in this set.
+                </p>
               )}
             </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
-          Select a compliance rule set to view full rule details.
+        <div className="border-border bg-muted/30 text-muted-foreground rounded-lg border px-4 py-3 text-sm">
+          Select a compliance rule set in the association dialog to view full
+          rule details.
         </div>
       )}
     </div>

@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { ANALYSIS_REPORT_MOCK_DATA, type DetailedReport } from "@/lib/constants/reports-mock-data";
 import {
     Download,
-    ArrowLeft,
     Info,
     AlertTriangle,
     BarChart3,
@@ -43,14 +43,10 @@ export function DetailedReportPage() {
                 {/* Header */}
                 <div className="flex items-center justify-between mt-2">
                     <div className="flex items-center gap-6">
-                        <Button
-                            variant="ghost"
-                            size="icon"
+                        <DetailBackButton
                             onClick={() => window.history.back()}
-                            className="bg-white/5 h-10 w-10 text-slate-400 hover:text-white border border-white/10 hover:bg-white/10 transition-all rounded-xl"
-                        >
-                            <ArrowLeft className="size-5" />
-                        </Button>
+                            className="h-10 w-10 rounded-xl border border-white/10 bg-white/5 text-slate-400 hover:bg-white/10 hover:text-white"
+                        />
                         <div className="space-y-1">
                             <h1 className="text-3xl font-black tracking-tight text-white">{data.title}</h1>
                             <div className="flex items-center gap-3 text-xs font-bold text-slate-500 uppercase tracking-[0.2em]">

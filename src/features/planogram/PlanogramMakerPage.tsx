@@ -1,27 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { LayoutGrid, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 
 import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
 import { createMakerPlanogramTableColumns } from "@/components/planogram/planogram-maker-table-columns";
-import { PLANOGRAM_INITIAL_SORT, PlanogramActionsMenu } from "@/components/planogram/planogram-table-columns";
-import { DataTable } from "@/components/ui/data-table";
+import {
+  PLANOGRAM_INITIAL_SORT,
+  PlanogramActionsMenu,
+} from "@/components/planogram/planogram-table-columns";
 import { Button } from "@/components/ui/button";
+import { DataTable } from "@/components/ui/data-table";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { getShelfFixtureId } from "@/lib/fixtures/analysis";
+import { useStore } from "@/providers/store";
+import { fetchStoreFixtures as fetchCheckerStoreFixtures } from "@/queries/checker/api/fixtures";
 import {
-  useShelves,
   useComplianceRuleSets,
   usePlanogramList,
+  useShelves,
 } from "@/queries/maker";
-import { fetchStoreFixtures as fetchCheckerStoreFixtures } from "@/queries/checker/api/fixtures";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
-import { useStore } from "@/providers/store";
-import type { PlanogramArrangement } from "@/types/planogram";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
-import { getShelfFixtureId } from "@/lib/fixtures/analysis";
+import type { PlanogramArrangement } from "@/types/planogram";
 
 const MAKER_PLANOGRAM_PAGE_SIZE_OPTIONS = [10, 20, 50, 75, 100] as const;
 
@@ -51,7 +54,9 @@ function toPlanogramRow(
     ? planogramMap?.get(resolvedPlanogramId)
     : undefined;
   const info =
-    planogramInfo && typeof planogramInfo === "object" ? planogramInfo : undefined;
+    planogramInfo && typeof planogramInfo === "object"
+      ? planogramInfo
+      : undefined;
   const aisleCode =
     info?.aisle ??
     shelf.aisleCode ??
@@ -147,7 +152,7 @@ export function PlanogramMakerPage() {
       const fallbackShelf: Shelf = {
         id: fixture.id,
         fixtureId: fixture.id,
-        shelfName: fixture.code ?? fixture.type ?? "Fixture",
+        shelfName: `${fixture.code.trim()} (${fixture.type.trim()})`,
         status: "never-audited",
         aisleCode: fixture.physical_location.aisle,
         zone: fixture.physical_location.zone,
@@ -169,23 +174,17 @@ export function PlanogramMakerPage() {
         ...baseRow,
         id: fixture.id,
         fixtureId: fixture.id,
-        fixtureCode: fixture.code ?? "",
+        fixtureCode: fixture.code,
         fixtureShelvesCount: fixtureShelves.length,
         aisleCode:
           fixture.physical_location.aisle || baseRow.aisleCode || undefined,
         zone: fixture.physical_location.zone || baseRow.zone,
         section: fixture.physical_location.section || baseRow.section,
         fixtureType: fixture.type || baseRow.fixtureType,
-        dimensions:
-          `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
+        dimensions: `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
       } satisfies PlanogramShelfRow;
     });
-  }, [
-    storeFixtures,
-    shelvesByFixtureId,
-    planogramMap,
-    defaultRuleSetName,
-  ]);
+  }, [storeFixtures, shelvesByFixtureId, planogramMap, defaultRuleSetName]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -195,8 +194,12 @@ export function PlanogramMakerPage() {
         r.shelfName.toLowerCase().includes(q) ||
         r.complianceRuleSet?.toLowerCase().includes(q) ||
         r.categorizeBy?.toLowerCase().includes(q) ||
-        String(r.aisleCode ?? "").toLowerCase().includes(q) ||
-        String(r.bayCode ?? r.bayNumber ?? "").toLowerCase().includes(q) ||
+        String(r.aisleCode ?? "")
+          .toLowerCase()
+          .includes(q) ||
+        String(r.bayCode ?? r.bayNumber ?? "")
+          .toLowerCase()
+          .includes(q) ||
         String((r as { fixtureId?: string }).fixtureId ?? "")
           .toLowerCase()
           .includes(q) ||
@@ -217,7 +220,7 @@ export function PlanogramMakerPage() {
       if (menuEl?.contains(target)) return;
 
       const triggerBtn = (target as HTMLElement).closest?.(
-        "[data-action=\"open-menu\"]",
+        '[data-action="open-menu"]',
       );
       if (triggerBtn && triggerBtn === actionsMenu.triggerEl) {
         skipNextOpenMenuFromTriggerRef.current = true;
@@ -272,7 +275,8 @@ export function PlanogramMakerPage() {
 
   const handlePlanogramAnalysis = useCallback(
     (row: PlanogramShelfRow) => {
-      const fixtureShelves = shelvesByFixtureId.get(row.fixtureId ?? row.id) ?? [];
+      const fixtureShelves =
+        shelvesByFixtureId.get(row.fixtureId ?? row.id) ?? [];
       const targetShelfId = fixtureShelves[0]?.id;
       if (!targetShelfId) {
         toast({
@@ -322,13 +326,13 @@ export function PlanogramMakerPage() {
 
   return (
     <>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pb-4 sm:pb-4 lg:pb-5">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <div className="mt-4 shrink-0 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="group relative w-full sm:max-w-md">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden pb-4 sm:pb-4 lg:pb-5">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
+          <div className="mt-4 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
-                placeholder="Search fixture by type, code, or location..."
+                placeholder="Search Display Unit by type, code, or location..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="border-border bg-card text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus:border-accent h-12 pl-11 transition-all"
@@ -347,7 +351,6 @@ export function PlanogramMakerPage() {
                 Add POG Analysis
               </Link>
             </Button> */}
-            
           </div>
 
           <div className="mt-4">
@@ -357,24 +360,20 @@ export function PlanogramMakerPage() {
                 <Skeleton className="h-64 w-full rounded-lg" />
               </div>
             ) : filteredRows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
+              <div className="border-border bg-card/50 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
+                <div className="bg-muted mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
                   <LayoutGrid
-                    className="h-7 w-7 text-muted-foreground"
+                    className="text-muted-foreground h-7 w-7"
                     aria-hidden
                   />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  No shelves yet
+                <h3 className="text-foreground text-lg font-semibold">
+                  No Display Units yet
                 </h3>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-                  Add shelves to run planogram-based compliance analysis.
+                <p className="text-muted-foreground mt-2 max-w-sm text-sm">
+                  Add Display Units to run planogram-based compliance analysis.
                 </p>
-                <Button
-                  asChild
-                  variant="success"
-                  className="mt-6"
-                >
+                <Button asChild variant="success" className="mt-6">
                   <Link
                     to="/maker/audits/planogram/new"
                     search={{ fixtureId: undefined }}
@@ -386,32 +385,33 @@ export function PlanogramMakerPage() {
               </div>
             ) : (
               <div ref={tableWrapperRef}>
-                {filteredRows.length > 0 && (
-              <p className="text-muted-foreground mb-2 shrink-0 text-sm">
-                Showing{" "}
-                <span className="text-foreground font-semibold">
-                  {Math.max(
-                    0,
-                    Math.min(
-                      tablePagination.pageSize,
-                      filteredRows.length -
-                        (tablePagination.page - 1) * tablePagination.pageSize,
-                    ),
-                  )}
-                </span>{" "}
-                of{" "}
-                <span className="text-foreground font-semibold">
-                  {filteredRows.length}
-                </span>{" "}
-                fixture{filteredRows.length !== 1 ? "s" : ""}
-              </p>
-            )}
+                {/* {filteredRows.length > 0 && (
+                  <p className="text-muted-foreground mb-2 shrink-0 text-sm">
+                    Showing{" "}
+                    <span className="text-foreground font-semibold">
+                      {Math.max(
+                        0,
+                        Math.min(
+                          tablePagination.pageSize,
+                          filteredRows.length -
+                            (tablePagination.page - 1) *
+                              tablePagination.pageSize,
+                        ),
+                      )}
+                    </span>{" "}
+                    of{" "}
+                    <span className="text-foreground font-semibold">
+                      {filteredRows.length}
+                    </span>{" "}
+                    Display Unit{filteredRows.length !== 1 ? "s" : ""}
+                  </p>
+                )} */}
                 <DataTable<PlanogramShelfRow>
                   columns={tableColumns}
                   data={filteredRows}
                   rowIdField="id"
                   initialSort={PLANOGRAM_INITIAL_SORT}
-                  emptyMessage="No shelves match your search"
+                  emptyMessage="No Display Units match your search"
                   pageSize={50}
                   pageSizeSelector={pageSizeSelectorOptions}
                   headerFilters={false}

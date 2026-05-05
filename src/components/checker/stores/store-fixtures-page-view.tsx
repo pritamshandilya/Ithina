@@ -42,7 +42,7 @@ interface StoreFixturesPageViewProps {
   isDeleteConfirmOpen: boolean;
   onCloseDeleteConfirm: () => void;
   onConfirmDelete: () => void;
-  fixtureToDeleteType?: string;
+  fixtureToDeleteLabel?: string;
   isDeletingFixture: boolean;
   fixtureModalOpen: boolean;
   onCloseFixtureModal: () => void;
@@ -98,7 +98,7 @@ export function StoreFixturesPageView({
   isDeleteConfirmOpen,
   onCloseDeleteConfirm,
   onConfirmDelete,
-  fixtureToDeleteType,
+  fixtureToDeleteLabel,
   isDeletingFixture,
   fixtureModalOpen,
   onCloseFixtureModal,
@@ -238,7 +238,7 @@ export function StoreFixturesPageView({
           onClose={onCloseDeleteConfirm}
           onConfirm={onConfirmDelete}
           title="Delete fixture?"
-          description={`This will permanently delete "${fixtureToDeleteType ?? "this fixture"}".`}
+          description={`This will permanently delete "${fixtureToDeleteLabel ?? "this fixture"}".`}
           confirmLabel="Delete"
           cancelLabel="Cancel"
           variant="destructive"

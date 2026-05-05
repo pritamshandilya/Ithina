@@ -35,7 +35,7 @@ export function NewAdhocAnalysisPage() {
   const { data: fixtures = [] } = useStoreFixtures();
   const fixtureOptions = fixtures.map((fixture) => ({
     id: fixture.id,
-    code: fixture.code,
+    code: fixture.code ?? "",
     fixtureName: fixture.type,
   }));
   const isFixtureLocked = Boolean(fixtureId && search.from);

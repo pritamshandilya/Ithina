@@ -1,7 +1,4 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 
 interface AddPlanogramHeaderProps {
   shelfListPath: string;
@@ -14,12 +11,7 @@ export function AddPlanogramHeader({
 }: AddPlanogramHeaderProps) {
   return (
     <header className="flex items-center gap-4">
-      <Button variant="ghost" size="icon" asChild>
-        <Link to={shelfListPath as never}>
-          <ArrowLeft className="size-4" aria-hidden />
-          <span className="sr-only">Back</span>
-        </Link>
-      </Button>
+      <DetailBackButton to={shelfListPath} />
       <div>
         <h1 className="text-2xl font-bold text-foreground">
           {isAssociateMode ? "Associated Planogram" : "Add Shelf"}

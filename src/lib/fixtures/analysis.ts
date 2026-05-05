@@ -24,9 +24,12 @@ export function getFixtureDisplayName(
   _fixtureId: string,
   shelves: Shelf[],
 ): string {
-  const firstShelf = shelves[0];
-  const type = firstShelf?.fixtureType?.replace(/_/g, " ").trim();
-  return type && type.length > 0 ? type : "Fixture";
+  const firstShelf = shelves[0] as Shelf & { fixtureCode?: string };
+  const code = firstShelf?.fixtureCode?.trim() ?? "";
+  const type = firstShelf?.fixtureType?.replace(/_/g, " ").trim() ?? "";
+  if (code && type) return `${code} (${type})`;
+  if (code) return code;
+  return type || "Fixture";
 }
 
 export function groupShelvesByFixture(shelves: Shelf[]): FixtureAnalysisGroup[] {

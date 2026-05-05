@@ -1,8 +1,9 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Download, FileUp, Sparkles } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import { AlertCircle, Download, FileUp, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import {
@@ -139,12 +140,7 @@ export function PlanogramsNewPage() {
     >
       <div className="mx-auto max-w-screen-2xl space-y-4 px-2 pb-6 pt-2 sm:px-3 lg:px-4">
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to={href.list as never}>
-              <ArrowLeft className="size-4" aria-hidden />
-              <span className="sr-only">Back to planograms</span>
-            </Link>
-          </Button>
+          <DetailBackButton to={href.list} aria-label="Back to planograms" />
         </div>
 
         <div className="grid gap-4 lg:grid-cols-2">

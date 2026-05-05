@@ -6,11 +6,11 @@
  *
  * Maker-focused: no AI pipeline details, simple operational language.
  */
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Camera, ImageIcon, Upload } from "lucide-react";
+import { Camera, ImageIcon, Upload } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { ReportSnippetsView } from "@/components/maker";
 import { AnalysisProcessingOverlay } from "@/components/maker/analysis-processing-overlay";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,7 @@ export interface AnalysisFlowPageProps {
   /** Callback when fixture changes */
   onFixtureSelect?: (id: string) => void;
   /** Available fixtures for selection */
-  fixtures?: Array<{ id: string; code?: string; fixtureName: string }>;
+  fixtures?: Array<{ id: string; code: string; fixtureName: string }>;
   /** Lock fixture selection (e.g. preselected from fixture actions) */
   isFixtureSelectionLocked?: boolean;
   /** Force fixture for analysis submit (planogram flow). */
@@ -269,12 +269,7 @@ export function AnalysisFlowPage({
         <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col gap-2 lg:gap-3">
           <header className="flex shrink-0 items-center justify-between gap-4">
             <div className="flex w-full items-center gap-2">
-              <Button variant="ghost" size="icon" asChild>
-                <Link to={backTo}>
-                  <ArrowLeft className="size-4" aria-hidden />
-                  <span className="sr-only">Back</span>
-                </Link>
-              </Button>
+              <DetailBackButton to={backTo} />
               <div className="flex w-full items-center justify-between space-y-0.5">
                 <div>
                   <h1 className="text-foreground text-xl font-bold sm:text-2xl">
@@ -301,9 +296,7 @@ export function AnalysisFlowPage({
                   <option value="">No fixture selected</option>
                   {fixtureOptions?.map((fixture) => (
                     <option key={fixture.id} value={fixture.id}>
-                      {fixture.code?.trim()
-                        ? `${fixture.code.trim()} (${fixture.fixtureName})`
-                        : fixture.fixtureName}
+                      {`${fixture.code.trim()} (${fixture.fixtureName.trim()})`}
                     </option>
                   ))}
                 </Select>

@@ -1,9 +1,9 @@
-import { Link, useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useState, type ChangeEvent } from "react";
+import { useNavigate, useParams } from "@tanstack/react-router";
+import { AlertCircle, Trash2 } from "lucide-react";
+import { type ChangeEvent, useCallback, useEffect, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,11 +19,17 @@ import { PlanogramRenderedPreview } from "@/features/planogram-library/planogram
 import { usePlanogramSectionHref } from "@/features/planogram-library/use-planogram-section-href";
 import { useToast } from "@/hooks/use-toast";
 import { parsePlanogramJsonText } from "@/lib/planogram/parse-planogram-json";
-import { useDeletePlanogram, usePlanogramById, useUpdatePlanogram } from "@/queries/maker";
+import {
+  useDeletePlanogram,
+  usePlanogramById,
+  useUpdatePlanogram,
+} from "@/queries/maker";
 import type { PlanogramPayload } from "@/types/planogram";
 
 export function PlanogramDetailPage() {
-  const { planogramId } = useParams({ strict: false }) as { planogramId: string };
+  const { planogramId } = useParams({ strict: false }) as {
+    planogramId: string;
+  };
   const href = usePlanogramSectionHref();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -33,7 +39,9 @@ export function PlanogramDetailPage() {
 
   const [editor, setEditor] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
-  const [draftPreview, setDraftPreview] = useState<PlanogramPayload | null>(null);
+  const [draftPreview, setDraftPreview] = useState<PlanogramPayload | null>(
+    null,
+  );
   const [showEditor, setShowEditor] = useState(false);
 
   useEffect(() => {
@@ -65,7 +73,10 @@ export function PlanogramDetailPage() {
     } catch (e) {
       toast({
         title: "Fix JSON first",
-        description: e instanceof Error ? e.message : "Parse errors must be resolved before saving.",
+        description:
+          e instanceof Error
+            ? e.message
+            : "Parse errors must be resolved before saving.",
         variant: "destructive",
       });
       return;
@@ -96,7 +107,10 @@ export function PlanogramDetailPage() {
         });
         return;
       }
-      toast({ title: "Removed", description: "The custom planogram was deleted." });
+      toast({
+        title: "Removed",
+        description: "The custom planogram was deleted.",
+      });
       void navigate({ to: href.list as never });
     } catch (e) {
       toast({
@@ -108,109 +122,118 @@ export function PlanogramDetailPage() {
   }, [deleteMutation, href.list, navigate, planogramId, toast]);
 
   return (
-    <MainLayout
-      pageHeader={
-        <PageHeader
-          title={data?.name ?? "Planogram"}
-          description="View the full structure below, then update JSON and save when you are ready."
-        />
-      }
-    >
-      <div className="mx-auto max-w-screen-2xl space-y-4 px-2 pb-6 pt-2 sm:px-3 lg:px-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to={href.list as never}>
-              <ArrowLeft className="size-4" aria-hidden />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <div className="flex flex-wrap items-center gap-2">
-            {!isLoading && data ? (
-              <Button type="button" variant="secondary" onClick={() => setShowEditor((prev) => !prev)}>
-                {showEditor ? "Close" : "Edit"}
-              </Button>
-            ) : null}
-            {!isLoading && data && showEditor ? (
-              <>
+    <MainLayout>
+      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="mx-auto max-w-screen-2xl space-y-4">
+          <header className="flex flex-wrap items-center gap-4">
+            <DetailBackButton to={href.list} />
+            <div className="min-w-0 flex-1">
+              <h1 className="text-foreground truncate text-2xl font-bold">
+                {data?.name ?? "Planogram"}
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                View the full structure below, then update JSON and save when you
+                are ready.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {!isLoading && data ? (
                 <Button
                   type="button"
-                  variant="success"
-                  disabled={saveMutation.isPending}
-                  onClick={() => void handleSave()}
+                  variant="secondary"
+                  onClick={() => setShowEditor((prev) => !prev)}
                 >
-                  {saveMutation.isPending ? "Saving…" : "Save"}
+                  {showEditor ? "Close" : "Edit"}
                 </Button>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={deleteMutation.isPending}
-                  onClick={() => void handleDelete()}
-                >
-                  <Trash2 className="size-4" aria-hidden />
-                  {deleteMutation.isPending ? "Deleting…" : "Delete"}
-                </Button>
-              </>
-            ) : null}
-          </div>
-        </div>
-
-        {error ? (
-          <p className="text-sm text-destructive">
-            {error instanceof Error ? error.message : "Failed to load planogram."}
-          </p>
-        ) : null}
-
-        <div className="space-y-6">
-          {!isLoading && data && showEditor ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Update planogram</CardTitle>
-                <CardDescription>
-                  Edit the JSON payload, parse to refresh the overview below, then save. Delete removes only custom
-                  definitions for this id.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="space-y-2">
-                  <Label htmlFor="planogram-json-editor">PlanogramPayload</Label>
-                  <Textarea
-                    id="planogram-json-editor"
-                    value={editor}
-                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditor(e.target.value)}
-                    className="min-h-[280px] font-mono text-xs"
-                    spellCheck={false}
-                  />
-                </div>
-                {parseError ? (
-                  <p className="flex items-center gap-1.5 text-sm text-destructive">
-                    <AlertCircle className="size-4 shrink-0" aria-hidden />
-                    {parseError}
-                  </p>
-                ) : null}
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="secondary" onClick={runParse}>
-                    Parse preview
+              ) : null}
+              {!isLoading && data && showEditor ? (
+                <>
+                  <Button
+                    type="button"
+                    variant="success"
+                    disabled={saveMutation.isPending}
+                    onClick={() => void handleSave()}
+                  >
+                    {saveMutation.isPending ? "Saving…" : "Save"}
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={deleteMutation.isPending}
+                    onClick={() => void handleDelete()}
+                  >
+                    <Trash2 className="size-4" aria-hidden />
+                    {deleteMutation.isPending ? "Deleting…" : "Delete"}
+                  </Button>
+                </>
+              ) : null}
+            </div>
+          </header>
+
+          {error ? (
+            <p className="text-destructive text-sm">
+              {error instanceof Error
+                ? error.message
+                : "Failed to load planogram."}
+            </p>
           ) : null}
 
-          <Card className="border-border bg-card/80">
-            <CardContent className="space-y-4 p-4">
-              <PlanogramJsonOverview
-                payload={displayPayload}
-                isLoading={isLoading && !draftPreview}
-                emptyMessage="Planogram not found."
-                embedded
-              />
-              <PlanogramRenderedPreview
-                payload={displayPayload}
-                isLoading={isLoading && !draftPreview}
-                embedded
-              />
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            {!isLoading && data && showEditor ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Update planogram</CardTitle>
+                  <CardDescription>
+                    Edit the JSON payload, parse to refresh the overview below,
+                    then save. Delete removes only custom definitions for this id.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="planogram-json-editor">
+                      PlanogramPayload
+                    </Label>
+                    <Textarea
+                      id="planogram-json-editor"
+                      value={editor}
+                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+                        setEditor(e.target.value)
+                      }
+                      className="min-h-[280px] font-mono text-xs"
+                      spellCheck={false}
+                    />
+                  </div>
+                  {parseError ? (
+                    <p className="text-destructive flex items-center gap-1.5 text-sm">
+                      <AlertCircle className="size-4 shrink-0" aria-hidden />
+                      {parseError}
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" onClick={runParse}>
+                      Parse preview
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            <Card className="border-border bg-card/80">
+              <CardContent className="space-y-4 p-4">
+                <PlanogramJsonOverview
+                  payload={displayPayload}
+                  isLoading={isLoading && !draftPreview}
+                  emptyMessage="Planogram not found."
+                  embedded
+                />
+                <PlanogramRenderedPreview
+                  payload={displayPayload}
+                  isLoading={isLoading && !draftPreview}
+                  embedded
+                />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </MainLayout>

@@ -108,7 +108,7 @@ function AdhocAnalysisPage() {
       const fallbackShelf: Shelf = {
         id: fixture.id,
         fixtureId: fixture.id,
-        shelfName: fixture.code ?? fixture.type ?? "Fixture",
+        shelfName: `${fixture.code.trim()} (${fixture.type.trim()})`,
         status: "never-audited",
         aisleCode: fixture.physical_location.aisle,
         zone: fixture.physical_location.zone,
@@ -125,7 +125,7 @@ function AdhocAnalysisPage() {
         ...baseRow,
         id: fixture.id,
         fixtureId: fixture.id,
-        fixtureCode: fixture.code ?? "",
+        fixtureCode: fixture.code,
         fixtureShelvesCount: fixtureShelves.length,
         aisleCode:
           fixture.physical_location.aisle || baseRow.aisleCode || undefined,
@@ -252,7 +252,7 @@ function AdhocAnalysisPage() {
       pageHeader={
         <PageHeader
           title="Adhoc Analysis"
-          description="Select a fixture and run adhoc analysis without requiring a planogram in the request."
+          description="Select a Display Unit and run adhoc analysis without requiring a planogram in the request."
         >
           <Button asChild variant="success" className="shrink-0">
             <Link
@@ -272,7 +272,7 @@ function AdhocAnalysisPage() {
             <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
-                placeholder="Search fixture by type, code, or location..."
+                placeholder="Search Display Unit by type, code, or location..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 className="border-border bg-card text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus:border-accent h-12 pl-11 transition-all"
@@ -280,7 +280,7 @@ function AdhocAnalysisPage() {
             </div>
           </div>
 
-          {filteredRows.length > 0 && (
+          {/* {filteredRows.length > 0 && (
             <p className="text-muted-foreground mt-4 shrink-0 text-sm">
               Showing{" "}
               <span className="text-foreground font-semibold">
@@ -297,9 +297,9 @@ function AdhocAnalysisPage() {
               <span className="text-foreground font-semibold">
                 {filteredRows.length}
               </span>{" "}
-              fixture{filteredRows.length !== 1 ? "s" : ""}
+              Display Unit{filteredRows.length !== 1 ? "s" : ""}
             </p>
-          )}
+          )} */}
 
           <div className="mt-4 min-h-0 flex-1 overflow-auto">
             {isLoading ? (
@@ -316,11 +316,11 @@ function AdhocAnalysisPage() {
                   />
                 </div>
                 <h3 className="text-foreground text-lg font-semibold">
-                  No fixtures found
+                  No Display Units found
                 </h3>
                 <p className="text-muted-foreground mt-2 max-w-sm text-sm">
-                  Add fixtures first to run adhoc analysis and view compliance
-                  details.
+                  Add Display Units first to run adhoc analysis and view
+                  compliance details.
                 </p>
                 <Button asChild variant="success" className="mt-6">
                   <Link

@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import {
   CategoryFilterTags,
   ProductDetailsTable,
@@ -40,12 +40,7 @@ export function PlanogramShelfEditorView({
       <div className="min-h-screen bg-primary px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4">
         <div className="mx-auto max-w-screen-2xl space-y-4">
           <header className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={backTo as never}>
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Back</span>
-              </Link>
-            </Button>
+            <DetailBackButton to={backTo} />
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-2xl font-bold text-foreground">
                 {preview?.shelf.shelfName ?? title}

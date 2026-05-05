@@ -167,11 +167,10 @@ export function ReportSnippetsView({
       </div>
 
       <div className="grid gap-4 lg:h-[min(640px,calc(100vh-14rem))] lg:grid-cols-[1fr_1fr] lg:items-stretch xl:grid-cols-[1.2fr_1fr]">
-        {/* Left: Observed Fixture */}
         <section className="border-border bg-card/80 flex min-h-[320px] flex-col overflow-hidden rounded-xl border shadow-sm lg:min-h-0">
           <div className="border-border flex shrink-0 items-center justify-between border-b px-4 py-3">
             <h3 className="text-foreground text-sm font-semibold">
-              Observed Fixture
+              Observed Display Unit
             </h3>
             <div className="flex items-center gap-2">
               <Button
@@ -215,7 +214,7 @@ export function ReportSnippetsView({
               <div className="flex min-h-full items-center justify-center p-4">
                 <img
                   src={imagePreview}
-                  alt="Shelf analysis"
+                  alt="Display Unit analysis"
                   className="max-w-full object-contain transition-transform duration-200"
                   style={{ transform: `scale(${zoomLevel})` }}
                 />
@@ -245,13 +244,12 @@ export function ReportSnippetsView({
           </div>
         </section>
 
-        {/* Right: Report snippets (scrollable) */}
         <section className="border-border bg-card/80 flex min-h-[320px] flex-col overflow-hidden rounded-xl border shadow-sm lg:min-h-0">
           <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4">
             {/* Key metrics row */}
             <div className="scrollbar-thin -mx-1 flex gap-2 overflow-x-auto pb-2">
               <MetricCard
-                label="Category"
+                label="Compliance"
                 value={`${report.complianceScore}%`}
                 variant="score"
               />

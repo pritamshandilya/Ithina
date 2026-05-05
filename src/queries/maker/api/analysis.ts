@@ -277,9 +277,12 @@ export async function fetchAdhocAnalysesForStore(
       const createdAt = parseDate(job.created_at);
       const status = toAdhocStatus(job.status);
       const complianceScore = extractComplianceScore(job.result);
-      const fixtureName = fixture?.code
-        ? `${fixture.code} (${fixture.type})`
-        : (fixture?.type ?? `Fixture ${job.fixture_id.slice(0, 8)}`);
+      const typeFallback = fixture?.type ?? `Fixture ${job.fixture_id.slice(0, 8)}`;
+      const c = fixture?.code?.trim() ?? "";
+      const fixtureName =
+        c && typeFallback.trim()
+          ? `${c} (${typeFallback.trim()})`
+          : c || typeFallback.trim();
 
       return {
         id: job.id,

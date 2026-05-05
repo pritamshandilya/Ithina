@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
 import { AlertCircle } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
-import type { ShelfTemplate } from "@/types/shelf-template";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
+import type { ShelfTemplate } from "@/types/shelf-template";
 
 export interface AddShelfFormValues {
   name: string;
@@ -44,7 +44,7 @@ export function AddShelfFormModal({
   shelfTemplatesLoading = false,
   initialTemplateId,
   title = "Add Shelf",
-  description = "Create a shelf for the selected fixture.",
+  description = "Create a shelf for the selected Display Unit.",
   fixtureOptions = [],
   selectedFixtureId = "",
   onFixtureChange,
@@ -96,8 +96,13 @@ export function AddShelfFormModal({
       setError("Height must be a valid number greater than 0.");
       return;
     }
-    if (!Number.isFinite(parsedVerticalPosition) || parsedVerticalPosition < 0) {
-      setError("Vertical position must be a valid number greater than or equal to 0.");
+    if (
+      !Number.isFinite(parsedVerticalPosition) ||
+      parsedVerticalPosition < 0
+    ) {
+      setError(
+        "Vertical position must be a valid number greater than or equal to 0.",
+      );
       return;
     }
 
@@ -112,21 +117,26 @@ export function AddShelfFormModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-xl" showCloseButton>
-      <div className="rounded-xl border border-border bg-card p-6 shadow-2xl">
-        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-xl"
+      showCloseButton
+    >
+      <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
+        <h3 className="text-foreground text-lg font-semibold">{title}</h3>
+        <p className="text-muted-foreground mt-1 text-sm">{description}</p>
 
         <div className="mt-5 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="add-shelf-fixture">Fixture</Label>
+            <Label htmlFor="add-shelf-fixture">Display Unit</Label>
             <Select
               id="add-shelf-fixture"
               value={selectedFixtureId}
               onChange={(event) => onFixtureChange?.(event.target.value)}
               disabled={disableFixtureSelect}
             >
-              <option value="">Select fixture...</option>
+              <option value="">Select display unit...</option>
               {fixtureOptions.map((fixture) => (
                 <option key={fixture.id} value={fixture.id}>
                   {fixture.label}
@@ -136,7 +146,9 @@ export function AddShelfFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="add-shelf-template">Shelf template (optional)</Label>
+            <Label htmlFor="add-shelf-template">
+              Shelf template (optional)
+            </Label>
             <Select
               id="add-shelf-template"
               value={templateId}
@@ -174,7 +186,9 @@ export function AddShelfFormModal({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="add-shelf-width">Width ({defaultDimensionUnit})</Label>
+              <Label htmlFor="add-shelf-width">
+                Width ({defaultDimensionUnit})
+              </Label>
               <Input
                 id="add-shelf-width"
                 type="number"
@@ -184,7 +198,9 @@ export function AddShelfFormModal({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="add-shelf-height">Height ({defaultDimensionUnit})</Label>
+              <Label htmlFor="add-shelf-height">
+                Height ({defaultDimensionUnit})
+              </Label>
               <Input
                 id="add-shelf-height"
                 type="number"
@@ -196,7 +212,9 @@ export function AddShelfFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="add-shelf-vertical-position">Vertical position</Label>
+            <Label htmlFor="add-shelf-vertical-position">
+              Vertical position
+            </Label>
             <Input
               id="add-shelf-vertical-position"
               type="number"
@@ -207,7 +225,7 @@ export function AddShelfFormModal({
           </div>
 
           {error ? (
-            <p className="flex items-center gap-1.5 text-sm text-destructive">
+            <p className="text-destructive flex items-center gap-1.5 text-sm">
               <AlertCircle className="size-4 shrink-0" />
               {error}
             </p>
@@ -218,7 +236,11 @@ export function AddShelfFormModal({
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button variant="success" onClick={() => void handleSubmit()} disabled={!canSubmit}>
+          <Button
+            variant="success"
+            onClick={() => void handleSubmit()}
+            disabled={!canSubmit}
+          >
             {isSaving ? "Creating..." : "Create Shelf"}
           </Button>
         </div>

@@ -1,6 +1,5 @@
 import { Link, useLocation } from "@tanstack/react-router";
 import {
-  ChevronDown,
   ChevronRight,
   FileBarChart,
   FileJson2,
@@ -10,12 +9,11 @@ import {
   LayoutGrid,
   LayoutPanelLeft,
   Library,
-  ListChecks,
   Settings,
   ShieldCheck,
   Store,
   Users,
-  Zap
+  Zap,
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
@@ -52,7 +50,7 @@ import { useStores as useCheckerStores, useOrgStores } from "@/queries/checker";
 import { useStores as useMakerStores } from "@/queries/maker";
 import SidenavFooter from "./footer";
 import { TeamSwitcher } from "./header-switch";
-import { type NavItem, isActiveItem, isMyAuditsActive } from "./nav-utils";
+import { type NavItem, isActiveItem } from "./nav-utils";
 
 export default function Sidenav() {
   const location = useLocation();
@@ -106,16 +104,6 @@ export default function Sidenav() {
 
     return nav;
   }, [currentUser]);
-
-  const [myAuditsExpanded, setMyAuditsExpanded] = useState(() =>
-    isMyAuditsActive(location.pathname),
-  );
-
-  useEffect(() => {
-    if (!isMyAuditsActive(location.pathname)) return;
-    const t = setTimeout(() => setMyAuditsExpanded(true), 0);
-    return () => clearTimeout(t);
-  }, [location.pathname]);
 
   const roleItems = useMemo<NavItem[]>(() => {
     const isStoreContext =
@@ -352,94 +340,35 @@ export default function Sidenav() {
 
               {role === "maker" && (
                 <SidebarMenuItem>
-                  {sidebarState === "collapsed" ? (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <SidebarMenuButton
-                          isActive={isMyAuditsActive(location.pathname)}
-                          tooltip="My Audits"
-                          className="cursor-pointer"
-                        >
-                          <ListChecks className="text-sidebar-foreground size-4 shrink-0 stroke-2 group-data-[collapsible=icon]:stroke-[2.5]" />
-                          <span className="flex-1 truncate group-data-[collapsible=icon]:hidden">
-                            My Audits
-                          </span>
-                        </SidebarMenuButton>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        side="right"
-                        align="start"
-                        className="w-56"
-                      >
-                        <DropdownMenuItem asChild>
-                          <Link
-                            to="/maker/audits/planogram"
-                            className="flex items-center gap-2"
-                          >
-                            <LayoutGrid className="size-4" />
-                            Planogram based analysis
-                          </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                          <Link
-                            to="/maker/audits/adhoc"
-                            className="flex items-center gap-2"
-                          >
-                            <Zap className="size-4" />
-                            Adhoc Analysis
-                          </Link>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  ) : (
-                    <>
-                      <SidebarMenuButton
-                        isActive={isMyAuditsActive(location.pathname)}
-                        tooltip="My Audits"
-                        onClick={() => setMyAuditsExpanded((e) => !e)}
-                        className="cursor-pointer"
-                        asChild={false}
-                      >
-                        <span className="flex w-full items-center gap-2">
-                          <ListChecks className="text-sidebar-foreground size-4 shrink-0 stroke-2 group-data-[collapsible=icon]:stroke-[2.5]" />
-                          <span className="flex-1 truncate">My Audits</span>
-                          <ChevronDown
-                            className={`size-4 shrink-0 transition-transform ${myAuditsExpanded ? "rotate-180" : ""}`}
-                          />
-                        </span>
-                      </SidebarMenuButton>
-                      {myAuditsExpanded && (
-                        <SidebarMenuSub>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={location.pathname.startsWith(
-                                "/maker/audits/planogram",
-                              )}
-                            >
-                              <Link to="/maker/audits/planogram">
-                                <LayoutGrid />
-                                Planogram based analysis
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                          <SidebarMenuSubItem>
-                            <SidebarMenuSubButton
-                              asChild
-                              isActive={location.pathname.startsWith(
-                                "/maker/audits/adhoc",
-                              )}
-                            >
-                              <Link to="/maker/audits/adhoc">
-                                <Zap />
-                                Adhoc Analysis
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        </SidebarMenuSub>
-                      )}
-                    </>
-                  )}
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith(
+                      "/maker/audits/planogram",
+                    )}
+                    tooltip="Planogram based analysis"
+                  >
+                    <Link to="/maker/audits/planogram">
+                      <LayoutGrid className="size-4 shrink-0" />
+                      Planogram based analysis
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
+
+              {role === "maker" && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location.pathname.startsWith(
+                      "/maker/audits/adhoc",
+                    )}
+                    tooltip="Adhoc Analysis"
+                  >
+                    <Link to="/maker/audits/adhoc">
+                      <Zap className="size-4 shrink-0" />
+                      Adhoc Analysis
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               )}
 

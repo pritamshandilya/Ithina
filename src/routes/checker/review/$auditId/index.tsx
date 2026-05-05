@@ -14,7 +14,6 @@ import {
 } from "@tanstack/react-router";
 import { format } from "date-fns";
 import {
-  ArrowLeft,
   Calendar,
   CheckCircle,
   FileBarChart,
@@ -28,6 +27,7 @@ import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { ComplianceReportMetrics } from "@/components/shared/compliance-report";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
 import { Label } from "@/components/ui/label";
@@ -251,15 +251,10 @@ export function AuditReviewWorkspace() {
       <MainLayout>
         <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
           <div className="mx-auto max-w-screen-2xl space-y-4">
-            <Button variant="ghost" asChild>
-              <Link
-                {...routes.toAuditReview()}
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Audit Review
-              </Link>
-            </Button>
+            <DetailBackButton
+              linkProps={{ ...routes.toAuditReview() }}
+              aria-label="Back to Audit Review"
+            />
             <div className="border-destructive/50 bg-destructive/10 rounded-lg border p-8 text-center">
               <XCircle className="text-destructive mx-auto h-12 w-12" />
               <p className="text-foreground mt-4 text-lg font-semibold">
@@ -292,15 +287,10 @@ export function AuditReviewWorkspace() {
         <div className="mx-auto max-w-screen-2xl space-y-4">
           {/* Header: Back + Title + View Full Report */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <Button variant="ghost" asChild size="sm">
-              <Link
-                {...routes.toAuditReview()}
-                className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Audit Review
-              </Link>
-            </Button>
+            <DetailBackButton
+              linkProps={{ ...routes.toAuditReview() }}
+              aria-label="Back to Audit Review"
+            />
             <Button
               variant="outline"
               size="sm"

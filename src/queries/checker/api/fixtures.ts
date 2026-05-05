@@ -4,7 +4,7 @@ export interface StoreFixtureApiModel {
   id: string;
   store_id: string;
   type: string;
-  code?: string;
+  code: string;
   compliance_rule_set_id?: string | null;
   planogram_id?: string | null;
   current_planogram_assignment?: FixtureCurrentPlanogramAssignmentApiModel | null;
@@ -47,7 +47,7 @@ export interface FixturePlanogramAssignmentHistoryApiModel {
 
 export interface CreateStoreFixturePayload {
   type: string;
-  code?: string;
+  code: string;
   dimensions: {
     width: number;
     height: number;
@@ -129,6 +129,7 @@ function normalizeFixture(
 ): StoreFixtureApiModel {
   return {
     ...fixture,
+    code: fixture.code ?? "",
     planogram_id:
       fixture.current_planogram_assignment?.planogram_id ??
       fixture.planogram_id ??

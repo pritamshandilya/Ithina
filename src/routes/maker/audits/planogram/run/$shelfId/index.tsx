@@ -44,7 +44,11 @@ function NewPlanogramAnalysisPage() {
       title="New Planogram Based Analysis"
       backTo={backTo}
       analysisType="PLANOGRAM"
-      fixtureName={fixture?.type}
+      fixtureName={
+        fixture
+          ? `${fixture.code.trim()} (${fixture.type.trim()})`
+          : undefined
+      }
       planogramName={analysisPlanogramPayload?.name}
       planogramPayload={analysisPlanogramPayload}
       fixedFixtureId={fixtureId ?? undefined}

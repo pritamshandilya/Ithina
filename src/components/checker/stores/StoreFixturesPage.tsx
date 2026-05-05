@@ -238,6 +238,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
     if (!canEdit) return;
     if (!selectedStoreId) return;
     const type = values.type.trim();
+    const code = values.code.trim();
     if (!type) {
       toast({
         title: "Missing fixture type",
@@ -246,14 +247,21 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
       });
       return;
     }
+    if (!code) {
+      toast({
+        title: "Missing fixture code",
+        description: "Fixture code is required.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setIsCreatingFixture(true);
     try {
       if (editingFixture) {
-        const code = values.code?.trim() || undefined;
         await updateStoreFixture(selectedStoreId, editingFixture.id, {
           type,
-          ...(code ? { code } : {}),
+          code,
           dimensions: {
             width: Number(values.width) || editingFixture.dimensions.width,
             height: Number(values.height) || editingFixture.dimensions.height,
@@ -289,6 +297,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
       } else {
         await createStoreFixture(selectedStoreId, {
           type,
+          code,
           dimensions: {
             width: Number(values.width) || 120,
             height: Number(values.height) || 200,
@@ -618,7 +627,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
           id: `fixture-${fixture.id}`,
           fixtureId: fixture.id,
           shelfName: fixture.type,
-          shelfCode: fixture.code ?? "—",
+          shelfCode: fixture.code.trim() || "—",
           fixtureType: fixture.type,
           section: fixture.physical_location.section,
           zone: fixture.physical_location.zone,
@@ -812,7 +821,11 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
           if (!fixtureToDelete) return;
           void handleDeleteFixture(fixtureToDelete);
         }}
-        fixtureToDeleteType={fixtureToDelete?.type}
+        fixtureToDeleteLabel={
+          fixtureToDelete
+            ? `${fixtureToDelete.code.trim()} (${fixtureToDelete.type.trim()})`
+            : undefined
+        }
         isDeletingFixture={isDeletingFixture}
         fixtureModalOpen={fixtureModalOpen}
         onCloseFixtureModal={() => {
@@ -866,9 +879,7 @@ export function StoreFixturesPage({ canEdit = false }: StoreFixturesPageProps) {
         initialTemplateId={pendingTemplateId}
         fixtureOptions={fixtures.map((fixture) => ({
           id: fixture.id,
-          label: fixture.code
-            ? `${fixture.code} (${fixture.type})`
-            : `${fixture.type} - ${fixture.physical_location.zone}/${fixture.physical_location.section}`,
+          label: `${fixture.code.trim()} (${fixture.type.trim()})`,
         }))}
         selectedFixtureId={selectedFixtureForShelfForm}
         onFixtureChange={setSelectedFixtureForShelfForm}

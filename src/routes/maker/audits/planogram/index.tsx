@@ -17,7 +17,7 @@ function PlanogramAnalysisPage() {
       pageHeader={
         <PageHeader
           title="Planogram Based Analysis"
-          description="Analyze store shelves against approved planogram arrangements."
+          description="Analyze store Display Units against approved planogram arrangements."
         />
       }
     >

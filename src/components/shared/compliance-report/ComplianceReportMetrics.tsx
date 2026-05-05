@@ -4,8 +4,14 @@
  * Horizontal row of metric cards for the full report.
  * Uses ReportSnippet metrics structure.
  */
+import {
+  AlertCircle,
+  AlertTriangle,
+  Check,
+  Package,
+  XCircle,
+} from "lucide-react";
 
-import { Check, AlertTriangle, XCircle, Package, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface ComplianceReportMetricsProps {
@@ -37,7 +43,7 @@ export function ComplianceReportMetrics({
 }: ComplianceReportMetricsProps) {
   const metrics = [
     {
-      label: "Category",
+      label: "Compliance",
       value: `${complianceScore}%`,
       variant: "score" as const,
       icon: null,
@@ -72,9 +78,19 @@ export function ComplianceReportMetrics({
       variant: "issues" as const,
       icon: AlertCircle,
     },
-    { label: "Facings", value: facings, variant: "neutral" as const, icon: null },
+    {
+      label: "Facings",
+      value: facings,
+      variant: "neutral" as const,
+      icon: null,
+    },
     { label: "Units", value: units, variant: "neutral" as const, icon: null },
-    { label: "Detected", value: detected, variant: "neutral" as const, icon: null },
+    {
+      label: "Detected",
+      value: detected,
+      variant: "neutral" as const,
+      icon: null,
+    },
     {
       label: "Gap",
       value: gap,
@@ -86,8 +102,8 @@ export function ComplianceReportMetrics({
   return (
     <div
       className={cn(
-        "grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2 w-full",
-        className
+        "grid w-full grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-10",
+        className,
       )}
     >
       {metrics.map((m) => (
@@ -158,12 +174,12 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "rounded-lg border px-2.5 py-2 min-w-0 text-center flex flex-col items-center justify-center",
-        variantStyles[variant] ?? variantStyles.neutral
+        "flex min-w-0 flex-col items-center justify-center rounded-lg border px-2.5 py-2 text-center",
+        variantStyles[variant] ?? variantStyles.neutral,
       )}
     >
       {variant === "score" && score !== null ? (
-        <div className="relative size-10 mb-0.5">
+        <div className="relative mb-0.5 size-10">
           <svg viewBox="0 0 36 36" className="size-10 -rotate-90">
             <path
               d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
@@ -185,7 +201,7 @@ function MetricCard({
               strokeDasharray={`${(score / 100) * 100} 100`}
             />
           </svg>
-          <span className="absolute inset-0 flex items-center justify-center text-xs font-bold text-foreground">
+          <span className="text-foreground absolute inset-0 flex items-center justify-center text-xs font-bold">
             {value}
           </span>
         </div>
@@ -193,21 +209,24 @@ function MetricCard({
         <div className="flex items-center gap-1">
           {Icon && (
             <Icon
-              className={cn("size-4 shrink-0", iconColors[variant] ?? "text-muted-foreground")}
+              className={cn(
+                "size-4 shrink-0",
+                iconColors[variant] ?? "text-muted-foreground",
+              )}
               aria-hidden
             />
           )}
           <p
             className={cn(
               "text-lg font-bold",
-              valueColors[variant] ?? "text-foreground"
+              valueColors[variant] ?? "text-foreground",
             )}
           >
             {value}
           </p>
         </div>
       )}
-      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground mt-0.5">
+      <p className="text-muted-foreground mt-0.5 text-[10px] font-medium tracking-wider uppercase">
         {label}
       </p>
     </div>

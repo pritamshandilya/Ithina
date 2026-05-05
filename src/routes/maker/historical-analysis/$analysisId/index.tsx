@@ -9,13 +9,12 @@ import {
   useLocation,
   useNavigate,
 } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import placeholderShelf from "@/assets/placeholder-shelf.jpg";
 import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
-import { Button } from "@/components/ui/button";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type ReportSnippet,
@@ -116,14 +115,7 @@ function HistoricalAnalysisDetailPage() {
       <div className="bg-primary flex h-full min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
           <header className="flex shrink-0 items-center gap-2 pb-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate({ to: backTo })}
-              aria-label="Back"
-            >
-              <ArrowLeft className="size-4" aria-hidden />
-            </Button>
+            <DetailBackButton onClick={() => navigate({ to: backTo })} />
             <div className="space-y-0.5">
               <h1 className="text-foreground text-xl font-bold sm:text-2xl">
                 Combined Compliance & Analysis Report

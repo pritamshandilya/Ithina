@@ -1,6 +1,6 @@
+import { Pencil, Plus } from "lucide-react";
 import type { MutableRefObject } from "react";
 import { useState } from "react";
-import { Pencil, Plus } from "lucide-react";
 
 import {
   CategoryFilterTags,
@@ -50,9 +50,16 @@ function PlanogramAssociationModal({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} className="max-w-lg" showCloseButton>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      className="max-w-lg"
+      showCloseButton
+    >
       <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
-        <h3 className="text-foreground text-lg font-semibold">Associate Planogram</h3>
+        <h3 className="text-foreground text-lg font-semibold">
+          Associate Planogram
+        </h3>
         <p className="text-muted-foreground mt-1 text-sm">
           Select a planogram to assign to this fixture.
         </p>
@@ -103,7 +110,10 @@ export interface StoreFixtureDetailPlanogramTabProps {
     productId: string,
     targetProductId?: string,
   ) => void;
-  dragRef: MutableRefObject<{ productId: string; fromShelf: string | "removed" } | null>;
+  dragRef: MutableRefObject<{
+    productId: string;
+    fromShelf: string | "removed";
+  } | null>;
   planogramOptions: { id: string; name: string }[];
   planogramId: string;
   onPlanogramIdChange: (value: string) => void;
@@ -135,7 +145,8 @@ export function StoreFixtureDetailPlanogramTab({
   const [isAssociationModalOpen, setIsAssociationModalOpen] = useState(false);
   const hasAssociatedPlanogram = !!effectiveFixturePlanogramId;
   const associatedPlanogramName =
-    planogramOptions.find((option) => option.id === effectiveFixturePlanogramId)?.name ??
+    planogramOptions.find((option) => option.id === effectiveFixturePlanogramId)
+      ?.name ??
     effectivePayload?.name ??
     effectiveFixturePlanogramId;
 
@@ -147,8 +158,8 @@ export function StoreFixtureDetailPlanogramTab({
             <CardTitle className="text-sm">Planogram Association</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              No planogram is associated with this fixture.
+            <p className="text-muted-foreground text-sm">
+              No planogram is associated with this Display Unit.
             </p>
             <Button
               type="button"
@@ -179,13 +190,15 @@ export function StoreFixtureDetailPlanogramTab({
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
-            <div className="text-sm text-foreground">{associatedPlanogramName}</div>
+            <div className="text-foreground text-sm">
+              {associatedPlanogramName}
+            </div>
             {effectivePayload ? (
               <>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {effectivePayload.version ?? "—"} · {effectivePayload.status}
                 </div>
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {effectivePayload.description ?? "No description"}
                 </div>
               </>
@@ -203,18 +216,20 @@ export function StoreFixtureDetailPlanogramTab({
       />
       {hasAssociatedPlanogram && !isMissingPlanogram && (
         <>
-          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+          {/* <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
             <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
             <StatCard title="SKUs" value={stats.skus} className="stat-card" />
             <StatCard title="Front Facings" value={stats.frontFacings} className="stat-card" />
             <StatCard title="Total Units" value={stats.totalUnits} className="stat-card" />
             <StatCard title="Categories" value={stats.categories} className="stat-card" />
             <StatCard title="Removed" value={stats.removed} className="stat-card" />
-          </div>
+          </div> */}
           <CategoryFilterTags
             categories={stats.categoryList}
             selected={
-              selectedCategories.size === 0 ? new Set(stats.categoryList) : selectedCategories
+              selectedCategories.size === 0
+                ? new Set(stats.categoryList)
+                : selectedCategories
             }
             onToggle={onToggleCategory}
           />
@@ -241,10 +256,19 @@ export function StoreFixtureDetailPlanogramTab({
                       if (!dragRef.current) return;
                       const { productId, fromShelf } = dragRef.current;
                       dragRef.current = null;
-                      onMoveProduct(fromShelf, toShelfId, productId, targetProductId);
+                      onMoveProduct(
+                        fromShelf,
+                        toShelfId,
+                        productId,
+                        targetProductId,
+                      );
                     },
                     onDropOnRemoved: () => {
-                      if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
+                      if (
+                        !dragRef.current ||
+                        dragRef.current.fromShelf === "removed"
+                      )
+                        return;
                       const { productId, fromShelf } = dragRef.current;
                       dragRef.current = null;
                       onRemoveProduct(fromShelf, productId);
@@ -258,7 +282,9 @@ export function StoreFixtureDetailPlanogramTab({
               shelves={baseShelves}
               onRestore={onRestoreProduct}
               onRemoveFromShelf={onRemoveProduct}
-              onMoveFromSidebar={(productId, toShelfId) => onMoveProduct("removed", toShelfId, productId)}
+              onMoveFromSidebar={(productId, toShelfId) =>
+                onMoveProduct("removed", toShelfId, productId)
+              }
             />
           </div>
           <div className="grid gap-3">
@@ -267,15 +293,17 @@ export function StoreFixtureDetailPlanogramTab({
                 <ProductDetailsTable shelves={shelvesToShow} />
               </div>
             </div>
-            <div className="rounded-lg border border-border bg-card/80 p-3 text-sm text-muted-foreground">
+            <div className="border-border bg-card/80 text-muted-foreground rounded-lg border p-3 text-sm">
               {planogramFixture ? (
                 <div>
-                  Fixture: {planogramFixture.width}×{planogramFixture.height}×{planogramFixture.depth}
+                  Fixture: {planogramFixture.width}×{planogramFixture.height}×
+                  {planogramFixture.depth}
                 </div>
               ) : null}
               {baseShelves.length > 0 ? (
                 <div className={planogramFixture ? "mt-2" : undefined}>
-                  {getShelfDisplayLabel(baseShelves, baseShelves[0].id)} starts at {baseShelves[0].y_position}
+                  {getShelfDisplayLabel(baseShelves, baseShelves[0].id)} starts
+                  at {baseShelves[0].y_position}
                 </div>
               ) : null}
             </div>

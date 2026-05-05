@@ -38,7 +38,7 @@ function getFixtureInitialValues(
 
   return {
     type: editingFixture.type,
-    code: editingFixture.code,
+    code: editingFixture.code ?? "",
     planogramId: editingFixturePlanogramId ?? editingFixture.planogram_id ?? "",
     width:
       editingFixture.dimensions?.width !== undefined &&

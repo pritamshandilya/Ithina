@@ -32,7 +32,10 @@ import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { StoreSetting } from "@/types/checker";
 import type { ShelfTemplateCreateInput } from "@/types/shelf-template";
 import { replaceShelfTemplates } from "@/queries/checker/api/shelf-templates";
-import { createStoreFixture } from "@/queries/checker/api/fixtures";
+import {
+  createStoreFixture,
+  createStoreFixturesBulk,
+} from "@/queries/checker/api/fixtures";
 import type { CreateComplianceRuleSetModalProps } from "@/components/common/create-compliance-rule-set-modal";
 
 const LOCAL_DEFAULT_RULE_SET_ID = "local-default-compliance-rule-set";
@@ -167,10 +170,7 @@ export function useStoreOnboarding() {
     basicForm.region.trim().length > 0 &&
     basicForm.currency.trim().length > 0;
 
-  const canContinueConfig =
-    configForm.default_dimensions.trim().length > 0 &&
-    fixtureTypes.some((f) => f.type.trim().length > 0) &&
-    shelfTemplatesConfig.some((t) => t.name.trim().length > 0);
+  const canContinueConfig = configForm.default_dimensions.trim().length > 0;
 
   const { data: dimensionUnits = [] } = useDimensionUnits();
 
@@ -441,29 +441,32 @@ export function useStoreOnboarding() {
           seen.add(key);
           return true;
         });
-        const fixtureResults = await Promise.allSettled(
-          dedupedFixtures.map((fixture, idx) => {
-            let generatedCode =
-              fixture.code ||
-              buildFixtureCode(
-                {
-                  type: fixture.type,
-                  aisle: fixture.aisle,
-                  zone: fixture.zone,
-                  section: fixture.section,
-                },
-                idx,
-              );
-            // Ensure uniqueness in this batch.
-            while (seenCodes.has(generatedCode)) {
-              generatedCode = `${generatedCode}-${String(seenCodes.size + 1).padStart(2, "0")}`;
-            }
-            seenCodes.add(generatedCode);
+        const fixturesWithCodes = dedupedFixtures.map((fixture, idx) => {
+          let generatedCode =
+            fixture.code ||
+            buildFixtureCode(
+              {
+                type: fixture.type,
+                aisle: fixture.aisle,
+                zone: fixture.zone,
+                section: fixture.section,
+              },
+              idx,
+            );
+          // Ensure uniqueness in this batch.
+          while (seenCodes.has(generatedCode)) {
+            generatedCode = `${generatedCode}-${String(seenCodes.size + 1).padStart(2, "0")}`;
+          }
+          seenCodes.add(generatedCode);
+          return { ...fixture, code: generatedCode };
+        });
 
-            return (
-            createStoreFixture(storeId, {
+        let failedFixtureCount = 0;
+        try {
+          await createStoreFixturesBulk(storeId, {
+            fixtures: fixturesWithCodes.map((fixture) => ({
+              code: fixture.code,
               type: fixture.type,
-              code: generatedCode,
               dimensions: {
                 width: fixture.width,
                 height: fixture.height,
@@ -475,14 +478,42 @@ export function useStoreOnboarding() {
                 aisle: fixture.aisle,
                 zone: fixture.zone,
               },
-            })
-            );
-          }),
-        );
-
-        const failedFixtureCount = fixtureResults.filter(
-          (result) => result.status === "rejected",
-        ).length;
+              // Backend requires at least one shelf for bulk fixture creation.
+              shelves: [
+                {
+                  code: "S-01",
+                  name: "Main Shelf",
+                  width: Math.max(1, fixture.width),
+                  height: Math.max(1, fixture.height),
+                  vertical_position: 0,
+                },
+              ],
+            })),
+          });
+        } catch {
+          const fixtureResults = await Promise.allSettled(
+            fixturesWithCodes.map((fixture) =>
+              createStoreFixture(storeId, {
+                type: fixture.type,
+                code: fixture.code,
+                dimensions: {
+                  width: fixture.width,
+                  height: fixture.height,
+                  depth: fixture.depth,
+                },
+                dimension_unit: fixture.dimension_unit,
+                physical_location: {
+                  section: fixture.section,
+                  aisle: fixture.aisle,
+                  zone: fixture.zone,
+                },
+              }),
+            ),
+          );
+          failedFixtureCount = fixtureResults.filter(
+            (result) => result.status === "rejected",
+          ).length;
+        }
         if (failedFixtureCount > 0) {
           postCreateWarnings.push(
             `${failedFixtureCount} fixture(s) could not be created during onboarding; you can add them later from shelf setup.`,

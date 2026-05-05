@@ -10,7 +10,9 @@ export function buildFixtureGroupHeader(
   count: number,
 ) {
   const fixture = fixtureById.get(value);
-  const fixtureLabel = fixture?.type ?? "Fixture";
+  const fixtureLabel = fixture
+    ? `${fixture.code.trim()} (${fixture.type.trim()})`
+    : "Fixture";
   const aisle = fixture?.physical_location.aisle ?? "—";
   const zone = fixture?.physical_location.zone ?? "—";
   const section = fixture?.physical_location.section ?? "—";

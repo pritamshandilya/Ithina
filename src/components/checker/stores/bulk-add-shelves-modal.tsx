@@ -293,58 +293,62 @@ export function BulkAddShelvesModal({
       }}
       className="max-w-3xl"
     >
-      <div className="rounded-lg border border-border bg-card p-6 shadow-lg min-h-[520px] flex flex-col">
-        <h3 className="text-base font-semibold text-foreground">Bulk Add Shelves</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Upload or paste JSON, then review before creating.
-        </p>
-        <div className="mt-4 inline-flex rounded-md border border-border bg-muted/30 p-1">
-          <Button
-            type="button"
-            size="sm"
-            variant={bulkAddMode === "file" ? "default" : "ghost"}
-            onClick={() => {
-              setBulkAddMode("file");
-              setBulkAddStep("input");
-              setParsedBulkPayload(null);
-            }}
-          >
-            Upload JSON
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant={bulkAddMode === "paste" ? "default" : "ghost"}
-            onClick={() => {
-              setBulkAddMode("paste");
-              setBulkAddStep("input");
-              setParsedBulkPayload(null);
-            }}
-          >
-            Paste JSON
-          </Button>
+      <div className="flex max-h-[min(88vh,860px)] w-full flex-col overflow-hidden rounded-lg border border-border bg-card p-6 shadow-lg">
+        <div className="shrink-0 space-y-3">
+          <div>
+            <h3 className="text-base font-semibold text-foreground">Bulk Add Shelves</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Upload or paste JSON, then review before creating.
+            </p>
+          </div>
+          <div className="inline-flex rounded-md border border-border bg-muted/30 p-1">
+            <Button
+              type="button"
+              size="sm"
+              variant={bulkAddMode === "file" ? "default" : "ghost"}
+              onClick={() => {
+                setBulkAddMode("file");
+                setBulkAddStep("input");
+                setParsedBulkPayload(null);
+              }}
+            >
+              Upload JSON
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={bulkAddMode === "paste" ? "default" : "ghost"}
+              onClick={() => {
+                setBulkAddMode("paste");
+                setBulkAddStep("input");
+                setParsedBulkPayload(null);
+              }}
+            >
+              Paste JSON
+            </Button>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={handleLoadSampleJson}>
+              Upload sample JSON
+            </Button>
+            <Button type="button" variant="outline" size="sm" onClick={handleDownloadSampleJson}>
+              Download sample JSON
+            </Button>
+          </div>
+          <input
+            ref={bulkFileInputRef}
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={handleBulkFileChange}
+          />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={handleLoadSampleJson}>
-            Upload sample JSON
-          </Button>
-          <Button type="button" variant="outline" size="sm" onClick={handleDownloadSampleJson}>
-            Download sample JSON
-          </Button>
-        </div>
-        <input
-          ref={bulkFileInputRef}
-          type="file"
-          accept=".json,application/json"
-          className="hidden"
-          onChange={handleBulkFileChange}
-        />
-        <div className="mt-4 flex-1 min-h-0">
+        <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
           {bulkAddStep === "input" ? (
             bulkAddMode === "file" ? (
-              <>
+              <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
                 <div
-                  className={`h-full min-h-[340px] rounded-lg border-2 border-dashed p-6 text-center transition-colors flex flex-col items-center justify-center ${
+                  className={`flex min-h-0 flex-1 flex-col items-center justify-center overflow-auto rounded-lg border-2 border-dashed p-6 text-center transition-colors ${
                     isBulkDragging ? "border-accent bg-accent/10" : "border-border bg-card"
                   }`}
                   onDragOver={(event) => {
@@ -366,14 +370,14 @@ export function BulkAddShelvesModal({
                     type="button"
                     variant="outline"
                     size="sm"
-                    className="mt-4"
+                    className="mt-4 shrink-0"
                     onClick={() => bulkFileInputRef.current?.click()}
                   >
                     {bulkFile ? "Change File" : "Browse File"}
                   </Button>
                 </div>
                 {bulkFile ? (
-                  <div className="mt-3 flex items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
+                  <div className="flex shrink-0 items-center justify-between rounded-md border border-border bg-muted/30 px-3 py-2">
                     <p className="truncate text-sm text-foreground">{bulkFile.name}</p>
                     <Button
                       type="button"
@@ -386,20 +390,20 @@ export function BulkAddShelvesModal({
                     </Button>
                   </div>
                 ) : null}
-              </>
+              </div>
             ) : (
-              <div className="h-full rounded-lg border border-border bg-muted/20 p-3">
+              <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-border bg-muted/20 p-3">
                 <textarea
                   value={pastedBulkJson}
                   onChange={(e) => setPastedBulkJson(e.target.value)}
                   placeholder="Paste JSON with fixtures and shelves"
-                  className="h-[calc(100%-8px)] min-h-[300px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
+                  className="min-h-[200px] w-full flex-1 resize-none rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             )
           ) : (
-            <div className="h-full min-h-[340px] overflow-auto rounded-lg border border-border bg-muted/20 p-3">
-              <p className="mb-3 text-sm text-muted-foreground">
+            <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden rounded-lg border border-border bg-muted/20 p-3">
+              <p className="shrink-0 text-sm text-muted-foreground">
                 Previewing{" "}
                 <span className="font-semibold text-foreground">
                   {parsedBulkPayload?.totalShelves ?? 0}
@@ -410,9 +414,9 @@ export function BulkAddShelvesModal({
                 </span>{" "}
                 fixtures
               </p>
-              <div className="overflow-auto rounded-md border border-border bg-card">
+              <div className="min-h-0 flex-1 overflow-auto rounded-md border border-border bg-card">
                 <table className="w-full min-w-[820px] text-sm">
-                  <thead className="bg-muted/40 text-left text-xs uppercase text-muted-foreground">
+                  <thead className="sticky top-0 z-1 bg-muted/95 text-left text-xs uppercase text-muted-foreground backdrop-blur-sm">
                     <tr>
                       <th className="px-3 py-2">Fixture</th>
                       <th className="px-3 py-2">Location</th>
@@ -430,7 +434,9 @@ export function BulkAddShelvesModal({
                           key={`${fixture.code}-${shelf.code}`}
                           className="border-t border-border text-foreground"
                         >
-                          <td className="px-3 py-2">{fixture.code}</td>
+                            <td className="px-3 py-2">
+                              {`${fixture.code.trim()} (${fixture.type.trim()})`}
+                            </td>
                           <td className="px-3 py-2">
                             {fixture.physical_location.section} / {fixture.physical_location.aisle} /{" "}
                             {fixture.physical_location.zone}
@@ -449,7 +455,7 @@ export function BulkAddShelvesModal({
             </div>
           )}
         </div>
-        <div className="mt-auto pt-5 flex justify-end gap-2">
+        <div className="mt-4 flex shrink-0 justify-end gap-2 border-t border-border pt-4">
           <Button
             type="button"
             variant="outline"

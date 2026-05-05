@@ -17,7 +17,11 @@ import {
   normalizeShelfProductPositions,
   sortPlanogramShelves,
 } from "@/lib/planogram/planogram-schema";
-import type { PlanogramPayload, PlanogramProduct, PlanogramShelfDef } from "@/types/planogram";
+import type {
+  PlanogramPayload,
+  PlanogramProduct,
+  PlanogramShelfDef,
+} from "@/types/planogram";
 
 interface PlanogramRenderedPreviewProps {
   payload: PlanogramPayload | null;
@@ -32,8 +36,13 @@ export function PlanogramRenderedPreview({
 }: PlanogramRenderedPreviewProps) {
   const [shelves, setShelves] = useState<PlanogramShelfDef[]>([]);
   const [removedItems, setRemovedItems] = useState<PlanogramProduct[]>([]);
-  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
-  const dragRef = useRef<{ productId: string; fromShelf: string | "removed" } | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(
+    new Set(),
+  );
+  const dragRef = useRef<{
+    productId: string;
+    fromShelf: string | "removed";
+  } | null>(null);
 
   useEffect(() => {
     setShelves(payload ? normalizePlanogramShelves(payload.shelves) : []);
@@ -41,7 +50,10 @@ export function PlanogramRenderedPreview({
     setSelectedCategories(new Set());
   }, [payload]);
 
-  const stats = useMemo(() => derivePlanogramStats(shelves, removedItems), [shelves, removedItems]);
+  const stats = useMemo(
+    () => derivePlanogramStats(shelves, removedItems),
+    [shelves, removedItems],
+  );
 
   const shelvesToShow = useMemo(() => {
     if (selectedCategories.size === 0) return shelves;
@@ -73,11 +85,19 @@ export function PlanogramRenderedPreview({
   );
 
   const mutateShelfProducts = useCallback(
-    (shelfId: string, updater: (products: PlanogramProduct[]) => PlanogramProduct[]) => {
+    (
+      shelfId: string,
+      updater: (products: PlanogramProduct[]) => PlanogramProduct[],
+    ) => {
       setShelves((previous) =>
         previous.map((shelf) =>
           shelf.id === shelfId
-            ? { ...shelf, products: normalizeShelfProductPositions(updater(shelf.products)) }
+            ? {
+                ...shelf,
+                products: normalizeShelfProductPositions(
+                  updater(shelf.products),
+                ),
+              }
             : shelf,
         ),
       );
@@ -85,28 +105,38 @@ export function PlanogramRenderedPreview({
     [],
   );
 
-  const onEditName = useCallback((shelfId: string, productId: string, newName: string) => {
-    mutateShelfProducts(shelfId, (products) =>
-      products.map((product, index) =>
-        getPlanogramProductId(product, `${shelfId}:${index}`) === productId
-          ? { ...product, name: newName }
-          : product,
-      ),
-    );
-  }, [mutateShelfProducts]);
+  const onEditName = useCallback(
+    (shelfId: string, productId: string, newName: string) => {
+      mutateShelfProducts(shelfId, (products) =>
+        products.map((product, index) =>
+          getPlanogramProductId(product, `${shelfId}:${index}`) === productId
+            ? { ...product, name: newName }
+            : product,
+        ),
+      );
+    },
+    [mutateShelfProducts],
+  );
 
-  const onEditCategory = useCallback((shelfId: string, productId: string, newCategory: string) => {
-    mutateShelfProducts(shelfId, (products) =>
-      products.map((product, index) =>
-        getPlanogramProductId(product, `${shelfId}:${index}`) === productId
-          ? { ...product, category: newCategory }
-          : product,
-      ),
-    );
-  }, [mutateShelfProducts]);
+  const onEditCategory = useCallback(
+    (shelfId: string, productId: string, newCategory: string) => {
+      mutateShelfProducts(shelfId, (products) =>
+        products.map((product, index) =>
+          getPlanogramProductId(product, `${shelfId}:${index}`) === productId
+            ? { ...product, category: newCategory }
+            : product,
+        ),
+      );
+    },
+    [mutateShelfProducts],
+  );
 
   const onEditFacingsDepth = useCallback(
-    (shelfId: string, productId: string, updates: { facings?: number; depthCount?: number }) => {
+    (
+      shelfId: string,
+      productId: string,
+      updates: { facings?: number; depthCount?: number },
+    ) => {
       mutateShelfProducts(shelfId, (products) =>
         products.map((product, index) =>
           getPlanogramProductId(product, `${shelfId}:${index}`) === productId
@@ -126,10 +156,14 @@ export function PlanogramRenderedPreview({
     setShelves((previous) => {
       const sourceShelf = previous.find((shelf) => shelf.id === shelfId);
       const product = sourceShelf?.products.find(
-        (item, index) => getPlanogramProductId(item, `${shelfId}:${index}`) === productId,
+        (item, index) =>
+          getPlanogramProductId(item, `${shelfId}:${index}`) === productId,
       );
       if (!product) return previous;
-      setRemovedItems((items) => [...items, { ...product, size: { ...product.size } }]);
+      setRemovedItems((items) => [
+        ...items,
+        { ...product, size: { ...product.size } },
+      ]);
       return previous.map((shelf) =>
         shelf.id === shelfId
           ? {
@@ -137,7 +171,8 @@ export function PlanogramRenderedPreview({
               products: normalizeShelfProductPositions(
                 shelf.products.filter(
                   (item, index) =>
-                    getPlanogramProductId(item, `${shelfId}:${index}`) !== productId,
+                    getPlanogramProductId(item, `${shelfId}:${index}`) !==
+                    productId,
                 ),
               ),
             }
@@ -146,15 +181,30 @@ export function PlanogramRenderedPreview({
     });
   }, []);
 
-  const onRestoreProduct = useCallback((shelfId: string, product: PlanogramProduct) => {
-    mutateShelfProducts(shelfId, (products) => [...products, { ...product, size: { ...product.size } }]);
-    setRemovedItems((previous) =>
-      previous.filter((item, index) => getPlanogramProductId(item, `removed:${index}`) !== getPlanogramProductId(product, "restored")),
-    );
-  }, [mutateShelfProducts]);
+  const onRestoreProduct = useCallback(
+    (shelfId: string, product: PlanogramProduct) => {
+      mutateShelfProducts(shelfId, (products) => [
+        ...products,
+        { ...product, size: { ...product.size } },
+      ]);
+      setRemovedItems((previous) =>
+        previous.filter(
+          (item, index) =>
+            getPlanogramProductId(item, `removed:${index}`) !==
+            getPlanogramProductId(product, "restored"),
+        ),
+      );
+    },
+    [mutateShelfProducts],
+  );
 
   const onMoveProduct = useCallback(
-    (from: string | "removed", to: string, productId: string, targetProductId?: string) => {
+    (
+      from: string | "removed",
+      to: string,
+      productId: string,
+      targetProductId?: string,
+    ) => {
       const sourceProduct =
         from === "removed"
           ? removedItems.find(
@@ -174,8 +224,7 @@ export function PlanogramRenderedPreview({
 
       const incomingWidth = sourceProduct.size.width * sourceProduct.facings;
       const currentWidth =
-        getShelfUsedWidth(targetShelf) -
-        (from === to ? incomingWidth : 0);
+        getShelfUsedWidth(targetShelf) - (from === to ? incomingWidth : 0);
 
       if (currentWidth + incomingWidth > targetShelf.width) {
         return;
@@ -191,7 +240,8 @@ export function PlanogramRenderedPreview({
                   products: normalizeShelfProductPositions(
                     shelf.products.filter(
                       (item, index) =>
-                        getPlanogramProductId(item, `${from}:${index}`) !== productId,
+                        getPlanogramProductId(item, `${from}:${index}`) !==
+                        productId,
                     ),
                   ),
                 }
@@ -211,11 +261,16 @@ export function PlanogramRenderedPreview({
           const insertionIndex = targetProductId
             ? nextProducts.findIndex(
                 (item, index) =>
-                  getPlanogramProductId(item, `${to}:${index}`) === targetProductId,
+                  getPlanogramProductId(item, `${to}:${index}`) ===
+                  targetProductId,
               )
             : -1;
-          const productToInsert = { ...sourceProduct, size: { ...sourceProduct.size } };
-          if (insertionIndex >= 0) nextProducts.splice(insertionIndex, 0, productToInsert);
+          const productToInsert = {
+            ...sourceProduct,
+            size: { ...sourceProduct.size },
+          };
+          if (insertionIndex >= 0)
+            nextProducts.splice(insertionIndex, 0, productToInsert);
           else nextProducts.push(productToInsert);
 
           return {
@@ -237,19 +292,22 @@ export function PlanogramRenderedPreview({
     [removedItems, shelves],
   );
 
-  const onReorderProducts = useCallback((shelfId: string, productIds: string[]) => {
-    mutateShelfProducts(shelfId, (products) => {
-      const byId = new Map(
-        products.map((product, index) => [
-          getPlanogramProductId(product, `${shelfId}:${index}`),
-          product,
-        ]),
-      );
-      return productIds
-        .map((id) => byId.get(id))
-        .filter((product): product is PlanogramProduct => product != null);
-    });
-  }, [mutateShelfProducts]);
+  const onReorderProducts = useCallback(
+    (shelfId: string, productIds: string[]) => {
+      mutateShelfProducts(shelfId, (products) => {
+        const byId = new Map(
+          products.map((product, index) => [
+            getPlanogramProductId(product, `${shelfId}:${index}`),
+            product,
+          ]),
+        );
+        return productIds
+          .map((id) => byId.get(id))
+          .filter((product): product is PlanogramProduct => product != null);
+      });
+    },
+    [mutateShelfProducts],
+  );
 
   const editHandlers: PlanogramEditHandlers = {
     onEditName,
@@ -257,7 +315,8 @@ export function PlanogramRenderedPreview({
     onEditFacingsDepth,
     onRemoveProduct,
     onMoveProduct,
-    onReorderProducts: selectedCategories.size === 0 ? onReorderProducts : undefined,
+    onReorderProducts:
+      selectedCategories.size === 0 ? onReorderProducts : undefined,
   };
 
   if (isLoading || !payload) {
@@ -265,19 +324,25 @@ export function PlanogramRenderedPreview({
   }
 
   const content = (
-    <CardContent className={embedded ? "space-y-3 px-0 pb-0 pt-0" : "space-y-3"}>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
+    <CardContent
+      className={embedded ? "space-y-3 px-0 pt-0 pb-0" : "space-y-3"}
+    >
+      {/* <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard title="Shelves" value={stats.shelves} className="stat-card" />
         <StatCard title="SKUs" value={stats.skus} className="stat-card" />
         <StatCard title="Front Facings" value={stats.frontFacings} className="stat-card" />
         <StatCard title="Total Units" value={stats.totalUnits} className="stat-card" />
         <StatCard title="Categories" value={stats.categories} className="stat-card" />
         <StatCard title="Removed" value={stats.removed} className="stat-card" />
-      </div>
+      </div> */}
 
       <CategoryFilterTags
         categories={stats.categoryList}
-        selected={selectedCategories.size === 0 ? new Set(stats.categoryList) : selectedCategories}
+        selected={
+          selectedCategories.size === 0
+            ? new Set(stats.categoryList)
+            : selectedCategories
+        }
         onToggle={onToggleCategory}
       />
 
@@ -298,10 +363,19 @@ export function PlanogramRenderedPreview({
                   if (!dragRef.current) return;
                   const { productId, fromShelf } = dragRef.current;
                   dragRef.current = null;
-                  onMoveProduct(fromShelf, toShelfId, productId, targetProductId);
+                  onMoveProduct(
+                    fromShelf,
+                    toShelfId,
+                    productId,
+                    targetProductId,
+                  );
                 },
                 onDropOnRemoved: () => {
-                  if (!dragRef.current || dragRef.current.fromShelf === "removed") return;
+                  if (
+                    !dragRef.current ||
+                    dragRef.current.fromShelf === "removed"
+                  )
+                    return;
                   const { productId, fromShelf } = dragRef.current;
                   dragRef.current = null;
                   onRemoveProduct(fromShelf, productId);
@@ -315,7 +389,9 @@ export function PlanogramRenderedPreview({
           shelves={shelves}
           onRestore={onRestoreProduct}
           onRemoveFromShelf={onRemoveProduct}
-          onMoveFromSidebar={(productId, toShelfId) => onMoveProduct("removed", toShelfId, productId)}
+          onMoveFromSidebar={(productId, toShelfId) =>
+            onMoveProduct("removed", toShelfId, productId)
+          }
         />
       </div>
 

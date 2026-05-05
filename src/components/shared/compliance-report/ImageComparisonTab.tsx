@@ -119,7 +119,7 @@ export function ImageComparisonTab({
       <p className="text-muted-foreground text-sm">
         {showPlanogramPanel
           ? "Side-by-side comparison: Planogram (expected layout) vs Real Shelf (captured image). Non-compliant items are highlighted."
-          : "Observed Fixture image with detected overlays from the analysis run."}
+          : "Observed Display Unit image with detected overlays from the analysis run."}
       </p>
 
       <div

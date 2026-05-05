@@ -1,10 +1,11 @@
-import { createFileRoute, Link, useLocation, useNavigate, useParams } from "@tanstack/react-router";
-import { AlertCircle, ArrowLeft, Check, LayoutGrid } from "lucide-react";
+import { createFileRoute, useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import { AlertCircle, Check, LayoutGrid } from "lucide-react";
 
 import { useToast } from "@/hooks/use-toast";
 import { useCallback, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/detail-back-button";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -151,12 +152,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
         <div className="mx-auto max-w-screen-2xl space-y-4">
 
           <header className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild>
-              <Link to={backPath as never}>
-                <ArrowLeft className="size-4" aria-hidden />
-                <span className="sr-only">Back</span>
-              </Link>
-            </Button>
+            <DetailBackButton to={backPath} />
             <div>
               <h1 className="text-2xl font-bold text-foreground">Add POG Analysis</h1>
             </div>

@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   Link,
   createFileRoute,
@@ -22,9 +21,11 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { getShelfFixtureId } from "@/lib/fixtures/analysis";
-import { useStore } from "@/providers/store";
-import { fetchStoreFixtures as fetchCheckerStoreFixtures } from "@/queries/checker/api/fixtures";
-import { useComplianceRuleSets, useShelves } from "@/queries/maker";
+import {
+  useComplianceRuleSets,
+  useShelves,
+  useStoreFixtures,
+} from "@/queries/maker";
 import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
 import type { PlanogramArrangement } from "@/types/planogram";
@@ -57,15 +58,11 @@ function toPlanogramRow(
 function AdhocAnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { selectedStore } = useStore();
   const { toast } = useToast();
-  const { data: shelves, isLoading } = useShelves();
-  const { data: storeFixtures = [] } = useQuery({
-    queryKey: ["maker", "fixtures", "list", selectedStore?.id ?? "no-store"],
-    queryFn: fetchCheckerStoreFixtures,
-    enabled: !!selectedStore?.id,
-    staleTime: 60 * 1000,
-  });
+  const { data: shelves, isLoading: isShelvesLoading } = useShelves();
+  const { data: storeFixtures = [], isLoading: isFixturesLoading } =
+    useStoreFixtures();
+  const isLoading = isShelvesLoading || isFixturesLoading;
   const { data: ruleSets = [] } = useComplianceRuleSets();
   const [searchQuery, setSearchQuery] = useState("");
   const [, setTablePagination] = useState({
@@ -105,12 +102,7 @@ function AdhocAnalysisPage() {
     return storeFixtures.filter((fixture) => {
       const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
       const fixtureHasShelves = fixtureShelves.length > 0;
-      const fixturePlanogramId = fixture.planogram_id?.trim();
-      const shelfPlanogramId = fixtureShelves.find((shelf) =>
-        shelf.planogramId?.trim(),
-      )?.planogramId;
-      const fixtureHasPlanogram = Boolean(fixturePlanogramId || shelfPlanogramId);
-      return fixtureHasShelves && fixtureHasPlanogram;
+      return fixtureHasShelves;
     });
   }, [shelvesByFixtureId, storeFixtures]);
 

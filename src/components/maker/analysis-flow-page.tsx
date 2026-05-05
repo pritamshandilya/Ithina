@@ -69,8 +69,6 @@ export interface AnalysisFlowPageProps {
 export function AnalysisFlowPage({
   title,
   backTo,
-  fixtureName: _fixtureName,
-  planogramName: _planogramName,
   planogramPayload,
   showFixtureSelection,
   selectedFixtureId,

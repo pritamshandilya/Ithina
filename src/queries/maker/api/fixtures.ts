@@ -65,6 +65,12 @@ export function fetchStoreFixtures(): Promise<FixtureResponse[]> {
     .then((fixtures) => fixtures.map(normalizeFixture));
 }
 
+export function fetchReadyForAnalysisFixtures(): Promise<FixtureResponse[]> {
+  return apiClient
+    .get<FixtureResponse[]>("/fixtures/ready-for-analysis")
+    .then((fixtures) => fixtures.map(normalizeFixture));
+}
+
 export function createFixture(payload: CreateFixturePayload): Promise<FixtureResponse> {
   return apiClient
     .post<FixtureResponse>("/fixtures", payload)

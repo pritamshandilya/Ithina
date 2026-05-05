@@ -21,6 +21,7 @@ export { useStores, storesKeys } from "./useStores";
 export { useCreateShelf } from "./useCreateShelf";
 export { useCreateFixture } from "./useCreateFixture";
 export { useStoreFixtures } from "./useStoreFixtures";
+export { useReadyForAnalysisFixtures } from "./useReadyForAnalysisFixtures";
 export { useMakerAudits, makerAuditsKeys } from "./useMakerAudits";
 export { useAdhocAnalyses, adhocAnalysesKeys } from "./useAdhocAnalyses";
 export { useComplianceRuleSets, complianceRuleSetsKeys } from "./useComplianceRuleSets";

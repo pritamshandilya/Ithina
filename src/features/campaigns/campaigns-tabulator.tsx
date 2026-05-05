@@ -189,7 +189,7 @@ export default function CampaignsTabulator() {
   );
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg">
       {detailCampaignId && (
         <CampaignDetailModal
           campaignId={detailCampaignId}
@@ -215,7 +215,7 @@ export default function CampaignsTabulator() {
         />
       )}
 
-      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
           <div className="flex shrink-0 flex-wrap items-center gap-3">
             <div className="flex shrink-0 gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">

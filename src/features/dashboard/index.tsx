@@ -39,7 +39,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col gap-8 overflow-hidden p-6 lg:p-8">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-8 overflow-y-auto overflow-x-hidden p-6 lg:p-8">
         {isLoading ? (
           <LoadingSpinner label="Loading dashboard..." className="flex-1" />
         ) : (

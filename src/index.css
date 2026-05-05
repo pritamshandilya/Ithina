@@ -809,6 +809,7 @@ input[type="datetime-local"].wizard-campaign-datetime::-moz-calendar-picker-indi
 .data-table-wrapper .tabulator-tableholder {
   overflow-x: auto !important;
   overflow-y: auto !important;
+  scrollbar-gutter: stable;
 }
 
 .data-table-wrapper .tabulator-tableholder::-webkit-scrollbar {

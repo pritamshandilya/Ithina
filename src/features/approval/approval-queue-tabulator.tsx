@@ -1,6 +1,6 @@
 ﻿/**
- * ApprovalQueueTabulator — Three-tab approval queue using DataTable (Tabulator).
- * Tabs: Pending Approval · Approved · All
+ * ApprovalQueueTabulator — Approval queue using DataTable (Tabulator).
+ * Tabs: Pending Approval · Approved · Draft · All
  */
 
 import { AlertCircle, Check, Search, X, Zap } from "lucide-react";
@@ -32,7 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { InboxItem } from "@/types/approval";
 
-type TabId = "pending" | "approved" | "all";
+type TabId = "pending" | "approved" | "draft" | "all";
 
 const APPROVAL_TABLE_PAGE_SIZE = 15;
 
@@ -61,14 +61,49 @@ interface ApprovedRow {
   status: "Deployed" | "Scheduled";
 }
 
+type AllRowApprovalStatus =
+  | "Pending"
+  | "Approved"
+  | "Rejected"
+  | "Draft"
+  | "Processing"
+  | "Scheduled"
+  | "Publishing";
+
 interface AllRow {
   id: string;
   title: string;
   initiator: string;
   skus: number;
-  approvalStatus: "Pending" | "Approved" | "Rejected";
+  approvalStatus: AllRowApprovalStatus;
   guardRails: "Pass" | "1 warning" | "2 warnings";
   date: string;
+}
+
+const APPROVAL_STATUS_STYLES: Record<string, string> = {
+  Approved:   "border-chart-2/20 bg-chart-2/10 text-chart-2",
+  Pending:    "border-amber-400/20 bg-amber-400/10 text-amber-400",
+  Rejected:   "border-rose-400/20 bg-rose-400/10 text-rose-400",
+  Draft:      "border-slate-400/20 bg-slate-400/10 text-slate-400",
+  Processing: "border-purple-400/20 bg-purple-400/10 text-purple-400",
+  Scheduled:  "border-sky-400/20 bg-sky-400/10 text-sky-400",
+  Publishing: "border-amber-400/20 bg-amber-400/10 text-amber-400",
+};
+
+/** Maps API `campaign.status` to All-tab labels; aligns with `mapApiStatusToUi` in campaigns service. */
+export function mapApiStatusToApprovalLabel(apiStatus: string | undefined): AllRowApprovalStatus {
+  switch (apiStatus) {
+    case "pending_approval": return "Pending";
+    case "approved":
+    case "active":           return "Approved";
+    case "rejected":         return "Rejected";
+    case "scheduled":        return "Scheduled";
+    case "publishing":       return "Publishing";
+    case "generating":
+    case "processing":       return "Processing";
+    default:
+      return "Draft";
+  }
 }
 
 /* ── HTML formatter helpers ── */
@@ -148,7 +183,10 @@ export default function ApprovalQueueTabulator() {
   );
 
   /* ── Pending tab ── */
-  const pendingCount = useMemo(() => inbox.filter((i) => i.status === "pending").length, [inbox]);
+  const pendingCount = useMemo(
+    () => campaigns.filter((c) => c.apiStatus === "pending_approval").length,
+    [campaigns],
+  );
 
   const filteredPending = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -220,12 +258,22 @@ export default function ApprovalQueueTabulator() {
         id: c.id, title: c.name,
         initiator: c.ownerName ?? c.initiator,
         skus: c.skus,
-        approvalStatus: (c.approvalStatus === "approved" ? "Approved" : c.approvalStatus === "rejected" ? "Rejected" : "Pending") as AllRow["approvalStatus"],
+        approvalStatus: mapApiStatusToApprovalLabel(c.apiStatus),
         guardRails: "Pass" as const,
         date: c.date,
       }))
       .filter((r) => !q || r.title.toLowerCase().includes(q) || r.initiator.toLowerCase().includes(q) || r.id.toLowerCase().includes(q));
   }, [campaigns, search]);
+
+  const draftCount = useMemo(
+    () => campaigns.filter((c) => mapApiStatusToApprovalLabel(c.apiStatus) === "Draft").length,
+    [campaigns],
+  );
+
+  const filteredDraft = useMemo(
+    () => filteredAll.filter((r) => r.approvalStatus === "Draft"),
+    [filteredAll],
+  );
 
   const historyIconOnly = `<button type="button" data-action="history" class="edit-btn inline-flex size-8 items-center justify-center rounded-md border border-white/15 bg-white/[0.03] text-slate-400 transition-all hover:border-primary/40 hover:bg-white/[0.06] hover:text-white" title="Approval history" aria-label="Approval history">
     <svg class="size-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -525,12 +573,7 @@ export default function ApprovalQueueTabulator() {
         },
         formatter: (cell: DataTableCell<AllRow>) => {
           const v = String(cell.getValue() ?? "");
-          const map: Record<string, string> = {
-            Approved: "border-chart-2/20 bg-chart-2/10 text-chart-2",
-            Pending:  "border-amber-400/20 bg-amber-400/10 text-amber-400",
-            Rejected: "border-rose-400/20 bg-rose-400/10 text-rose-400",
-          };
-          const cls = map[v] ?? map.Pending;
+          const cls = APPROVAL_STATUS_STYLES[v] ?? APPROVAL_STATUS_STYLES.Draft;
           const dot = v === "Approved" ? `<span class="size-1.5 rounded-full bg-current"></span>` : "";
           return `<span class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${cls}">${dot}${v}</span>`;
         },
@@ -585,14 +628,15 @@ export default function ApprovalQueueTabulator() {
   const tabItems: { id: TabId; label: string; count: number | null }[] = [
     { id: "pending",  label: "Pending Approval", count: pendingCount },
     { id: "approved", label: "Approved",         count: null },
+    { id: "draft",    label: "Draft",            count: draftCount },
     { id: "all",      label: "All",              count: null },
   ];
 
   const pendingSelectedCount = selectedPendingIds.size;
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
-      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg animate-[fadeIn_0.4s_ease-out]">
+      <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
         <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
           <div className="flex shrink-0 flex-wrap items-center justify-between gap-3">
             <div className="flex gap-0.5 rounded-lg border border-ithina-border bg-ithina-panel/80 p-0.5">
@@ -739,6 +783,21 @@ export default function ApprovalQueueTabulator() {
                   pageSize={APPROVAL_TABLE_PAGE_SIZE}
                   pageSizeSelector={[5, 10, 15, 20, 50]}
                   emptyMessage="No approved campaigns."
+                  className="min-h-0 flex-1"
+                />
+              )}
+
+              {tab === "draft" && (
+                <DataTable<AllRow>
+                  data={filteredDraft}
+                  columns={allColumns}
+                  rowIdField="id"
+                  isBulkEnabled
+                  onSelectionChange={setSelectedAll}
+                  pagination
+                  pageSize={APPROVAL_TABLE_PAGE_SIZE}
+                  pageSizeSelector={[5, 10, 15, 20, 50]}
+                  emptyMessage="No draft campaigns."
                   className="min-h-0 flex-1"
                 />
               )}

@@ -37,17 +37,17 @@ export function ComplianceReportHeader({
   return (
     <header
       className={cn(
-        "flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4",
+        "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between",
         className,
       )}
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2.5">
         {backTo ? <DetailBackButton to={backTo} /> : null}
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          <h1 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
             {title}
           </h1>
-          <p className="text-muted-foreground mt-0.5 text-sm">{subtitle}</p>
+          <p className="text-muted-foreground mt-0.5 text-xs">{subtitle}</p>
         </div>
       </div>
       <Button

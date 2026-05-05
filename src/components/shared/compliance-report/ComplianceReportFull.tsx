@@ -7,23 +7,14 @@
  *
  * Shared between Maker and Checker flows.
  */
-import { useState } from "react";
-
-import { AllIssuesTab } from "./AllIssuesTab";
-import { AllItemsTab } from "./AllItemsTab";
-import { ComplianceReportHeader } from "./ComplianceReportHeader";
-import { ComplianceReportMetrics } from "./ComplianceReportMetrics";
-import { ComplianceReportTabs } from "./ComplianceReportTabs";
-import type { ReportTabId } from "./ComplianceReportTabs";
-import { ImageComparisonTab } from "./ImageComparisonTab";
-import { OverviewChartsTab } from "./OverviewChartsTab";
+import { AdhocComplianceReportPage } from "./AdhocComplianceReportPage";
+import { PlanogramComplianceReportPage } from "./PlanogramComplianceReportPage";
 import type {
   AllIssuesReportData,
   AllItemsReportData,
   ImageComparisonData,
   ReportSnippet,
 } from "@/lib/analysis";
-import { cn } from "@/lib/utils";
 import type { PlanogramPayload } from "@/types/planogram";
 
 export interface ComplianceReportFullProps {
@@ -62,73 +53,34 @@ export function ComplianceReportFull({
   backTo,
   onExportPdf,
   isExportingPdf = false,
-  className,
+  className: _className,
 }: ComplianceReportFullProps) {
-  const [activeTab, setActiveTab] = useState<ReportTabId>("overview");
   const isAdhoc = analysisType === "ADHOC";
-
-  const subtitle = report.planogramName
-    ? `Planogram "${report.planogramName}" • ${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`
-    : `${report.productsDetected} products detected • ${report.analysisIssues} analysis issues`;
+  if (isAdhoc) {
+    return (
+      <AdhocComplianceReportPage
+        report={report}
+        imageUrl={imageUrl}
+        imageComparison={imageComparison}
+        allItems={allItems}
+        allIssues={allIssues}
+        backTo={backTo}
+        onExportPdf={onExportPdf}
+        isExportingPdf={isExportingPdf}
+      />
+    );
+  }
 
   return (
-    <div
-      className={cn(
-        "compliance-report-full print-report flex min-h-0 flex-1 flex-col",
-        className,
-      )}
-    >
-      {/* Static section: header, metrics, tabs - stays fixed when tab content scrolls */}
-      <div className="bg-primary sticky top-0 z-10 shrink-0 space-y-4 pb-4">
-        <ComplianceReportHeader
-          title="Combined Compliance & Analysis Report"
-          subtitle={subtitle}
-          backTo={backTo}
-          onExportPdf={onExportPdf}
-          isExporting={isExportingPdf}
-        />
-
-        <ComplianceReportMetrics
-          complianceScore={report.complianceScore}
-          matched={report.matched}
-          misplaced={report.misplaced}
-          missing={report.missing}
-          extra={report.extra}
-          issues={report.issues}
-          facings={report.facings}
-          units={report.units}
-          detected={report.detected}
-          gap={report.gap}
-        />
-
-        <ComplianceReportTabs
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          imageTabLabel={isAdhoc ? "Observed Display Unit" : undefined}
-        />
-      </div>
-
-      {/* Scrollable tab content - fixed width; overflow-x-hidden keeps width consistent; scrollbar-gutter prevents layout shift */}
-      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]">
-        <div className="w-full max-w-full min-w-0">
-          {activeTab === "overview" && <OverviewChartsTab report={report} />}
-
-          {activeTab === "image-comparison" && (
-            <ImageComparisonTab
-              data={imageComparison}
-              imageUrl={imageUrl}
-              planogramPayload={planogramPayload}
-              showPlanogramPanel={!isAdhoc}
-            />
-          )}
-
-          {activeTab === "issues" && <AllIssuesTab data={allIssues} />}
-
-          {activeTab === "items" && (
-            <AllItemsTab data={allItems} showPlanogramItems={!isAdhoc} />
-          )}
-        </div>
-      </div>
-    </div>
+    <PlanogramComplianceReportPage
+      report={report}
+      imageUrl={imageUrl}
+      planogramPayload={planogramPayload}
+      allItems={allItems}
+      allIssues={allIssues}
+      backTo={backTo}
+      onExportPdf={onExportPdf}
+      isExportingPdf={isExportingPdf}
+    />
   );
 }

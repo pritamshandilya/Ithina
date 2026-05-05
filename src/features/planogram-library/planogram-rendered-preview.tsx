@@ -7,7 +7,6 @@ import {
   ShelfRow,
 } from "@/components/planogram";
 import type { PlanogramEditHandlers } from "@/components/planogram/types";
-import { StatCard } from "@/components/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { derivePlanogramStats } from "@/lib/planogram/planogram-derive-stats";
 import {

@@ -68,7 +68,7 @@ function AdhocAnalysisPage() {
   });
   const { data: ruleSets = [] } = useComplianceRuleSets();
   const [searchQuery, setSearchQuery] = useState("");
-  const [tablePagination, setTablePagination] = useState({
+  const [, setTablePagination] = useState({
     page: 1,
     pageSize: 50,
   });
@@ -101,14 +101,29 @@ function AdhocAnalysisPage() {
     return map;
   }, [shelves]);
 
-  const fixtureRows = useMemo(() => {
-    return storeFixtures.map((fixture) => {
+  const eligibleFixtures = useMemo(() => {
+    return storeFixtures.filter((fixture) => {
       const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
+      const fixtureHasShelves = fixtureShelves.length > 0;
+      const fixturePlanogramId = fixture.planogram_id?.trim();
+      const shelfPlanogramId = fixtureShelves.find((shelf) =>
+        shelf.planogramId?.trim(),
+      )?.planogramId;
+      const fixtureHasPlanogram = Boolean(fixturePlanogramId || shelfPlanogramId);
+      return fixtureHasShelves && fixtureHasPlanogram;
+    });
+  }, [shelvesByFixtureId, storeFixtures]);
+
+  const fixtureRows = useMemo(() => {
+    return eligibleFixtures.map((fixture) => {
+      const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
+      const fixtureCode = (fixture.code ?? "").trim();
+      const fixtureType = (fixture.type ?? "").trim();
       const representativeShelf = fixtureShelves[0];
       const fallbackShelf: Shelf = {
         id: fixture.id,
         fixtureId: fixture.id,
-        shelfName: `${fixture.code.trim()} (${fixture.type.trim()})`,
+        shelfName: `${fixtureCode} (${fixtureType})`,
         status: "never-audited",
         aisleCode: fixture.physical_location.aisle,
         zone: fixture.physical_location.zone,
@@ -136,7 +151,7 @@ function AdhocAnalysisPage() {
         complianceRuleSet: defaultRuleSetName,
       } satisfies PlanogramShelfRow;
     });
-  }, [defaultRuleSetName, shelvesByFixtureId, storeFixtures]);
+  }, [defaultRuleSetName, eligibleFixtures, shelvesByFixtureId]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return fixtureRows;
@@ -233,6 +248,7 @@ function AdhocAnalysisPage() {
       <DataTable<PlanogramShelfRow>
         columns={tableColumns}
         data={filteredRows}
+        className="h-full"
         rowIdField="id"
         initialSort={PLANOGRAM_INITIAL_SORT}
         emptyMessage="No fixtures match your search"
@@ -333,7 +349,9 @@ function AdhocAnalysisPage() {
                 </Button>
               </div>
             ) : (
-              <div ref={tableWrapperRef}>{fixtureTable}</div>
+              <div ref={tableWrapperRef} className="h-full">
+                {fixtureTable}
+              </div>
             )}
           </div>
         </div>

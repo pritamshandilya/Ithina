@@ -8,8 +8,8 @@ import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { Button } from "@/components/ui/button";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { type ReportSnippet } from "@/lib/analysis";
 import { exportReportToPdf } from "@/lib/reports/pdf-export";
@@ -79,8 +79,10 @@ function FullReportPage() {
   if (!report) {
     return (
       <MainLayout>
-        <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-primary p-6 text-center">
-          <p className="text-foreground text-base font-semibold">Full report is unavailable</p>
+        <div className="bg-primary flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-foreground text-base font-semibold">
+            Full report is unavailable
+          </p>
           <p className="text-muted-foreground max-w-md text-sm">
             Open this page from a report entry that includes analysis data.
           </p>

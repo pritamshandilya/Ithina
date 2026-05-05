@@ -21,9 +21,6 @@ export interface ComplianceReportMetricsProps {
   missing: number;
   extra: number;
   issues: number;
-  facings: number;
-  units: number;
-  detected: number;
   gap: number;
   className?: string;
 }
@@ -35,9 +32,6 @@ export function ComplianceReportMetrics({
   missing,
   extra,
   issues,
-  facings,
-  units,
-  detected,
   gap,
   className,
 }: ComplianceReportMetricsProps) {
@@ -45,7 +39,7 @@ export function ComplianceReportMetrics({
     {
       label: "Compliance",
       value: `${complianceScore}%`,
-      variant: "score" as const,
+      variant: "neutral" as const,
       icon: null,
     },
     {
@@ -78,31 +72,20 @@ export function ComplianceReportMetrics({
       variant: "issues" as const,
       icon: AlertCircle,
     },
-    {
-      label: "Facings",
-      value: facings,
-      variant: "neutral" as const,
-      icon: null,
-    },
-    { label: "Units", value: units, variant: "neutral" as const, icon: null },
-    {
-      label: "Detected",
-      value: detected,
-      variant: "neutral" as const,
-      icon: null,
-    },
-    {
-      label: "Gap",
-      value: gap,
-      variant: "gap" as const,
-      icon: null,
-    },
-  ];
+    { label: "Gap", value: gap, variant: "gap" as const, icon: null },
+  ].filter((metric, index, all) => {
+    // Avoid repeated cards with same label/value pair.
+    const key = `${metric.label}:${metric.value}`;
+    return (
+      all.findIndex((entry) => `${entry.label}:${entry.value}` === key) ===
+      index
+    );
+  });
 
   return (
     <div
       className={cn(
-        "grid w-full grid-cols-2 gap-2 sm:grid-cols-5 lg:grid-cols-10",
+        "flex w-full gap-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >
@@ -138,11 +121,6 @@ function MetricCard({
     | "gap";
   icon: React.ComponentType<{ className?: string }> | null;
 }) {
-  const score =
-    variant === "score" && typeof value === "string"
-      ? parseInt(value, 10)
-      : null;
-
   const variantStyles: Record<string, string> = {
     score: "border-border bg-card/60",
     matched: "border-chart-2/40 bg-chart-2/10",
@@ -174,59 +152,30 @@ function MetricCard({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col items-center justify-center rounded-lg border px-2.5 py-2 text-center",
+        "flex h-11 min-w-48 shrink-0 flex-col items-center justify-center rounded-md border px-1 py-1 text-center",
         variantStyles[variant] ?? variantStyles.neutral,
       )}
     >
-      {variant === "score" && score !== null ? (
-        <div className="relative mb-0.5 size-10">
-          <svg viewBox="0 0 36 36" className="size-10 -rotate-90">
-            <path
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke="var(--muted)"
-              strokeWidth="3"
-            />
-            <path
-              d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-              fill="none"
-              stroke={
-                score >= 80
-                  ? "var(--chart-2)"
-                  : score > 0
-                    ? "var(--action-warning)"
-                    : "var(--destructive)"
-              }
-              strokeWidth="3"
-              strokeDasharray={`${(score / 100) * 100} 100`}
-            />
-          </svg>
-          <span className="text-foreground absolute inset-0 flex items-center justify-center text-xs font-bold">
-            {value}
-          </span>
-        </div>
-      ) : (
-        <div className="flex items-center gap-1">
-          {Icon && (
-            <Icon
-              className={cn(
-                "size-4 shrink-0",
-                iconColors[variant] ?? "text-muted-foreground",
-              )}
-              aria-hidden
-            />
-          )}
-          <p
+      <div className="flex items-center gap-1">
+        {Icon && (
+          <Icon
             className={cn(
-              "text-lg font-bold",
-              valueColors[variant] ?? "text-foreground",
+              "size-3.5 shrink-0",
+              iconColors[variant] ?? "text-muted-foreground",
             )}
-          >
-            {value}
-          </p>
-        </div>
-      )}
-      <p className="text-muted-foreground mt-0.5 text-[10px] font-medium tracking-wider uppercase">
+            aria-hidden
+          />
+        )}
+        <p
+          className={cn(
+            "text-sm font-semibold",
+            valueColors[variant] ?? "text-foreground",
+          )}
+        >
+          {value}
+        </p>
+      </div>
+      <p className="text-muted-foreground mt-0.5 text-[9px] font-medium tracking-wider uppercase">
         {label}
       </p>
     </div>

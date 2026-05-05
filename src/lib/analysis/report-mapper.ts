@@ -319,6 +319,37 @@ export function mapAnalysisResultToAllItemsReportData(
 ): AllItemsReportData {
   if (!result) return { planogramItems: [], skuFacings: [] };
 
+  const diffIssues = result.planogram_diff?.issues ?? [];
+  const issueQueueByNameAndShelf = new Map<
+    string,
+    Array<Record<string, unknown> & { type?: string; detail?: string; name?: string }>
+  >();
+  const issueQueueByName = new Map<
+    string,
+    Array<Record<string, unknown> & { type?: string; detail?: string; name?: string }>
+  >();
+
+  for (const issue of diffIssues) {
+    const normalizedName = normalizeIssueName(issue.name);
+    if (!normalizedName) continue;
+    const issueRecord = issue as Record<string, unknown> & {
+      type?: string;
+      detail?: string;
+      name?: string;
+    };
+    const shelfNumber = shelfNumberFromIssue(issue);
+    if (shelfNumber !== null) {
+      const key = `${normalizedName}::${shelfNumber}`;
+      const queue = issueQueueByNameAndShelf.get(key) ?? [];
+      queue.push(issueRecord);
+      issueQueueByNameAndShelf.set(key, queue);
+      continue;
+    }
+    const queue = issueQueueByName.get(normalizedName) ?? [];
+    queue.push(issueRecord);
+    issueQueueByName.set(normalizedName, queue);
+  }
+
   const grouped = new Map<
     string,
     { name: string; row: number; count: number }
@@ -337,26 +368,72 @@ export function mapAnalysisResultToAllItemsReportData(
 
   const entries = Array.from(grouped.entries());
   return {
-    planogramItems: entries.map(([key, item], index) => ({
-      id: `pi-${index + 1}`,
-      productName: item.name,
-      sku: key.replace("::", "-"),
-      shelf: `Shelf ${item.row}`,
-      status: "matched",
-      complianceLevel: "LOW",
-      issueDescription: undefined,
-    })),
-    skuFacings: entries.map(([key, item], index) => ({
-      id: `sf-${index + 1}`,
-      productName: item.name,
-      sku: key.replace("::", "-"),
-      frontFacings: item.count,
-      detected: item.count,
-      depth: 1,
-      totalExpected: item.count,
-      facingDiffText: "OK",
-      facingDiffVariant: "ok",
-    })),
+    planogramItems: entries.map(([key, item], index) => {
+      const normalizedName = normalizeIssueName(item.name);
+      const shelfKey = `${normalizedName}::${item.row}`;
+      const issue =
+        issueQueueByNameAndShelf.get(shelfKey)?.shift() ??
+        issueQueueByName.get(normalizedName)?.shift();
+      const issueType = (issue?.type ?? "").toUpperCase();
+      const status =
+        issueType === "UNEXPECTED_PRODUCT"
+          ? "extra"
+          : issueType === "MISPLACED_PRODUCT"
+            ? "misplaced"
+            : issueType === "MISSING_PRODUCT" || issueType === "FACING_SHORTAGE"
+              ? "missing"
+              : "matched";
+      const complianceLevel =
+        status === "missing"
+          ? "HIGH"
+          : status === "misplaced" || status === "extra"
+            ? "MEDIUM"
+            : "LOW";
+      return {
+        id: `pi-${index + 1}`,
+        productName: item.name,
+        sku: key.replace("::", "-"),
+        shelf: `Shelf ${item.row}`,
+        status,
+        complianceLevel,
+        issueDescription: issue?.detail,
+      };
+    }),
+    skuFacings: entries.map(([key, item], index) => {
+      const normalizedName = normalizeIssueName(item.name);
+      const shelfKey = `${normalizedName}::${item.row}`;
+      const issue =
+        issueQueueByNameAndShelf.get(shelfKey)?.[0] ??
+        issueQueueByName.get(normalizedName)?.[0];
+      const issueType = String(issue?.type ?? "").toUpperCase();
+      const expectedFacings = parseNumericValue(issue?.expected_facings) || item.count;
+      const detectedFacings =
+        parseNumericValue(issue?.detected_facings) || parseNumericValue(issue?.detected_count) || item.count;
+      const diff = detectedFacings - expectedFacings;
+      const facingDiffVariant: "ok" | "short" | "extra" =
+        issueType === "UNEXPECTED_PRODUCT" || diff > 0
+          ? "extra"
+          : issueType === "FACING_SHORTAGE" || issueType === "MISSING_PRODUCT" || diff < 0
+            ? "short"
+            : "ok";
+      const facingDiffText =
+        facingDiffVariant === "ok"
+          ? "OK"
+          : facingDiffVariant === "short"
+            ? `${Math.abs(diff || 1)} short`
+            : `+${Math.abs(diff || 1)} extra`;
+      return {
+        id: `sf-${index + 1}`,
+        productName: item.name,
+        sku: key.replace("::", "-"),
+        frontFacings: expectedFacings,
+        detected: detectedFacings,
+        depth: 1,
+        totalExpected: expectedFacings,
+        facingDiffText,
+        facingDiffVariant,
+      };
+    }),
   };
 }
 
@@ -422,6 +499,7 @@ export function mapAnalysisResultToAllIssuesReportData(
                 id: `missing-${index + 1}`,
                 productName: issue.name ?? "Unknown",
                 description: issue.detail ?? "Missing product",
+                detail: issue.shelf_name ?? undefined,
                 severity: "HIGH" as const,
               })),
             },
@@ -439,6 +517,7 @@ export function mapAnalysisResultToAllIssuesReportData(
                 id: `misplaced-${index + 1}`,
                 productName: issue.name ?? "Unknown",
                 description: issue.detail ?? "Misplaced product",
+                detail: issue.shelf_name ?? undefined,
                 severity: "MEDIUM" as const,
               })),
             },
@@ -456,6 +535,7 @@ export function mapAnalysisResultToAllIssuesReportData(
                 id: `extra-${index + 1}`,
                 productName: issue.name ?? "Unknown",
                 description: issue.detail ?? "Unexpected product",
+                detail: issue.shelf_name ?? undefined,
                 severity: "MEDIUM" as const,
               })),
             },

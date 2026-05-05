@@ -93,7 +93,7 @@ export function PlanogramMakerPage() {
   const { data: ruleSets } = useComplianceRuleSets();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [tablePagination, setTablePagination] = useState({
+  const [, setTablePagination] = useState({
     page: 1,
     pageSize: 50,
   });
@@ -139,9 +139,24 @@ export function PlanogramMakerPage() {
     return map;
   }, [shelves]);
 
-  const planogramRows = useMemo(() => {
-    return storeFixtures.map((fixture) => {
+  const eligibleFixtures = useMemo(() => {
+    return storeFixtures.filter((fixture) => {
       const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
+      const fixtureHasShelves = fixtureShelves.length > 0;
+      const fixturePlanogramId = fixture.planogram_id?.trim();
+      const shelfPlanogramId = fixtureShelves.find((shelf) =>
+        shelf.planogramId?.trim(),
+      )?.planogramId;
+      const fixtureHasPlanogram = Boolean(fixturePlanogramId || shelfPlanogramId);
+      return fixtureHasShelves && fixtureHasPlanogram;
+    });
+  }, [shelvesByFixtureId, storeFixtures]);
+
+  const planogramRows = useMemo(() => {
+    return eligibleFixtures.map((fixture) => {
+      const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
+      const fixtureCode = (fixture.code ?? "").trim();
+      const fixtureType = (fixture.type ?? "").trim();
       const representativeShelf = fixtureShelves
         .slice()
         .sort(
@@ -152,7 +167,7 @@ export function PlanogramMakerPage() {
       const fallbackShelf: Shelf = {
         id: fixture.id,
         fixtureId: fixture.id,
-        shelfName: `${fixture.code.trim()} (${fixture.type.trim()})`,
+        shelfName: `${fixtureCode} (${fixtureType})`,
         status: "never-audited",
         aisleCode: fixture.physical_location.aisle,
         zone: fixture.physical_location.zone,
@@ -184,7 +199,7 @@ export function PlanogramMakerPage() {
         dimensions: `${fixture.dimensions.width}x${fixture.dimensions.height}x${fixture.dimensions.depth} ${fixture.dimension_unit}`,
       } satisfies PlanogramShelfRow;
     });
-  }, [storeFixtures, shelvesByFixtureId, planogramMap, defaultRuleSetName]);
+  }, [eligibleFixtures, shelvesByFixtureId, planogramMap, defaultRuleSetName]);
 
   const filteredRows = useMemo(() => {
     if (!searchQuery.trim()) return planogramRows;
@@ -353,7 +368,7 @@ export function PlanogramMakerPage() {
             </Button> */}
           </div>
 
-          <div className="mt-4">
+          <div className="mt-4 min-h-0 flex-1 overflow-auto">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -384,7 +399,7 @@ export function PlanogramMakerPage() {
                 </Button>
               </div>
             ) : (
-              <div ref={tableWrapperRef}>
+              <div ref={tableWrapperRef} className="h-full">
                 {/* {filteredRows.length > 0 && (
                   <p className="text-muted-foreground mb-2 shrink-0 text-sm">
                     Showing{" "}
@@ -409,6 +424,7 @@ export function PlanogramMakerPage() {
                 <DataTable<PlanogramShelfRow>
                   columns={tableColumns}
                   data={filteredRows}
+                  className="h-full"
                   rowIdField="id"
                   initialSort={PLANOGRAM_INITIAL_SORT}
                   emptyMessage="No Display Units match your search"

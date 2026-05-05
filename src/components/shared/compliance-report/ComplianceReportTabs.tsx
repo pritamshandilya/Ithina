@@ -4,13 +4,8 @@
  * Tab navigation for full report sections.
  * Overview & Charts, Image Comparison, All Issues, All Items.
  */
+import { AlertTriangle, BarChart3, ImageIcon, List } from "lucide-react";
 
-import {
-  BarChart3,
-  ImageIcon,
-  AlertTriangle,
-  List,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type ReportTabId = "overview" | "image-comparison" | "issues" | "items";
@@ -27,6 +22,8 @@ export interface ComplianceReportTabsProps {
   onTabChange: (tab: ReportTabId) => void;
   /** Optional custom label for image tab */
   imageTabLabel?: string;
+  issuesCount?: number;
+  itemsCount?: number;
   className?: string;
 }
 
@@ -41,6 +38,8 @@ export function ComplianceReportTabs({
   activeTab,
   onTabChange,
   imageTabLabel,
+  issuesCount,
+  itemsCount,
   className,
 }: ComplianceReportTabsProps) {
   const tabs = TABS.map((tab) =>
@@ -52,8 +51,8 @@ export function ComplianceReportTabs({
   return (
     <div
       className={cn(
-        "flex border-b border-border gap-6 overflow-x-auto",
-        className
+        "border-border flex gap-6 overflow-x-auto border-b",
+        className,
       )}
     >
       {tabs.map((tab) => {
@@ -64,23 +63,29 @@ export function ComplianceReportTabs({
             type="button"
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "flex items-center gap-2 pb-4 text-sm font-medium transition-colors relative shrink-0",
+              "relative flex shrink-0 items-center gap-2 pb-4 text-sm font-medium transition-colors",
               isActive
                 ? "text-accent"
-                : "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             <tab.icon
               className={cn(
                 "size-4",
-                isActive ? "text-accent" : "text-muted-foreground"
+                isActive ? "text-accent" : "text-muted-foreground",
               )}
               aria-hidden
             />
             {tab.label}
+            {tab.id === "issues" && typeof issuesCount === "number"
+              ? ` (${issuesCount})`
+              : null}
+            {tab.id === "items" && typeof itemsCount === "number"
+              ? ` (${itemsCount})`
+              : null}
             {isActive && (
               <div
-                className="absolute bottom-0 left-0 right-0 h-0.5 bg-accent rounded-t-full"
+                className="bg-accent absolute right-0 bottom-0 left-0 h-0.5 rounded-t-full"
                 aria-hidden
               />
             )}

@@ -33,12 +33,13 @@ package-lock.json
 yarn.lock
 bun.lock
 
+# Documentation
 *.md
-*.tanstack
-# documentation
-/docs
+!README.md
+!STRUCTURE.md
+!FRONTEND_ROLE_ENDPOINTS.md
+!AGENTS.md
 
-*.md
 *.tanstack
 # documentation
 /docs

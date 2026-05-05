@@ -38,3 +38,9 @@ export type { ImageComparisonTabProps } from "./ImageComparisonTab";
 
 export { ComplianceReportPdfContent } from "./ComplianceReportPdfContent";
 export type { ComplianceReportPdfContentProps } from "./ComplianceReportPdfContent";
+
+export { PlanogramComplianceReportPage } from "./PlanogramComplianceReportPage";
+export type { PlanogramComplianceReportPageProps } from "./PlanogramComplianceReportPage";
+
+export { AdhocComplianceReportPage } from "./AdhocComplianceReportPage";
+export type { AdhocComplianceReportPageProps } from "./AdhocComplianceReportPage";

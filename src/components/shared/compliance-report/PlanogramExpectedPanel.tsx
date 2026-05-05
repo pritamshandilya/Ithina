@@ -84,7 +84,7 @@ function PlanogramSlotCard({
   return (
     <div
       className={cn(
-        "relative flex min-h-[72px] flex-col items-center rounded-lg bg-card/80 p-2",
+        "relative flex min-h-[62px] flex-col items-center rounded-md bg-card/80 px-1 py-1",
         borderByStatus[slot.status]
       )}
     >
@@ -99,26 +99,26 @@ function PlanogramSlotCard({
       {!isPreview ? (
         <span
           className={cn(
-            "absolute top-1.5 right-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
+            "absolute top-1 right-1 rounded-full px-1 py-0 text-[9px] font-bold",
             badgeByStatus[slot.status]
           )}
         >
           {slot.detectedFacings}/{slot.expectedFacings}
         </span>
       ) : (
-        <span className="absolute top-1.5 right-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+        <span className="absolute top-1 right-1 rounded px-1 py-0 text-[9px] font-medium text-muted-foreground">
           {slot.expectedFacings} facings
         </span>
       )}
-      <div className="mt-1 flex flex-1 items-center justify-center">
+      <div className="mt-0.5 flex flex-1 items-center justify-center">
         <ProductIcon shape={slot.shape} color={slot.color} />
       </div>
-      <p className="mt-0.5 w-full truncate text-center text-xs font-medium text-foreground">
+      <p className="mt-0.5 w-full truncate text-center text-[10px] font-medium text-foreground">
         {slot.shortName}
       </p>
       <p
         className={cn(
-          "text-[10px] font-mono",
+          "text-[9px] font-mono",
           isPreview
             ? "text-muted-foreground"
             : slot.status === "matched"
@@ -173,13 +173,13 @@ export function PlanogramExpectedPanel({
           Planogram (Expected)
         </h3>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto p-3 space-y-2">
+      <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
         {data.planogramShelves.map((shelf) => (
-          <div key={shelf.shelfName} className="space-y-1.5">
+          <div key={shelf.shelfName} className="space-y-0.5">
             <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
               {shelf.shelfName}: {shelf.shelfLabel} — {shelf.units} units
             </h4>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1 sm:grid-cols-4 lg:grid-cols-5">
               {shelf.slots.map((slot) => (
                 <PlanogramSlotCard key={slot.id} slot={slot} variant={variant} />
               ))}

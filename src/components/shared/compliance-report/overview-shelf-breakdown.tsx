@@ -1,12 +1,16 @@
+import { useState } from "react";
+import type {
+  AllItemsReportData,
+  ReportShelfCompliance,
+  ReportSnippet,
+} from "@/lib/analysis";
 import { cn } from "@/lib/utils";
-import type { ReportSnippet, ReportShelfCompliance } from "@/lib/analysis";
 
 type ShelfItemStatus = "matched" | "misplaced" | "missing" | "extra";
 
-interface ShelfBreakdownItem {
+interface ShelfIssueItem {
   name: string;
   status: ShelfItemStatus;
-  count: string;
 }
 
 function normalizeLocation(value: string): string {
@@ -17,17 +21,20 @@ function mapIssueTypeToStatus(type: string): ShelfItemStatus {
   const normalizedType = type.toLowerCase();
   if (normalizedType.includes("missing")) return "missing";
   if (normalizedType.includes("misplaced")) return "misplaced";
-  if (normalizedType.includes("unexpected") || normalizedType.includes("extra")) {
+  if (
+    normalizedType.includes("unexpected") ||
+    normalizedType.includes("extra")
+  ) {
     return "extra";
   }
   return "matched";
 }
 
-function buildShelfBreakdownMap(
+function buildShelfIssueMap(
   shelfCompliance: ReportShelfCompliance[],
   issuesToReview: ReportSnippet["issuesToReview"],
-): Map<string, ShelfBreakdownItem[]> {
-  const issuesByShelf = new Map<string, ShelfBreakdownItem[]>();
+): Map<string, ShelfIssueItem[]> {
+  const issuesByShelf = new Map<string, ShelfIssueItem[]>();
   const normalizedShelfNames = shelfCompliance.map((shelf) => ({
     key: shelf.shelfName,
     normalized: normalizeLocation(shelf.shelfName),
@@ -37,7 +44,9 @@ function buildShelfBreakdownMap(
     const location = issue.location ? normalizeLocation(issue.location) : "";
     const matchedShelf =
       normalizedShelfNames.find(
-        (shelf) => location.includes(shelf.normalized) || shelf.normalized.includes(location),
+        (shelf) =>
+          location.includes(shelf.normalized) ||
+          shelf.normalized.includes(location),
       )?.key ?? null;
     if (!matchedShelf) continue;
 
@@ -45,7 +54,6 @@ function buildShelfBreakdownMap(
     shelfIssues.push({
       name: issue.skuName?.trim() || "Issue detected",
       status: mapIssueTypeToStatus(issue.type),
-      count: issue.type.toUpperCase(),
     });
     issuesByShelf.set(matchedShelf, shelfIssues);
   }
@@ -53,114 +61,208 @@ function buildShelfBreakdownMap(
   return issuesByShelf;
 }
 
+function parseShelfNumber(shelfName: string): number | null {
+  const match = shelfName.match(/(\d+)/);
+  if (!match) return null;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function parseShelfNumberFromSku(sku: string): number | null {
+  const match = sku.match(/-(\d+)$/);
+  if (!match) return null;
+  const value = Number.parseInt(match[1], 10);
+  return Number.isFinite(value) ? value : null;
+}
+
+function buildShelfItemsMap(allItems?: AllItemsReportData | null) {
+  const map = new Map<number, AllItemsReportData["skuFacings"]>();
+  for (const row of allItems?.skuFacings ?? []) {
+    const shelfNumber = parseShelfNumberFromSku(row.sku);
+    if (shelfNumber === null) continue;
+    const rows = map.get(shelfNumber) ?? [];
+    rows.push(row);
+    map.set(shelfNumber, rows);
+  }
+  return map;
+}
+
 export function OverviewShelfBreakdown({
   shelfCompliance,
   issuesToReview,
+  allItems = null,
 }: {
   shelfCompliance: ReportShelfCompliance[];
   issuesToReview: ReportSnippet["issuesToReview"];
+  allItems?: AllItemsReportData | null;
 }) {
-  const shelfBreakdownMap = buildShelfBreakdownMap(shelfCompliance, issuesToReview);
+  const shelfIssueMap = buildShelfIssueMap(
+    shelfCompliance,
+    issuesToReview,
+  );
+  const shelfItemsMap = buildShelfItemsMap(allItems);
+  const [expandedShelves, setExpandedShelves] = useState<Record<string, boolean>>(
+    {},
+  );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {shelfCompliance.map((shelf) => {
-        const products = shelfBreakdownMap.get(shelf.shelfName) ?? [];
-        const explicitMatchedCount = products.filter((p) => p.status === "matched").length;
-        const misplacedCount = products.filter((p) => p.status === "misplaced").length;
-        const missingCount = products.filter((p) => p.status === "missing").length;
-        const extraCount = products.filter((p) => p.status === "extra").length;
-        const inferredMatchedCount = Math.max(
-          0,
-          (shelf.skuCount ?? shelf.units ?? 0) - misplacedCount - missingCount - extraCount,
+        const shelfNumber = parseShelfNumber(shelf.shelfName);
+        const shelfItems =
+          shelfNumber !== null ? (shelfItemsMap.get(shelfNumber) ?? []) : [];
+        const shelfIssues = shelfIssueMap.get(shelf.shelfName) ?? [];
+        const issueByName = new Map(
+          shelfIssues.map((entry) => [entry.name.toLowerCase(), entry.status] as const),
         );
-        const matchedCount = Math.max(explicitMatchedCount, inferredMatchedCount);
+        const misplacedCount = shelfItems.filter(
+          (item) => issueByName.get(item.productName.toLowerCase()) === "misplaced",
+        ).length;
+        const missingCount = shelfIssues.filter((item) => item.status === "missing").length;
+        const extraCount = shelfIssues.filter((item) => item.status === "extra").length;
+        const nonCompliantItems = shelfItems.filter((item) => {
+          const status = issueByName.get(item.productName.toLowerCase()) ?? "matched";
+          return status !== "matched";
+        });
+        const maxVisible = 3;
+        const visibleItems = nonCompliantItems.slice(0, maxVisible);
+        const isExpanded = expandedShelves[shelf.shelfName] ?? false;
+        const toggleExpanded = () =>
+          setExpandedShelves((prev) => ({
+            ...prev,
+            [shelf.shelfName]: !isExpanded,
+          }));
 
         return (
           <div
             key={shelf.shelfName}
-            className="border-b border-border pb-6 last:border-b-0 last:pb-0"
+            className="border-border bg-background/30 rounded-lg border px-2.5 py-2"
           >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <h4 className="text-sm font-semibold text-foreground">
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-1.5">
+              <h4 className="text-foreground text-[11px] font-semibold">
                 {shelf.shelfName} {shelf.shelfLabel ?? ""}
               </h4>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-[10px]">
                 {shelf.units ?? 0} units · {shelf.skuCount ?? 0} SKUs
               </span>
-            </div>
-            <div className="flex items-center gap-3 mb-3">
-              <div className="flex-1 h-3 rounded bg-muted/60 overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded transition-all",
-                    shelf.compliance >= 80
-                      ? "bg-chart-2"
-                      : shelf.compliance > 0
-                        ? "bg-action-warning"
-                        : "bg-muted",
-                  )}
-                  style={{ width: `${shelf.compliance}%` }}
-                />
-              </div>
               <span
                 className={cn(
-                  "text-xs font-medium w-10 text-right",
-                  shelf.compliance >= 80 ? "text-chart-2" : "text-muted-foreground",
+                  "text-[11px] font-semibold",
+                  shelf.compliance >= 80
+                    ? "text-chart-2"
+                    : shelf.compliance > 0
+                      ? "text-action-warning"
+                      : "text-destructive",
                 )}
               >
                 {shelf.compliance}%
               </span>
             </div>
-            {products.length > 0 ? (
-              <div className="flex flex-wrap gap-2 mb-2">
-                {products.map((p, i) => (
+            <div className="mb-1.5 flex items-center gap-2">
+              <div className="bg-muted/60 h-2 flex-1 overflow-hidden rounded-full">
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-all",
+                    shelf.compliance >= 80
+                      ? "bg-linear-to-r from-chart-2/85 to-chart-2"
+                      : shelf.compliance > 0
+                        ? "bg-linear-to-r from-action-warning/85 to-action-warning"
+                        : "bg-destructive/70",
+                  )}
+                  style={{ width: `${shelf.compliance}%` }}
+                />
+              </div>
+            </div>
+            {nonCompliantItems.length > 0 ? (
+              <div className="mb-0.5 flex flex-wrap gap-1">
+                {visibleItems.map((item) => {
+                  const status = issueByName.get(item.productName.toLowerCase()) ?? "matched";
+                  return (
                   <span
-                    key={`${p.name}-${i}`}
+                    key={item.id}
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium",
-                      p.status === "matched" &&
-                        "bg-chart-2/20 text-chart-2 border border-chart-2/40",
-                      p.status === "misplaced" &&
-                        "bg-action-warning/20 text-action-warning border border-action-warning/40",
-                      p.status === "missing" &&
-                        "bg-destructive/20 text-destructive border border-destructive/40",
-                      p.status === "extra" &&
-                        "bg-blue-500/20 text-blue-500 border border-blue-500/40",
+                      "border-border bg-card/70 text-foreground inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px] font-medium",
                     )}
                   >
+                    <span className="max-w-[110px] truncate">{item.productName}</span>
                     <span
                       className={cn(
-                        "size-1.5 rounded-full shrink-0",
-                        p.status === "matched" && "bg-chart-2",
-                        p.status === "misplaced" && "bg-action-warning",
-                        p.status === "missing" && "bg-destructive",
-                        p.status === "extra" && "bg-blue-500",
-                      )}
-                    />
-                    {p.name}
-                    <span
-                      className={cn(
-                        "rounded px-1 text-[10px]",
-                        p.status === "matched" && "bg-chart-2/30",
-                        p.status === "misplaced" && "bg-action-warning/30",
-                        p.status === "missing" && "bg-destructive/30",
-                        p.status === "extra" && "bg-blue-500/30",
+                        "rounded px-1 text-[9px]",
+                        status === "matched" && "bg-chart-2/20 text-chart-2",
+                        status === "misplaced" &&
+                          "bg-action-warning/20 text-action-warning",
+                        status === "missing" && "bg-destructive/20 text-destructive",
+                        status === "extra" && "bg-blue-500/20 text-blue-500",
                       )}
                     >
-                      {p.count}
+                      {item.detected}/{item.frontFacings} D{item.depth}
                     </span>
                   </span>
-                ))}
+                );
+                })}
+                {nonCompliantItems.length > maxVisible && (
+                  <button
+                    type="button"
+                    onClick={toggleExpanded}
+                    className="text-accent inline-flex items-center text-[10px] font-medium underline-offset-2 hover:underline"
+                  >
+                    +{nonCompliantItems.length - maxVisible} more
+                  </button>
+                )}
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground mb-2">
-                No shelf-level issues detected.
+              <p className="text-muted-foreground mb-0.5 text-[10px]">
+                No non-compliant products on this shelf.
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
-              {matchedCount} matched {misplacedCount} misplaced {missingCount} missing
+            <p className="text-muted-foreground text-[10px]">
+              {misplacedCount} misplaced · {missingCount} missing · {extraCount} extra
             </p>
+            {shelfItems.length > 0 && (
+              <div className="mt-1.5">
+                <button
+                  type="button"
+                  onClick={toggleExpanded}
+                  className="text-muted-foreground hover:text-foreground text-[10px] underline-offset-2 hover:underline"
+                >
+                  {isExpanded
+                    ? "Hide details"
+                    : `View details (${shelfItems.length} products)`}
+                </button>
+              </div>
+            )}
+            {isExpanded && shelfItems.length > 0 && (
+              <div className="border-border mt-1.5 rounded-md border p-1.5">
+                <div className="flex flex-wrap gap-1">
+                  {shelfItems.map((item) => {
+                    const status =
+                      issueByName.get(item.productName.toLowerCase()) ?? "matched";
+                    return (
+                      <span
+                        key={`detail-${item.id}`}
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-md border px-1.5 py-0.5 text-[10px]",
+                          status === "matched" &&
+                            "border-chart-2/40 bg-chart-2/20 text-chart-2",
+                          status === "misplaced" &&
+                            "border-action-warning/40 bg-action-warning/20 text-action-warning",
+                          status === "missing" &&
+                            "border-destructive/40 bg-destructive/20 text-destructive",
+                          status === "extra" &&
+                            "border-blue-500/40 bg-blue-500/20 text-blue-500",
+                        )}
+                      >
+                        <span className="max-w-[120px] truncate">{item.productName}</span>
+                        <span className="rounded bg-black/10 px-1 text-[9px]">
+                          {item.detected}/{item.frontFacings} D{item.depth}
+                        </span>
+                        <span className="uppercase">{status}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })}

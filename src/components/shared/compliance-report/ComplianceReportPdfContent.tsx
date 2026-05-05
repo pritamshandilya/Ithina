@@ -32,11 +32,11 @@ export function ComplianceReportPdfContent({
     <div
       className={cn(
         "compliance-report-pdf bg-white text-[#1a1a1a] p-6 space-y-8",
-        "[&_.text-muted-foreground]:!text-[#6b7280]",
-        "[&_.text-foreground]:!text-[#1a1a1a]",
-        "[&_.border-border]:!border-[#e5e7eb]",
-        "[&_.bg-card]:!bg-[#f9fafb]",
-        "[&_.bg-muted]:!bg-[#f3f4f6]",
+        "[&_.text-muted-foreground]:text-[#6b7280]!",
+        "[&_.text-foreground]:text-[#1a1a1a]!",
+        "[&_.border-border]:border-[#e5e7eb]!",
+        "[&_.bg-card]:bg-[#f9fafb]!",
+        "[&_.bg-muted]:bg-[#f3f4f6]!",
         className
       )}
     >
@@ -56,9 +56,6 @@ export function ComplianceReportPdfContent({
         missing={report.missing}
         extra={report.extra}
         issues={report.issues}
-        facings={report.facings}
-        units={report.units}
-        detected={report.detected}
         gap={report.gap}
       />
 

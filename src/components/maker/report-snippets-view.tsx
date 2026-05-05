@@ -16,8 +16,6 @@ import {
   FileText,
   Info,
   Lightbulb,
-  Minus,
-  Plus,
   Send,
   Upload,
   XCircle,
@@ -25,6 +23,7 @@ import {
 import { useState } from "react";
 
 import { SendForApprovalModal } from "@/components/maker/send-for-approval-modal";
+import { ImageViewer } from "@/components/shared/image-viewer/ImageViewer";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type {
@@ -98,7 +97,6 @@ export function ReportSnippetsView({
 }: ReportSnippetsViewProps) {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [zoomLevel, setZoomLevel] = useState(1);
   const [sendForApprovalOpen, setSendForApprovalOpen] = useState(false);
   const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
 
@@ -116,9 +114,6 @@ export function ReportSnippetsView({
       navigate({ to: "/maker/audits/planogram" });
     }, 800);
   };
-
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 0.25, 2));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 0.25, 0.5));
 
   return (
     <div className="space-y-4">
@@ -173,24 +168,6 @@ export function ReportSnippetsView({
               Observed Display Unit
             </h3>
             <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleZoomIn}
-                disabled={zoomLevel >= 2}
-                aria-label="Zoom in"
-              >
-                <Plus className="size-4" aria-hidden />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleZoomOut}
-                disabled={zoomLevel <= 0.5}
-                aria-label="Zoom out"
-              >
-                <Minus className="size-4" aria-hidden />
-              </Button>
               {!isHistorical && (
                 <>
                   <Button size="sm" variant="accent" onClick={onReplaceImage}>
@@ -211,14 +188,7 @@ export function ReportSnippetsView({
           </div>
           <div className="bg-muted/30 min-h-0 flex-1 overflow-auto">
             {imagePreview ? (
-              <div className="flex min-h-full items-center justify-center p-4">
-                <img
-                  src={imagePreview}
-                  alt="Display Unit analysis"
-                  className="max-w-full object-contain transition-transform duration-200"
-                  style={{ transform: `scale(${zoomLevel})` }}
-                />
-              </div>
+              <ImageViewer imageUrl={imagePreview} className="p-4" />
             ) : (
               <div className="text-muted-foreground flex h-full min-h-[280px] items-center justify-center">
                 <p className="text-sm">No image</p>

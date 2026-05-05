@@ -4,15 +4,15 @@
  * Displayed when user clicks on an analysis from shelf-level or store-level reports.
  * Uses mapped report payload from navigation state when available.
  */
-
 import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { useState } from "react";
+
 import MainLayout from "@/components/layouts/main";
-import { Button } from "@/components/ui/button";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import { type ReportSnippet } from "@/lib/analysis";
 import { exportReportToPdf } from "@/lib/reports/pdf-export";
-import { useToast } from "@/hooks/use-toast";
 
 export const Route = createFileRoute("/checker/reports/view/")({
   component: CheckerFullReportPage,
@@ -21,11 +21,13 @@ export const Route = createFileRoute("/checker/reports/view/")({
 function CheckerFullReportPage() {
   const location = useLocation();
   const { toast } = useToast();
-  const state = (location.state as {
-    imageUrl?: string;
-    report?: ReportSnippet;
-    backTo?: string;
-  } | undefined);
+  const state = location.state as
+    | {
+        imageUrl?: string;
+        report?: ReportSnippet;
+        backTo?: string;
+      }
+    | undefined;
   const imageUrl = state?.imageUrl;
   const report = state?.report;
   const backTo = state?.backTo ?? "/checker/audit-review";
@@ -61,8 +63,10 @@ function CheckerFullReportPage() {
   if (!report) {
     return (
       <MainLayout>
-        <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-primary p-6 text-center">
-          <p className="text-foreground text-base font-semibold">Full report is unavailable</p>
+        <div className="bg-primary flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-foreground text-base font-semibold">
+            Full report is unavailable
+          </p>
           <p className="text-muted-foreground max-w-md text-sm">
             Open this page from a report entry that includes analysis data.
           </p>
@@ -76,7 +80,7 @@ function CheckerFullReportPage() {
 
   return (
     <MainLayout>
-      <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary flex h-full min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col overflow-hidden">
           <ComplianceReportFull
             report={report}

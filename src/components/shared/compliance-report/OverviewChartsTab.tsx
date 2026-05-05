@@ -8,27 +8,43 @@
  *
  * Uses placeholder content; will be wired to dynamic data later.
  */
-
 import {
-  Info,
-  Lightbulb,
   BarChart3,
-  PieChart,
-  AlertTriangle,
-  Leaf,
+  Info,
   Layers,
+  Leaf,
+  Lightbulb,
+  PieChart,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type {
-  ReportSnippet,
-  ReportKeyFinding,
-  ReportIssueDistribution,
-} from "@/lib/analysis";
+import type { ComponentType, ReactNode } from "react";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Label,
+  LabelList,
+  Pie,
+  PieChart as RechartsPieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+
 import { OverviewShelfBreakdown } from "./overview-shelf-breakdown";
 import { OverviewSpaceEfficiencyChart } from "./overview-space-efficiency-chart";
+import type {
+  AllItemsReportData,
+  ReportIssueDistribution,
+  ReportKeyFinding,
+  ReportSnippet,
+} from "@/lib/analysis";
+import { cn } from "@/lib/utils";
 
 export interface OverviewChartsTabProps {
   report: ReportSnippet;
+  allItems?: AllItemsReportData | null;
   className?: string;
 }
 
@@ -39,20 +55,20 @@ function ReportCard({
   className,
 }: {
   title: string;
-  icon: React.ComponentType<{ className?: string }>;
-  children: React.ReactNode;
+  icon: ComponentType<{ className?: string }>;
+  children: ReactNode;
   className?: string;
 }) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card/60 p-4 sm:p-5",
-        className
+        "border-border bg-card/60 rounded-xl border p-3",
+        className,
       )}
     >
-      <div className="flex items-center gap-2 mb-3">
-        <Icon className="size-4 text-accent shrink-0" aria-hidden />
-        <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+      <div className="mb-2 flex items-center gap-2">
+        <Icon className="text-accent size-4 shrink-0" aria-hidden />
+        <h3 className="text-foreground text-sm font-semibold tracking-wider uppercase">
           {title}
         </h3>
       </div>
@@ -65,24 +81,22 @@ function KeyFindingIcon({ type }: { type: ReportKeyFinding["type"] }) {
   if (type === "error")
     return (
       <span
-        className="size-4 rounded-full bg-destructive/30 flex items-center justify-center shrink-0"
+        className="bg-destructive/30 flex size-4 shrink-0 items-center justify-center rounded-full"
         aria-hidden
       >
-        <span className="size-2 rounded-full bg-destructive" />
+        <span className="bg-destructive size-2 rounded-full" />
       </span>
     );
   if (type === "warning")
     return (
       <span
-        className="size-4 rounded-full bg-action-warning/30 flex items-center justify-center shrink-0"
+        className="bg-action-warning/30 flex size-4 shrink-0 items-center justify-center rounded-full"
         aria-hidden
       >
-        <span className="size-2 rounded-full bg-action-warning" />
+        <span className="bg-action-warning size-2 rounded-full" />
       </span>
     );
-  return (
-    <Info className="size-4 shrink-0 text-accent" aria-hidden />
-  );
+  return <Info className="text-accent size-4 shrink-0" aria-hidden />;
 }
 
 function DonutChart({
@@ -93,69 +107,235 @@ function DonutChart({
   total: number;
 }) {
   if (total === 0) return null;
-  const cx = 50;
-  const cy = 50;
-  const or = 40;
-  const ir = 28;
   const segments = [
-    { value: distribution.matched, color: "var(--chart-2)" },
-    { value: distribution.misplaced, color: "var(--action-warning)" },
-    { value: distribution.missing, color: "var(--destructive)" },
-    { value: distribution.extra, color: "#6366f1" },
-  ];
-
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  let startAngle = -90;
+    {
+      key: "misplaced",
+      label: "Misplaced",
+      value: distribution.misplaced,
+      color: "var(--action-warning)",
+    },
+    {
+      key: "missing",
+      label: "Missing",
+      value: distribution.missing,
+      color: "var(--destructive)",
+    },
+    {
+      key: "extra",
+      label: "Extra",
+      value: distribution.extra,
+      color: "#6366f1",
+    },
+  ].filter((segment) => segment.value > 0);
 
   return (
-    <div className="relative size-28 shrink-0">
-      <svg viewBox="0 0 100 100" className="size-28">
-        {segments.map((s, i) => {
-          const angle = (s.value / total) * 360;
-          const endAngle = startAngle + angle;
-          const x1 = cx + or * Math.cos(toRad(startAngle));
-          const y1 = cy + or * Math.sin(toRad(startAngle));
-          const x2 = cx + or * Math.cos(toRad(endAngle));
-          const y2 = cy + or * Math.sin(toRad(endAngle));
-          const x3 = cx + ir * Math.cos(toRad(endAngle));
-          const y3 = cy + ir * Math.sin(toRad(endAngle));
-          const x4 = cx + ir * Math.cos(toRad(startAngle));
-          const y4 = cy + ir * Math.sin(toRad(startAngle));
-          const largeArc = angle > 180 ? 1 : 0;
-          const path = `M ${x1} ${y1} A ${or} ${or} 0 ${largeArc} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${largeArc} 0 ${x4} ${y4} Z`;
-          startAngle = endAngle;
-          return <path key={i} d={path} fill={s.color} />;
-        })}
-      </svg>
+    <div className="mx-auto w-full max-w-[320px]">
+      <ResponsiveContainer width="100%" height={220}>
+        <RechartsPieChart>
+          <Tooltip content={<IssueDistributionTooltip total={total} />} />
+          <Pie
+            data={segments}
+            dataKey="value"
+            nameKey="label"
+            innerRadius={52}
+            outerRadius={86}
+            stroke="var(--card)"
+            strokeWidth={2}
+          >
+            {segments.map((segment) => (
+              <Cell key={segment.key} fill={segment.color} />
+            ))}
+            <Label
+              position="center"
+              content={() => (
+                <g>
+                  <text
+                    x="50%"
+                    y="48%"
+                    textAnchor="middle"
+                    className="fill-foreground text-[14px] font-semibold"
+                  >
+                    {total}
+                  </text>
+                  <text
+                    x="50%"
+                    y="56%"
+                    textAnchor="middle"
+                    className="fill-muted-foreground text-[10px]"
+                  >
+                    Total
+                  </text>
+                </g>
+              )}
+            />
+          </Pie>
+        </RechartsPieChart>
+      </ResponsiveContainer>
+      <div className="mt-1 grid grid-cols-3 gap-2">
+        {segments.map((segment) => (
+          <div key={segment.key} className="flex items-center gap-1.5 text-[10px]">
+            <svg className="size-2 shrink-0" viewBox="0 0 8 8" aria-hidden>
+              <circle cx="4" cy="4" r="4" fill={segment.color} />
+            </svg>
+            <span className="text-muted-foreground">{segment.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
+function IssueDistributionTooltip({
+  active,
+  payload,
+  total,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: { label: string; value: number } }>;
+  total: number;
+}) {
+  if (!active || !payload?.length) return null;
+  const point = payload[0].payload;
+  const percentage = total > 0 ? Math.round((point.value / total) * 100) : 0;
 
-export function OverviewChartsTab({ report, className }: OverviewChartsTabProps) {
+  return (
+    <div className="border-border bg-card rounded-md border px-2 py-1 text-[10px] shadow-md">
+      <p className="text-foreground font-semibold">{point.label}</p>
+      <p className="text-muted-foreground">
+        {point.value} ({percentage}%)
+      </p>
+    </div>
+  );
+}
+
+function ShelfComplianceHorizontalBarChart({
+  shelfCompliance,
+}: {
+  shelfCompliance: ReportSnippet["shelfCompliance"];
+}) {
+  if (!shelfCompliance.length) {
+    return (
+      <p className="text-muted-foreground text-xs">No shelf compliance data.</p>
+    );
+  }
+
+  const getBarFill = (compliance: number) => {
+    if (compliance >= 80) return "var(--chart-2)";
+    if (compliance > 0) return "var(--action-warning)";
+    return "var(--destructive)";
+  };
+  const chartData = shelfCompliance.map((shelf) => ({
+    shelfName: shelf.shelfName,
+    compliance: Math.max(0, Math.min(100, shelf.compliance)),
+    fill: getBarFill(shelf.compliance),
+  }));
+  const chartHeight = Math.max(220, shelfCompliance.length * 34 + 22);
+
+  return (
+    <div className="w-full">
+      <ResponsiveContainer width="100%" height={chartHeight}>
+        <BarChart
+          data={chartData}
+          layout="vertical"
+          margin={{ top: 12, right: 44, left: 4, bottom: 8 }}
+          barCategoryGap={10}
+        >
+          <CartesianGrid stroke="var(--border)" strokeOpacity={0.45} horizontal={false} />
+          <XAxis
+            type="number"
+            domain={[0, 100]}
+            ticks={[0, 25, 50, 75, 100]}
+            tickFormatter={(value) => `${value}%`}
+            tick={{ fill: "var(--muted-foreground)", fontSize: 10 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <YAxis
+            dataKey="shelfName"
+            type="category"
+            width={70}
+            tickFormatter={(value) =>
+              String(value).replaceAll(" ", "\u00A0")
+            }
+            tick={{ fill: "var(--foreground)", fontSize: 11 }}
+            axisLine={false}
+            tickLine={false}
+          />
+          <Tooltip content={<ShelfComplianceTooltip />} cursor={false} />
+          <Bar dataKey="compliance" barSize={16} radius={3} background={{ fill: "var(--muted)" }}>
+            <LabelList
+              dataKey="compliance"
+              content={({ x, y, width, height, value }) => (
+                <text
+                  x={Number(x) + Number(width) + 8}
+                  y={Number(y) + Number(height) / 2}
+                  fill="var(--foreground)"
+                  fontSize={11}
+                  fontWeight={500}
+                  textAnchor="start"
+                  dominantBaseline="middle"
+                >
+                  {value}%
+                </text>
+              )}
+            />
+            {chartData.map((entry) => (
+              <Cell key={entry.shelfName} fill={entry.fill} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function ShelfComplianceTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: Array<{ value: number }>;
+  label?: string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="border-border bg-card rounded-md border px-2 py-1 text-[10px] shadow-md">
+      <p className="text-foreground font-semibold">{label}</p>
+      <p className="text-muted-foreground">{payload[0].value}% compliance</p>
+    </div>
+  );
+}
+
+export function OverviewChartsTab({
+  report,
+  allItems = null,
+  className,
+}: OverviewChartsTabProps) {
   const totalDistribution =
-    report.issueDistribution.matched +
     report.issueDistribution.misplaced +
     report.issueDistribution.missing +
     report.issueDistribution.extra;
 
   return (
-    <div className={cn("w-full min-w-0 space-y-4", className)}>
+    <div className={cn("w-full min-w-0 space-y-3", className)}>
       {/* Top row: Executive Summary + AI Recommendations */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-3 lg:grid-cols-2">
         <ReportCard title="Executive Summary" icon={Info}>
-          <p className="text-sm text-foreground leading-relaxed">
+          <p className="text-foreground text-sm leading-relaxed">
             {report.executiveSummary}
           </p>
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {report.keyFindings.map((f, i) => (
               <div
                 key={i}
                 className={cn(
-                  "flex gap-2 rounded-lg px-3 py-2.5 text-sm",
-                  f.type === "error" && "bg-destructive/10 border border-destructive/30",
-                  f.type === "warning" && "bg-action-warning/10 border border-action-warning/30",
-                  f.type === "info" && "bg-accent/10 border border-accent/30"
+                  "flex gap-2 rounded-lg px-2.5 py-2 text-xs",
+                  f.type === "error" &&
+                    "bg-destructive/10 border-destructive/30 border",
+                  f.type === "warning" &&
+                    "bg-action-warning/10 border-action-warning/30 border",
+                  f.type === "info" && "bg-accent/10 border-accent/30 border",
                 )}
               >
                 <KeyFindingIcon type={f.type} />
@@ -166,7 +346,7 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
         </ReportCard>
 
         <ReportCard title="AI Recommendations" icon={Lightbulb}>
-          <ul className="space-y-2 text-sm text-foreground">
+          <ul className="text-foreground space-y-1.5 text-xs">
             {report.aiRecommendations.map((rec, i) => (
               <li key={i} className="flex gap-2">
                 <span className="text-accent shrink-0">→</span>
@@ -178,103 +358,26 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
       </div>
 
       {/* Charts row: Compliance by Shelf, Issue Distribution, All Issues Breakdown */}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-2">
         <ReportCard title="Compliance by Shelf" icon={BarChart3}>
-          <div className="space-y-3">
-            {report.shelfCompliance.map((s) => (
-              <div key={s.shelfName} className="flex items-center gap-3">
-                <span className="w-20 shrink-0 text-xs font-medium text-foreground truncate text-right">
-                  {s.shelfName}
-                </span>
-                <div className="flex-1 h-5 rounded bg-muted/60 overflow-hidden min-w-[60px]">
-                  <div
-                    className={cn(
-                      "h-full rounded transition-all",
-                      s.compliance >= 80
-                        ? "bg-chart-2"
-                        : s.compliance > 0
-                          ? "bg-action-warning"
-                          : "bg-destructive/70"
-                    )}
-                    style={{ width: `${s.compliance}%` }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-foreground w-8 text-right">
-                  {s.compliance}%
-                </span>
-              </div>
-            ))}
-          </div>
+          <ShelfComplianceHorizontalBarChart
+            shelfCompliance={report.shelfCompliance}
+          />
         </ReportCard>
 
         <ReportCard title="Planogram Issue Distribution" icon={PieChart}>
-          <div className="flex items-center gap-4">
+          <div className="flex justify-center">
             <DonutChart
               distribution={report.issueDistribution}
               total={totalDistribution}
             />
-            <div className="flex flex-col gap-2 text-sm">
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-sm bg-chart-2" aria-hidden />
-                Matched: {report.issueDistribution.matched}
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-sm bg-action-warning" aria-hidden />
-                Misplaced: {report.issueDistribution.misplaced}
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-sm bg-destructive" aria-hidden />
-                Missing: {report.issueDistribution.missing}
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="h-3 w-3 rounded-sm bg-blue-500" aria-hidden />
-                Extra: {report.issueDistribution.extra}
-              </span>
-            </div>
-          </div>
-        </ReportCard>
-
-        <ReportCard title="All Issues Breakdown" icon={AlertTriangle}>
-          <div className="space-y-2 max-h-[180px] overflow-y-auto">
-            {report.issueCategories.map((cat) => (
-              <div
-                key={cat.id}
-                className="flex items-center gap-2"
-              >
-                <span className="w-24 shrink-0 text-xs font-medium text-foreground truncate">
-                  {cat.title}
-                </span>
-                <div className="flex-1 h-4 rounded bg-muted/60 overflow-hidden min-w-[40px]">
-                  <div
-                    className={cn(
-                      "h-full rounded",
-                      cat.variant === "matched" && "bg-chart-2",
-                      cat.variant === "misplaced" && "bg-action-warning",
-                      cat.variant === "missing" && "bg-destructive",
-                      cat.variant === "extra" && "bg-blue-500",
-                      cat.variant === "analysis" && "bg-accent",
-                      cat.variant === "depth" && "bg-teal-500"
-                    )}
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        (cat.count / Math.max(...report.issueCategories.map((c) => c.count))) * 100
-                      )}%`,
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-medium text-foreground w-6 text-right">
-                  {cat.count}
-                </span>
-              </div>
-            ))}
           </div>
         </ReportCard>
       </div>
 
       {/* Space Efficiency vs Weight */}
       <ReportCard title="Space Efficiency vs Weight" icon={Leaf}>
-        <div className="rounded-lg border border-border bg-muted/10 p-3">
+        <div className="bg-muted/10 rounded-lg p-1">
           <OverviewSpaceEfficiencyChart />
         </div>
       </ReportCard>
@@ -284,6 +387,7 @@ export function OverviewChartsTab({ report, className }: OverviewChartsTabProps)
         <OverviewShelfBreakdown
           shelfCompliance={report.shelfCompliance}
           issuesToReview={report.issuesToReview}
+          allItems={allItems}
         />
       </ReportCard>
     </div>

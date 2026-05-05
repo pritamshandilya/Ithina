@@ -2,20 +2,20 @@ import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { Button } from "@/components/ui/button";
 import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import {
   getAnnotatedImagePreview,
   mapAnalysisResultToAllIssuesReportData,
   mapAnalysisResultToAllItemsReportData,
-  mapPlanogramPayloadToAllItemsReportData,
   mapAnalysisResultToReportSnippet,
+  mapPlanogramPayloadToAllItemsReportData,
 } from "@/lib/analysis";
 import { exportReportToPdf } from "@/lib/reports/pdf-export";
 import { getRelativePath } from "@/lib/utils";
-import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
 import { usePlanogramById } from "@/queries/maker";
+import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
 
 export const Route = createFileRoute("/maker/reports/view/$analysisId/")({
   component: FullReportByAnalysisPage,
@@ -37,13 +37,27 @@ function FullReportByAnalysisPage() {
     | undefined;
 
   const backTo = getRelativePath(state?.backTo ?? "/maker/historical-analysis");
-  const [report, setReport] = useState<ReturnType<typeof mapAnalysisResultToReportSnippet> | null>(null);
-  const [imageUrl, setImageUrl] = useState<string | null>(state?.imageUrl ?? null);
-  const [planogramId, setPlanogramId] = useState<string | null>(state?.planogramId ?? null);
-  const [allItems, setAllItems] = useState<ReturnType<typeof mapAnalysisResultToAllItemsReportData> | null>(null);
-  const [allIssues, setAllIssues] = useState<ReturnType<typeof mapAnalysisResultToAllIssuesReportData> | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<Awaited<ReturnType<typeof fetchAnalysisJob>>["result"] | null>(null);
-  const [analysisType, setAnalysisType] = useState<"PLANOGRAM" | "ADHOC" | null>(null);
+  const [report, setReport] = useState<ReturnType<
+    typeof mapAnalysisResultToReportSnippet
+  > | null>(null);
+  const [imageUrl, setImageUrl] = useState<string | null>(
+    state?.imageUrl ?? null,
+  );
+  const [planogramId, setPlanogramId] = useState<string | null>(
+    state?.planogramId ?? null,
+  );
+  const [allItems, setAllItems] = useState<ReturnType<
+    typeof mapAnalysisResultToAllItemsReportData
+  > | null>(null);
+  const [allIssues, setAllIssues] = useState<ReturnType<
+    typeof mapAnalysisResultToAllIssuesReportData
+  > | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<
+    Awaited<ReturnType<typeof fetchAnalysisJob>>["result"] | null
+  >(null);
+  const [analysisType, setAnalysisType] = useState<
+    "PLANOGRAM" | "ADHOC" | null
+  >(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const { data: planogramPayload } = usePlanogramById(planogramId);
@@ -96,7 +110,10 @@ function FullReportByAnalysisPage() {
 
     if (analysisType === "PLANOGRAM" && planogramPayload) {
       setAllItems(
-        mapPlanogramPayloadToAllItemsReportData(planogramPayload, analysisResult),
+        mapPlanogramPayloadToAllItemsReportData(
+          planogramPayload,
+          analysisResult,
+        ),
       );
       return;
     }
@@ -136,7 +153,7 @@ function FullReportByAnalysisPage() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="flex h-full min-h-0 flex-1 items-center justify-center bg-primary p-6">
+        <div className="bg-primary flex h-full min-h-0 flex-1 items-center justify-center p-6">
           <p className="text-muted-foreground text-sm">Loading report...</p>
         </div>
       </MainLayout>
@@ -146,8 +163,10 @@ function FullReportByAnalysisPage() {
   if (!report) {
     return (
       <MainLayout>
-        <div className="flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-primary p-6 text-center">
-          <p className="text-foreground text-base font-semibold">Full report is unavailable</p>
+        <div className="bg-primary flex h-full min-h-0 flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+          <p className="text-foreground text-base font-semibold">
+            Full report is unavailable
+          </p>
           <p className="text-muted-foreground max-w-md text-sm">
             No report payload is available for this analysis.
           </p>

@@ -4,21 +4,15 @@
  * Side-by-side: Planogram (expected layout) vs Real Shelf (captured image).
  * Non-compliant items are highlighted with color-coded borders.
  */
-import { ImageIcon } from "lucide-react";
-import { Fragment } from "react";
+import { ImageIcon, ListFilter } from "lucide-react";
 
 import { PlanogramExpectedPanel } from "./PlanogramExpectedPanel";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { ImageViewer, type ImageViewerOverlay } from "@/components/shared/image-viewer/ImageViewer";
 import { mapPlanogramPayloadToImageComparisonData } from "@/lib/analysis";
 import type {
-  DetectionOverlay,
-  DetectionOverlayStatus,
   ImageComparisonData,
 } from "@/lib/analysis/image-comparison-types";
+import type { SkuFacingRow } from "@/lib/analysis/all-items-report-types";
 import { cn } from "@/lib/utils";
 import type { PlanogramPayload } from "@/types/planogram";
 
@@ -29,67 +23,6 @@ const DETECTION_LEGEND: { color: string; label: string }[] = [
   { color: "bg-blue-500", label: "Extra" },
 ];
 
-const OVERLAY_BORDER: Record<DetectionOverlayStatus, string> = {
-  compliant: "border-chart-2",
-  misplaced: "border-action-warning",
-  missing: "border-destructive",
-  extra: "border-blue-500",
-};
-
-function RealShelfWithOverlays({
-  imageUrl,
-  overlays = [],
-}: {
-  imageUrl: string;
-  overlays?: DetectionOverlay[];
-}) {
-  return (
-    <div className="relative h-full w-full overflow-auto">
-      <div className="relative mx-auto w-fit max-w-full">
-        <img
-          src={imageUrl}
-          alt="Captured shelf"
-          className="block h-auto max-w-full object-contain"
-        />
-        {overlays.length > 0 && (
-          <div className="absolute inset-0" aria-hidden>
-            {overlays.map((o) => {
-              const box = (
-                <div
-                  className={cn(
-                    "absolute flex flex-col justify-end border-2 bg-black/5 p-0.5",
-                    OVERLAY_BORDER[o.status],
-                  )}
-                  style={{
-                    left: `${o.xPercent}%`,
-                    top: `${o.yPercent}%`,
-                    width: `${o.widthPercent}%`,
-                    height: `${o.heightPercent}%`,
-                  }}
-                >
-                  <span className="text-foreground truncate text-[10px] leading-tight font-medium">
-                    {o.label}
-                  </span>
-                </div>
-              );
-              return o.tooltip ? (
-                <Tooltip key={o.id}>
-                  <TooltipTrigger asChild>{box}</TooltipTrigger>
-                  <TooltipContent side="top" className="max-w-[240px]">
-                    <p className="text-xs">{o.tooltip}</p>
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Fragment key={o.id}>{box}</Fragment>
-              );
-            })}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
 export interface ImageComparisonTabProps {
   /** Report data */
   data?: ImageComparisonData | null;
@@ -99,6 +32,8 @@ export interface ImageComparisonTabProps {
   imageUrl?: string | null;
   /** Whether expected planogram panel should be shown */
   showPlanogramPanel?: boolean;
+  /** Optional SKU list for right side table */
+  skuFacings?: SkuFacingRow[] | null;
   className?: string;
 }
 
@@ -107,12 +42,50 @@ export function ImageComparisonTab({
   planogramPayload = null,
   imageUrl = null,
   showPlanogramPanel = true,
+  skuFacings = null,
   className,
 }: ImageComparisonTabProps) {
   const comparisonData = planogramPayload
     ? mapPlanogramPayloadToImageComparisonData(planogramPayload)
     : data;
   const overlays = comparisonData?.detectionOverlays ?? [];
+  const viewerOverlays: ImageViewerOverlay[] = overlays.map((overlay) => ({
+    id: overlay.id,
+    xPercent: overlay.xPercent,
+    yPercent: overlay.yPercent,
+    widthPercent: overlay.widthPercent,
+    heightPercent: overlay.heightPercent,
+    label: overlay.label,
+    color:
+      overlay.status === "compliant"
+        ? "var(--chart-2)"
+        : overlay.status === "misplaced"
+          ? "var(--action-warning)"
+          : overlay.status === "extra"
+            ? "var(--chart-1)"
+            : "var(--destructive)",
+  }));
+
+  const rows = skuFacings ?? [];
+  const mappedRows = rows.map((row) => {
+    const brand = row.productName.trim().split(" ")[0] ?? "-";
+    const shelfMatch = row.sku.match(/-(\d+)$/);
+    const shelf = shelfMatch ? `Shelf ${shelfMatch[1]}` : "-";
+    const status =
+      row.facingDiffVariant === "ok"
+        ? "Matched"
+        : row.facingDiffVariant === "short"
+          ? "Missing"
+          : "Extra";
+    return {
+      ...row,
+      brand,
+      shelf,
+      status,
+      expectedSlot: `D${row.depth} · ${row.frontFacings} facings`,
+      comment: row.facingDiffText || "-",
+    };
+  });
 
   return (
     <div className={cn("w-full min-w-0 space-y-4", className)}>
@@ -124,7 +97,7 @@ export function ImageComparisonTab({
 
       <div
         className={cn(
-          "h-[calc(100vh-14rem)] min-h-[480px] gap-4 overflow-hidden",
+          "min-h-[440px] gap-4 overflow-hidden",
           showPlanogramPanel ? "grid lg:grid-cols-2" : "grid grid-cols-1",
         )}
       >
@@ -136,21 +109,26 @@ export function ImageComparisonTab({
                 detectionOverlays: [],
               }
             }
-            className="min-h-0"
+            className="min-h-[440px]"
           />
         )}
 
         {/* Right: Real Shelf (Captured) */}
-        <section className="border-border bg-card/60 flex min-h-0 flex-col overflow-hidden rounded-xl border">
+        <section className="border-border bg-card/60 flex min-h-[440px] flex-col overflow-hidden rounded-xl border">
           <div className="border-border flex shrink-0 items-center gap-2 border-b px-4 py-3">
             <ImageIcon className="text-accent size-4 shrink-0" aria-hidden />
             <h3 className="text-foreground text-sm font-semibold">
               Real Shelf (Captured)
             </h3>
+            {overlays.length > 0 ? (
+              <span className="bg-muted text-muted-foreground ml-auto rounded-full px-2 py-0.5 text-[10px] font-medium">
+                {overlays.length} detections
+              </span>
+            ) : null}
           </div>
           <div className="bg-muted/20 min-h-0 flex-1 overflow-y-auto">
             {imageUrl ? (
-              <RealShelfWithOverlays imageUrl={imageUrl} overlays={overlays} />
+              <ImageViewer imageUrl={imageUrl} overlays={viewerOverlays} className="p-3" />
             ) : (
               <div className="flex h-full min-h-[360px] flex-col items-center justify-center gap-4 p-6 text-center">
                 <div className="bg-muted/50 rounded-full p-4">
@@ -183,7 +161,92 @@ export function ImageComparisonTab({
             ))}
           </div>
         </section>
+
       </div>
+
+      {rows.length > 0 && (
+        <section className="border-border bg-card/60 overflow-hidden rounded-xl border">
+          <div className="border-border flex items-center justify-between border-b px-4 py-2.5">
+            <div className="flex items-center gap-2">
+              <ListFilter className="text-accent size-4 shrink-0" aria-hidden />
+              <h3 className="text-foreground text-sm font-semibold">
+                SKU Compliance List
+              </h3>
+            </div>
+            <span className="text-muted-foreground text-xs">
+              {mappedRows.length} items
+            </span>
+          </div>
+          <div className="max-h-[360px] overflow-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-muted/40 sticky top-0 z-10">
+                <tr>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    SKU
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Brand
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Product Name
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Status
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Expected Slot
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Comment
+                  </th>
+                  <th className="text-muted-foreground px-3 py-2 text-left font-semibold">
+                    Shelf
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {mappedRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className="border-border/60 hover:bg-muted/20 border-t transition-colors"
+                  >
+                    <td className="text-foreground max-w-[180px] truncate px-3 py-2 font-medium">
+                      {row.sku}
+                    </td>
+                    <td className="text-muted-foreground max-w-[120px] truncate px-3 py-2">
+                      {row.brand}
+                    </td>
+                    <td className="text-foreground max-w-[220px] truncate px-3 py-2">
+                      {row.productName}
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                          row.status === "Matched" && "bg-chart-2/20 text-chart-2",
+                          row.status === "Missing" &&
+                            "bg-destructive/20 text-destructive",
+                          row.status === "Extra" &&
+                            "bg-action-warning/20 text-action-warning",
+                        )}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2">
+                      {row.expectedSlot}
+                    </td>
+                    <td className="text-muted-foreground max-w-[220px] truncate px-3 py-2">
+                      {row.comment}
+                    </td>
+                    <td className="text-muted-foreground px-3 py-2">{row.shelf}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }

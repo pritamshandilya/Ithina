@@ -336,9 +336,6 @@ export function AuditReviewWorkspace() {
                 missing={criticalCount}
                 extra={infoCount}
                 issues={totalViolations}
-                facings={0}
-                units={0}
-                detected={0}
                 gap={0}
               />
             </div>

@@ -5,7 +5,7 @@ import type { HTMLAttributes } from "react";
 
 import type { InboxItem } from "@/types/approval";
 
-import ApprovalQueueTabulator from "./approval-queue-tabulator";
+import ApprovalQueueTabulator, { mapApiStatusToApprovalLabel } from "./approval-queue-tabulator";
 
 const mockInboxSnapshot = {
   current: {
@@ -21,6 +21,7 @@ const mockCampaignsSnapshot = {
       id: string;
       name: string;
       approvalStatus: "approved" | "rejected" | "pending";
+      apiStatus?: string;
       reviewedByName?: string;
       reviewedAt?: string;
       ownerName?: string;
@@ -174,6 +175,16 @@ function renderQueue() {
   );
 }
 
+describe("mapApiStatusToApprovalLabel", () => {
+  it("maps guardrails_review to Draft (maker guard-rails step, not checker approval)", () => {
+    expect(mapApiStatusToApprovalLabel("guardrails_review")).toBe("Draft");
+  });
+
+  it("maps pending_approval to Pending", () => {
+    expect(mapApiStatusToApprovalLabel("pending_approval")).toBe("Pending");
+  });
+});
+
 describe("ApprovalQueueTabulator", () => {
   beforeEach(() => {
     mockInboxSnapshot.current = { data: [], isLoading: false, isError: false };
@@ -183,11 +194,12 @@ describe("ApprovalQueueTabulator", () => {
   });
 
   describe("rendering", () => {
-    it("should render tab controls for Pending Approval, Approved, and All", () => {
+    it("should render tab controls for Pending Approval, Approved, Draft, and All", () => {
       renderQueue();
 
       expect(screen.getByRole("button", { name: /pending approval/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^approved$/i })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /draft/i })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: /^all$/i })).toBeInTheDocument();
     });
 
@@ -200,6 +212,14 @@ describe("ApprovalQueueTabulator", () => {
         ],
         isLoading: false,
         isError: false,
+      };
+      mockCampaignsSnapshot.current = {
+        data: [
+          { id: "a", name: "One", approvalStatus: "pending", apiStatus: "pending_approval", skus: 5, hardware: [], date: "5/5/2026" },
+          { id: "b", name: "Two", approvalStatus: "approved", apiStatus: "approved", skus: 3, hardware: [], date: "5/5/2026" },
+          { id: "c", name: "Three", approvalStatus: "pending", apiStatus: "pending_approval", skus: 8, hardware: [], date: "5/4/2026" },
+          { id: "d", name: "Draft", approvalStatus: "pending", apiStatus: "draft", skus: 2, hardware: [], date: "5/3/2026" },
+        ],
       };
 
       renderQueue();
@@ -246,6 +266,31 @@ describe("ApprovalQueueTabulator", () => {
       await user.click(screen.getByRole("button", { name: /^approved$/i }));
 
       expect(screen.getByText("No approved campaigns.")).toBeInTheDocument();
+    });
+
+    it("should show the draft empty state on the Draft tab", async () => {
+      const user = userEvent.setup();
+      mockInboxSnapshot.current = { data: [], isLoading: false, isError: false };
+
+      renderQueue();
+
+      await user.click(screen.getByRole("button", { name: /draft/i }));
+
+      expect(screen.getByText("No draft campaigns.")).toBeInTheDocument();
+    });
+
+    it("should show draft count on the Draft tab", () => {
+      mockInboxSnapshot.current = { data: [], isLoading: false, isError: false };
+      mockCampaignsSnapshot.current = {
+        data: [
+          { id: "d", name: "DraftCamp", approvalStatus: "pending", apiStatus: "draft", skus: 2, hardware: [], date: "5/3/2026" },
+          { id: "e", name: "Pending", approvalStatus: "pending", apiStatus: "pending_approval", skus: 1, hardware: [], date: "5/3/2026" },
+        ],
+      };
+
+      renderQueue();
+
+      expect(screen.getByRole("button", { name: /draft/i })).toHaveTextContent("1");
     });
 
     it("should show the all-campaigns empty state on the All tab", async () => {

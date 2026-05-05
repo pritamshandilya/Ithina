@@ -57,17 +57,6 @@ function clearAuthStorage() {
   clearAuthToken();
 }
 
-/**
- * Synchronously wipe all client-side auth state (localStorage tokens, Redux
- * slices, TanStack Query cache). Safe to call from non-React code such as
- * Axios interceptors — does **not** hit the network.
- */
-export function clearPromoAuthLocalState(): void {
-  clearAuthStorage();
-  StoreContext.clearStoreId();
-  resetClientSessionState();
-}
-
 function readUser(): PromoUser | null {
   const raw = localStorage.getItem(USER_KEY);
   if (!raw) return null;
@@ -180,11 +169,15 @@ export class PromoAuthService {
     try {
       await promoApiClient.post(`${API_PREFIX}/auth/logout`);
     } catch (error) {
+      // Keep logout resilient, but emit a dev-only debug signal so local
+      // network/proxy issues are easier to trace.
       if (import.meta.env.DEV) {
         console.debug("Logout request failed (continuing local logout):", error);
       }
     } finally {
-      clearPromoAuthLocalState();
+      clearAuthStorage();
+      StoreContext.clearStoreId();
+      resetClientSessionState();
     }
   }
 

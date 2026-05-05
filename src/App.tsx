@@ -9,7 +9,6 @@ import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
 import RoutePendingFallback from "@/components/shared/route-pending-fallback";
 import { Toaster } from "@/components/ui/toaster";
 
-import { bindAppRouter } from "@/lib/app-navigation";
 import { promoQueryClient } from "@/lib/query-client";
 
 import { useAuth } from "./providers/auth";
@@ -47,8 +46,6 @@ const router = createRouter({
     auth: undefined!,
   },
 });
-
-bindAppRouter(router);
 
 export default function App() {
   const auth = useAuth();

@@ -144,7 +144,7 @@ export default function SidenavFooter() {
           isCollapsed ? "px-0" : "px-4",
         )}
       >
-        V 1.0.3.0
+        v 1.0.0.3
       </p>
 
       {/* ── Profile trigger button ── */}

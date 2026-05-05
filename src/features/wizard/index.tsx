@@ -704,11 +704,6 @@ export default function Wizard() {
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         pipelineSessionIdRef.current = null;
         setError("Session expired. Your next message will start a fresh draft.");
-      } else if (
-        axios.isAxiosError(err) &&
-        (err.response?.status === 504 || err.response?.status === 502 || err.response?.status === 503 || err.code === "ECONNABORTED")
-      ) {
-        setError("The request timed out — the AI agent took too long. Please try a simpler prompt or start a new draft.");
       } else {
         setError("Failed to process intent. Please try again.");
       }
@@ -1085,11 +1080,6 @@ export default function Wizard() {
         setError(
           "The wizard session has expired. Please start a new campaign or re-chat with the AI to create a fresh session.",
         );
-      } else if (
-        axios.isAxiosError(err) &&
-        (err.response?.status === 504 || err.response?.status === 502 || err.response?.status === 503 || err.code === "ECONNABORTED")
-      ) {
-        setError("The request timed out. Please try again or start a new campaign.");
       } else {
         setError("Failed to generate layouts. Check your connection and try again.");
       }

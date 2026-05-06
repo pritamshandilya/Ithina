@@ -4,6 +4,7 @@ import type { ComplianceRule } from "@/types/checker";
 import type { ComplianceRuleSetSummary } from "@/types/complianceRuleSet";
 
 export const COMPLIANCE_RULE_SET_NAME_MAX_LENGTH = 120;
+const COMPLIANCE_RULE_SETS_ENDPOINT = "/compliance-rule-sets";
 
 export type { ComplianceRuleCategory, ComplianceRuleSetStatus } from "./types";
 
@@ -117,7 +118,7 @@ export async function fetchComplianceRuleSetsForAnalysis(): Promise<
   ComplianceRuleSetSummary[]
 > {
   const sets = await axiosClient
-    .get<ComplianceRuleSetRequestResponse[]>("/complianceRuleSets")
+    .get<ComplianceRuleSetRequestResponse[]>(COMPLIANCE_RULE_SETS_ENDPOINT)
     .then((res) => res.data);
   return sets.map(mapRuleSetToSummary).sort((a, b) => {
     if (a.isDefault && !b.isDefault) return -1;
@@ -134,7 +135,7 @@ export async function fetchAggregatedComplianceRulesFromRuleSets(): Promise<
   ComplianceRule[]
 > {
   const sets = await axiosClient
-    .get<ComplianceRuleSetRequestResponse[]>("/complianceRuleSets")
+    .get<ComplianceRuleSetRequestResponse[]>(COMPLIANCE_RULE_SETS_ENDPOINT)
     .then((res) => res.data);
   const out: ComplianceRule[] = [];
   for (const ruleSet of sets) {
@@ -152,7 +153,9 @@ export async function fetchRulesByRuleSetId(
   ruleSetId: string,
 ): Promise<ComplianceRule[]> {
   const ruleSet = await axiosClient
-    .get<ComplianceRuleSetRequestResponse>(`/complianceRuleSets/${ruleSetId}`)
+    .get<ComplianceRuleSetRequestResponse>(
+      `${COMPLIANCE_RULE_SETS_ENDPOINT}/${ruleSetId}`,
+    )
     .then((res) => res.data);
   return ruleSet.rules
     .slice()
@@ -164,7 +167,9 @@ export async function fetchComplianceRuleSetById(
   ruleSetId: string,
 ): Promise<ComplianceRuleSetRequestResponse> {
   return axiosClient
-    .get<ComplianceRuleSetRequestResponse>(`/complianceRuleSets/${ruleSetId}`)
+    .get<ComplianceRuleSetRequestResponse>(
+      `${COMPLIANCE_RULE_SETS_ENDPOINT}/${ruleSetId}`,
+    )
     .then((res) => res.data);
 }
 
@@ -172,7 +177,7 @@ export async function createComplianceRuleSet(
   payload: CreateComplianceRuleSetInput,
 ): Promise<ComplianceRuleSetRequestResponse> {
   return axiosClient
-    .post<ComplianceRuleSetRequestResponse>("/complianceRuleSets", {
+    .post<ComplianceRuleSetRequestResponse>(COMPLIANCE_RULE_SETS_ENDPOINT, {
       name: payload.name,
       status: payload.status,
       reference_document_id: payload.reference_document_id ?? null,
@@ -193,7 +198,7 @@ export async function createComplianceRuleSetForStore(
 ): Promise<ComplianceRuleSetRequestResponse> {
   return axiosClient
     .post<ComplianceRuleSetRequestResponse>(
-      "/complianceRuleSets",
+      COMPLIANCE_RULE_SETS_ENDPOINT,
       {
         name: payload.name,
         status: payload.status,
@@ -217,7 +222,7 @@ export async function updateComplianceRuleSet(
 ): Promise<ComplianceRuleSetRequestResponse> {
   return axiosClient
     .put<ComplianceRuleSetRequestResponse>(
-      `/complianceRuleSets/${ruleSetId}`,
+      `${COMPLIANCE_RULE_SETS_ENDPOINT}/${ruleSetId}`,
       {
         ...(payload.name ? { name: payload.name } : {}),
         ...(payload.status ? { status: payload.status } : {}),
@@ -234,6 +239,6 @@ export async function deleteComplianceRuleSet(
   ruleSetId: string,
 ): Promise<void> {
   return axiosClient
-    .delete<void>(`/complianceRuleSets/${ruleSetId}`)
+    .delete<void>(`${COMPLIANCE_RULE_SETS_ENDPOINT}/${ruleSetId}`)
     .then((res) => res.data);
 }

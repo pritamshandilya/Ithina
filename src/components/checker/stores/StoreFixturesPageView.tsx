@@ -37,7 +37,7 @@ export function StoreFixturesPageView({
       }
     >
       <div className="bg-primary px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
-        <div className="mx-auto w-full max-w-screen-2xl space-y-4">
+        <div className="flex w-full flex-1 flex-col space-y-4 px-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
@@ -82,7 +82,9 @@ export function StoreFixturesPageView({
             )}
           </div>
 
-          {children}
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            {children}
+          </div>
         </div>
       </div>
     </MainLayout>

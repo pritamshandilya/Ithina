@@ -7,26 +7,26 @@ import {
   CreateComplianceRuleSetModal,
   type CreateComplianceRuleSetModalProps,
 } from "@/components/common/CreateComplianceRuleSetModal";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   DataTable,
   type DataTableCell,
   type DataTableColumn,
 } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
-import { knowledgeCenterKeys } from "@/queries/checker/hooks/useKnowledgeCenter";
-import { useComplianceRuleSets } from "@/queries/maker";
 import {
   createComplianceRuleSet,
   deleteComplianceRuleSet,
   fetchComplianceRuleSetById,
   updateComplianceRuleSet,
 } from "@/lib/api/maker/complianceRuleSets";
+import { knowledgeCenterKeys } from "@/queries/checker/hooks/useKnowledgeCenter";
+import { useComplianceRuleSets } from "@/queries/maker";
 
 function mapRuleSetToModalInitialValues(
   ruleSet: Awaited<ReturnType<typeof fetchComplianceRuleSetById>>,
@@ -345,8 +345,11 @@ export function ComplianceRuleSetsManagementSection() {
           Create, edit, and remove rule sets for this store.
         </p>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col">
-        <Card noBorder className="bg-card glassmorphism shadow-xl">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Card
+          noBorder
+          className="bg-card glassmorphism flex min-h-0 flex-1 flex-col overflow-hidden shadow-xl"
+        >
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
               <div className="flex flex-wrap items-center gap-2">
@@ -379,11 +382,12 @@ export function ComplianceRuleSetsManagementSection() {
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="min-h-0 flex-1 overflow-hidden">
             {isLoading ? (
               <Skeleton className="h-64 w-full rounded-lg" />
             ) : (
               <DataTable<ComplianceRuleTreeRow>
+                className="min-h-0 flex-1"
                 columns={tableColumns}
                 data={tableData}
                 rowIdField="id"

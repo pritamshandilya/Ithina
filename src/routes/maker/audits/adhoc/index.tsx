@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import {
   Link,
   createFileRoute,
@@ -9,23 +10,21 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { ComplianceRuleViewSheet } from "@/components/planogram/ComplianceRuleViewSheet";
-import { createMakerPlanogramTableColumns } from "@/components/planogram/planogramMakerTableColumns";
 import {
   PLANOGRAM_INITIAL_SORT,
   PlanogramActionsMenu,
 } from "@/components/planogram/PlanogramTableColumns";
+import { createMakerPlanogramTableColumns } from "@/components/planogram/planogramMakerTableColumns";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
+import { fetchStoreFixtures } from "@/lib/api/maker/fixtures";
 import { getShelfFixtureId } from "@/lib/fixtures/analysis";
-import {
-  useComplianceRuleSets,
-  useShelves,
-  useStoreFixtures,
-} from "@/queries/maker";
+import { useStore } from "@/providers/store";
+import { useComplianceRuleSets, useShelves } from "@/queries/maker";
 import type { ComplianceRuleSetSummary } from "@/types/complianceRuleSet";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
 import type { PlanogramArrangement } from "@/types/planogram";
@@ -58,11 +57,15 @@ function toPlanogramRow(
 function AdhocAnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { selectedStore } = useStore();
   const { toast } = useToast();
-  const { data: shelves, isLoading: isShelvesLoading } = useShelves();
-  const { data: storeFixtures = [], isLoading: isFixturesLoading } =
-    useStoreFixtures();
-  const isLoading = isShelvesLoading || isFixturesLoading;
+  const { data: shelves, isLoading } = useShelves();
+  const { data: storeFixtures = [] } = useQuery({
+    queryKey: ["maker", "fixtures", "list", selectedStore?.id ?? "no-store"],
+    queryFn: fetchStoreFixtures,
+    enabled: !!selectedStore?.id,
+    staleTime: 60 * 1000,
+  });
   const { data: ruleSets = [] } = useComplianceRuleSets();
   const [searchQuery, setSearchQuery] = useState("");
   const [, setTablePagination] = useState({
@@ -102,7 +105,14 @@ function AdhocAnalysisPage() {
     return storeFixtures.filter((fixture) => {
       const fixtureShelves = shelvesByFixtureId.get(fixture.id) ?? [];
       const fixtureHasShelves = fixtureShelves.length > 0;
-      return fixtureHasShelves;
+      const fixturePlanogramId = fixture.planogram_id?.trim();
+      const shelfPlanogramId = fixtureShelves.find((shelf) =>
+        shelf.planogramId?.trim(),
+      )?.planogramId;
+      const fixtureHasPlanogram = Boolean(
+        fixturePlanogramId || shelfPlanogramId,
+      );
+      return fixtureHasShelves && fixtureHasPlanogram;
     });
   }, [shelvesByFixtureId, storeFixtures]);
 
@@ -240,14 +250,14 @@ function AdhocAnalysisPage() {
       <DataTable<PlanogramShelfRow>
         columns={tableColumns}
         data={filteredRows}
-        className="h-full"
+        className="min-h-0 flex-1"
         rowIdField="id"
         initialSort={PLANOGRAM_INITIAL_SORT}
         emptyMessage="No fixtures match your search"
         pageSize={50}
         pageSizeSelector={[10, 20, 50, 75, 100]}
         headerFilters={false}
-        layout="fitData"
+        layout="fitColumns"
         onPaginationChange={setTablePagination}
         onRowClick={handleRunAdhoc}
       />
@@ -274,9 +284,9 @@ function AdhocAnalysisPage() {
         </PageHeader>
       }
     >
-      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
-        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
-          <div className="mt-4 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden pb-3 sm:pb-3 lg:pb-4">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-6">
+          <div className="mt-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
@@ -309,7 +319,7 @@ function AdhocAnalysisPage() {
             </p>
           )} */}
 
-          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -341,7 +351,10 @@ function AdhocAnalysisPage() {
                 </Button>
               </div>
             ) : (
-              <div ref={tableWrapperRef} className="h-full">
+              <div
+                ref={tableWrapperRef}
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+              >
                 {fixtureTable}
               </div>
             )}

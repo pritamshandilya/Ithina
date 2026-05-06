@@ -18,7 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { useToast } from "@/hooks/useToast";
-import { mockCheckerUser } from "@/lib/api/mockData";
+import { AuthSessionService } from "@/lib/auth/session";
 import {
   useActivateComplianceRule,
   useCloneRetiredRule,
@@ -283,7 +283,7 @@ export function RuleVersionsTab() {
     cloneRule.mutate(
       {
         ruleId: cloneConfirmRuleId,
-        createdBy: `${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`,
+        createdBy: `${AuthSessionService.getCurrentUser()?.firstName} ${AuthSessionService.getCurrentUser()?.lastName} (${AuthSessionService.getCurrentUser()?.email})`,
       },
       {
         onSuccess: () => {
@@ -529,7 +529,7 @@ export function RuleVersionsTab() {
       </div>
 
       {/* Versions DataTable */}
-      <div className="mt-4 min-h-0 flex-1 overflow-auto">
+      <div className="mt-4 flex min-h-0 flex-1 flex-col overflow-hidden">
         {isLoading ? (
           <div className="border-border bg-card text-muted-foreground flex h-48 items-center justify-center rounded-lg border">
             Loading versions…
@@ -560,6 +560,7 @@ export function RuleVersionsTab() {
         ) : (
           <>
             <DataTable<VersionDisplayRow>
+              className="min-h-0 flex-1"
               columns={tableColumns}
               data={filteredRows}
               rowIdField="id"
@@ -634,7 +635,7 @@ export function RuleVersionsTab() {
               : [editingRule]
             : undefined
         }
-        createdBy={`${mockCheckerUser.firstName} ${mockCheckerUser.lastName} (${mockCheckerUser.email})`}
+        createdBy={`${AuthSessionService.getCurrentUser()?.firstName} ${AuthSessionService.getCurrentUser()?.lastName} (${AuthSessionService.getCurrentUser()?.email})`}
       />
 
       {/* Actions dropdown */}

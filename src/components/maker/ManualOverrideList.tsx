@@ -400,7 +400,7 @@ export function ApprovalStatusList({
         </div>
       )}
 
-      <div className="mt-2 min-h-0 flex-1 overflow-auto">
+      <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
         {filteredAudits.length === 0 ? (
           <div className="border-border bg-card flex min-h-full items-center justify-center rounded-lg border p-8 text-center">
             <div>
@@ -416,8 +416,9 @@ export function ApprovalStatusList({
             </div>
           </div>
         ) : (
-          <div className="border-border bg-card overflow-hidden rounded-lg border">
+          <div className="border-border bg-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border">
             <DataTable<Audit>
+              className="min-h-0 flex-1"
               columns={tableColumns}
               data={filteredAudits}
               rowIdField="id"

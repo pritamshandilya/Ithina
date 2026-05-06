@@ -98,7 +98,7 @@ The repository must follow this structure.
 │   │   └── shared hooks
 │
 │   ├── providers/
-│   │   └── lib/auth/
+│   │   └── auth/
 │
 │   ├── context/
 │
@@ -108,7 +108,7 @@ The repository must follow this structure.
 │
 │   ├── lib/
 │   │   ├── api/
-│   │   ├── lib/auth/
+│   │   ├── auth/
 │   │   ├── notifications/
 │   │   └── utils.ts
 │
@@ -411,7 +411,7 @@ src/routes/__root.tsx
 
 Responsibilities:
 
-- lib/auth/session checks
+- auth/session checks
 - root layout
 - error boundaries
 

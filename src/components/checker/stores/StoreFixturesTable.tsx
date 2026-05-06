@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 
-import { useStoreFixturesTableDom } from "./useStoreFixturesTableDom";
 import type { ActionsMenuState } from "./useStoreFixturesPageLogic";
+import { useStoreFixturesTableDom } from "./useStoreFixturesTableDom";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { useToast } from "@/hooks/useToast";
 import type { StoreFixtureApiModel } from "@/lib/api/checker/fixtures";
@@ -35,10 +35,20 @@ interface StoreFixturesTableProps {
   defaultRuleSetName: string;
   fixtureComplianceOverrides: Record<string, string>;
   fixtureCategorizeOverrides: Record<string, string>;
-  setFixtureComplianceOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  setFixtureCategorizeOverrides: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  openFixtureDetail: (shelfId: string, options?: { fixtureId?: string }) => void;
-  handleOpenFixtureActions: (row: PlanogramShelfRow, triggerEl: HTMLElement) => void;
+  setFixtureComplianceOverrides: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
+  setFixtureCategorizeOverrides: React.Dispatch<
+    React.SetStateAction<Record<string, string>>
+  >;
+  openFixtureDetail: (
+    shelfId: string,
+    options?: { fixtureId?: string },
+  ) => void;
+  handleOpenFixtureActions: (
+    row: PlanogramShelfRow,
+    triggerEl: HTMLElement,
+  ) => void;
 }
 
 export function StoreFixturesTable({
@@ -186,7 +196,10 @@ export function StoreFixturesTable({
           const target = event.target as HTMLElement;
           const trigger = target?.closest?.("[data-action='open-menu']");
           if (!trigger) return;
-          handleOpenFixtureActions(cell.getData() as PlanogramShelfRow, trigger as HTMLElement);
+          handleOpenFixtureActions(
+            cell.getData() as PlanogramShelfRow,
+            trigger as HTMLElement,
+          );
         },
       },
     ],
@@ -194,36 +207,17 @@ export function StoreFixturesTable({
   );
 
   return (
-    <div ref={tableWrapperRef} className="min-h-0 flex-1">
-      {fixtureShelfRows.length > 0 && (
-        <p className="text-muted-foreground mb-2 shrink-0 text-sm">
-          Showing{" "}
-          <span className="text-foreground font-semibold">
-            {Math.max(
-              0,
-              Math.min(
-                tablePagination.pageSize,
-                fixtureShelfRows.length -
-                  (tablePagination.page - 1) * tablePagination.pageSize,
-              ),
-            )}
-          </span>{" "}
-          of{" "}
-          <span className="text-foreground font-semibold">
-            {fixtureShelfRows.length}
-          </span>{" "}
-          fixture{fixtureShelfRows.length !== 1 ? "s" : ""}
-        </p>
-      )}
+    <div ref={tableWrapperRef} className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <DataTable<PlanogramShelfRow>
         columns={columns}
         data={fixtureShelfRows}
         rowIdField="id"
-        pageSize={50}
+        pageSize={tablePagination.pageSize}
         pageSizeSelector={FIXTURE_TABLE_PAGE_SIZE_OPTIONS}
         emptyMessage="No shelves found matching your search"
         headerFilters={false}
         layout="fitData"
+        className="h-full min-h-0"
         onPaginationChange={onPaginationChange}
         onRowClick={onRowClick}
       />

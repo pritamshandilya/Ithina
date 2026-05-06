@@ -44,7 +44,11 @@ export default function MainLayout({
             {pageHeader}
           </div>
         ) : null}
-        <div className="mt-4 flex-1">{children ?? <Outlet />}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-auto overflow-y-auto overscroll-y-contain scroll-smooth">
+            {children ?? <Outlet />}
+          </div>
+        </div>
       </>
     );
   }
@@ -53,7 +57,7 @@ export default function MainLayout({
     <MainLayoutContext.Provider value={true}>
       <Sidenav />
 
-      <SidebarInset className="bg-background flex min-h-0 flex-col">
+      <SidebarInset className="bg-background flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {pageHeader ? (
           <div className="border-border/80 bg-sidebar/70 shrink-0 border-b px-3 py-4 backdrop-blur-xl sm:px-4 lg:px-6">
             <div
@@ -68,10 +72,10 @@ export default function MainLayout({
         ) : null}
         <div
           className={cn(
-            "min-h-0 flex-1",
+            "min-h-0 min-w-0 flex-1",
             constrainedHeight
               ? "flex flex-col overflow-hidden"
-              : "overflow-auto",
+              : "flex flex-col overflow-x-auto overflow-y-auto overscroll-y-contain scroll-smooth",
           )}
         >
           {children ?? <Outlet />}

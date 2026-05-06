@@ -349,7 +349,7 @@ export function MakerShelfPage() {
             </p>
           )}
 
-          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -371,8 +371,9 @@ export function MakerShelfPage() {
                 </p>
               </div>
             ) : (
-              <div>
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <DataTable<PlanogramShelfRow>
+                  className="min-h-0 flex-1"
                   columns={PLANOGRAM_COLUMNS}
                   data={filteredRows}
                   rowIdField="id"
@@ -381,7 +382,7 @@ export function MakerShelfPage() {
                   pageSize={10}
                   pageSizeSelector={pageSizeSelectorOptions}
                   headerFilters={false}
-                  layout="fitData"
+                  layout="fitColumns"
                   onPaginationChange={setTablePagination}
                 />
               </div>

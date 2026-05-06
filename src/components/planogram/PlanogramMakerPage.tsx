@@ -13,9 +13,9 @@ export function PlanogramMakerPage() {
 
   return (
     <>
-      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden pb-4 sm:pb-4 lg:pb-5">
-        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
-          <div className="mt-4 flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden pb-3 sm:pb-3 lg:pb-4">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-6">
+          <div className="mt-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="group relative w-full sm:max-w-md">
               <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
@@ -27,7 +27,7 @@ export function PlanogramMakerPage() {
             </div>
           </div>
 
-          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+          <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
             {state.isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />

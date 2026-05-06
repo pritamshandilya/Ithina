@@ -3,6 +3,7 @@ import { Check, Trash2, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
+import { IconButton } from "../ui/IconButton";
 import { AuditReviewQueueToolbar } from "./AuditReviewQueueToolbar";
 import {
   AUDIT_BASE_TABLE_COLUMNS,
@@ -19,7 +20,6 @@ import {
   type DataTableCell,
   type DataTableColumn,
 } from "@/components/ui/DataTable";
-import { IconButton } from "@/components/ui/IconButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStoreScopedCheckerRoutes } from "@/hooks/useStoreScopedCheckerRoutes";
 import { cn } from "@/lib/utils";
@@ -266,7 +266,7 @@ export function AuditReviewQueue({
         onViewModeChange={setViewMode}
       />
 
-      <div className="mt-3 min-h-0 flex-1 overflow-auto">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col overflow-hidden">
         {filteredAndSortedAudits.length === 0 ? (
           <div className="border-border bg-card/50 flex min-h-full items-center justify-center rounded-lg border-2 border-dashed p-10 text-center">
             <div>
@@ -289,6 +289,7 @@ export function AuditReviewQueue({
         ) : viewMode === "table" ? (
           <>
             <DataTable<CheckerAudit>
+              className="min-h-0 flex-1"
               columns={tableColumns}
               data={filteredAndSortedAudits}
               rowIdField="id"

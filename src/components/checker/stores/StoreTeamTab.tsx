@@ -105,6 +105,7 @@ export function StoreTeamTab({
           <Skeleton className="h-[200px] w-full rounded-lg" />
         ) : (
           <DataTable<AuthSessionUser>
+            className="min-h-0 flex-1"
             columns={userColumns}
             data={storeUsers}
             pageSize={5}

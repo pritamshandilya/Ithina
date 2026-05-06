@@ -306,8 +306,9 @@ export function AuditReviewQueue({
               audits
             </p>
           </div>
-          <div className="border-border bg-card overflow-hidden rounded-lg border shadow-sm">
+          <div className="border-border bg-card min-h-0 flex-1 overflow-hidden rounded-lg border shadow-sm">
             <DataTable<Audit>
+              className="min-h-0 flex-1"
               columns={tableColumns}
               data={filteredAudits}
               rowIdField="id"

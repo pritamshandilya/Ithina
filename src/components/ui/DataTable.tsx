@@ -8,7 +8,7 @@
 import { useEffect, useRef } from "react";
 import { TabulatorFull } from "tabulator-tables";
 
-import "tabulator-tables/dist/css/tabulator.css";
+import "tabulator-tables/dist/css/tabulator_simple.min.css";
 
 import { cn } from "@/lib/utils";
 
@@ -202,6 +202,7 @@ export function DataTable<T extends object>({
       data: [...data],
       columns: finalColumns,
       layout,
+      height: "100%",
       responsiveLayout: false,
       resizableColumns: true,
       resizableColumnFit: false,
@@ -330,13 +331,16 @@ export function DataTable<T extends object>({
   return (
     <div
       className={cn(
-        "data-table-wrapper w-full min-h-[280px] rounded-lg border border-border bg-card overflow-x-auto overflow-y-auto",
+        "data-table-wrapper flex h-full min-h-[280px] w-full min-w-0 max-w-full flex-col rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         className
       )}
       role="region"
       aria-label="Data table"
     >
-      <div ref={containerRef} className="data-table-container h-full w-full" />
+      <div
+        ref={containerRef}
+        className="data-table-container flex-1 min-h-0 w-full min-w-0"
+      />
     </div>
   );
 }

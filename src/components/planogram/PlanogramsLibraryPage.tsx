@@ -4,8 +4,8 @@ import { useCallback, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePlanogramSectionHref } from "@/hooks/planogram/usePlanogramSectionHref";
@@ -119,7 +119,7 @@ export function PlanogramsLibraryPage() {
   const navigate = useNavigate();
   const { data: list, isLoading } = usePlanogramList();
   const [searchQuery, setSearchQuery] = useState("");
-  const [tablePagination, setTablePagination] = useState({
+  const [, setTablePagination] = useState({
     page: 1,
     pageSize: 20,
   });
@@ -163,19 +163,16 @@ export function PlanogramsLibraryPage() {
         />
       }
     >
-      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-3 sm:pb-4 lg:px-4 lg:pb-5">
-        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
-          <div className="mt-2 flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative w-full sm:max-w-md">
-              <Search
-                className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
-                aria-hidden
-              />
+      <div className="bg-primary flex h-full min-h-0 flex-col px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="flex h-full min-h-0 w-full flex-1 flex-col space-y-4 px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="group relative w-full sm:max-w-md">
+              <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
               <Input
                 placeholder="Search planograms…"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="bg-background h-10 pl-9"
+                className="border-border bg-card text-foreground placeholder:text-muted-foreground hover:border-accent/50 focus:border-accent h-12 pl-11 transition-all"
                 aria-label="Search planograms"
               />
             </div>
@@ -191,29 +188,7 @@ export function PlanogramsLibraryPage() {
             </Button>
           </div>
 
-          {filteredRows.length > 0 && (
-            <p className="text-muted-foreground mt-2 shrink-0 text-sm">
-              Showing{" "}
-              <span className="text-foreground font-semibold">
-                {Math.max(
-                  0,
-                  Math.min(
-                    tablePagination.pageSize,
-                    filteredRows.length -
-                      (tablePagination.page - 1) * tablePagination.pageSize,
-                  ),
-                )}
-              </span>{" "}
-              of{" "}
-              <span className="text-foreground font-semibold">
-                {filteredRows.length}
-              </span>{" "}
-              planogram
-              {filteredRows.length !== 1 ? "s" : ""}
-            </p>
-          )}
-
-          <div className="mt-3 min-h-0 flex-1 overflow-auto">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -231,20 +206,22 @@ export function PlanogramsLibraryPage() {
                 </p>
               </div>
             ) : (
-              <DataTable<PlanogramTableRow>
-                className="min-w-0 [&_.tabulator]:w-full"
-                columns={PLANOGRAM_LIBRARY_COLUMNS}
-                data={filteredRows}
-                rowIdField="id"
-                initialSort={INITIAL_SORT}
-                emptyMessage="No planograms match your filters"
-                pageSize={20}
-                pageSizeSelector={pageSizeSelectorOptions}
-                headerFilters
-                layout="fitColumns"
-                onPaginationChange={setTablePagination}
-                onRowClick={onRowClick}
-              />
+              <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+                <DataTable<PlanogramTableRow>
+                  className="h-full min-h-0 flex-1 [&_.tabulator]:w-full"
+                  columns={PLANOGRAM_LIBRARY_COLUMNS}
+                  data={filteredRows}
+                  rowIdField="id"
+                  initialSort={INITIAL_SORT}
+                  emptyMessage="No planograms match your filters"
+                  pageSize={20}
+                  pageSizeSelector={pageSizeSelectorOptions}
+                  headerFilters
+                  layout="fitColumns"
+                  onPaginationChange={setTablePagination}
+                  onRowClick={onRowClick}
+                />
+              </div>
             )}
           </div>
         </div>

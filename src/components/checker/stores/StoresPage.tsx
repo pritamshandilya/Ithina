@@ -17,7 +17,6 @@ import { StoreFormModal } from "./StoreFormModal";
 import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import {
   DataTable,
@@ -25,6 +24,7 @@ import {
   type DataTableColumn,
 } from "@/components/ui/DataTable";
 import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AuthSessionService } from "@/lib/auth/session";
@@ -311,8 +311,8 @@ export function StoresPage() {
         </PageHeader>
       }
     >
-      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
-        <div className="mx-auto w-full max-w-screen-2xl space-y-4">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col space-y-4">
           <div className="group relative">
             <Search className="text-muted-foreground group-focus-within:text-accent absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 transition-colors" />
             <Input
@@ -323,11 +323,12 @@ export function StoresPage() {
             />
           </div>
 
-          <div className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {isLoading ? (
               <Skeleton className="h-[400px] w-full rounded-xl" />
             ) : (
               <DataTable<StoreSetting>
+                className="min-h-0 flex-1"
                 columns={columns}
                 data={filteredStores}
                 onRowClick={handleViewStore}

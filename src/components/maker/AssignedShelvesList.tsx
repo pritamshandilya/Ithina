@@ -420,6 +420,7 @@ export function AssignedShelvesList({
         </div>
       ) : viewMode === "table" ? (
         <DataTable<Shelf>
+          className="min-h-0 flex-1"
           columns={SHELF_TABLE_COLUMNS}
           data={filteredShelves}
           rowIdField="id"

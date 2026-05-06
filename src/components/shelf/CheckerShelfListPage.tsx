@@ -10,13 +10,12 @@ import {
   PlanogramActionsMenu,
   createPlanogramColumns,
 } from "@/components/planogram/PlanogramTableColumns";
-import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
-import { mockUser } from "@/lib/api/mockData";
 import { useStore } from "@/providers/store";
 import {
   useCreateFixture,
@@ -380,7 +379,7 @@ export function CheckerShelfListPage({
   const createFixtureMutation = useCreateFixture();
   const createShelfMutation = useCreateShelf();
   const { data: planogramList } = usePlanogramList();
-  const _selectedStoreId = selectedStore?.id || mockUser.storeId;
+  const _selectedStoreId = selectedStore?.id;
   void _selectedStoreId;
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -1068,7 +1067,7 @@ export function CheckerShelfListPage({
             </p>
           )}
 
-          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -1077,8 +1076,12 @@ export function CheckerShelfListPage({
             ) : filteredRows.length === 0 ? (
               <CheckerShelfEmptyState />
             ) : (
-              <div ref={tableWrapperRef}>
+              <div
+                ref={tableWrapperRef}
+                className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+              >
                 <DataTable<PlanogramShelfRow>
+                  className="min-h-0 flex-1"
                   columns={tableColumns}
                   data={filteredRows}
                   rowIdField="id"

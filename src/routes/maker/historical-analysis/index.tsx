@@ -167,22 +167,8 @@ function HistoricalAnalysisPage() {
       }
     >
       <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
-        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
-          {analyses.length > 0 && (
-            <p className="text-muted-foreground mt-4 shrink-0 text-sm">
-              Showing{" "}
-              <span className="text-foreground font-semibold">
-                {tableVisibleCount}
-              </span>{" "}
-              of{" "}
-              <span className="text-foreground font-semibold">
-                {analyses.length}
-              </span>{" "}
-              analyses
-            </p>
-          )}
-
-          <div className="mt-4 min-h-0 flex-1 overflow-auto">
+        <div className="flex min-h-0 w-full flex-1 flex-col px-6">
+          <div className="mt-2 min-h-0 flex-1">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
@@ -210,6 +196,7 @@ function HistoricalAnalysisPage() {
                 rowIdField="id"
                 initialSort={{ field: "runDate", dir: "desc" }}
                 emptyMessage="No analyses yet"
+                layout="fitData"
                 pageSize={10}
                 pageSizeSelector={[5, 10, 20, 50]}
                 headerFilters={false}

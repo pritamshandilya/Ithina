@@ -7,12 +7,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { UserFormModal } from "@/components/admin/users/UserFormModal";
 import MainLayout from "@/components/layouts/main";
 import { PageHeader } from "@/components/shared/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmModal } from "@/components/ui/ConfirmModal";
 import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { type DataTableCell } from "@/components/ui/DataTable";
 import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/useToast";
@@ -259,8 +259,8 @@ function AdminUsersPage() {
         </PageHeader>
       }
     >
-      <div className="bg-primary min-h-screen px-4 pt-4 pb-8 lg:px-8">
-        <div className="mx-auto w-full max-w-screen-2xl space-y-6">
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-4 pt-4 pb-8 lg:px-8">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col space-y-6">
           <Card className="bg-card border-border backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
@@ -293,13 +293,14 @@ function AdminUsersPage() {
             </CardContent>
           </Card>
 
-          <div className="min-h-0 flex-1">
+          <div className="min-h-0 flex-1 overflow-hidden">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-[400px] w-full rounded-lg" />
               </div>
             ) : (
               <DataTable<AuthSessionUser>
+                className="min-h-0 flex-1"
                 columns={columns}
                 data={filteredUsers}
                 pageSize={10}

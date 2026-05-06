@@ -34,18 +34,21 @@ export function PlanogramMakerTable({
   );
 
   return (
-    <div ref={tableWrapperRef} className="h-full">
+    <div
+      ref={tableWrapperRef}
+      className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+    >
       <DataTable<PlanogramShelfRow>
         columns={tableColumns}
         data={data}
-        className="h-full"
+        className="min-h-0 flex-1"
         rowIdField="id"
         initialSort={PLANOGRAM_INITIAL_SORT}
         emptyMessage="No Display Units match your search"
         pageSize={50}
         pageSizeSelector={pageSizeSelectorOptions}
         headerFilters={false}
-        layout="fitData"
+        layout="fitColumns"
         onPaginationChange={onPaginationChange}
       />
     </div>

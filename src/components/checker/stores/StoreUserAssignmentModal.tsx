@@ -1,13 +1,13 @@
 import { Search, Trash2, UserPlus, X } from "lucide-react";
 import { useMemo, useState } from "react";
 
-import { Button } from "@/components/ui/button";
 import {
   DataTable,
   type DataTableCell,
   type DataTableColumn,
 } from "@/components/ui/DataTable";
 import { IconButton } from "@/components/ui/IconButton";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -226,6 +226,7 @@ export function StoreUserAssignmentModal({
               </p>
             ) : (
               <DataTable<AuthSessionUser>
+                className="min-h-0 flex-1"
                 columns={availableColumns}
                 data={availableUsers}
                 pageSize={5}

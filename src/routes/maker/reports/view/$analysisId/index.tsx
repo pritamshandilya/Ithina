@@ -12,10 +12,10 @@ import {
   mapAnalysisResultToReportSnippet,
   mapPlanogramPayloadToAllItemsReportData,
 } from "@/lib/analysis";
+import { fetchAnalysisJob } from "@/lib/api/maker/analysis";
 import { exportReportToPdf } from "@/lib/reports/PdfExport";
 import { getRelativePath } from "@/lib/utils";
 import { usePlanogramById } from "@/queries/maker";
-import { fetchAnalysisJob } from "@/lib/api/maker/analysis";
 
 export const Route = createFileRoute("/maker/reports/view/$analysisId/")({
   component: FullReportByAnalysisPage,

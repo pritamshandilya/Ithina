@@ -2,7 +2,9 @@ import {
   datetimeLocalValueToParts,
   formatIsoDateUsShort,
   formatIsoRangeUsShort,
+  nextWeekdayWallIso,
   normalizeDraftScheduleForParsing,
+  parseNlScheduleRangeFromAssistantMessage,
   parseScheduledTimeToHm,
 } from "./wizard-datetime";
 
@@ -28,5 +30,21 @@ describe("wizard-datetime", () => {
   it("should format ISO dates for display", () => {
     expect(formatIsoDateUsShort("2026-04-29T12:00:00")).toMatch(/Apr .*2026/);
     expect(formatIsoRangeUsShort("2026-04-29T12:00:00", "2026-05-02T12:00:00")).toMatch(/Apr .* – May/);
+  });
+
+  describe("NL schedule prose", () => {
+    const wedMay6 = new Date(2026, 4, 6, 12, 0, 0); // Wed local
+
+    it("parses Friday at 08:00 AM plus this weekend end", () => {
+      const prose =
+        "We recommend … this weekend … starting Friday at 08:00 AM …\n\n**Other suggestions:**\n* something";
+      const { scheduleStartIso, scheduleEndIso } = parseNlScheduleRangeFromAssistantMessage(prose, wedMay6);
+      expect(scheduleStartIso).toBeTruthy();
+      expect(scheduleEndIso).toBeTruthy();
+      expect(nextWeekdayWallIso("friday", 8, 0, wedMay6)).toBe(scheduleStartIso);
+      const end = scheduleEndIso ? new Date(scheduleEndIso.trim()) : null;
+      expect(end?.getDay()).toBe(0); // Sunday local calendar day
+      expect(scheduleEndIso).toMatch(/T23:59:00$/);
+    });
   });
 });

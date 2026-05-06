@@ -3,6 +3,7 @@ import type { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from "axio
 import { toast } from "@/hooks/use-toast";
 import { navigateToLogin } from "@/lib/app-navigation";
 import { clearPromoAuthLocalState } from "@/lib/auth/promo-auth";
+import { isManualLogoutActive } from "@/lib/promo-api/manual-logout-guard";
 
 const AUTH_HANDSHAKE_PATTERNS = ["/auth/login", "/auth/token", "/auth/logout"];
 
@@ -87,6 +88,10 @@ export function attachAuthResponseInterceptor(
       } catch {
         // Refresh failed — fall through to logout.
       }
+    }
+
+    if (isManualLogoutActive()) {
+      return Promise.reject(error);
     }
 
     handleSessionExpired();

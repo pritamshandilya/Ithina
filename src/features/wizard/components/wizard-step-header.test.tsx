@@ -12,7 +12,6 @@ describe("WizardStepHeader", () => {
     expect(screen.getByText("AI Assisted")).toBeInTheDocument();
     expect(screen.getByText("Products")).toBeInTheDocument();
     expect(screen.getByText("Screens")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument();
   });
 
   it("should render CSV upload mode when NL mode uses CSV input", () => {

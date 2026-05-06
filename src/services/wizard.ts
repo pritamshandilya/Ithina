@@ -15,7 +15,11 @@ import {
   MOCK_MARGINS,
   MOCK_STORES,
 } from "@/mocks/wizard";
-import { formatIsoRangeUsShort, normalizeDraftScheduleForParsing } from "@/lib/wizard-datetime";
+import { inferNlDraftCampaignHintsFromMessage } from "@/lib/chat-message-format";
+import { formatIsoRangeUsShort, normalizeDraftScheduleForParsing, parseNlScheduleRangeFromAssistantMessage } from "@/lib/wizard-datetime";
+import {
+  defaultIncludedForStagedSku,
+} from "@/lib/staged-sku-margin-policy";
 import { draftCampaignFromPrompt } from "@/services/campaigns";
 import type { ApiCampaignDraftResponse, ApiCampaignSKU } from "@/types/api/campaigns";
 import type {
@@ -74,16 +78,41 @@ function extractDraftMeta(response: ApiCampaignDraftResponse): DraftCampaignMeta
     response.suggested_schedule_end?.trim() ||
     meta?.schedule_end?.trim() ||
     null;
+
+  let scheduleStartIso = normalizeDraftScheduleForParsing(
+    scheduleStartRaw,
+    "start",
+    meta?.scheduled_time,
+  );
+  let scheduleEndIso = normalizeDraftScheduleForParsing(scheduleEndRaw, "end");
+  let campaignThemeName = themeRaw || null;
+
+  if (response.message?.trim()) {
+    const hints = inferNlDraftCampaignHintsFromMessage(response.message);
+    if (!campaignThemeName && hints.campaignThemeName) {
+      campaignThemeName = hints.campaignThemeName;
+    }
+    const nlSched = parseNlScheduleRangeFromAssistantMessage(response.message);
+    if (!scheduleStartIso && nlSched.scheduleStartIso) {
+      scheduleStartIso = nlSched.scheduleStartIso;
+    }
+    if (!scheduleEndIso && nlSched.scheduleEndIso) {
+      scheduleEndIso = nlSched.scheduleEndIso;
+    }
+  }
+
   return {
-    campaignThemeName: themeRaw || null,
-    scheduleStartIso: normalizeDraftScheduleForParsing(
-      scheduleStartRaw,
-      "start",
-      meta?.scheduled_time,
-    ),
-    scheduleEndIso: normalizeDraftScheduleForParsing(scheduleEndRaw, "end"),
+    campaignThemeName,
+    scheduleStartIso,
+    scheduleEndIso,
   };
 }
+
+// Re-export for callers that import margin policy from the wizard service.
+export {
+  defaultIncludedForStagedSku,
+  stagedSkuViolatesMarginPolicy,
+} from "@/lib/staged-sku-margin-policy";
 
 // ─── Static reference data (no backend equivalent yet) ───────────────────────
 
@@ -139,6 +168,7 @@ export function mapDraftResponseSkusToStaged(
       typeof stockRaw === "number" && !Number.isNaN(stockRaw) ? stockRaw : undefined;
     const marginPct =
       typeof s.margin_pct === "number" && !Number.isNaN(s.margin_pct) ? s.margin_pct : undefined;
+    const marginPolicyRow = { safe: s.is_safe, marginPct };
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? "",
@@ -150,7 +180,7 @@ export function mapDraftResponseSkusToStaged(
       ...(marginPct !== undefined ? { marginPct } : {}),
       baseCost: s.base_cost,
       discount,
-      included: true,
+      included: defaultIncludedForStagedSku(marginPolicyRow),
       isFree: s.is_free === true || s.isFree === true,
       ...(eslRaw ? { eslId: String(eslRaw) } : {}),
       ...(rankingScore !== undefined ? { rankingScore } : {}),

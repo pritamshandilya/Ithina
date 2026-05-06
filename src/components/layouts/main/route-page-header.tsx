@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 const HIDE_FOR_PATHS = new Set<string>(["/admin/dashboard", "/admin/stores/new"]);
 
-/** Wizard renders its own title/shell — hide the global strip to avoid duplicate “New Campaign” headings. */
+/** Wizard uses the same title strip as other routes (see RoutePageHeader wizard branch). */
 function isWizardPath(pathname: string): boolean {
   return (
     pathname === "/maker/wizard" ||
@@ -64,22 +64,28 @@ export default function RoutePageHeader() {
   const createUser = useCreateAdminUser();
 
   const nav = useMemo(() => navItemForPath(location.pathname), [location.pathname]);
+  const onWizard = isWizardPath(location.pathname);
 
-  if (isWizardPath(location.pathname)) return null;
-  if (!nav) return null;
-  if (HIDE_FOR_PATHS.has(location.pathname)) return null;
+  if (!onWizard) {
+    if (!nav) return null;
+    if (HIDE_FOR_PATHS.has(location.pathname)) return null;
+  }
+
+  const pageTitle = onWizard ? "New Campaign" : nav!.title;
+  const pageSubtitle = onWizard
+    ? "Stage products, design displays, review guard rails, and schedule your promotion."
+    : nav!.subtitle;
 
   const isProfilePage =
     location.pathname === "/maker/profile" ||
     location.pathname === "/checker/profile" ||
     location.pathname === "/admin/profile";
   const isAdminOrganizationSettingsPage = location.pathname === "/admin/organization-settings";
-  const isWizardRoute = isWizardPath(location.pathname);
   const showNewCampaign =
+    !onWizard &&
     (role === "maker" || role === "admin") &&
     !isProfilePage &&
-    !isAdminOrganizationSettingsPage &&
-    !isWizardRoute;
+    !isAdminOrganizationSettingsPage;
   const isAdminUsersPage = location.pathname === "/admin/users";
   const isAdminStoresPage = location.pathname === "/admin/stores";
   const isGuardRailsPage = location.pathname === "/admin/settings";
@@ -89,8 +95,8 @@ export default function RoutePageHeader() {
       <div className="flex w-full flex-col gap-3 px-4 lg:flex-row lg:items-end lg:justify-between lg:px-8">
         <div className="flex min-w-0 items-start gap-2 sm:gap-3">
           <div className="min-w-0 space-y-1">
-            <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">{nav.title}</h1>
-            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{nav.subtitle}</p>
+            <h1 className="text-2xl font-extrabold tracking-[-0.03em] text-foreground sm:text-3xl">{pageTitle}</h1>
+            <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{pageSubtitle}</p>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 lg:gap-3">
@@ -131,7 +137,13 @@ export default function RoutePageHeader() {
           ) : showNewCampaign ? (
             <button
               type="button"
-              onClick={() => navigate({ to: wizardEntryPathFromPathname(location.pathname) })}
+              onClick={() =>
+                navigate({
+                  to: wizardEntryPathFromPathname(location.pathname),
+                  search: {},
+                  replace: true,
+                })
+              }
               className={cn(
                 "inline-flex h-9 items-center gap-1.5 rounded-md bg-primary px-4 text-xs font-bold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90",
               )}

@@ -25,7 +25,11 @@ export default function Dashboard() {
 
   const handleInsightAction = (insight: InsightCardData) => {
     dispatch(setCampaignName(insight.actionLabel));
-    navigate({ to: wizardEntryPathFromPathname(location.pathname) });
+    navigate({
+      to: wizardEntryPathFromPathname(location.pathname),
+      search: {},
+      replace: true,
+    });
   };
 
   if (hasError) {

@@ -370,6 +370,7 @@ export default function CampaignsTabulator() {
                 pageSizeSelector={[5, 10, 15, 20, 50]}
                 emptyMessage="No campaigns match your filter."
                 headerFilters
+                stretchLayout
                 className="min-h-0 flex-1"
               />
             </div>

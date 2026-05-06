@@ -31,7 +31,11 @@ describe("CampaignGate", () => {
     expect(screen.getByRole("heading", { name: /campaign studio/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /new campaign/i }));
-    expect(mockNavigate).toHaveBeenCalledWith({ to: "/maker/wizard" });
+    expect(mockNavigate).toHaveBeenCalledWith({
+      to: "/maker/wizard",
+      search: {},
+      replace: true,
+    });
 
     await user.click(screen.getByRole("button", { name: /open existing/i }));
     expect(onShowPicker).toHaveBeenCalledTimes(1);

@@ -1,7 +1,6 @@
 import { ChevronLeft, CloudUpload, Loader2, Save, Zap } from "lucide-react";
 import { memo, type ReactNode } from "react";
 
-import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { cn } from "@/lib/utils";
 
 import type { WizardMode } from "./mode-chooser";
@@ -197,7 +196,6 @@ function WizardStepHeader({
             )}
           </div>
         )}
-        <HeaderNotificationsTrigger />
         {trailingSlot ? <div className="flex shrink-0 items-center">{trailingSlot}</div> : null}
       </div>
     </div>

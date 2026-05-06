@@ -1,9 +1,8 @@
 import { redirect } from "@tanstack/react-router";
 
-import { hasStoreScope } from "@/auth/authorization";
-import type { AppRouterContext } from "@/routes/__root";
-
 import { requireAuth } from "./requireAuth";
+import { hasStoreScope } from "@/lib/auth/authorization";
+import type { AppRouterContext } from "@/routes/__root";
 
 export function requireStoreScope(context: AppRouterContext, storeId: string) {
   const user = requireAuth(context);

@@ -14,8 +14,7 @@ export function useSignup(auth: Auth) {
       auth.startRegister();
       return true;
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : "Signup failed";
+      const errorMessage = err instanceof Error ? err.message : "Signup failed";
       setError(errorMessage);
       return false;
     } finally {

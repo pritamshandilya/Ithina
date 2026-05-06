@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchCheckerDashboardStats } from "../api/checker";
-import { mockCheckerUser } from "@/lib/api/mock-data";
+
+import { fetchCheckerDashboardStats } from "@/lib/api/checker/checker";
+import { mockCheckerUser } from "@/lib/api/mockData";
 import { useStore } from "@/providers/store";
 
 export const checkerDashboardStatsKeys = {

@@ -2,9 +2,9 @@ import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { ComplianceReportFull } from "@/components/shared/complianceReport";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import {
   getAnnotatedImagePreview,
   mapAnalysisResultToAllIssuesReportData,
@@ -12,10 +12,10 @@ import {
   mapAnalysisResultToReportSnippet,
   mapPlanogramPayloadToAllItemsReportData,
 } from "@/lib/analysis";
-import { exportReportToPdf } from "@/lib/reports/pdf-export";
+import { exportReportToPdf } from "@/lib/reports/PdfExport";
 import { getRelativePath } from "@/lib/utils";
 import { usePlanogramById } from "@/queries/maker";
-import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
+import { fetchAnalysisJob } from "@/lib/api/maker/analysis";
 
 export const Route = createFileRoute("/maker/reports/view/$analysisId/")({
   component: FullReportByAnalysisPage,

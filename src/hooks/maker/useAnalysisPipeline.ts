@@ -4,11 +4,10 @@
  * Simulates AI analysis steps. Pauses at Data Enrichment step to allow
  * user to review/adjust SKU metrics before continuing.
  */
-
 import { useCallback, useRef, useState } from "react";
 
 import { PIPELINE_STEPS } from "@/lib/analysis/constants";
-import { MOCK_SKU_ENRICHMENT_ITEMS } from "@/lib/analysis/mock-sku-data";
+import { MOCK_SKU_ENRICHMENT_ITEMS } from "@/lib/analysis/mockSkuData";
 import type { PipelineStepId, SkuEnrichmentItem } from "@/types/analysis/types";
 
 const STEP_INTERVAL_MS = 1500;
@@ -16,7 +15,9 @@ const DATA_ENRICHMENT_STEP_ID: PipelineStepId = "input";
 
 export interface UseAnalysisPipelineOptions {
   /** Called when pipeline reaches Data Enrichment – resolve with enriched items to continue */
-  onEnrichmentRequired?: (items: SkuEnrichmentItem[]) => Promise<SkuEnrichmentItem[]>;
+  onEnrichmentRequired?: (
+    items: SkuEnrichmentItem[],
+  ) => Promise<SkuEnrichmentItem[]>;
   /** Called when pipeline completes */
   onComplete?: () => void;
   stepIntervalMs?: number;
@@ -37,7 +38,7 @@ export interface UseAnalysisPipelineReturn {
 }
 
 export function useAnalysisPipeline(
-  options: UseAnalysisPipelineOptions = {}
+  options: UseAnalysisPipelineOptions = {},
 ): UseAnalysisPipelineReturn {
   const {
     onEnrichmentRequired,
@@ -52,7 +53,9 @@ export function useAnalysisPipeline(
   const [awaitingEnrichment, setAwaitingEnrichment] = useState(false);
 
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const elapsedIntervalRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
 
   const clearIntervals = useCallback(() => {
     if (intervalRef.current) {
@@ -85,10 +88,7 @@ export function useAnalysisPipeline(
         const nextStep = stepIds[stepIndex]!;
         setCurrentStep(nextStep);
 
-        if (
-          nextStep === DATA_ENRICHMENT_STEP_ID &&
-          onEnrichmentRequired
-        ) {
+        if (nextStep === DATA_ENRICHMENT_STEP_ID && onEnrichmentRequired) {
           clearIntervals();
           setAwaitingEnrichment(true);
           onEnrichmentRequired([...MOCK_SKU_ENRICHMENT_ITEMS])
@@ -137,12 +137,11 @@ export function useAnalysisPipeline(
     ? PIPELINE_STEPS.findIndex((s) => s.id === currentStep)
     : -1;
 
-  const progressPercent =
-    currentStep
-      ? ((currentStepIndex + 1) / PIPELINE_STEPS.length) * 100
-      : analysisComplete
-        ? 100
-        : 0;
+  const progressPercent = currentStep
+    ? ((currentStepIndex + 1) / PIPELINE_STEPS.length) * 100
+    : analysisComplete
+      ? 100
+      : 0;
 
   return {
     isAnalyzing,

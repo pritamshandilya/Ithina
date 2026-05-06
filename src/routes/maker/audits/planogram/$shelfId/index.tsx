@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { PlanogramShelfEditorView } from "@/features/planogram-library/planogram-shelf-editor-view";
+
+import { PlanogramShelfEditorView } from "@/components/planogram/PlanogramShelfEditorView";
 
 export const Route = createFileRoute("/maker/audits/planogram/$shelfId/")({
   component: PlanogramPreviewPage,

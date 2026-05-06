@@ -6,7 +6,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchStores } from "../api/checker";
+import { fetchStores } from "@/lib/api/checker/checker";
 import { AuthSessionService } from "@/lib/auth/session";
 
 /**

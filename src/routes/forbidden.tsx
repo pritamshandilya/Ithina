@@ -1,8 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { Button } from "@/components/ui/button";
-import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
+import type { BeforeLoadArgs } from "@/routes/__root";
 
 export const Route = createFileRoute("/forbidden")({
   beforeLoad: ({ context, location }: BeforeLoadArgs) => {
@@ -13,10 +13,10 @@ export const Route = createFileRoute("/forbidden")({
 
 function ForbiddenPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-primary p-6">
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 text-center">
-        <h1 className="text-xl font-semibold text-foreground">Access denied</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+    <div className="bg-primary flex min-h-screen items-center justify-center p-6">
+      <div className="border-border bg-card w-full max-w-md rounded-xl border p-6 text-center">
+        <h1 className="text-foreground text-xl font-semibold">Access denied</h1>
+        <p className="text-muted-foreground mt-2 text-sm">
           You do not have permission to view this page.
         </p>
         <Button asChild className="mt-4">

@@ -3,9 +3,9 @@
  *
  * TanStack Query hook for fetching a single planogram by ID from third party.
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchPlanogramById } from "../api/planogram";
+
+import { fetchPlanogramById } from "@/lib/api/maker/planogram";
 
 /**
  * Query key factory for individual planograms

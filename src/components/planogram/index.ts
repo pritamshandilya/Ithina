@@ -1,13 +1,13 @@
 export {
   CategoryFilterTags,
   type CategoryFilterTagsProps,
-} from "./category-filter-tags";
-export { InlineEdit, type InlineEditProps } from "./inline-edit";
+} from "./CategoryFilterTags";
+export { InlineEdit, type InlineEditProps } from "./InlineEdit";
 export {
   InlineFacingsDepthEdit,
   type InlineFacingsDepthEditProps,
-} from "./inline-facings-depth-edit";
-export { getProductSVG } from "./product-svg-utils";
+} from "./InlineFacingsDepthEdit";
+export { getProductSVG } from "./productSvgUtils";
 export {
   BottleSVG,
   CanSVG,
@@ -23,23 +23,23 @@ export {
   RazorPackSVG,
   EnergyDrinkCanSVG,
   type ProductSVGProps,
-} from "./product-svgs";
+} from "./ProductSvgs";
 export {
   RemovedItemsSidebar,
   type RemovedItemsSidebarProps,
-} from "./removed-items-sidebar";
+} from "./RemovedItemsSidebar";
 export {
   ProductDetailsTable,
   type ProductDetailsRow,
   type ProductDetailsTableProps,
-} from "./product-details-table";
-export { ShelfProduct, type ShelfProductProps } from "./shelf-product";
-export { ShelfRow, type ShelfRowProps } from "./shelf-row";
+} from "./ProductDetailsTable";
+export { ShelfProduct, type ShelfProductProps } from "./ShelfProduct";
+export { ShelfRow, type ShelfRowProps } from "./ShelfRow";
 export {
   StockingRulesSection,
   type StockingRulesSectionProps,
-} from "./stocking-rules-section";
-export { ShelfInfoModal } from "./shelf-info-modal";
+} from "./StockingRulesSection";
+export { ShelfInfoModal } from "./ShelfInfoModal";
 export {
   createPlanogramColumns,
   PLANOGRAM_INITIAL_SORT,
@@ -48,4 +48,4 @@ export {
   PlanogramActionsMenu,
   type PlanogramActionsMenuProps,
   type PlanogramStatusCellProps,
-} from "./planogram-table-columns";
+} from "./PlanogramTableColumns";

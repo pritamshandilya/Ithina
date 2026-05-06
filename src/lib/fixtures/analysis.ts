@@ -32,7 +32,9 @@ export function getFixtureDisplayName(
   return type || "Fixture";
 }
 
-export function groupShelvesByFixture(shelves: Shelf[]): FixtureAnalysisGroup[] {
+export function groupShelvesByFixture(
+  shelves: Shelf[],
+): FixtureAnalysisGroup[] {
   const grouped = new Map<string, Shelf[]>();
   for (const shelf of shelves) {
     const fixtureId = getShelfFixtureId(shelf);

@@ -1,4 +1,4 @@
-import type { AnalysisApiMode } from "./types";
+import type { AnalysisApiMode } from "@/lib/api/analysis/types";
 
 const DEFAULT_ANALYSIS_API_MODE: AnalysisApiMode = "live";
 
@@ -8,4 +8,3 @@ export function getAnalysisApiMode(): AnalysisApiMode {
   if (rawMode === "live") return "live";
   return DEFAULT_ANALYSIS_API_MODE;
 }
-

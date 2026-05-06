@@ -1,9 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
+import { storesKeys as checkerStoresKeys } from "./useStores";
 import {
+  type OrgUserType,
+  type UpsertUserPayload,
   assignUserToStore,
-  createUser,
   createStore,
+  createUser,
   deactivateUser,
   deleteStore,
   fetchOrgStores,
@@ -14,13 +17,10 @@ import {
   fetchUserById,
   inviteUser,
   removeUserFromStore,
-  updateUser,
-  type OrgUserType,
-  type UpsertUserPayload,
   updateStore,
   updateStoreComplianceSettings,
-} from "../api/org";
-import { storesKeys as checkerStoresKeys } from "./useStores";
+  updateUser,
+} from "@/lib/api/checker/org";
 
 /**
  * Query keys for organization-level data
@@ -174,13 +174,8 @@ export function useAssignStoreUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      storeId,
-      userId,
-    }: {
-      storeId: string;
-      userId: string;
-    }) => assignUserToStore(storeId, userId),
+    mutationFn: ({ storeId, userId }: { storeId: string; userId: string }) =>
+      assignUserToStore(storeId, userId),
     onSuccess: (_, { storeId }) => {
       invalidateAllStoreQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });
@@ -196,13 +191,8 @@ export function useRemoveStoreUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      storeId,
-      userId,
-    }: {
-      storeId: string;
-      userId: string;
-    }) => removeUserFromStore(storeId, userId),
+    mutationFn: ({ storeId, userId }: { storeId: string; userId: string }) =>
+      removeUserFromStore(storeId, userId),
     onSuccess: (_, { storeId }) => {
       invalidateAllStoreQueries(queryClient);
       queryClient.invalidateQueries({ queryKey: orgKeys.store(storeId) });

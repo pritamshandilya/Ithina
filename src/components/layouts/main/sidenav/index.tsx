@@ -17,15 +17,17 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
-import { CORE_NAV } from "@/app/nav";
+import SidenavFooter from "./footer";
+import { TeamSwitcher } from "./HeaderSwitch";
+import { type NavItem, isActiveItem } from "./navUtils";
 import logo from "@/assets/logo.avif";
-import { hasAnyPermission, hasPermission } from "@/auth/authorization";
+import { CORE_NAV } from "@/components/navigation/nav";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/DropdownMenu";
 import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
@@ -43,14 +45,12 @@ import {
   SidebarToggle,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { hasAnyPermission, hasPermission } from "@/lib/auth/authorization";
 import { AuthSessionService, type UserRole } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
 import { useStores as useCheckerStores, useOrgStores } from "@/queries/checker";
 import { useStores as useMakerStores } from "@/queries/maker";
-import SidenavFooter from "./footer";
-import { TeamSwitcher } from "./header-switch";
-import { type NavItem, isActiveItem } from "./nav-utils";
 
 export default function Sidenav() {
   const location = useLocation();
@@ -130,6 +130,21 @@ export default function Sidenav() {
 
     if (role === "maker") {
       const items: NavItem[] = [];
+      items.push({
+        label: "Planogram Analysis",
+        to: "/maker/audits/planogram",
+        icon: LayoutGrid,
+      });
+      items.push({
+        label: "Adhoc Analysis",
+        to: "/maker/audits/adhoc",
+        icon: Zap,
+      });
+      items.push({
+        label: "Historical Analysis",
+        to: "/maker/historical-analysis",
+        icon: History,
+      });
       if (enabledCoreNav.has("approvals")) {
         items.push({
           label: "Approvals",
@@ -176,7 +191,7 @@ export default function Sidenav() {
         icon: LayoutPanelLeft,
       });
     }
-    // items.push({ label: "Shelves", to: `${storePrefix}/shelf` as never, icon: Rows3 });
+
     items.push({
       label: "Planograms",
       to: `${storePrefix}/planograms` as never,
@@ -318,76 +333,6 @@ export default function Sidenav() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-
-              {/* {role === "maker" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActiveItem(location.pathname, location.hash, {
-                      label: "Shelves",
-                      to: "/maker/shelf",
-                      icon: Rows3,
-                    })}
-                    tooltip="Shelves"
-                  >
-                    <Link to="/maker/shelf">
-                      <Rows3 className="size-4 shrink-0" />
-                      Shelves
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )} */}
-
-              {role === "maker" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname.startsWith(
-                      "/maker/audits/planogram",
-                    )}
-                    tooltip="Planogram based analysis"
-                  >
-                    <Link to="/maker/audits/planogram">
-                      <LayoutGrid className="size-4 shrink-0" />
-                      Planogram based analysis
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              {role === "maker" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname.startsWith(
-                      "/maker/audits/adhoc",
-                    )}
-                    tooltip="Adhoc Analysis"
-                  >
-                    <Link to="/maker/audits/adhoc">
-                      <Zap className="size-4 shrink-0" />
-                      Adhoc Analysis
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
-
-              {role === "maker" && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={location.pathname.startsWith(
-                      "/maker/historical-analysis",
-                    )}
-                    tooltip="Historical Analysis"
-                  >
-                    <Link to="/maker/historical-analysis">
-                      <History className="size-4 shrink-0" />
-                      Historical Analysis
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
 
               {roleItems.map((item) => {
                 const Icon = item.icon;

@@ -1,22 +1,22 @@
 /**
  * useNotifications Hook
- * 
+ *
  * TanStack Query hook for fetching checker notifications.
- * 
+ *
  * Features:
  * - Automatic caching (30 second stale time)
  * - Polling every 30 seconds for new notifications
  * - Refetch on window focus
  * - Type-safe with TypeScript
  */
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   fetchNotifications,
-  markNotificationAsRead,
   markAllNotificationsAsRead,
-} from "../api/checker";
-import { mockCheckerUser } from "@/lib/api/mock-data";
+  markNotificationAsRead,
+} from "@/lib/api/checker/checker";
+import { mockCheckerUser } from "@/lib/api/mockData";
 import type { Notification } from "@/types/checker";
 
 /**
@@ -30,10 +30,10 @@ export const notificationsKeys = {
 
 /**
  * Hook to fetch notifications for the checker
- * 
+ *
  * @param storeId - Optional store ID to filter notifications
  * @returns TanStack Query result with notifications data
- * 
+ *
  * @example
  * ```tsx
  * const { data: notifications, isLoading } = useNotifications(selectedStoreId);
@@ -52,9 +52,9 @@ export function useNotifications(storeId?: string) {
 
 /**
  * Hook to mark a notification as read with optimistic update
- * 
+ *
  * @returns Mutation function to mark notification as read
- * 
+ *
  * @example
  * ```tsx
  * const markAsRead = useMarkNotificationAsRead();
@@ -76,10 +76,8 @@ export function useMarkNotificationAsRead() {
       const previousNotifications = queryClient.getQueryData(userScopeKey);
 
       // Optimistically update to the new value
-      queryClient.setQueryData<Notification[]>(
-        userScopeKey,
-        (old) =>
-          old?.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
+      queryClient.setQueryData<Notification[]>(userScopeKey, (old) =>
+        old?.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
       );
 
       return { previousNotifications };
@@ -99,9 +97,9 @@ export function useMarkNotificationAsRead() {
 
 /**
  * Hook to mark all notifications as read with optimistic update
- * 
+ *
  * @returns Mutation function to mark all notifications as read
- * 
+ *
  * @example
  * ```tsx
  * const markAllAsRead = useMarkAllNotificationsAsRead();
@@ -121,9 +119,8 @@ export function useMarkAllNotificationsAsRead() {
       const previousNotifications = queryClient.getQueryData(userScopeKey);
 
       // Mark all as read
-      queryClient.setQueryData<Notification[]>(
-        userScopeKey,
-        (old) => old?.map((n) => ({ ...n, read: true })),
+      queryClient.setQueryData<Notification[]>(userScopeKey, (old) =>
+        old?.map((n) => ({ ...n, read: true })),
       );
 
       return { previousNotifications };

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { AddPlanogramPage } from "@/routes/checker/shelf/new/index";
 import { z } from "zod";
+
+import { AddPlanogramPage } from "@/routes/checker/shelf/new/index";
 
 export const Route = createFileRoute("/admin/$storeId/shelf/new")({
   component: AdminShelfNewRouteComponent,

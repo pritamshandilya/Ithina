@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { hasPermission } from "@/auth/authorization";
-import type { BeforeLoadArgs } from "@/routes/__root";
+import { hasPermission } from "@/lib/auth/authorization";
 import { requireAuth } from "@/routes/-guards/requireAuth";
+import type { BeforeLoadArgs } from "@/routes/__root";
 
 export const Route = createFileRoute("/_app/approvals")({
   beforeLoad: ({ context, location }: BeforeLoadArgs) => {

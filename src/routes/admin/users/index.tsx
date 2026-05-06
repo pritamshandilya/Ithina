@@ -1,26 +1,29 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, Search, Trash2, UserPlus } from "lucide-react";
-import { useState, useMemo } from "react";
 import { formatDistanceToNow } from "date-fns";
-
-import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { IconButton } from "@/components/ui/icon-button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useOrgUsers, useInviteUser, useUpdateUser, useDeactivateUser } from "@/queries/checker";
-import { UserFormModal } from "@/components/admin/users/UserFormModal";
-import { ConfirmModal } from "@/components/ui/confirm-modal";
-import { useToast } from "@/hooks/use-toast";
-import type { AuthSessionUser } from "@/lib/auth/session";
-import type { UpsertUserPayload } from "@/queries/checker/api/org";
+import { Pencil, Search, Trash2, UserPlus } from "lucide-react";
+import { useMemo, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import { UserFormModal } from "@/components/admin/users/UserFormModal";
+import MainLayout from "@/components/layouts/main";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmModal } from "@/components/ui/ConfirmModal";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
+import { type DataTableCell } from "@/components/ui/DataTable";
+import { IconButton } from "@/components/ui/IconButton";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/useToast";
+import type { UpsertUserPayload } from "@/lib/api/checker/org";
+import type { AuthSessionUser } from "@/lib/auth/session";
 import {
-  type DataTableCell,
-} from "@/components/ui/data-table";
+  useDeactivateUser,
+  useInviteUser,
+  useOrgUsers,
+  useUpdateUser,
+} from "@/queries/checker";
 
 export const Route = createFileRoute("/admin/users/")({
   component: AdminUsersPage,
@@ -47,7 +50,9 @@ function AdminUsersPage() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<"invite" | "edit">("invite");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<AuthSessionUser | null>(null);
+  const [selectedUser, setSelectedUser] = useState<AuthSessionUser | null>(
+    null,
+  );
 
   const filteredUsers = useMemo(() => {
     return users.filter((member) => {
@@ -65,21 +70,38 @@ function AdminUsersPage() {
     try {
       await inviteUserMutation.mutateAsync(payload);
       setIsFormModalOpen(false);
-      toast({ title: "Invitation Sent", description: `A login invitation has been sent to ${payload.email}.` });
+      toast({
+        title: "Invitation Sent",
+        description: `A login invitation has been sent to ${payload.email}.`,
+      });
     } catch (_err) {
-      toast({ title: "Error", description: "Failed to send invitation.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to send invitation.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleEdit = async (payload: UpsertUserPayload) => {
     if (!selectedUser) return;
     try {
-      await updateUserMutation.mutateAsync({ userId: selectedUser.id, payload });
+      await updateUserMutation.mutateAsync({
+        userId: selectedUser.id,
+        payload,
+      });
       setIsFormModalOpen(false);
       setSelectedUser(null);
-      toast({ title: "User Updated", description: "The user has been updated successfully." });
+      toast({
+        title: "User Updated",
+        description: "The user has been updated successfully.",
+      });
     } catch (_err) {
-      toast({ title: "Error", description: "Failed to update user.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to update user.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -89,9 +111,16 @@ function AdminUsersPage() {
       await deactivateUserMutation.mutateAsync(selectedUser.id);
       setIsDeleteModalOpen(false);
       setSelectedUser(null);
-      toast({ title: "User Deactivated", description: "The user account has been disabled." });
+      toast({
+        title: "User Deactivated",
+        description: "The user account has been disabled.",
+      });
     } catch (_err) {
-      toast({ title: "Error", description: "Failed to deactivate user.", variant: "destructive" });
+      toast({
+        title: "Error",
+        description: "Failed to deactivate user.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -192,7 +221,10 @@ function AdminUsersPage() {
       cellClick: (e: unknown, cell: DataTableCell<AuthSessionUser>) => {
         const user = cell.getData() as AuthSessionUser;
         const target =
-          e && typeof e === "object" && "target" in e && e.target instanceof Element
+          e &&
+          typeof e === "object" &&
+          "target" in e &&
+          e.target instanceof Element
             ? e.target.closest("button")
             : null;
         if (target?.classList.contains("edit-btn")) {
@@ -214,32 +246,46 @@ function AdminUsersPage() {
           title="Users"
           description="Manage organization users and role assignments."
         >
-          <Button variant="accent" onClick={() => { setFormMode("invite"); setIsFormModalOpen(true); }}>
+          <Button
+            variant="accent"
+            onClick={() => {
+              setFormMode("invite");
+              setIsFormModalOpen(true);
+            }}
+          >
             <UserPlus className="mr-2 size-4" />
             Invite User
           </Button>
         </PageHeader>
       }
     >
-      <div className="min-h-screen bg-primary pt-4 px-4 pb-8 lg:px-8">
+      <div className="bg-primary min-h-screen px-4 pt-4 pb-8 lg:px-8">
         <div className="mx-auto w-full max-w-screen-2xl space-y-6">
           <Card className="bg-card border-border backdrop-blur-sm">
             <CardContent className="p-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Search className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2" />
                   <Input
                     placeholder="Search by name, email, or role..."
-                    className="pl-10 bg-background/50 border-input text-foreground placeholder:text-muted-foreground/50 focus:ring-accent transition-all"
+                    className="bg-background/50 border-input text-foreground placeholder:text-muted-foreground/50 focus:ring-accent pl-10 transition-all"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" className="bg-background/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-background/50"
+                  >
                     Role Filter
                   </Button>
-                  <Button variant="outline" size="sm" className="bg-background/50">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="bg-background/50"
+                  >
                     Status Filter
                   </Button>
                 </div>
@@ -269,7 +315,9 @@ function AdminUsersPage() {
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
         onSubmit={formMode === "edit" ? handleEdit : handleInvite}
-        initialData={formMode === "edit" ? selectedUser || undefined : undefined}
+        initialData={
+          formMode === "edit" ? selectedUser || undefined : undefined
+        }
         isLoading={inviteUserMutation.isPending || updateUserMutation.isPending}
         mode={formMode}
       />

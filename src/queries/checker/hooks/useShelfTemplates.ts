@@ -1,13 +1,16 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useStore } from "@/providers/store";
-import type { ShelfTemplateCreateInput, ShelfTemplateUpdateInput } from "@/types/shelf-template";
 import {
-  fetchShelfTemplates,
   createShelfTemplate,
-  updateShelfTemplate,
   deleteShelfTemplate,
-} from "@/queries/checker/api/shelf-templates";
+  fetchShelfTemplates,
+  updateShelfTemplate,
+} from "@/lib/api/checker/shelfTemplates";
+import { useStore } from "@/providers/store";
+import type {
+  ShelfTemplateCreateInput,
+  ShelfTemplateUpdateInput,
+} from "@/types/shelfTemplate";
 
 export const shelfTemplatesKeys = {
   all: ["shelf-templates"] as const,
@@ -15,9 +18,14 @@ export const shelfTemplatesKeys = {
     [...shelfTemplatesKeys.all, storeId ?? "all", unit] as const,
 };
 
-function getSelectedUnit(selectedStore: ReturnType<typeof useStore>["selectedStore"]) {
+function getSelectedUnit(
+  selectedStore: ReturnType<typeof useStore>["selectedStore"],
+) {
   const unit = selectedStore?.default_dimensions;
-  return (unit === "mm" || unit === "cm" || unit === "inch" ? unit : "mm") as "mm" | "cm" | "inch";
+  return (unit === "mm" || unit === "cm" || unit === "inch" ? unit : "mm") as
+    | "mm"
+    | "cm"
+    | "inch";
 }
 
 export function useShelfTemplates() {
@@ -80,4 +88,3 @@ export function useDeleteShelfTemplate() {
     },
   });
 }
-

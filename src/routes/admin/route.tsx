@@ -1,10 +1,10 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { hasPermission } from "@/auth/authorization";
 import MainLayout from "@/components/layouts/main";
+import { hasPermission } from "@/lib/auth/authorization";
 import { AuthSessionService } from "@/lib/auth/session";
-import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
+import type { BeforeLoadArgs } from "@/routes/__root";
 
 export const Route = createFileRoute("/admin")({
   beforeLoad: ({ context, location }: BeforeLoadArgs) => {

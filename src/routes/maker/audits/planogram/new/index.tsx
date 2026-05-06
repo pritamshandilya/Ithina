@@ -1,11 +1,14 @@
-import { createFileRoute, useLocation, useNavigate, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
 import { AlertCircle, Check, LayoutGrid } from "lucide-react";
-
-import { useToast } from "@/hooks/use-toast";
 import { useCallback, useMemo, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { DetailBackButton } from "@/components/shared/detail-back-button";
+import { DetailBackButton } from "@/components/shared/DetailBackButton";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,22 +17,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Label } from "@/components/ui/label";
-import {
-  useShelves,
-  usePlanogramById,
-  usePlanogramList,
-  useAssignPlanogramToShelf,
-} from "@/queries/maker";
+import { useToast } from "@/hooks/useToast";
 import { groupShelvesByFixture } from "@/lib/fixtures/analysis";
-import type { PlanogramArrangement } from "@/types/planogram";
 import {
   getPlanogramProductId,
   getShelfDisplayLabel,
   sortPlanogramShelves,
-} from "@/lib/planogram/planogram-schema";
+} from "@/lib/planogram/planogramSchema";
+import {
+  useAssignPlanogramToShelf,
+  usePlanogramById,
+  usePlanogramList,
+  useShelves,
+} from "@/queries/maker";
+import type { PlanogramArrangement } from "@/types/planogram";
 
 export const Route = createFileRoute("/maker/audits/planogram/new/")({
   validateSearch: (search: Record<string, unknown>) => {
@@ -54,7 +58,9 @@ function MakerPOGAnalysisRouteComponent() {
   return <AddPOGAnalysisPage searchOverride={search} />;
 }
 
-export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) {
+export function AddPOGAnalysisPage({
+  searchOverride,
+}: AddPOGAnalysisPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const params = useParams({ strict: false }) as { storeId?: string };
@@ -62,9 +68,10 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
   const { fixtureId } = searchOverride ?? {};
   const isFixtureLocked = !!fixtureId;
   const isAdmin = location.pathname.includes("/admin/");
-  const backPath = isAdmin && params.storeId
-    ? `/admin/${params.storeId}/shelf`
-    : "/maker/audits/planogram";
+  const backPath =
+    isAdmin && params.storeId
+      ? `/admin/${params.storeId}/shelf`
+      : "/maker/audits/planogram";
   const { data: planogramList, isLoading: listLoading } = usePlanogramList();
   const { data: shelves, isLoading: shelvesLoading } = useShelves();
   const assignPlanogramMutation = useAssignPlanogramToShelf();
@@ -128,7 +135,9 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
       });
       navigate({ to: backPath as never });
     } catch (err) {
-      setSaveError(err instanceof Error ? err.message : "Failed to configure analysis");
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to configure analysis",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -148,13 +157,14 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto max-w-screen-2xl space-y-4">
-
           <header className="flex items-center gap-2">
             <DetailBackButton to={backPath} />
             <div>
-              <h1 className="text-2xl font-bold text-foreground">Add POG Analysis</h1>
+              <h1 className="text-foreground text-2xl font-bold">
+                Add POG Analysis
+              </h1>
             </div>
           </header>
 
@@ -163,9 +173,12 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
             <div className="space-y-3">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Configure analysis</CardTitle>
+                  <CardTitle className="text-base">
+                    Configure analysis
+                  </CardTitle>
                   <CardDescription>
-                    Select an existing planogram and an existing fixture to pair them together for analysis.
+                    Select an existing planogram and an existing fixture to pair
+                    them together for analysis.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -183,7 +196,8 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                         <option value="">Select a planogram...</option>
                         {(planogramList ?? []).map((p) => (
                           <option key={p.id} value={p.id}>
-                            {p.name} ({p.shelfCount} shelves · {p.productCount} SKUs)
+                            {p.name} ({p.shelfCount} shelves · {p.productCount}{" "}
+                            SKUs)
                           </option>
                         ))}
                       </Select>
@@ -204,7 +218,10 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                       >
                         <option value="">Select a fixture...</option>
                         {fixtureGroups.map((fixtureGroup) => (
-                          <option key={fixtureGroup.fixtureId} value={fixtureGroup.fixtureId}>
+                          <option
+                            key={fixtureGroup.fixtureId}
+                            value={fixtureGroup.fixtureId}
+                          >
                             {fixtureGroup.fixtureName}
                             {fixtureGroup.shelves.some((s) => s.planogramId)
                               ? " (Has planogram mapping)"
@@ -214,14 +231,14 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                       </Select>
                     )}
                     {isFixtureLocked ? (
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Fixture selection is locked for this analysis run.
                       </p>
                     ) : null}
                   </div>
 
                   {saveError && (
-                    <p className="flex items-center gap-1.5 text-sm text-destructive">
+                    <p className="text-destructive flex items-center gap-1.5 text-sm">
                       <AlertCircle className="size-4 shrink-0" />
                       {saveError}
                     </p>
@@ -256,12 +273,17 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
               </CardHeader>
               <CardContent>
                 {!selectedPlanogramId ? (
-                  <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-muted/30 py-10 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                      <LayoutGrid className="h-7 w-7 text-muted-foreground" aria-hidden />
+                  <div className="border-border bg-muted/30 flex flex-col items-center justify-center rounded-xl border-2 border-dashed py-10 text-center">
+                    <div className="bg-muted mb-3 flex h-12 w-12 items-center justify-center rounded-full">
+                      <LayoutGrid
+                        className="text-muted-foreground h-7 w-7"
+                        aria-hidden
+                      />
                     </div>
-                    <p className="font-medium text-foreground">No planogram selected</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="text-foreground font-medium">
+                      No planogram selected
+                    </p>
+                    <p className="text-muted-foreground mt-1 text-sm">
                       Choose a planogram from the list to preview its structure.
                     </p>
                   </div>
@@ -273,75 +295,79 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                 ) : planogramPayload && fixture ? (
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Shelves
                         </p>
-                        <p className="text-lg font-semibold tabular-nums text-foreground">
+                        <p className="text-foreground text-lg font-semibold tabular-nums">
                           {sortedShelves.length}
                         </p>
                       </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           SKUs
                         </p>
-                        <p className="text-lg font-semibold tabular-nums text-foreground">
-                          {sortedShelves.reduce((sum, shelf) => sum + shelf.products.length, 0)}
+                        <p className="text-foreground text-lg font-semibold tabular-nums">
+                          {sortedShelves.reduce(
+                            (sum, shelf) => sum + shelf.products.length,
+                            0,
+                          )}
                         </p>
                       </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Dimensions
                         </p>
-                        <p className="text-sm font-semibold tabular-nums text-foreground">
+                        <p className="text-foreground text-sm font-semibold tabular-nums">
                           {fixture.width}×{fixture.height}×{fixture.depth}
                         </p>
                       </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Status
                         </p>
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-foreground text-sm font-medium">
                           {planogramPayload.status}
                         </p>
                       </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Version
                         </p>
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-foreground text-sm font-medium">
                           {planogramPayload.version ?? "—"}
                         </p>
                       </div>
-                      <div className="rounded-lg border border-border bg-muted/30 px-3 py-2">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 rounded-lg border px-3 py-2">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Total Units
                         </p>
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-foreground text-sm font-medium">
                           {sortedShelves.reduce(
                             (sum, shelf) =>
                               sum +
                               shelf.products.reduce(
                                 (productSum, product) =>
-                                  productSum + product.facings * product.depth_count,
+                                  productSum +
+                                  product.facings * product.depth_count,
                                 0,
                               ),
                             0,
                           )}
                         </p>
                       </div>
-                      <div className="col-span-2 rounded-lg border border-border bg-muted/30 px-3 py-2 sm:col-span-3">
-                        <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      <div className="border-border bg-muted/30 col-span-2 rounded-lg border px-3 py-2 sm:col-span-3">
+                        <p className="text-muted-foreground text-[10px] font-medium tracking-wider uppercase">
                           Description
                         </p>
-                        <p className="text-sm font-medium text-foreground">
+                        <p className="text-foreground text-sm font-medium">
                           {planogramPayload.description ?? "—"}
                         </p>
                       </div>
                     </div>
 
                     <div>
-                      <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                      <h3 className="text-muted-foreground mb-2 text-xs font-semibold tracking-wider uppercase">
                         Shelf breakdown
                       </h3>
                       <ul className="space-y-2">
@@ -353,13 +379,15 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                           return (
                             <li
                               key={shelf.id}
-                              className="flex items-center justify-between rounded-md border border-border bg-muted/20 px-3 py-2 text-sm"
+                              className="border-border bg-muted/20 flex items-center justify-between rounded-md border px-3 py-2 text-sm"
                             >
-                              <span className="font-medium text-foreground">
-                                {getShelfDisplayLabel(sortedShelves, shelf.id)} · {shelf.id}
+                              <span className="text-foreground font-medium">
+                                {getShelfDisplayLabel(sortedShelves, shelf.id)}{" "}
+                                · {shelf.id}
                               </span>
-                              <span className="tabular-nums text-muted-foreground">
-                                {shelf.products.length} items · {productCount} units
+                              <span className="text-muted-foreground tabular-nums">
+                                {shelf.products.length} items · {productCount}{" "}
+                                units
                               </span>
                             </li>
                           );
@@ -368,7 +396,7 @@ export function AddPOGAnalysisPage({ searchOverride }: AddPOGAnalysisPageProps) 
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     Planogram not found.
                   </p>
                 )}

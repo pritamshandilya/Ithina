@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
+import { fetchMakerDashboardStats } from "@/lib/api/maker/maker";
 import { useSelectedStoreId } from "@/providers/store";
-import { fetchMakerDashboardStats } from "../api/maker";
 
 export const makerDashboardStatsKeys = {
   all: ["maker", "dashboard-stats"] as const,

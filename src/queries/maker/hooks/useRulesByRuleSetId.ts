@@ -4,13 +4,12 @@
  * Fetches rules in a compliance rule set (read-only view for maker).
  * API errors (e.g. not found) surface as query error + a destructive toast once per rule set id.
  */
-
-import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 
-import { useToast } from "@/hooks/use-toast";
 import { ApiError } from "@/exceptions/ApiError";
-import { fetchRulesByRuleSetId } from "@/queries/maker/api/compliance-rule-sets";
+import { useToast } from "@/hooks/useToast";
+import { fetchRulesByRuleSetId } from "@/lib/api/maker/complianceRuleSets";
 
 export const rulesByRuleSetIdKeys = {
   all: ["rules-by-rule-set"] as const,
@@ -48,7 +47,10 @@ export function useRulesByRuleSetId(ruleSetId: string | null) {
     enabled: !!ruleSetId,
     staleTime: 2 * 60 * 1000,
     retry: (failureCount, error) => {
-      if (error instanceof ApiError && (error.status === 404 || error.status === 422)) {
+      if (
+        error instanceof ApiError &&
+        (error.status === 404 || error.status === 422)
+      ) {
         return false;
       }
       return failureCount < 2;

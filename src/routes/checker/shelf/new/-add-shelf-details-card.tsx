@@ -12,9 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
-import type { ShelfTemplate } from "@/types/shelf-template";
+import { cn } from "@/lib/utils";
+import type { ShelfTemplate } from "@/types/shelfTemplate";
 
 type PlanogramListItem = {
   id: string;
@@ -136,8 +136,8 @@ export function AddShelfDetailsCard({
                 <option value="">Select a planogram...</option>
                 {planogramList.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} ({p.shelfCount} shelves ·{" "}
-                    {p.productCount} SKUs)
+                    {p.name} · {p.zone ?? "—"} / {p.section ?? "—"} (
+                    {p.shelfCount} shelves · {p.productCount} SKUs)
                   </option>
                 ))}
               </Select>
@@ -159,12 +159,14 @@ export function AddShelfDetailsCard({
               isAssociateMode && "bg-muted/50",
             )}
             aria-invalid={!!duplicateNameError}
-            aria-describedby={duplicateNameError ? "shelf-name-error" : undefined}
+            aria-describedby={
+              duplicateNameError ? "shelf-name-error" : undefined
+            }
           />
           {duplicateNameError && (
             <p
               id="shelf-name-error"
-              className="flex items-center gap-1.5 text-sm text-destructive"
+              className="text-destructive flex items-center gap-1.5 text-sm"
             >
               <AlertCircle className="size-4 shrink-0" />
               {duplicateNameError}
@@ -177,7 +179,9 @@ export function AddShelfDetailsCard({
             {!isManualEntryMode ? (
               <>
                 <div className="space-y-2">
-                  <Label htmlFor="shelf-template-select">Shelf template (optional)</Label>
+                  <Label htmlFor="shelf-template-select">
+                    Shelf template (optional)
+                  </Label>
                   {shelfTemplatesLoading ? (
                     <Skeleton className="h-9 w-full" />
                   ) : (
@@ -284,8 +288,11 @@ export function AddShelfDetailsCard({
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="dim-width">Width</Label>
-                  <span className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    Unit: <span className="ml-1 font-medium">{defaultDimensionUnit}</span>
+                  <span className="border-border bg-background/60 text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]">
+                    Unit:{" "}
+                    <span className="ml-1 font-medium">
+                      {defaultDimensionUnit}
+                    </span>
                   </span>
                 </div>
                 <Input
@@ -297,10 +304,13 @@ export function AddShelfDetailsCard({
                 />
               </div>
               <div className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="dim-height">Height</Label>
-                  <span className="inline-flex items-center rounded-full border border-border bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground">
-                    Unit: <span className="ml-1 font-medium">{defaultDimensionUnit}</span>
+                  <span className="border-border bg-background/60 text-muted-foreground inline-flex items-center rounded-full border px-2 py-0.5 text-[11px]">
+                    Unit:{" "}
+                    <span className="ml-1 font-medium">
+                      {defaultDimensionUnit}
+                    </span>
                   </span>
                 </div>
                 <Input
@@ -316,7 +326,7 @@ export function AddShelfDetailsCard({
         )}
 
         {saveError && (
-          <p className="flex items-center gap-1.5 text-sm text-destructive">
+          <p className="text-destructive flex items-center gap-1.5 text-sm">
             <AlertCircle className="size-4 shrink-0" />
             {saveError}
           </p>

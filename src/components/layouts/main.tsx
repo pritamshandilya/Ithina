@@ -1,5 +1,5 @@
-import { createContext, type PropsWithChildren, useContext } from "react";
 import { Outlet, useRouter } from "@tanstack/react-router";
+import { type PropsWithChildren, createContext, useContext } from "react";
 
 import Sidenav from "./main/sidenav";
 import { SidebarInset } from "@/components/ui/sidebar";
@@ -35,11 +35,16 @@ export default function MainLayout({
     return (
       <>
         {pageHeader ? (
-          <div className={cn("mb-4 shrink-0 border-b border-border px-3 py-3 sm:px-4 lg:px-6", pageHeaderClassName)}>{pageHeader}</div>
+          <div
+            className={cn(
+              "border-border mb-4 shrink-0 border-b px-3 py-3 sm:px-4 lg:px-6",
+              pageHeaderClassName,
+            )}
+          >
+            {pageHeader}
+          </div>
         ) : null}
-        <div className="mt-4 flex-1">
-          {children ?? <Outlet />}
-        </div>
+        <div className="mt-4 flex-1">{children ?? <Outlet />}</div>
       </>
     );
   }
@@ -48,10 +53,15 @@ export default function MainLayout({
     <MainLayoutContext.Provider value={true}>
       <Sidenav />
 
-      <SidebarInset className="flex min-h-0 flex-col bg-background">
+      <SidebarInset className="bg-background flex min-h-0 flex-col">
         {pageHeader ? (
-          <div className="shrink-0 border-b border-border/80 bg-sidebar/70 px-3 py-4 backdrop-blur-xl sm:px-4 lg:px-6">
-            <div className={cn("mx-auto w-full max-w-screen-2xl", pageHeaderClassName)}>
+          <div className="border-border/80 bg-sidebar/70 shrink-0 border-b px-3 py-4 backdrop-blur-xl sm:px-4 lg:px-6">
+            <div
+              className={cn(
+                "mx-auto w-full max-w-screen-2xl",
+                pageHeaderClassName,
+              )}
+            >
               {pageHeader}
             </div>
           </div>
@@ -61,7 +71,7 @@ export default function MainLayout({
             "min-h-0 flex-1",
             constrainedHeight
               ? "flex flex-col overflow-hidden"
-              : "overflow-auto"
+              : "overflow-auto",
           )}
         >
           {children ?? <Outlet />}

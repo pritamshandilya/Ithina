@@ -154,7 +154,7 @@
   }
 
   body {
-    @apply bg-background font-sans text-foreground antialiased selection:bg-accent/30 selection:text-white;
+    @apply bg-background text-foreground selection:bg-accent/30 font-sans antialiased selection:text-white;
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -219,12 +219,16 @@
   }
 
   .stat-card {
-    @apply rounded-xl border border-border bg-card px-5 py-4 text-card-foreground shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+    @apply border-border bg-card text-card-foreground rounded-xl border px-5 py-4 shadow-[0_18px_40px_rgba(3,8,20,0.28)];
   }
 
   .stat-card-success {
     border-color: color-mix(in srgb, var(--status-approved) 28%, var(--border));
-    background-color: color-mix(in srgb, var(--status-approved) 6%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--status-approved) 6%,
+      var(--card)
+    );
   }
 
   .stat-card-warning {
@@ -234,7 +238,11 @@
 
   .stat-card-critical {
     border-color: color-mix(in srgb, var(--action-critical) 28%, var(--border));
-    background-color: color-mix(in srgb, var(--action-critical) 6%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--action-critical) 6%,
+      var(--card)
+    );
   }
 
   .stat-card-accent {
@@ -243,7 +251,7 @@
   }
 
   .card-interactive {
-    @apply cursor-pointer border border-border bg-card transition-all duration-200;
+    @apply border-border bg-card cursor-pointer border transition-all duration-200;
   }
 
   .card-interactive:hover {
@@ -253,7 +261,7 @@
   }
 
   .shelf-card-interactive {
-    @apply cursor-pointer border border-border bg-card transition-all duration-200;
+    @apply border-border bg-card cursor-pointer border transition-all duration-200;
   }
 
   .shelf-card-interactive:hover {
@@ -263,35 +271,57 @@
   }
 
   .status-pending {
-    background-color: color-mix(in srgb, var(--status-pending) 12%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--status-pending) 12%,
+      var(--card)
+    );
     color: var(--status-pending);
     border: 1px solid color-mix(in srgb, var(--status-pending) 22%, transparent);
   }
 
   .status-approved {
-    background-color: color-mix(in srgb, var(--status-approved) 12%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--status-approved) 12%,
+      var(--card)
+    );
     color: var(--status-approved);
-    border: 1px solid color-mix(in srgb, var(--status-approved) 22%, transparent);
+    border: 1px solid
+      color-mix(in srgb, var(--status-approved) 22%, transparent);
   }
 
   .status-returned,
   .status-rejected,
   .status-critical {
-    background-color: color-mix(in srgb, var(--status-rejected) 12%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--status-rejected) 12%,
+      var(--card)
+    );
     color: var(--status-rejected);
-    border: 1px solid color-mix(in srgb, var(--status-rejected) 22%, transparent);
+    border: 1px solid
+      color-mix(in srgb, var(--status-rejected) 22%, transparent);
   }
 
   .status-never-audited,
   .status-neutral,
   .status-inactive {
-    background-color: color-mix(in srgb, var(--status-neutral) 10%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--status-neutral) 10%,
+      var(--card)
+    );
     color: var(--muted-foreground);
     border: 1px solid color-mix(in srgb, var(--status-neutral) 16%, transparent);
   }
 
   .status-warning {
-    background-color: color-mix(in srgb, var(--action-warning) 12%, var(--card));
+    background-color: color-mix(
+      in srgb,
+      var(--action-warning) 12%,
+      var(--card)
+    );
     color: var(--action-warning);
     border: 1px solid color-mix(in srgb, var(--action-warning) 22%, transparent);
   }
@@ -303,7 +333,7 @@
   }
 
   .ithina-page {
-    @apply min-h-screen bg-background px-2 pb-4 pt-2 sm:px-2 sm:pb-4 sm:pt-3 lg:px-2 lg:pb-5 lg:pt-4;
+    @apply bg-background min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5;
   }
 
   .ithina-page-inner {
@@ -311,43 +341,43 @@
   }
 
   .ithina-panel {
-    @apply rounded-xl border border-border bg-card/95 shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+    @apply border-border bg-card/95 rounded-xl border shadow-[0_18px_40px_rgba(3,8,20,0.28)];
   }
 
   .ithina-panel-soft {
-    @apply rounded-xl border border-border/80 bg-secondary/80 shadow-[0_12px_30px_rgba(3,8,20,0.24)];
+    @apply border-border/80 bg-secondary/80 rounded-xl border shadow-[0_12px_30px_rgba(3,8,20,0.24)];
   }
 
   .ithina-panel-header {
-    @apply flex items-center justify-between border-b border-border/80 px-5 py-4;
+    @apply border-border/80 flex items-center justify-between border-b px-5 py-4;
   }
 
   .ithina-overline {
-    @apply font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground;
+    @apply text-muted-foreground font-mono text-[10px] tracking-[0.22em] uppercase;
   }
 
   .ithina-section-title {
-    @apply text-xl font-bold tracking-tight text-foreground sm:text-2xl;
+    @apply text-foreground text-xl font-bold tracking-tight sm:text-2xl;
   }
 
   .ithina-section-copy {
-    @apply max-w-2xl text-sm leading-6 text-muted-foreground;
+    @apply text-muted-foreground max-w-2xl text-sm leading-6;
   }
 
   .ithina-chip {
-    @apply inline-flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-1.5 font-mono text-[11px] text-muted-foreground;
+    @apply border-border bg-secondary text-muted-foreground inline-flex items-center gap-2 rounded-md border px-3 py-1.5 font-mono text-[11px];
   }
 
   .ithina-divider {
-    @apply relative my-6 h-px bg-border;
+    @apply bg-border relative my-6 h-px;
   }
 
   .ithina-empty-state {
-    @apply rounded-xl border border-dashed border-border bg-secondary/70 px-6 py-10 text-center text-sm text-muted-foreground;
+    @apply border-border bg-secondary/70 text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-sm;
   }
 
   .ithina-auth-shell {
-    @apply relative min-h-screen overflow-hidden bg-background;
+    @apply bg-background relative min-h-screen overflow-hidden;
   }
 
   .ithina-auth-grid {
@@ -355,15 +385,15 @@
   }
 
   .ithina-auth-hero {
-    @apply hidden flex-col justify-between border-r border-border bg-sidebar px-10 py-10 lg:flex xl:px-14;
+    @apply border-border bg-sidebar hidden flex-col justify-between border-r px-10 py-10 lg:flex xl:px-14;
   }
 
   .ithina-auth-panel {
-    @apply mx-auto w-full max-w-md rounded-2xl border border-border bg-card/90 p-8 shadow-[0_24px_60px_rgba(3,8,20,0.42)] backdrop-blur-xl sm:p-10;
+    @apply border-border bg-card/90 mx-auto w-full max-w-md rounded-2xl border p-8 shadow-[0_24px_60px_rgba(3,8,20,0.42)] backdrop-blur-xl sm:p-10;
   }
 
   .ithina-table-shell {
-    @apply overflow-hidden rounded-xl border border-border bg-card shadow-[0_18px_40px_rgba(3,8,20,0.28)];
+    @apply border-border bg-card overflow-hidden rounded-xl border shadow-[0_18px_40px_rgba(3,8,20,0.28)];
   }
 
   .technical-text {
@@ -380,7 +410,11 @@
   --tabulator-row-hover: color-mix(in srgb, var(--accent) 8%, var(--card));
   --tabulator-footer-bg: color-mix(in srgb, var(--sidebar) 82%, var(--card));
   --tabulator-footer-pill: color-mix(in srgb, var(--secondary) 92%, black 8%);
-  --tabulator-footer-pill-hover: color-mix(in srgb, var(--accent) 10%, var(--secondary));
+  --tabulator-footer-pill-hover: color-mix(
+    in srgb,
+    var(--accent) 10%,
+    var(--secondary)
+  );
   --tabulator-sort-icon: var(--muted-foreground);
   --tabulator-sort-active: var(--accent);
 }
@@ -416,7 +450,8 @@
 
 .data-table-wrapper .tabulator-header .tabulator-col {
   background-color: var(--tabulator-header-bg) !important;
-  border-right: 1px solid color-mix(in srgb, var(--tabulator-border) 65%, transparent) !important;
+  border-right: 1px solid
+    color-mix(in srgb, var(--tabulator-border) 65%, transparent) !important;
 }
 
 .data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {
@@ -430,15 +465,26 @@
   text-align: center;
 }
 
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-resize-handle {
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-col-resize-handle {
   width: 6px;
   margin-right: -3px;
   background: color-mix(in srgb, var(--accent) 35%, transparent);
   cursor: col-resize;
 }
 
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input,
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  input,
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  select {
   width: 100%;
   border-radius: 0.625rem;
   border: 1px solid var(--input);
@@ -448,14 +494,27 @@
   padding: 0.35rem 0.5rem;
 }
 
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select {
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  select {
   color-scheme: dark !important;
-  background-color: color-mix(in srgb, var(--secondary) 92%, black 8%) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--secondary) 92%,
+    black 8%
+  ) !important;
   color: var(--card-foreground) !important;
   border-color: var(--input) !important;
 }
 
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select option {
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  select
+  option {
   background-color: var(--card) !important;
   color: var(--card-foreground) !important;
 }
@@ -466,8 +525,16 @@
   color-scheme: dark !important;
 }
 
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter input:focus,
-.data-table-wrapper .tabulator-header .tabulator-col .tabulator-header-filter select:focus {
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  input:focus,
+.data-table-wrapper
+  .tabulator-header
+  .tabulator-col
+  .tabulator-header-filter
+  select:focus {
   outline: 2px solid var(--ring);
   outline-offset: 1px;
 }
@@ -477,7 +544,9 @@
   border-top-color: var(--tabulator-sort-icon);
 }
 
-.data-table-wrapper .tabulator-col.tabulator-col-sortable:hover .tabulator-arrow,
+.data-table-wrapper
+  .tabulator-col.tabulator-col-sortable:hover
+  .tabulator-arrow,
 .data-table-wrapper .tabulator-col.tabulator-sortable .tabulator-arrow {
   border-bottom-color: var(--tabulator-sort-active);
   border-top-color: var(--tabulator-sort-active);
@@ -498,13 +567,19 @@
 }
 
 .data-table-wrapper .tabulator-row.tabulator-selected {
-  background-color: color-mix(in srgb, var(--accent) 16%, var(--card)) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--accent) 16%,
+    var(--card)
+  ) !important;
 }
 
 .data-table-wrapper .tabulator-cell {
   background-color: inherit !important;
-  border-right: 1px solid color-mix(in srgb, var(--tabulator-border) 50%, transparent) !important;
-  border-bottom: 1px solid color-mix(in srgb, var(--tabulator-border) 70%, transparent);
+  border-right: 1px solid
+    color-mix(in srgb, var(--tabulator-border) 50%, transparent) !important;
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--tabulator-border) 70%, transparent);
   padding: 0.7rem 0.85rem;
   font-size: 0.8125rem;
   color: var(--tabulator-fg);
@@ -532,7 +607,8 @@
 
 .data-table-wrapper .tabulator-footer {
   background: var(--tabulator-footer-bg) !important;
-  border-top: 1px solid color-mix(in srgb, var(--tabulator-border) 82%, transparent) !important;
+  border-top: 1px solid
+    color-mix(in srgb, var(--tabulator-border) 82%, transparent) !important;
   color: var(--muted-foreground);
   padding: 0.75rem 0.9rem;
 }
@@ -607,7 +683,11 @@
 }
 
 .data-table-wrapper .tabulator-footer .tabulator-page.active {
-  background: color-mix(in srgb, var(--accent) 18%, var(--secondary)) !important;
+  background: color-mix(
+    in srgb,
+    var(--accent) 18%,
+    var(--secondary)
+  ) !important;
   border-color: color-mix(in srgb, var(--accent) 42%, var(--tabulator-border));
   color: white !important;
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
@@ -620,7 +700,11 @@
   cursor: not-allowed;
 }
 
-.data-table-wrapper .tabulator-footer .tabulator-page:not(:disabled):not([disabled]):not(.tabulator-page-disabled):active {
+.data-table-wrapper
+  .tabulator-footer
+  .tabulator-page:not(:disabled):not([disabled]):not(
+    .tabulator-page-disabled
+  ):active {
   transform: translateY(1px);
 }
 
@@ -685,7 +769,9 @@
   color: var(--muted-foreground);
 }
 
-.data-table-wrapper .tabulator-row.tabulator-group .tabulator-group-toggle::before {
+.data-table-wrapper
+  .tabulator-row.tabulator-group
+  .tabulator-group-toggle::before {
   color: var(--muted-foreground);
 }
 
@@ -711,7 +797,11 @@
   --tabulator-row-hover: color-mix(in oklab, var(--primary) 8%, var(--card));
   --tabulator-footer-bg: color-mix(in oklab, var(--primary) 6%, var(--card));
   --tabulator-footer-pill: var(--card);
-  --tabulator-footer-pill-hover: color-mix(in oklab, var(--primary) 14%, var(--card));
+  --tabulator-footer-pill-hover: color-mix(
+    in oklab,
+    var(--primary) 14%,
+    var(--card)
+  );
 }
 
 .data-table-wrapper .tabulator-header .tabulator-col .tabulator-col-content {

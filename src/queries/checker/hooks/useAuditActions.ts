@@ -10,16 +10,16 @@
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { complianceOverviewKeys } from "./useComplianceOverview";
+import { overrideActivityKeys } from "./useOverrideActivity";
+import { pendingAuditsKeys } from "./usePendingAudits";
+import { publishedAuditsKeys } from "./usePublishedAudits";
 import {
   approveAudit,
   deleteAudit,
   overrideAndApprove,
   returnAudit,
-} from "../api/checker";
-import { complianceOverviewKeys } from "./useComplianceOverview";
-import { overrideActivityKeys } from "./useOverrideActivity";
-import { pendingAuditsKeys } from "./usePendingAudits";
-import { publishedAuditsKeys } from "./usePublishedAudits";
+} from "@/lib/api/checker/checker";
 
 /**
  * Hook to approve an audit

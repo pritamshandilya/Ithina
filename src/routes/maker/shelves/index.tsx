@@ -1,16 +1,19 @@
-import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { LayoutGrid, List, Plus, Search } from "lucide-react";
+import { useState } from "react";
 import { renderToString } from "react-dom/server";
-import { Plus, Search, LayoutGrid, List } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { ShelfCard, ShelfActions } from "@/components/maker";
+import { ShelfActions, ShelfCard } from "@/components/maker";
 import { Button } from "@/components/ui/button";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/input";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
-import { useShelves } from "@/queries/maker";
-import { AUDIT_STATUS_LABELS, getAuditStatusClass } from "@/lib/constants/maker";
+import {
+  AUDIT_STATUS_LABELS,
+  getAuditStatusClass,
+} from "@/lib/constants/maker";
 import { cn } from "@/lib/utils";
+import { useShelves } from "@/queries/maker";
 import type { Shelf } from "@/types/maker";
 
 export const Route = createFileRoute("/maker/shelves/")({
@@ -88,10 +91,10 @@ const SHELF_COLUMNS: DataTableColumn<Shelf>[] = [
     formatter: () => {
       // const wrapper = document.createElement("div");
       // wrapper.className = "flex items-center justify-center h-full w-full";
-      
+
       // const root = createRoot(wrapper);
       // root.render(<ShelfActions />);
-      
+
       // return wrapper;
       return renderToString(<ShelfActions />);
     },
@@ -107,13 +110,18 @@ function ShelfManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
-  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [tablePagination, setTablePagination] = useState({
+    page: 1,
+    pageSize: 10,
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const GRID_PAGE_SIZE = 9;
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    setTablePagination((prev) => (prev.page === 1 ? prev : { ...prev, page: 1 }));
+    setTablePagination((prev) =>
+      prev.page === 1 ? prev : { ...prev, page: 1 },
+    );
     setCurrentPage(1);
   };
 
@@ -142,38 +150,47 @@ function ShelfManagementPage() {
           0,
           Math.min(
             tablePagination.pageSize,
-            filteredShelves.length - (tablePagination.page - 1) * tablePagination.pageSize
-          )
+            filteredShelves.length -
+              (tablePagination.page - 1) * tablePagination.pageSize,
+          ),
         )
       : 0;
 
   // Pagination Logic for Grid
-  const totalPages = Math.max(1, Math.ceil(filteredShelves.length / GRID_PAGE_SIZE));
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredShelves.length / GRID_PAGE_SIZE),
+  );
   const visibleCurrentPage = Math.min(currentPage, totalPages);
   const paginatedGridShelves = filteredShelves.slice(
     (visibleCurrentPage - 1) * GRID_PAGE_SIZE,
-    visibleCurrentPage * GRID_PAGE_SIZE
+    visibleCurrentPage * GRID_PAGE_SIZE,
   );
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto max-w-screen-2xl space-y-4">
-
           {/* Header Bar */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="border-border bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
             <header className="space-y-1">
-              <h1 className="text-2xl font-bold text-foreground">Shelf Management</h1>
-              <p className="text-sm text-muted-foreground">
-                Create and manage shelves with aisle, bay, and elevation metadata
+              <h1 className="text-foreground text-2xl font-bold">
+                Shelf Management
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Create and manage shelves with aisle, bay, and elevation
+                metadata
               </p>
             </header>
 
-            <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="flex w-full items-center gap-3 sm:w-auto">
               <div className="relative flex-1 sm:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden />
+                <Search
+                  className="text-muted-foreground absolute top-1/2 left-3 size-4 -translate-y-1/2"
+                  aria-hidden
+                />
                 <Input
-                  className="pl-9 h-10"
+                  className="h-10 pl-9"
                   placeholder="Quick search shelves..."
                   aria-label="Search shelves"
                   value={searchQuery}
@@ -182,7 +199,11 @@ function ShelfManagementPage() {
               </div>
 
               {/* View Toggle */}
-              <div className="flex rounded-lg border border-border p-0.5 bg-card" role="tablist" aria-label="View mode">
+              <div
+                className="border-border bg-card flex rounded-lg border p-0.5"
+                role="tablist"
+                aria-label="View mode"
+              >
                 <button
                   type="button"
                   role="tab"
@@ -190,11 +211,11 @@ function ShelfManagementPage() {
                   onClick={() => setViewMode("table")}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
                     viewMode === "table"
                       ? "bg-accent text-accent-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
-                    )}
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
+                  )}
                 >
                   <List className="size-4" aria-hidden="true" />
                   Table
@@ -206,10 +227,10 @@ function ShelfManagementPage() {
                   onClick={() => setViewMode("grid")}
                   className={cn(
                     "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-all",
-                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    "focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none",
                     viewMode === "grid"
                       ? "bg-accent text-accent-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground"
+                      : "text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground",
                   )}
                 >
                   <LayoutGrid className="size-4" aria-hidden="true" />
@@ -228,11 +249,11 @@ function ShelfManagementPage() {
                 }
                 variant="success"
               >
-                <Plus className="size-4 mr-2" />
+                <Plus className="mr-2 size-4" />
                 New Shelf
               </Button>
               {/* </SheetTrigger> */}
-                {/* <SheetContent className="w-full sm:max-w-md p-0">
+              {/* <SheetContent className="w-full sm:max-w-md p-0">
                   <div className="flex flex-col h-full">
                     <SheetHeader className="p-4 pb-2 space-y-1">
                       <div className="flex items-center gap-2 text-accent mb-2">
@@ -334,25 +355,31 @@ function ShelfManagementPage() {
           <div className="min-h-[500px] space-y-4">
             {!isLoading && filteredShelves.length > 0 && (
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Showing{" "}
-                  <span className="font-semibold text-foreground">
-                    {viewMode === "table" ? tableVisibleCount : paginatedGridShelves.length}
+                  <span className="text-foreground font-semibold">
+                    {viewMode === "table"
+                      ? tableVisibleCount
+                      : paginatedGridShelves.length}
                   </span>{" "}
                   of{" "}
-                  <span className="font-semibold text-foreground">{filteredShelves.length}</span>{" "}
+                  <span className="text-foreground font-semibold">
+                    {filteredShelves.length}
+                  </span>{" "}
                   shelves
                 </p>
               </div>
             )}
             {isLoading ? (
-              <div className="flex items-center justify-center h-64 text-muted-foreground">
+              <div className="text-muted-foreground flex h-64 items-center justify-center">
                 Loading shelf data...
               </div>
             ) : filteredShelves.length === 0 ? (
-              <div className="rounded-lg border border-border bg-card p-12 text-center">
-                <p className="text-lg font-semibold text-foreground">No shelves found</p>
-                <p className="text-sm text-muted-foreground mt-2">
+              <div className="border-border bg-card rounded-lg border p-12 text-center">
+                <p className="text-foreground text-lg font-semibold">
+                  No shelves found
+                </p>
+                <p className="text-muted-foreground mt-2 text-sm">
                   Try adjusting your search query or create a new shelf.
                 </p>
               </div>
@@ -376,7 +403,10 @@ function ShelfManagementPage() {
                       key={shelf.id}
                       shelf={shelf}
                       onClick={(id) =>
-                        navigate({ to: "/maker/shelves/$shelfId/edit", params: { shelfId: id } })
+                        navigate({
+                          to: "/maker/shelves/$shelfId/edit",
+                          params: { shelfId: id },
+                        })
                       }
                     />
                   ))}
@@ -390,14 +420,24 @@ function ShelfManagementPage() {
                   >
                     Previous
                   </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page <span className="font-semibold text-foreground">{visibleCurrentPage}</span> of{" "}
-                    <span className="font-semibold text-foreground">{totalPages}</span>
+                  <span className="text-muted-foreground text-sm">
+                    Page{" "}
+                    <span className="text-foreground font-semibold">
+                      {visibleCurrentPage}
+                    </span>{" "}
+                    of{" "}
+                    <span className="text-foreground font-semibold">
+                      {totalPages}
+                    </span>
                   </span>
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, Math.min(p, totalPages) + 1))}
+                    onClick={() =>
+                      setCurrentPage((p) =>
+                        Math.min(totalPages, Math.min(p, totalPages) + 1),
+                      )
+                    }
                     disabled={visibleCurrentPage === totalPages}
                   >
                     Next
@@ -408,7 +448,7 @@ function ShelfManagementPage() {
           </div>
 
           {/* Footer Info */}
-          <div className="flex justify-between items-center text-xs text-muted-foreground px-2">
+          <div className="text-muted-foreground flex items-center justify-between px-2 text-xs">
             <p>Last synced: Just now</p>
             <p>{filteredShelves.length} total shelves</p>
           </div>

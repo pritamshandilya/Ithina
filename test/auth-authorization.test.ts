@@ -6,7 +6,7 @@ import {
   hasAnyPermission,
   hasPermission,
   hasStoreScope,
-} from "../src/auth/authorization";
+} from "../src/lib/auth/authorization";
 import type { AuthSessionUser } from "../src/lib/auth/session";
 
 function makeUser(overrides: Partial<AuthSessionUser> = {}): AuthSessionUser {

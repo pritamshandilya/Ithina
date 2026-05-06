@@ -3,20 +3,24 @@
  *
  * TanStack Query hook for fetching available planograms from third party.
  */
-
 import { useQuery } from "@tanstack/react-query";
 
-import { useSelectedStoreId } from "@/providers/store";
+import { fetchPlanogramList } from "@/lib/api/maker/planogram";
 import type { PlanogramApiStatus } from "@/models/request/planograms";
-import { fetchPlanogramList } from "../api/planogram";
+import { useSelectedStoreId } from "@/providers/store";
 
 export const planogramListKeys = {
   all: ["maker", "planogram-list"] as const,
-  byStore: (storeId: string | undefined, status: PlanogramApiStatus | undefined) =>
-    [...planogramListKeys.all, storeId ?? "all", status ?? "all"] as const,
+  byStore: (
+    storeId: string | undefined,
+    status: PlanogramApiStatus | undefined,
+  ) => [...planogramListKeys.all, storeId ?? "all", status ?? "all"] as const,
 };
 
-export function usePlanogramList(storeId?: string, status?: PlanogramApiStatus) {
+export function usePlanogramList(
+  storeId?: string,
+  status?: PlanogramApiStatus,
+) {
   const selectedStoreId = useSelectedStoreId();
   const scopedStoreId = storeId ?? selectedStoreId;
 

@@ -1,19 +1,22 @@
 /**
  * useDraftAudits Hook
- * 
+ *
  * TanStack Query hook for fetching and managing draft audits.
- * 
+ *
  * Features:
  * - Automatic caching (1 minute stale time)
  * - Background refetching
  * - Type-safe with TypeScript
  */
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-
-import { useSelectedStoreId } from "@/providers/store";
-import { fetchDraftAudits, saveDraftProgress, deleteDraft } from "../api/maker";
 import { quickStatsKeys } from "./useQuickStats";
+import {
+  deleteDraft,
+  fetchDraftAudits,
+  saveDraftProgress,
+} from "@/lib/api/maker/maker";
+import { useSelectedStoreId } from "@/providers/store";
 import type { Audit } from "@/types/maker";
 
 /**
@@ -27,9 +30,9 @@ export const draftAuditsKeys = {
 
 /**
  * Hook to fetch all draft audits
- * 
+ *
  * @returns TanStack Query result with draft audits data
- * 
+ *
  * @example
  * ```tsx
  * const { data: drafts, isLoading } = useDraftAudits();
@@ -49,9 +52,9 @@ export function useDraftAudits() {
 
 /**
  * Hook to save draft progress
- * 
+ *
  * @returns Mutation function to save draft
- * 
+ *
  * @example
  * ```tsx
  * const saveDraft = useSaveDraftProgress();
@@ -63,11 +66,18 @@ export function useSaveDraftProgress() {
   const storeId = useSelectedStoreId();
 
   return useMutation({
-    mutationFn: ({ auditId, progress }: { auditId: string; progress: number }) =>
-      saveDraftProgress(auditId, progress),
+    mutationFn: ({
+      auditId,
+      progress,
+    }: {
+      auditId: string;
+      progress: number;
+    }) => saveDraftProgress(auditId, progress),
     // Optimistic update
     onMutate: async ({ auditId, progress }) => {
-      await queryClient.cancelQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
+      await queryClient.cancelQueries({
+        queryKey: draftAuditsKeys.byStore(storeId),
+      });
 
       const previousDrafts = queryClient.getQueryData(
         draftAuditsKeys.byStore(storeId),
@@ -76,11 +86,11 @@ export function useSaveDraftProgress() {
       queryClient.setQueryData<Audit[]>(
         draftAuditsKeys.byStore(storeId),
         (old) =>
-        old?.map((audit) =>
-          audit.id === auditId
-            ? { ...audit, draftProgress: progress, draftSavedAt: new Date() }
-            : audit
-        ),
+          old?.map((audit) =>
+            audit.id === auditId
+              ? { ...audit, draftProgress: progress, draftSavedAt: new Date() }
+              : audit,
+          ),
       );
 
       return { previousDrafts };
@@ -94,17 +104,21 @@ export function useSaveDraftProgress() {
       }
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
-      queryClient.invalidateQueries({ queryKey: ["maker", "assigned-shelves"] });
+      queryClient.invalidateQueries({
+        queryKey: draftAuditsKeys.byStore(storeId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["maker", "assigned-shelves"],
+      });
     },
   });
 }
 
 /**
  * Hook to delete a draft
- * 
+ *
  * @returns Mutation function to delete draft
- * 
+ *
  * @example
  * ```tsx
  * const deleteDraftMutation = useDeleteDraft();
@@ -118,8 +132,12 @@ export function useDeleteDraft() {
   return useMutation({
     mutationFn: deleteDraft,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: draftAuditsKeys.byStore(storeId) });
-      queryClient.invalidateQueries({ queryKey: ["maker", "assigned-shelves"] });
+      queryClient.invalidateQueries({
+        queryKey: draftAuditsKeys.byStore(storeId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["maker", "assigned-shelves"],
+      });
       queryClient.invalidateQueries({ queryKey: quickStatsKeys.all });
     },
   });

@@ -1,8 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
 import { AuthSessionService } from "@/lib/auth/session";
-import type { BeforeLoadArgs } from "@/routes/__root";
 import { requirePermission } from "@/routes/-guards/requirePermission";
+import type { BeforeLoadArgs } from "@/routes/__root";
 import store from "@/store";
 import { selectSelectedStore } from "@/store/selectors";
 

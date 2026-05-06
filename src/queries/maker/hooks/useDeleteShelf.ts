@@ -4,10 +4,9 @@
  * TanStack Query mutation for deleting a shelf via DELETE /shelves/{id}.
  * Removes the detail cache entry and invalidates the list on success.
  */
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { deleteShelf } from "../api/shelves";
+import { deleteShelf } from "@/lib/api/maker/shelves";
 
 export function useDeleteShelf() {
   const queryClient = useQueryClient();

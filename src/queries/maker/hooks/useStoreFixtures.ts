@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchStoreFixtures } from "../api/fixtures";
+import { fetchStoreFixtures } from "@/lib/api/checker/fixtures";
 import { useSelectedStoreId } from "@/providers/store";
 
 export function useStoreFixtures() {
@@ -8,9 +8,8 @@ export function useStoreFixtures() {
 
   return useQuery({
     queryKey: ["maker", "fixtures", "list", storeId ?? "no-store"],
-    queryFn: fetchStoreFixtures,
+    queryFn: () => fetchStoreFixtures(),
     enabled: !!storeId,
     staleTime: 60 * 1000,
   });
 }
-

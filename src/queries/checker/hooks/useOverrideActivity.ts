@@ -1,16 +1,16 @@
 /**
  * useOverrideActivity Hook
- * 
+ *
  * TanStack Query hook for fetching override activity metrics.
- * 
+ *
  * Features:
  * - Automatic caching (2 minute stale time)
  * - Background refetching
  * - Type-safe with TypeScript
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchOverrideActivity } from "../api/checker";
+
+import { fetchOverrideActivity } from "@/lib/api/checker/checker";
 
 /**
  * Query key factory for override activity
@@ -22,10 +22,10 @@ export const overrideActivityKeys = {
 
 /**
  * Hook to fetch override activity metrics for a specific store
- * 
+ *
  * @param storeId - The store ID to fetch override data for
  * @returns TanStack Query result with override activity data
- * 
+ *
  * @example
  * ```tsx
  * const { data: overrides, isLoading, error } = useOverrideActivity(selectedStoreId);

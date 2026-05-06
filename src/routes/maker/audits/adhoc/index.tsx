@@ -8,25 +8,25 @@ import { LayoutGrid, Plus, Search } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceRuleViewSheet } from "@/components/planogram/compliance-rule-view-sheet";
-import { createMakerPlanogramTableColumns } from "@/components/planogram/planogram-maker-table-columns";
+import { ComplianceRuleViewSheet } from "@/components/planogram/ComplianceRuleViewSheet";
+import { createMakerPlanogramTableColumns } from "@/components/planogram/planogramMakerTableColumns";
 import {
   PLANOGRAM_INITIAL_SORT,
   PlanogramActionsMenu,
-} from "@/components/planogram/planogram-table-columns";
-import { PageHeader } from "@/components/shared/page-header";
+} from "@/components/planogram/PlanogramTableColumns";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
-import { DataTable } from "@/components/ui/data-table";
+import { DataTable } from "@/components/ui/DataTable";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { getShelfFixtureId } from "@/lib/fixtures/analysis";
 import {
   useComplianceRuleSets,
   useShelves,
   useStoreFixtures,
 } from "@/queries/maker";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
+import type { ComplianceRuleSetSummary } from "@/types/complianceRuleSet";
 import type { PlanogramShelfRow, Shelf } from "@/types/maker";
 import type { PlanogramArrangement } from "@/types/planogram";
 

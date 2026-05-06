@@ -1,17 +1,17 @@
 /**
  * usePublishedAudits Hook
- * 
+ *
  * TanStack Query hook for fetching recently published audits.
- * 
+ *
  * Features:
  * - Automatic caching (1 minute stale time)
  * - Background refetching
  * - Refetch on window focus
  * - Type-safe with TypeScript
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchPublishedAudits } from "../api/checker";
+
+import { fetchPublishedAudits } from "@/lib/api/checker/checker";
 
 /**
  * Query key factory for published audits
@@ -23,10 +23,10 @@ export const publishedAuditsKeys = {
 
 /**
  * Hook to fetch recently published audits for a specific store
- * 
+ *
  * @param storeId - The store ID to fetch published audits for
  * @returns TanStack Query result with published audits data
- * 
+ *
  * @example
  * ```tsx
  * const { data: publishedAudits, isLoading, error } = usePublishedAudits(selectedStoreId);

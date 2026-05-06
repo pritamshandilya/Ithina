@@ -11,17 +11,17 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 
-import placeholderShelf from "@/assets/placeholder-shelf.jpg";
+import placeholderShelf from "@/assets/placeholderShelf.jpg";
 import MainLayout from "@/components/layouts/main";
 import { ReportSnippetsView } from "@/components/maker";
-import { DetailBackButton } from "@/components/shared/detail-back-button";
+import { DetailBackButton } from "@/components/shared/DetailBackButton";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   type ReportSnippet,
   mapAnalysisResultToReportSnippet,
 } from "@/lib/analysis";
 import { getRelativePath } from "@/lib/utils";
-import { fetchAnalysisJob } from "@/queries/maker/api/analysis";
+import { fetchAnalysisJob } from "@/lib/api/maker/analysis";
 
 export const Route = createFileRoute("/maker/historical-analysis/$analysisId/")(
   {

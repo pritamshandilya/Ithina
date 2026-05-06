@@ -4,10 +4,9 @@
  * TanStack Query mutation for updating a shelf via PUT /shelves/{id}.
  * Invalidates both the list and the specific detail cache on success.
  */
-
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { updateShelf } from "../api/shelves";
+import { updateShelf } from "@/lib/api/maker/shelves";
 import type { UpdateShelfPayload } from "@/models/request/shelves";
 
 export function useUpdateShelf() {

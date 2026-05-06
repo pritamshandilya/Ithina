@@ -1,9 +1,9 @@
-import { useNavigate, createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { motion } from "framer-motion";
 import { ArrowUpRight, Store, TrendingUp, Users } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -28,7 +28,10 @@ function AdminDashboard() {
 
   const handleStoreClick = (store: StoreType) => {
     setSelectedStore(store);
-    navigate({ to: "/admin/$storeId/dashboard", params: { storeId: store.id } });
+    navigate({
+      to: "/admin/$storeId/dashboard",
+      params: { storeId: store.id },
+    });
   };
 
   const stats: Array<{
@@ -79,7 +82,11 @@ function AdminDashboard() {
           title="Organization Overview"
           description="Monitor stores, users, and organization-wide activity."
         >
-          <Button variant="outline" className="shrink-0" onClick={() => navigate({ to: "/admin/stores" })}>
+          <Button
+            variant="outline"
+            className="shrink-0"
+            onClick={() => navigate({ to: "/admin/stores" })}
+          >
             <Store className="mr-2 size-4" />
             Manage Stores
           </Button>
@@ -101,16 +108,18 @@ function AdminDashboard() {
                 <Card className="card-interactive border-border/90 bg-card">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
-                      <div className={`rounded-xl border border-white/6 p-3 ${stat.bg}`}>
+                      <div
+                        className={`rounded-xl border border-white/6 p-3 ${stat.bg}`}
+                      >
                         <stat.icon className={`size-6 ${stat.color}`} />
                       </div>
-                      <div className="flex items-center gap-1 rounded-md border border-chart-2/20 bg-chart-2/10 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.14em] text-chart-2">
+                      <div className="border-chart-2/20 bg-chart-2/10 text-chart-2 flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] tracking-[0.14em] uppercase">
                         <ArrowUpRight className="size-3" />
                         +2.5%
                       </div>
                     </div>
                     <div className="mt-4">
-                      <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                      <p className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
                         {stat.label}
                       </p>
                       <h3 className="mt-2 text-3xl font-extrabold tracking-[-0.04em] text-white">
@@ -129,7 +138,11 @@ function AdminDashboard() {
                 <p className="ithina-overline mb-1">Store Directory</p>
                 <h2 className="text-xl font-semibold text-white">Stores</h2>
               </div>
-              <Button variant="outline" size="sm" onClick={() => navigate({ to: "/admin/stores" })}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate({ to: "/admin/stores" })}
+              >
                 Manage All Stores
               </Button>
             </div>
@@ -140,40 +153,42 @@ function AdminDashboard() {
                   key={store.id}
                   initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 + index * 0.05 }}
-              >
-                <Card
-                  className="group card-interactive cursor-pointer border-border/90 bg-card"
-                  onClick={() => handleStoreClick(store)}
+                  transition={{ delay: 0.2 + index * 0.05 }}
                 >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                          <div className="rounded-xl border border-white/6 bg-secondary p-2.5 transition-colors group-hover:border-accent/20 group-hover:bg-accent/10">
-                            <Store className="size-5 text-muted-foreground transition-colors group-hover:text-accent" />
+                  <Card
+                    className="group card-interactive border-border/90 bg-card cursor-pointer"
+                    onClick={() => handleStoreClick(store)}
+                  >
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-secondary group-hover:border-accent/20 group-hover:bg-accent/10 rounded-xl border border-white/6 p-2.5 transition-colors">
+                            <Store className="text-muted-foreground group-hover:text-accent size-5 transition-colors" />
                           </div>
                           <div>
                             <CardTitle className="text-base text-white">
                               {store.name}
                             </CardTitle>
-                            <CardDescription className="text-xs text-muted-foreground">
+                            <CardDescription className="text-muted-foreground text-xs">
                               {store.address || "Retail Store"}
                             </CardDescription>
                           </div>
                         </div>
-                        <ArrowUpRight className="size-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-all" />
+                        <ArrowUpRight className="text-muted-foreground size-4 opacity-0 transition-all group-hover:opacity-100" />
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="grid grid-cols-2 gap-4 pt-2">
                         <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
                             Compliance
                           </p>
-                          <p className="mt-2 text-sm font-bold text-chart-2">92%</p>
+                          <p className="text-chart-2 mt-2 text-sm font-bold">
+                            92%
+                          </p>
                         </div>
                         <div>
-                          <p className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                          <p className="text-muted-foreground font-mono text-[10px] tracking-[0.16em] uppercase">
                             Active Audits
                           </p>
                           <p className="mt-2 text-sm font-bold text-white">4</p>

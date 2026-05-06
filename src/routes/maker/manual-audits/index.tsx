@@ -2,8 +2,8 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
-import { ManualOverrideList, type ApprovalAction } from "@/components/maker";
+import { type ApprovalAction, ManualOverrideList } from "@/components/maker";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { useHistoricalAnalyses } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/manual-audits/")({
@@ -16,19 +16,22 @@ function MakerManualAuditsPage() {
 
   const adhocAnalyses = useMemo(
     () => historicalAnalyses.filter((row) => row.type === "adhoc"),
-    [historicalAnalyses]
+    [historicalAnalyses],
   );
 
   const resolveAdhocAnalysisId = (
     explicitAnalysisId: string | undefined,
     fixtureId: string,
-    submittedAt?: Date
+    submittedAt?: Date,
   ): string | null => {
     if (explicitAnalysisId) return explicitAnalysisId;
     if (adhocAnalyses.length === 0) return null;
 
-    const fixtureMatches = adhocAnalyses.filter((row) => row.fixtureId === fixtureId);
-    const candidates = fixtureMatches.length > 0 ? fixtureMatches : adhocAnalyses;
+    const fixtureMatches = adhocAnalyses.filter(
+      (row) => row.fixtureId === fixtureId,
+    );
+    const candidates =
+      fixtureMatches.length > 0 ? fixtureMatches : adhocAnalyses;
 
     if (!submittedAt) return candidates[0]?.id ?? null;
 
@@ -51,7 +54,7 @@ function MakerManualAuditsPage() {
     action: ApprovalAction,
     mode?: string,
     adhocAnalysisId?: string,
-    submittedAt?: Date
+    submittedAt?: Date,
   ) => {
     const isPlanogram = mode === "planogram-based" || mode === "vision-edge";
     void auditId;
@@ -104,9 +107,12 @@ function MakerManualAuditsPage() {
         />
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-          <ManualOverrideList className="mt-3 flex-1 min-h-0" onAction={handleAction} />
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
+          <ManualOverrideList
+            className="mt-3 min-h-0 flex-1"
+            onAction={handleAction}
+          />
         </div>
       </div>
     </MainLayout>

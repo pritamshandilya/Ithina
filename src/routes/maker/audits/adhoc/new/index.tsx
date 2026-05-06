@@ -1,6 +1,10 @@
-import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 
-import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
+import { AnalysisFlowPage } from "@/components/maker/AnalysisFlowPage";
 import { useStoreFixtures } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/adhoc/new/")({

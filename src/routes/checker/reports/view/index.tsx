@@ -8,11 +8,11 @@ import { Link, createFileRoute, useLocation } from "@tanstack/react-router";
 import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceReportFull } from "@/components/shared/compliance-report";
+import { ComplianceReportFull } from "@/components/shared/complianceReport";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { type ReportSnippet } from "@/lib/analysis";
-import { exportReportToPdf } from "@/lib/reports/pdf-export";
+import { exportReportToPdf } from "@/lib/reports/PdfExport";
 
 export const Route = createFileRoute("/checker/reports/view/")({
   component: CheckerFullReportPage,

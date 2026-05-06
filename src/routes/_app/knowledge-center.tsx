@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import type { BeforeLoadArgs } from "@/routes/__root";
 import { requirePermission } from "@/routes/-guards/requirePermission";
+import type { BeforeLoadArgs } from "@/routes/__root";
 
 export const Route = createFileRoute("/_app/knowledge-center")({
   beforeLoad: ({ context }: BeforeLoadArgs) => {

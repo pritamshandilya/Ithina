@@ -5,80 +5,77 @@
 export {
   HeaderContextBar,
   type HeaderContextBarProps,
-} from "./header-context-bar";
+} from "./HeaderContextBar";
 export {
   MakerDashboardHeader,
   type MakerDashboardHeaderProps,
-} from "./maker-dashboard-header";
+} from "./MakerDashboardHeader";
 export {
   MakerAccomplishedCards,
   type MakerAccomplishedCardsProps,
-} from "./maker-accomplished-cards";
+} from "./MakerAccomplishedCards";
 export {
   MakerAttentionSection,
   type MakerAttentionSectionProps,
-} from "./maker-attention-section";
+} from "./MakerAttentionSection";
 export {
   MakerAssignedPreview,
   type MakerAssignedPreviewProps,
-} from "./maker-assigned-preview";
+} from "./MakerAssignedPreview";
 export {
   MakerAssignedTable,
   type MakerAssignedTableProps,
-} from "./maker-assigned-table";
+} from "./MakerAssignedTable";
 export {
   MakerPerformanceCharts,
   type MakerPerformanceChartsProps,
-} from "./maker-performance-charts";
+} from "./MakerPerformanceCharts";
 export {
   PrimaryActionSection,
   type PrimaryActionSectionProps,
-} from "./primary-action-section";
-export {
-  ShelfCard,
-  type ShelfCardProps,
-} from "./shelf-card";
+} from "./PrimaryActionSection";
+export { ShelfCard, type ShelfCardProps } from "./ShelfCard";
 export {
   AssignedShelvesList,
   type AssignedShelvesListProps,
-} from "./assigned-shelves-list";
+} from "./AssignedShelvesList";
 export {
   QuickStatsPanel,
   type QuickStatsPanelProps,
-} from "./quick-stats-panel";
+} from "./QuickStatsPanel";
 export {
   ReturnedAuditsSection,
   type ReturnedAuditsSectionProps,
-} from "./returned-audits-section";
+} from "./ReturnedAuditsSection";
 export {
   AuditModeSelector,
   type AuditModeSelectorProps,
-} from "./audit-mode-selector";
+} from "./AuditModeSelector";
 export {
   DraftAuditsSection,
   type DraftAuditsSectionProps,
-} from "./draft-audits-section";
+} from "./DraftAuditsSection";
 export {
   MyAuditsSection,
   type MyAuditsSectionProps,
-} from "./my-audits-section";
-export { ShelfSelectionFlow } from "./shelf-selection-flow";
+} from "./MyAuditsSection";
+export { ShelfSelectionFlow } from "./ShelfSelectionFlow";
 export {
   AuditReviewQueue,
   type AuditReviewQueueProps,
-} from "./audit-review-queue";
-export * from "./manual-override-list";
-export { ShelfActions } from "./shelf-actions";
-export { PlanogramPreview } from "./planogram-preview";
+} from "./AuditReviewQueue";
+export * from "./ManualOverrideList";
+export { ShelfActions } from "./ShelfActions";
+export { PlanogramPreview } from "./PlanogramPreview";
 export {
   ComplianceResultsView,
   type ComplianceResultsViewProps,
-} from "./compliance-results-view";
+} from "./ComplianceResultsView";
 export {
   ReportSnippetsView,
   type ReportSnippetsViewProps,
-} from "./report-snippets-view";
+} from "./ReportSnippetsView";
 export {
   AnalysisFlowPage,
   type AnalysisFlowPageProps,
-} from "./analysis-flow-page";
+} from "./AnalysisFlowPage";

@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
-import { PlanogramMakerPage } from "@/features/planogram/PlanogramMakerPage";
+import { PlanogramMakerPage } from "@/components/planogram/PlanogramMakerPage";
+import { PageHeader } from "@/components/shared/PageHeader";
 
 export const Route = createFileRoute("/maker/audits/planogram/")({
   component: PlanogramAnalysisPage,

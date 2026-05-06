@@ -9,9 +9,9 @@
  * - Refetch on window focus
  * - Type-safe with TypeScript
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchComplianceOverview } from "../api/checker";
+
+import { fetchComplianceOverview } from "@/lib/api/checker/checker";
 
 /**
  * Query key factory for compliance overview
@@ -24,10 +24,10 @@ export const complianceOverviewKeys = {
 
 /**
  * Hook to fetch compliance overview metrics for a specific store
- * 
+ *
  * @param storeId - The store ID to fetch metrics for
  * @returns TanStack Query result with compliance overview data
- * 
+ *
  * @example
  * ```tsx
  * const { data, isLoading, error } = useComplianceOverview(selectedStoreId);

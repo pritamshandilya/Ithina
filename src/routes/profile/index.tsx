@@ -1,24 +1,25 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  createFileRoute,
+  useNavigate,
+  useRouter,
+} from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import MainLayout from "@/components/layouts/main";
 import {
   AccountActionsCard,
   AccountMetadataCard,
   ProfileHeader,
   ProfileInfoCard,
 } from "@/components/common";
-import { useToast } from "@/hooks/use-toast";
-import {
-  AuthSessionService,
-  getInitialsFromEmail,
-} from "@/lib/auth/session";
+import MainLayout from "@/components/layouts/main";
+import { useToast } from "@/hooks/useToast";
+import { AuthSessionService, getInitialsFromEmail } from "@/lib/auth/session";
 import type { UserInfo } from "@/providers/auth/context";
 import { useStore } from "@/providers/store";
-import type { BeforeLoadArgs } from "@/routes/__root";
 import { requireAuth } from "@/routes/-guards/requireAuth";
+import type { BeforeLoadArgs } from "@/routes/__root";
 import type { RootState } from "@/store";
 
 import "./profile.css";
@@ -221,7 +222,7 @@ function ProfilePage() {
   if (isLoading) {
     return (
       <MainLayout>
-        <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
           <div className="mx-auto max-w-screen-2xl space-y-4">
             <div className="flex items-center justify-center py-16">
               <div className="space-y-4 text-center">
@@ -240,7 +241,7 @@ function ProfilePage() {
   if (!userInfo) {
     return (
       <MainLayout>
-        <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+        <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
           <div className="mx-auto max-w-screen-2xl space-y-4">
             <div className="flex items-center justify-center py-16">
               <div className="max-w-md space-y-4 text-center">
@@ -268,7 +269,7 @@ function ProfilePage() {
 
   return (
     <MainLayout>
-      <div className="bg-primary min-h-screen pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="bg-primary min-h-screen px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto max-w-screen-2xl space-y-4">
           {/* Page Header */}
           <div className="space-y-2">

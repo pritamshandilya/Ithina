@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import {
   activateComplianceRule,
@@ -15,21 +15,30 @@ import {
   updateReferenceDocumentLinks,
   uploadReferenceDocument,
   validateRuleForActivation,
-} from "../api/knowledge-center";
-import type { CreateRuleInput, RuleFilters, UpdateRuleInput } from "@/types/checker";
+} from "@/lib/api/checker/knowledgeCenter";
 import { useSelectedStoreId } from "@/providers/store";
+import type {
+  CreateRuleInput,
+  RuleFilters,
+  UpdateRuleInput,
+} from "@/types/checker";
 
 export const knowledgeCenterKeys = {
   all: ["checker", "knowledge-center"] as const,
-  rules: (filters?: RuleFilters) => [...knowledgeCenterKeys.all, "rules", filters] as const,
+  rules: (filters?: RuleFilters) =>
+    [...knowledgeCenterKeys.all, "rules", filters] as const,
   documents: () => [...knowledgeCenterKeys.all, "documents"] as const,
-  document: (documentId: string) => [...knowledgeCenterKeys.all, "documents", documentId] as const,
+  document: (documentId: string) =>
+    [...knowledgeCenterKeys.all, "documents", documentId] as const,
 };
 
 export function useComplianceRules(filters?: RuleFilters) {
   const storeId = useSelectedStoreId();
   return useQuery({
-    queryKey: [...knowledgeCenterKeys.rules(filters), storeId ?? "none"] as const,
+    queryKey: [
+      ...knowledgeCenterKeys.rules(filters),
+      storeId ?? "none",
+    ] as const,
     queryFn: () => fetchComplianceRules(filters),
     staleTime: 60 * 1000,
   });
@@ -42,7 +51,9 @@ export function useRuleVersions(ruleId?: string) {
     const rules = rulesQuery.data ?? [];
     const all = rules.flatMap((r) => r.versions);
     const filtered = ruleId ? all.filter((v) => v.ruleId === ruleId) : all;
-    return [...filtered].sort((a, b) => b.createdDate.getTime() - a.createdDate.getTime());
+    return [...filtered].sort(
+      (a, b) => b.createdDate.getTime() - a.createdDate.getTime(),
+    );
   }, [rulesQuery.data, ruleId]);
 
   return {
@@ -74,7 +85,9 @@ export function useValidateRuleActivation() {
   });
 }
 
-function invalidateKnowledgeCenterQueries(queryClient: ReturnType<typeof useQueryClient>) {
+function invalidateKnowledgeCenterQueries(
+  queryClient: ReturnType<typeof useQueryClient>,
+) {
   queryClient.invalidateQueries({ queryKey: knowledgeCenterKeys.all });
 }
 
@@ -89,8 +102,13 @@ export function useCreateComplianceRule() {
 export function useUpdateComplianceRule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ ruleId, payload }: { ruleId: string; payload: UpdateRuleInput }) =>
-      updateComplianceRule(ruleId, payload),
+    mutationFn: ({
+      ruleId,
+      payload,
+    }: {
+      ruleId: string;
+      payload: UpdateRuleInput;
+    }) => updateComplianceRule(ruleId, payload),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }
@@ -114,8 +132,13 @@ export function useRetireComplianceRule() {
 export function useCloneRetiredRule() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ ruleId, createdBy }: { ruleId: string; createdBy: string }) =>
-      cloneRetiredRule(ruleId, createdBy),
+    mutationFn: ({
+      ruleId,
+      createdBy,
+    }: {
+      ruleId: string;
+      createdBy: string;
+    }) => cloneRetiredRule(ruleId, createdBy),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }
@@ -137,7 +160,8 @@ export function useUploadReferenceDocument() {
 export function useGenerateDocumentRules() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (documentId: string) => generateRulesFromReferenceDocument(documentId),
+    mutationFn: (documentId: string) =>
+      generateRulesFromReferenceDocument(documentId),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }
@@ -153,8 +177,13 @@ export function useDeleteReferenceDocument() {
 export function useUpdateReferenceDocumentLinks() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ documentId, linkedRuleIds }: { documentId: string; linkedRuleIds: string[] }) =>
-      updateReferenceDocumentLinks(documentId, linkedRuleIds),
+    mutationFn: ({
+      documentId,
+      linkedRuleIds,
+    }: {
+      documentId: string;
+      linkedRuleIds: string[];
+    }) => updateReferenceDocumentLinks(documentId, linkedRuleIds),
     onSuccess: () => invalidateKnowledgeCenterQueries(queryClient),
   });
 }

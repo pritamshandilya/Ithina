@@ -4,14 +4,14 @@
  * Combines adhoc analyses and planogram runs into a unified list for the
  * Historical Analysis page. Sorted by run date descending.
  */
-
 import { useMemo } from "react";
+
 import { useAdhocAnalyses } from "./useAdhocAnalyses";
 import { useShelves } from "./useShelves";
-import type { HistoricalAnalysisRow } from "@/types/maker";
-import { mockUser } from "@/lib/api/mock-data";
-import { useStore } from "@/providers/store";
+import { mockUser } from "@/lib/api/mockData";
 import { getShelfFixtureId } from "@/lib/fixtures/analysis";
+import { useStore } from "@/providers/store";
+import type { HistoricalAnalysisRow } from "@/types/maker";
 
 export function useHistoricalAnalyses(): {
   data: HistoricalAnalysisRow[];
@@ -19,7 +19,8 @@ export function useHistoricalAnalyses(): {
 } {
   const { selectedStore } = useStore();
   const storeId = selectedStore?.id ?? mockUser.storeId;
-  const { data: adhocAnalyses = [], isLoading: isAdhocLoading } = useAdhocAnalyses(storeId);
+  const { data: adhocAnalyses = [], isLoading: isAdhocLoading } =
+    useAdhocAnalyses(storeId);
   const { data: shelves = [], isLoading: isShelvesLoading } = useShelves();
 
   const data = useMemo(() => {
@@ -28,7 +29,8 @@ export function useHistoricalAnalyses(): {
       type: a.analysisType as "adhoc" | "planogram",
       name: a.name,
       storeName: a.storeName,
-      runDate: a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt),
+      runDate:
+        a.createdAt instanceof Date ? a.createdAt : new Date(a.createdAt),
       status: a.status,
       complianceScore: a.complianceScore,
       storeId: a.storeId,
@@ -46,7 +48,10 @@ export function useHistoricalAnalyses(): {
         type: "planogram" as const,
         name: s.shelfName,
         storeName: selectedStore?.name ?? mockUser.storeName,
-        runDate: s.lastAuditDate instanceof Date ? s.lastAuditDate : new Date(s.lastAuditDate!),
+        runDate:
+          s.lastAuditDate instanceof Date
+            ? s.lastAuditDate
+            : new Date(s.lastAuditDate!),
         status: "completed" as const,
         complianceScore: s.complianceScore,
         fixtureId: getShelfFixtureId(s),

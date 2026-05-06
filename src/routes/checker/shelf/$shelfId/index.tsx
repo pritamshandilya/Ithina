@@ -18,15 +18,15 @@ import { useState } from "react";
 
 import { EditableField } from "@/components/common";
 import MainLayout from "@/components/layouts/main";
-import { DetailBackButton } from "@/components/shared/detail-back-button";
-import { PageHeader } from "@/components/shared/page-header";
+import { DetailBackButton } from "@/components/shared/DetailBackButton";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 import { useStoreFixtureTypes } from "@/queries/checker";
 import { useShelf } from "@/queries/maker";

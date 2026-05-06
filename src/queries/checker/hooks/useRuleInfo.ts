@@ -1,16 +1,16 @@
 /**
  * useRuleInfo Hook
- * 
+ *
  * TanStack Query hook for fetching rule information and metadata.
- * 
+ *
  * Features:
  * - Automatic caching (5 minute stale time)
  * - Background refetching
  * - Type-safe with TypeScript
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchRuleInfo } from "../api/checker";
+
+import { fetchRuleInfo } from "@/lib/api/checker/checker";
 
 /**
  * Query key factory for rule info
@@ -22,10 +22,10 @@ export const ruleInfoKeys = {
 
 /**
  * Hook to fetch rule information for a specific store
- * 
+ *
  * @param storeId - The store ID to fetch rule info for
  * @returns TanStack Query result with rule info data
- * 
+ *
  * @example
  * ```tsx
  * const { data: ruleInfo, isLoading, error } = useRuleInfo(selectedStoreId);

@@ -1,17 +1,17 @@
 /**
  * usePendingAudits Hook
- * 
+ *
  * TanStack Query hook for fetching pending audits in the review queue.
- * 
+ *
  * Features:
  * - Automatic caching (1 minute stale time)
  * - Background refetching
  * - Refetch on window focus
  * - Type-safe with TypeScript
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchPendingAudits } from "../api/checker";
+
+import { fetchPendingAudits } from "@/lib/api/checker/checker";
 
 /**
  * Query key factory for pending audits
@@ -23,10 +23,10 @@ export const pendingAuditsKeys = {
 
 /**
  * Hook to fetch pending audits for a specific store
- * 
+ *
  * @param storeId - The store ID to fetch audits for
  * @returns TanStack Query result with pending audits data
- * 
+ *
  * @example
  * ```tsx
  * const { data: audits, isLoading, error } = usePendingAudits(selectedStoreId);

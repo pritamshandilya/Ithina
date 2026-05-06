@@ -1,8 +1,7 @@
-
 import { useQuery } from "@tanstack/react-query";
 
+import { fetchAudits } from "@/lib/api/maker/maker";
 import { useSelectedStoreId } from "@/providers/store";
-import { fetchAudits } from "../api/maker";
 
 export const makerAuditsKeys = {
   all: ["maker", "audits"] as const,

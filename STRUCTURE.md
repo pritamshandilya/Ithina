@@ -6,11 +6,11 @@ All implementations, refactors, and new features **must follow this structure**.
 
 The project uses:
 
-* **React**
-* **TypeScript**
-* **Vite**
-* **TanStack Router**
-* **TanStack Query**
+- **React**
+- **TypeScript**
+- **Vite**
+- **TanStack Router**
+- **TanStack Query**
 
 Models modifying the codebase must **preserve this architecture and dependency direction**.
 
@@ -24,10 +24,10 @@ The application follows a **layered architecture with domain grouping**.
 
 Primary goals:
 
-* predictable structure
-* strict separation of UI and data logic
-* clear dependency direction
-* scalable feature organization
+- predictable structure
+- strict separation of UI and data logic
+- clear dependency direction
+- scalable feature organization
 
 High-level layers:
 
@@ -98,7 +98,7 @@ The repository must follow this structure.
 │   │   └── shared hooks
 │
 │   ├── providers/
-│   │   └── auth/
+│   │   └── lib/auth/
 │
 │   ├── context/
 │
@@ -108,7 +108,7 @@ The repository must follow this structure.
 │
 │   ├── lib/
 │   │   ├── api/
-│   │   ├── auth/
+│   │   ├── lib/auth/
 │   │   ├── notifications/
 │   │   └── utils.ts
 │
@@ -148,11 +148,11 @@ Routes act as **page controllers**.
 
 Responsibilities:
 
-* route definitions
-* page layout composition
-* query loading
-* mutation wiring
-* navigation
+- route definitions
+- page layout composition
+- query loading
+- mutation wiring
+- navigation
 
 Routes **must not contain API logic**.
 
@@ -163,7 +163,7 @@ Example:
 ```tsx
 export const Route = createFileRoute("/products")({
   component: ProductsPage,
-})
+});
 ```
 
 ---
@@ -178,9 +178,9 @@ src/components/*
 
 Responsibilities:
 
-* UI rendering
-* UI composition
-* local state
+- UI rendering
+- UI composition
+- local state
 
 Components must remain **pure UI**.
 
@@ -198,9 +198,9 @@ src/queries/*
 
 Responsibilities:
 
-* API requests
-* request/response handling
-* TanStack Query hooks
+- API requests
+- request/response handling
+- TanStack Query hooks
 
 All server communication **must be centralized here**.
 
@@ -222,8 +222,8 @@ src/hooks/*
 
 Responsibilities:
 
-* reusable behaviors
-* orchestration between queries, stores, and helpers
+- reusable behaviors
+- orchestration between queries, stores, and helpers
 
 Example:
 
@@ -244,9 +244,9 @@ src/store/*
 
 Responsibilities:
 
-* global client state
-* workflow state
-* UI state shared across routes
+- global client state
+- workflow state
+- UI state shared across routes
 
 This layer must **not store server state**.
 
@@ -264,9 +264,9 @@ src/providers/*
 
 Responsibilities:
 
-* authentication providers
-* integration providers
-* cross-app services
+- authentication providers
+- integration providers
+- cross-app services
 
 Providers are registered in **main.tsx**.
 
@@ -294,10 +294,10 @@ src/lib/*
 
 Responsibilities:
 
-* API clients
-* framework adapters
-* utilities
-* shared helpers
+- API clients
+- framework adapters
+- utilities
+- shared helpers
 
 This layer should remain **framework-agnostic when possible**.
 
@@ -313,8 +313,8 @@ src/models/*
 
 Responsibilities:
 
-* domain entities
-* business objects
+- domain entities
+- business objects
 
 Example:
 
@@ -336,8 +336,8 @@ src/types/*
 
 Responsibilities:
 
-* shared TypeScript types
-* utility types
+- shared TypeScript types
+- utility types
 
 ---
 
@@ -351,7 +351,7 @@ src/exceptions/*
 
 Responsibilities:
 
-* structured error classes
+- structured error classes
 
 Example:
 
@@ -378,10 +378,10 @@ models / types
 
 Forbidden dependencies:
 
-* queries must not import UI components
-* models must not import application code
-* components must not import routes
-* lib must not import UI or routes
+- queries must not import UI components
+- models must not import application code
+- components must not import routes
+- lib must not import UI or routes
 
 ---
 
@@ -411,9 +411,9 @@ src/routes/__root.tsx
 
 Responsibilities:
 
-* auth/session checks
-* root layout
-* error boundaries
+- lib/auth/session checks
+- root layout
+- error boundaries
 
 ---
 
@@ -423,9 +423,9 @@ All server state uses **TanStack Query**.
 
 Rules:
 
-* query functions live in `src/queries`
-* queries are grouped by domain
-* components never call APIs directly
+- query functions live in `src/queries`
+- queries are grouped by domain
+- components never call APIs directly
 
 Example structure:
 
@@ -468,9 +468,9 @@ src/bootstrap.ts
 
 This file configures:
 
-* API base URL
-* interceptors
-* authentication headers
+- API base URL
+- interceptors
+- authentication headers
 
 ---
 
@@ -504,9 +504,9 @@ This keeps the system **vertically organized by feature**.
 
 Rules:
 
-* route segments use **kebab-case**
-* domain folders must match route names
-* shared UI belongs in `components/ui`
+- route segments use **kebab-case**
+- domain folders must match route names
+- shared UI belongs in `components/ui`
 
 Example:
 

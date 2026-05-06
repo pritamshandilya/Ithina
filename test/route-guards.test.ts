@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import type { AuthSessionUser } from "../src/lib/auth/session";
 import { requireAuth } from "../src/routes/-guards/requireAuth";
 import { requirePermission } from "../src/routes/-guards/requirePermission";
 import { requireStoreScope } from "../src/routes/-guards/requireStoreScope";
-import type { AuthSessionUser } from "../src/lib/auth/session";
 import type { AppRouterContext } from "../src/routes/__root";
 
 function makeUser(overrides: Partial<AuthSessionUser> = {}): AuthSessionUser {

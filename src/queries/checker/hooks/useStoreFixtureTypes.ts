@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchStoreFixtures } from "@/queries/checker/api/fixtures";
+import { fetchStoreFixtures } from "@/lib/api/checker/fixtures";
 import { useStore } from "@/providers/store";
 
 export const storeDefaultsKeys = {

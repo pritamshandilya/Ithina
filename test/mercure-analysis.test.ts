@@ -147,7 +147,7 @@ function makeJob(
 setupBrowserGlobals();
 
 test("parseMercureLinkHeader extracts the hub URL", async () => {
-  const { parseMercureLinkHeader } = await import("../src/hooks/use-mercure");
+  const { parseMercureLinkHeader } = await import("../src/hooks/useMercure");
 
   assert.equal(
     parseMercureLinkHeader(
@@ -157,30 +157,26 @@ test("parseMercureLinkHeader extracts the hub URL", async () => {
   );
 });
 
-test("apiClient.postWithResponse returns data, status, and headers", async () => {
-  const { apiClient } = await import("../src/queries/api-client");
-  installFetchQueue([
-    {
-      status: 202,
-      headers: { Link: '<https://mercure.example/events>; rel="mercure"' },
-      body: { ok: true },
-    },
-  ]);
-
-  const response = await apiClient.postWithResponse<{ ok: boolean }>(
-    "https://api.example.test/resource",
-    { name: "Fixture" },
-  );
-
-  assert.equal(response.status, 202);
-  assert.deepEqual(response.data, { ok: true });
-  assert.equal(
-    response.headers.get("Link"),
-    '<https://mercure.example/events>; rel="mercure"',
-  );
-});
-
 test("runFixtureAnalysis subscribes to Mercure using submit response headers", async () => {
+  const { axiosClient } = await import("../src/lib/api/axiosClient");
+  axiosClient.defaults.baseURL = "https://api.example.test";
+  axiosClient.defaults.adapter = async (config) => {
+    const url = axiosClient.getUri(config);
+    const response = await fetch(url, {
+      method: config.method,
+      body: config.data,
+      headers: config.headers as any,
+    });
+    const data = await response.json();
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      config,
+    };
+  };
+
   MockEventSource.instances = [];
   const calls = installFetchQueue([
     {
@@ -201,7 +197,7 @@ test("runFixtureAnalysis subscribes to Mercure using submit response headers", a
     },
   ]);
   const { runFixtureAnalysis } =
-    await import("../src/queries/maker/api/analysis");
+    await import("../src/lib/api/maker/analysis");
   const progressMessages: Array<string | null> = [];
 
   const resultPromise = runFixtureAnalysis(
@@ -251,6 +247,25 @@ test("runFixtureAnalysis subscribes to Mercure using submit response headers", a
 });
 
 test("runFixtureAnalysis falls back to polling when Mercure headers are missing", async () => {
+  const { axiosClient } = await import("../src/lib/api/axiosClient");
+  axiosClient.defaults.baseURL = "https://api.example.test";
+  axiosClient.defaults.adapter = async (config) => {
+    const url = axiosClient.getUri(config);
+    const response = await fetch(url, {
+      method: config.method,
+      body: config.data,
+      headers: config.headers as any,
+    });
+    const data = await response.json();
+    return {
+      data,
+      status: response.status,
+      statusText: response.statusText,
+      headers: Object.fromEntries(response.headers.entries()),
+      config,
+    };
+  };
+
   MockEventSource.instances = [];
   const calls = installFetchQueue([
     { status: 202, body: makeJob() },
@@ -270,7 +285,7 @@ test("runFixtureAnalysis falls back to polling when Mercure headers are missing"
     },
   ]);
   const { runFixtureAnalysis } =
-    await import("../src/queries/maker/api/analysis");
+    await import("../src/lib/api/maker/analysis");
 
   const result = await runFixtureAnalysis(
     {

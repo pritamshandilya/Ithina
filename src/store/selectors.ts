@@ -1,7 +1,7 @@
-import type { RootState } from "@/store";
 import type { Store } from "@/providers/store/types";
-import type { Shelf } from "@/types/maker";
 import type { PlanogramShelfPreview } from "@/queries/maker";
+import type { RootState } from "@/store";
+import type { Shelf } from "@/types/maker";
 
 export const selectSelectedStore = (state: RootState): Store | null =>
   state.storeContext?.selectedStore ?? null;
@@ -16,9 +16,8 @@ export const selectPlanogramPreview = (
   state: RootState,
 ): PlanogramShelfPreview | null => state.planogramPreview?.data ?? null;
 
-export const selectPlanogramPreviewLoading = (
-  state: RootState,
-): boolean => state.planogramPreview?.isLoading ?? false;
+export const selectPlanogramPreviewLoading = (state: RootState): boolean =>
+  state.planogramPreview?.isLoading ?? false;
 
 export const selectPlanogramPreviewError = (state: RootState): string | null =>
   state.planogramPreview?.error ?? null;

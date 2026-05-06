@@ -4,7 +4,6 @@
  * Planogram reads may return either an envelope with `planogram_data`
  * or a flattened payload with response metadata alongside schema fields.
  */
-
 import type { PlanogramApiStatus } from "@/models/request/planograms";
 import type { PlanogramPayload } from "@/types/planogram";
 
@@ -27,4 +26,6 @@ export type PlanogramFlatResponse = PlanogramPayload & {
   updated_at?: string;
 };
 
-export type PlanogramResponse = PlanogramEnvelopeResponse | PlanogramFlatResponse;
+export type PlanogramResponse =
+  | PlanogramEnvelopeResponse
+  | PlanogramFlatResponse;

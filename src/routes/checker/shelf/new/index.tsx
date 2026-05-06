@@ -11,10 +11,10 @@ import { AddPlanogramHeader } from "./-add-planogram-header";
 import { AddShelfDetailsCard } from "./-add-shelf-details-card";
 import { PlanogramPreviewCard } from "./-planogram-preview-card";
 import MainLayout from "@/components/layouts/main";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
-import { fixtureTypeKey } from "@/lib/fixtures/type-normalization";
-import { getPlanogramProductId } from "@/lib/planogram/planogram-schema";
+import { fixtureTypeKey } from "@/lib/fixtures/typeNormalization";
+import { getPlanogramProductId } from "@/lib/planogram/planogramSchema";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
 import {
@@ -31,7 +31,7 @@ import {
   useStoreFixtures,
 } from "@/queries/maker";
 import type { PlanogramArrangement } from "@/types/planogram";
-import type { ShelfTemplate } from "@/types/shelf-template";
+import type { ShelfTemplate } from "@/types/shelfTemplate";
 
 export const Route = createFileRoute("/checker/shelf/new/")({
   component: AddPlanogramPage,

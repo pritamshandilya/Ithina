@@ -1,9 +1,15 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
+import type { StoreConfigurationTab } from "./storeConfiguration.types";
+import { StoreProfileTab } from "./StoreProfileTab";
+import { StoreTabNavigation } from "./StoreTabNavigation";
+import { StoreTeamTab } from "./StoreTeamTab";
+import { useStoreConfigurationActions } from "./useStoreConfigurationActions";
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/useToast";
 import { AuthSessionService } from "@/lib/auth/session";
 import type { StoreDimensionUnit } from "@/lib/constants/dimensions";
 import { useStore as useGlobalStore } from "@/providers/store";
@@ -13,13 +19,6 @@ import {
   useUpdateStore,
   useUpdateStoreComplianceSettings,
 } from "@/queries/checker";
-
-import { StoreUserAssignmentModal } from "./StoreUserAssignmentModal";
-import type { StoreConfigurationTab } from "./store-configuration.types";
-import { StoreProfileTab } from "./store-profile-tab";
-import { StoreTabNavigation } from "./store-tab-navigation";
-import { StoreTeamTab } from "./store-team-tab";
-import { useStoreConfigurationActions } from "./use-store-configuration-actions";
 
 interface StoreConfigurationPageProps {
   canEdit?: boolean;
@@ -39,7 +38,8 @@ export function StoreConfigurationPage({
     sessionUser?.role === "admin" || sessionUser?.role === "maker";
   const isAdmin = sessionUser?.role === "admin";
   const updateStoreMutation = useUpdateStore();
-  const updateStoreComplianceSettingsMutation = useUpdateStoreComplianceSettings();
+  const updateStoreComplianceSettingsMutation =
+    useUpdateStoreComplianceSettings();
   const { data: storeUsers = [], isLoading: storeUsersLoading } = useStoreUsers(
     selectedStore?.id ?? "",
   );
@@ -67,7 +67,9 @@ export function StoreConfigurationPage({
         status: selectedStore.status || "Active",
         currency: selectedStore.currency || "USD",
         default_dimensions:
-          (selectedStore.default_dimensions as StoreDimensionUnit | undefined) || "mm",
+          (selectedStore.default_dimensions as
+            | StoreDimensionUnit
+            | undefined) || "mm",
       });
       setIsProfileEditing(false);
     }
@@ -82,30 +84,24 @@ export function StoreConfigurationPage({
     );
   }
 
-  const {
-    handleSave,
-    handleActivateStore,
-    handleDeactivateStore,
-  } = useStoreConfigurationActions({
-    canEdit,
-    canManageComplianceRuleSets,
-    isAdmin: !!isAdmin,
-    selectedStore,
-    formData,
-    defaultComplianceRuleSetId: selectedStore.default_compliance_rule_set_id ?? "",
-    updateStoreMutation,
-    updateStoreComplianceSettingsMutation,
-    setSelectedStore,
-    toast,
-  });
+  const { handleSave, handleActivateStore, handleDeactivateStore } =
+    useStoreConfigurationActions({
+      canEdit,
+      canManageComplianceRuleSets,
+      isAdmin: !!isAdmin,
+      selectedStore,
+      formData,
+      defaultComplianceRuleSetId:
+        selectedStore.default_compliance_rule_set_id ?? "",
+      updateStoreMutation,
+      updateStoreComplianceSettingsMutation,
+      setSelectedStore,
+      toast,
+    });
 
   return (
-    <MainLayout
-      pageHeader={
-        <PageHeader title="Store Settings" />
-      }
-    >
-      <div className="space-y-6 mx-auto pb-10 pt-4 px-2 sm:px-4 max-w-6xl">
+    <MainLayout pageHeader={<PageHeader title="Store Settings" />}>
+      <div className="mx-auto max-w-6xl space-y-6 px-2 pt-4 pb-10 sm:px-4">
         <StoreTabNavigation activeTab={activeTab} onChange={setActiveTab} />
 
         {activeTab === "profile" && (
@@ -130,7 +126,9 @@ export function StoreConfigurationPage({
                 status: selectedStore.status || "Active",
                 currency: selectedStore.currency || "USD",
                 default_dimensions:
-                  (selectedStore.default_dimensions as StoreDimensionUnit | undefined) || "mm",
+                  (selectedStore.default_dimensions as
+                    | StoreDimensionUnit
+                    | undefined) || "mm",
               });
               setIsProfileEditing(false);
             }}
@@ -162,7 +160,6 @@ export function StoreConfigurationPage({
             store={selectedStore}
           />
         )}
-
       </div>
     </MainLayout>
   );

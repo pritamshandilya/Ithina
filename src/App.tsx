@@ -1,10 +1,10 @@
-import { useEffect, useSyncExternalStore } from "react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
+import { useEffect, useSyncExternalStore } from "react";
 
-import type { RouterAuthState } from "./auth/state";
 import { AuthSessionService } from "./lib/auth/session";
+import type { RouterAuthState } from "./lib/auth/state";
 import { useStore } from "./providers/store";
 import { queryClient } from "./queries/client";
 import { routeTree } from "./routeTree.gen";

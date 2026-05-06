@@ -3,13 +3,14 @@
  *
  * TanStack Query hook for fetching adhoc analyses (one-off shelf image uploads + AI analysis).
  */
-
 import { useQuery } from "@tanstack/react-query";
-import { fetchAdhocAnalyses } from "../api/maker";
+
+import { fetchAdhocAnalyses } from "@/lib/api/maker/maker";
 
 export const adhocAnalysesKeys = {
   all: ["maker", "adhoc-analyses"] as const,
-  byStore: (storeId: string | undefined) => [...adhocAnalysesKeys.all, storeId ?? "all"] as const,
+  byStore: (storeId: string | undefined) =>
+    [...adhocAnalysesKeys.all, storeId ?? "all"] as const,
 };
 
 export function useAdhocAnalyses(storeId?: string) {

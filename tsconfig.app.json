@@ -26,6 +26,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "types"],
-  "exclude": ["src/backlog"]
+  "include": ["src", "types"]
 }

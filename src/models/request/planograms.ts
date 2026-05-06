@@ -4,7 +4,6 @@
  * Request bodies sent to planogram endpoints.
  * The backend accepts the raw planogram schema as-is.
  */
-
 import type { PlanogramPayload } from "@/types/planogram";
 
 export type PlanogramApiStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";

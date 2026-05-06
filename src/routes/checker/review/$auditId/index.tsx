@@ -26,16 +26,16 @@ import {
 import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceReportMetrics } from "@/components/shared/compliance-report";
-import { DetailBackButton } from "@/components/shared/detail-back-button";
+import { ComplianceReportMetrics } from "@/components/shared/complianceReport";
+import { DetailBackButton } from "@/components/shared/DetailBackButton";
 import { Button } from "@/components/ui/button";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { Label } from "@/components/ui/label";
 import { Modal } from "@/components/ui/modal";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
-import { useToast } from "@/hooks/use-toast";
-import { mockCheckerUser } from "@/lib/api/mock-data";
+import { useStoreScopedCheckerRoutes } from "@/hooks/useStoreScopedCheckerRoutes";
+import { useToast } from "@/hooks/useToast";
+import { mockCheckerUser } from "@/lib/api/mockData";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/providers/store";
 import {

@@ -1,15 +1,15 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { planogramKeys } from "./usePlanogramById";
+import { planogramListKeys } from "./usePlanogramList";
+import { planogramShelfPreviewKeys } from "./usePlanogramShelfPreview";
 import {
   assignPlanogramToShelf,
   createPlanogram,
   deletePlanogram,
   updatePlanogram,
   updateShelfArrangement,
-} from "../api/planogram";
-import { planogramKeys } from "./usePlanogramById";
-import { planogramListKeys } from "./usePlanogramList";
-import { planogramShelfPreviewKeys } from "./usePlanogramShelfPreview";
+} from "@/lib/api/maker/planogram";
 import type { PlanogramArrangement, PlanogramPayload } from "@/types/planogram";
 
 interface AssignPlanogramToShelfInput {
@@ -103,7 +103,9 @@ export function useDeletePlanogram() {
     onSuccess: async (removed, id) => {
       if (!removed) return;
       await queryClient.invalidateQueries({ queryKey: planogramListKeys.all });
-      await queryClient.invalidateQueries({ queryKey: planogramKeys.detail(id) });
+      await queryClient.invalidateQueries({
+        queryKey: planogramKeys.detail(id),
+      });
     },
   });
 }

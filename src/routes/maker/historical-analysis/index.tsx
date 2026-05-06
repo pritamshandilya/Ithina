@@ -1,16 +1,20 @@
-import { createFileRoute, useLocation, useNavigate } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useLocation,
+  useNavigate,
+} from "@tanstack/react-router";
 import { format } from "date-fns";
 import { FolderOpen } from "lucide-react";
 import { useState } from "react";
-import { PageHeader } from "@/components/shared/page-header";
 
 import MainLayout from "@/components/layouts/main";
-import { DataTable, type DataTableColumn } from "@/components/ui/data-table";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { DataTable, type DataTableColumn } from "@/components/ui/DataTable";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getRelativePath } from "@/lib/utils";
 import { useHistoricalAnalyses } from "@/queries/maker";
 import type { AdhocAnalysisStatus } from "@/types/maker";
 import type { HistoricalAnalysisRow } from "@/types/maker";
-import { getRelativePath } from "@/lib/utils";
 
 export const Route = createFileRoute("/maker/historical-analysis/")({
   component: HistoricalAnalysisPage,
@@ -86,7 +90,8 @@ const COLUMNS: DataTableColumn<HistoricalAnalysisRow>[] = [
     headerFilter: false,
     formatter: (cell: unknown) => {
       const row = (cell as { getData: () => HistoricalAnalysisRow }).getData();
-      const date = row.runDate instanceof Date ? row.runDate : new Date(row.runDate);
+      const date =
+        row.runDate instanceof Date ? row.runDate : new Date(row.runDate);
       return `<span class="text-sm text-muted-foreground">${format(date, "MMM d, yyyy")}</span>`;
     },
   },
@@ -131,7 +136,10 @@ function HistoricalAnalysisPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { data: analyses, isLoading } = useHistoricalAnalyses();
-  const [tablePagination, setTablePagination] = useState({ page: 1, pageSize: 10 });
+  const [tablePagination, setTablePagination] = useState({
+    page: 1,
+    pageSize: 10,
+  });
 
   const handleRowClick = (row: HistoricalAnalysisRow) => {
     navigate({
@@ -145,8 +153,8 @@ function HistoricalAnalysisPage() {
     0,
     Math.min(
       tablePagination.pageSize,
-      analyses.length - (tablePagination.page - 1) * tablePagination.pageSize
-    )
+      analyses.length - (tablePagination.page - 1) * tablePagination.pageSize,
+    ),
   );
 
   return (
@@ -158,30 +166,40 @@ function HistoricalAnalysisPage() {
         />
       }
     >
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-primary pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
-        <div className="mx-auto flex w-full max-w-screen-2xl flex-1 flex-col min-h-0">
-
+      <div className="bg-primary flex min-h-0 flex-1 flex-col overflow-hidden px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
+        <div className="mx-auto flex min-h-0 w-full max-w-screen-2xl flex-1 flex-col">
           {analyses.length > 0 && (
-            <p className="mt-4 shrink-0 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-4 shrink-0 text-sm">
               Showing{" "}
-              <span className="font-semibold text-foreground">{tableVisibleCount}</span> of{" "}
-              <span className="font-semibold text-foreground">{analyses.length}</span> analyses
+              <span className="text-foreground font-semibold">
+                {tableVisibleCount}
+              </span>{" "}
+              of{" "}
+              <span className="text-foreground font-semibold">
+                {analyses.length}
+              </span>{" "}
+              analyses
             </p>
           )}
 
-          <div className="mt-4 flex-1 min-h-0 overflow-auto">
+          <div className="mt-4 min-h-0 flex-1 overflow-auto">
             {isLoading ? (
               <div className="space-y-4">
                 <Skeleton className="h-10 w-64" />
                 <Skeleton className="h-64 w-full rounded-lg" />
               </div>
             ) : analyses.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-border bg-card/50 p-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-muted mb-4">
-                  <FolderOpen className="h-7 w-7 text-muted-foreground" aria-hidden />
+              <div className="border-border bg-card/50 flex flex-col items-center justify-center rounded-xl border-2 border-dashed p-12 text-center">
+                <div className="bg-muted mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full">
+                  <FolderOpen
+                    className="text-muted-foreground h-7 w-7"
+                    aria-hidden
+                  />
                 </div>
-                <h3 className="text-lg font-semibold text-foreground">No analyses yet</h3>
-                <p className="mt-2 max-w-sm text-sm text-muted-foreground">
+                <h3 className="text-foreground text-lg font-semibold">
+                  No analyses yet
+                </h3>
+                <p className="text-muted-foreground mt-2 max-w-sm text-sm">
                   Run adhoc or planogram analyses to see them here.
                 </p>
               </div>

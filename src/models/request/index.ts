@@ -10,5 +10,5 @@ export type * from "./auth";
 export type * from "./shelves";
 export type * from "./audits";
 export type * from "./checker";
-export type * from "./knowledge-center";
+export type * from "./knowledgeCenter";
 export type * from "./planograms";

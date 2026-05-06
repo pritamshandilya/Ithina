@@ -4,11 +4,10 @@
  * Fetches compliance rule sets for adhoc analysis selection.
  * Rule sets are created in Store Settings (admin / maker).
  */
-
 import { useQuery } from "@tanstack/react-query";
 
+import { fetchComplianceRuleSetsForAnalysis } from "@/lib/api/maker/complianceRuleSets";
 import { useSelectedStoreId } from "@/providers/store";
-import { fetchComplianceRuleSetsForAnalysis } from "@/queries/maker/api/compliance-rule-sets";
 
 export const complianceRuleSetsKeys = {
   all: ["compliance-rule-sets"] as const,

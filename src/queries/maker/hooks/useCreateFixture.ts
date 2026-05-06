@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 
-import { createFixture } from "../api/fixtures";
+import { createFixture } from "@/lib/api/maker/fixtures";
 
 export function useCreateFixture() {
   return useMutation({

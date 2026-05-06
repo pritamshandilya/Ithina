@@ -1,6 +1,6 @@
 import { createFileRoute, useParams } from "@tanstack/react-router";
 
-import { StoreFixtureDetailPage } from "@/components/checker/stores/store-fixture-detail-page";
+import { StoreFixtureDetailPage } from "@/components/checker/stores/StoreFixtureDetailPage";
 
 export const Route = createFileRoute("/checker/fixture-types/$shelfId/")({
   component: CheckerFixtureShelfDetailRoute,

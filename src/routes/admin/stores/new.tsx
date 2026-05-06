@@ -1,14 +1,15 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Globe, Store as StoreIcon, Users as UsersIcon } from "lucide-react";
 
-import MainLayout from "@/components/layouts/main";
-import { StoreOnboardingBasicStep } from "@/components/admin/stores/store-onboarding-basic-step";
-import { StoreOnboardingConfigStep } from "@/components/admin/stores/store-onboarding-config-step";
-import { StoreOnboardingTeamStep } from "@/components/admin/stores/store-onboarding-team-step";
-import { StoreOnboardingStepper } from "@/components/admin/stores/store-onboarding-stepper";
+import { StoreOnboardingBasicStep } from "@/components/admin/stores/StoreOnboardingBasicStep";
+import { StoreOnboardingConfigStep } from "@/components/admin/stores/StoreOnboardingConfigStep";
+import { StoreOnboardingStepper } from "@/components/admin/stores/StoreOnboardingStepper";
+import { StoreOnboardingTeamStep } from "@/components/admin/stores/StoreOnboardingTeamStep";
 import { useStoreOnboarding } from "@/components/admin/stores/useStoreOnboarding";
-import { DetailBackButton } from "@/components/shared/detail-back-button";
-import { PageHeader } from "@/components/shared/page-header";
+import MainLayout from "@/components/layouts/main";
+import { DetailBackButton } from "@/components/shared/DetailBackButton";
+import { PageHeader } from "@/components/shared/PageHeader";
+
 export const Route = createFileRoute("/admin/stores/new")({
   component: StoreOnboardingPage,
 });
@@ -36,7 +37,7 @@ function StoreOnboardingPage() {
         </PageHeader>
       }
     >
-      <div className="min-h-0 pt-2 px-2 pb-4 sm:pt-3 sm:px-2 sm:pb-4 lg:pt-4 lg:px-2 lg:pb-5">
+      <div className="min-h-0 px-2 pt-2 pb-4 sm:px-2 sm:pt-3 sm:pb-4 lg:px-2 lg:pt-4 lg:pb-5">
         <div className="mx-auto w-full max-w-screen-2xl space-y-6">
           <StoreOnboardingStepper
             step={o.step}
@@ -50,11 +51,15 @@ function StoreOnboardingPage() {
               region={o.basicForm.region}
               currency={o.basicForm.currency}
               canContinue={o.canContinueBasic}
-              onNameChange={(value) => o.setBasicForm((f) => ({ ...f, name: value }))}
+              onNameChange={(value) =>
+                o.setBasicForm((f) => ({ ...f, name: value }))
+              }
               onAddressChange={(value) =>
                 o.setBasicForm((f) => ({ ...f, address: value }))
               }
-              onRegionChange={(value) => o.setBasicForm((f) => ({ ...f, region: value }))}
+              onRegionChange={(value) =>
+                o.setBasicForm((f) => ({ ...f, region: value }))
+              }
               onCurrencyChange={(value) =>
                 o.setBasicForm((f) => ({ ...f, currency: value }))
               }
@@ -84,7 +89,9 @@ function StoreOnboardingPage() {
               setConfigForm={o.setConfigForm}
               canContinueConfig={o.canContinueConfig}
               defaultComplianceRuleSet={o.defaultComplianceRuleSet}
-              onUpdateDefaultComplianceRuleSet={o.updateDefaultComplianceRuleSet}
+              onUpdateDefaultComplianceRuleSet={
+                o.updateDefaultComplianceRuleSet
+              }
               shelfFixtureLabels={o.shelfFixtureLabels}
               onBack={() => o.goToStep(0)}
               isCreatingStore={o.createStoreMutation.isPending}

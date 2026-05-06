@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+
 import { NewAdhocAnalysisPage } from "@/routes/maker/audits/adhoc/new/index";
 
 export const Route = createFileRoute("/checker/audits/adhoc/new")({

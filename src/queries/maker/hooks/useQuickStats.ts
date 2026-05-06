@@ -1,11 +1,10 @@
 /**
  * React Query hook for fetching quick statistics
  */
-
 import { useQuery } from "@tanstack/react-query";
 
+import { fetchQuickStats } from "@/lib/api/maker/maker";
 import { useSelectedStoreId } from "@/providers/store";
-import { fetchQuickStats } from "../api/maker";
 
 /**
  * Query key factory for quick stats
@@ -18,22 +17,22 @@ export const quickStatsKeys = {
 
 /**
  * Hook to fetch quick statistics for the dashboard
- * 
+ *
  * Features:
  * - Automatic caching (2 minutes for fresher data)
  * - Refetch on window focus (important for real-time feel)
  * - Auto-refetch every 2 minutes for live updates
  * - Loading and error states
- * 
+ *
  * @returns TanStack Query result with stats data
- * 
+ *
  * @example
  * ```tsx
  * function QuickStatsPanel() {
  *   const { data: stats, isLoading } = useQuickStats();
- *   
+ *
  *   if (isLoading) return <Skeleton />;
- *   
+ *
  *   return (
  *     <>
  *       <StatCard title="Today" value={stats?.auditsSubmittedToday} />

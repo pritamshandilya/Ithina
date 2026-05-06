@@ -35,7 +35,9 @@ export interface AnalysisPipelineState {
 
 export interface UseAnalysisPipelineOptions {
   /** Called when pipeline reaches Data Enrichment step – return enriched items to continue */
-  onEnrichmentRequired?: (items: SkuEnrichmentItem[]) => Promise<SkuEnrichmentItem[]>;
+  onEnrichmentRequired?: (
+    items: SkuEnrichmentItem[],
+  ) => Promise<SkuEnrichmentItem[]>;
   /** Called when pipeline completes */
   onComplete?: () => void;
   /** Interval in ms between steps (default 1500) */

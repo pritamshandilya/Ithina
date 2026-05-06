@@ -18,8 +18,8 @@ import {
   storeContextReducer,
   uiReducer,
 } from "./reducers";
-import { planogramPreviewReducer } from "./slices/planogramPreviewSlice";
-import { shelvesReducer } from "./slices/shelvesSlice";
+import { planogramPreviewReducer } from "./reducers/planogramPreviewSlice";
+import { shelvesReducer } from "./reducers/shelvesSlice";
 
 type PersistStorageModule = typeof storage | { default: typeof storage };
 

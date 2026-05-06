@@ -1,6 +1,6 @@
-import { getCookie, toMilliseconds } from "@/lib/utils";
 import type { AuthConfig, UserInvite } from "./config";
 import { UrlHelper } from "./url";
+import { getCookie, toMilliseconds } from "@/lib/utils";
 
 export * from "./config";
 
@@ -84,17 +84,23 @@ export class Auth {
     return userInfo;
   }
 
-  async sendInvitation(data: UserInvite | UserInvite[], organizationId?: string) {
+  async sendInvitation(
+    data: UserInvite | UserInvite[],
+    organizationId?: string,
+  ) {
     const invitePayload = Array.isArray(data) ? data : [data];
 
-    const inviteResponse = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
-      method: "POST",
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
+    const inviteResponse = await fetch(
+      this.urlHelper.getUserInvitationUrl(organizationId),
+      {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(invitePayload),
       },
-      body: JSON.stringify(invitePayload),
-    });
+    );
 
     if (!inviteResponse.ok) {
       throw new Error(
@@ -106,10 +112,13 @@ export class Auth {
   }
 
   async fetchInvitations(organizationId?: string) {
-    const response = await fetch(this.urlHelper.getUserInvitationUrl(organizationId), {
-      method: "GET",
-      credentials: "include",
-    });
+    const response = await fetch(
+      this.urlHelper.getUserInvitationUrl(organizationId),
+      {
+        method: "GET",
+        credentials: "include",
+      },
+    );
 
     if (!response.ok) {
       throw new Error(
@@ -121,10 +130,13 @@ export class Auth {
   }
 
   async revokeInvitation(invitationId: string) {
-    const response = await fetch(this.urlHelper.getUserInvitationUrl(invitationId), {
-      method: "DELETE",
-      credentials: "include",
-    });
+    const response = await fetch(
+      this.urlHelper.getUserInvitationUrl(invitationId),
+      {
+        method: "DELETE",
+        credentials: "include",
+      },
+    );
 
     if (!response.ok) {
       throw new Error(

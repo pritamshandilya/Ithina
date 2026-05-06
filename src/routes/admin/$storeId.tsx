@@ -1,4 +1,4 @@
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { useStore } from "@/providers/store";
@@ -36,7 +36,8 @@ function AdminStoreLayout() {
 
     if (matched) {
       const sameStore =
-        selectedStore?.id === matched.id && selectedStore?.name === matched.name;
+        selectedStore?.id === matched.id &&
+        selectedStore?.name === matched.name;
       if (!sameStore) {
         setSelectedStore(matched);
       }

@@ -1,13 +1,13 @@
 import { useCallback } from "react";
 
 import { NotificationsDropdown } from "@/components/checker";
+import { mockCheckerUser } from "@/lib/api/mockData";
+import { useStore } from "@/providers/store";
 import {
   useMarkAllNotificationsAsRead,
   useMarkNotificationAsRead,
   useNotifications,
 } from "@/queries/checker";
-import { mockCheckerUser } from "@/lib/api/mock-data";
-import { useStore } from "@/providers/store";
 import type { Notification } from "@/types/checker";
 
 export default function Header() {
@@ -61,10 +61,7 @@ export default function Header() {
             year: "numeric",
           })}
         </time> */}
-        <span
-          className="h-5 w-px bg-border shrink-0"
-          aria-hidden
-        />
+        <span className="bg-border h-5 w-px shrink-0" aria-hidden />
         <NotificationsDropdown
           notifications={notifications || []}
           onNotificationClick={handleNotificationClick}

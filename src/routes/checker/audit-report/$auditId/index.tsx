@@ -11,11 +11,11 @@ import { createFileRoute, useParams } from "@tanstack/react-router";
 import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { ComplianceReportFull } from "@/components/shared/compliance-report";
-import { useStoreScopedCheckerRoutes } from "@/hooks/use-store-scoped-checker-routes";
-import { useToast } from "@/hooks/use-toast";
+import { ComplianceReportFull } from "@/components/shared/complianceReport";
+import { useStoreScopedCheckerRoutes } from "@/hooks/useStoreScopedCheckerRoutes";
+import { useToast } from "@/hooks/useToast";
 import type { ReportSnippet } from "@/lib/analysis";
-import { exportReportToPdf } from "@/lib/reports/pdf-export";
+import { exportReportToPdf } from "@/lib/reports/PdfExport";
 import { useAuditDetail, useAuditViolations } from "@/queries/checker";
 
 export const Route = createFileRoute("/checker/audit-report/$auditId/")({

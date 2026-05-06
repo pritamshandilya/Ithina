@@ -2,12 +2,15 @@
  * Planogram-based analysis run – same pipeline as adhoc (upload, analyze, report).
  * Accessed when clicking "+ New" in the planogram table for a shelf.
  */
-
 import { createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 
-import { AnalysisFlowPage } from "@/components/maker/analysis-flow-page";
-import { usePlanogramById, usePlanogramShelfPreview, useStoreFixtures } from "@/queries/maker";
+import { AnalysisFlowPage } from "@/components/maker/AnalysisFlowPage";
+import {
+  usePlanogramById,
+  usePlanogramShelfPreview,
+  useStoreFixtures,
+} from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
   component: NewPlanogramAnalysisPage,
@@ -23,7 +26,11 @@ export const Route = createFileRoute("/maker/audits/planogram/run/$shelfId/")({
 
 function NewPlanogramAnalysisPage() {
   const { shelfId } = Route.useParams();
-  const { from, fixtureId: fixtureIdFromSearch, planogramId: planogramIdFromSearch } = Route.useSearch();
+  const {
+    from,
+    fixtureId: fixtureIdFromSearch,
+    planogramId: planogramIdFromSearch,
+  } = Route.useSearch();
   const { data: preview } = usePlanogramShelfPreview(shelfId);
   const { data: fixtures = [] } = useStoreFixtures();
   const backTo = from ?? "/maker/audits/planogram";
@@ -35,7 +42,8 @@ function NewPlanogramAnalysisPage() {
       planogramIdFromSearch ??
       null)
     : (preview?.shelf.planogramId ?? planogramIdFromSearch ?? null);
-  const { data: associatedPlanogramPayload } = usePlanogramById(effectivePlanogramId);
+  const { data: associatedPlanogramPayload } =
+    usePlanogramById(effectivePlanogramId);
   const analysisPlanogramPayload =
     associatedPlanogramPayload ?? preview?.planogramPayload ?? null;
 
@@ -45,9 +53,7 @@ function NewPlanogramAnalysisPage() {
       backTo={backTo}
       analysisType="PLANOGRAM"
       fixtureName={
-        fixture
-          ? `${fixture.code.trim()} (${fixture.type.trim()})`
-          : undefined
+        fixture ? `${fixture.code.trim()} (${fixture.type.trim()})` : undefined
       }
       planogramName={analysisPlanogramPayload?.name}
       planogramPayload={analysisPlanogramPayload}

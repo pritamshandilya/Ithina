@@ -6,7 +6,7 @@
  */
 import { useQuery } from "@tanstack/react-query";
 
-import { fetchStores } from "../api/maker";
+import { fetchStores } from "@/lib/api/maker/maker";
 import { AuthSessionService } from "@/lib/auth/session";
 
 export const storesKeys = {

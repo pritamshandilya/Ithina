@@ -5,4 +5,3 @@ import { StoreConfigurationPage } from "@/components/checker/stores/StoreConfigu
 export const Route = createFileRoute("/admin/$storeId/store-settings")({
   component: () => <StoreConfigurationPage canEdit />,
 });
-

@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-import { PlanogramsNewPage } from "@/features/planogram-library/planograms-new-page";
+import { PlanogramsNewPage } from "@/components/planogram/PlanogramsNewPage";
 
 export const Route = createFileRoute("/admin/$storeId/planograms/new")({
   component: PlanogramsNewPage,

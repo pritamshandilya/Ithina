@@ -9,4 +9,3 @@ export const Route = createFileRoute("/maker/store-settings/")({
 function MakerStoreSettingsRoute() {
   return <StoreConfigurationPage />;
 }
-

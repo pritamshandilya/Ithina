@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ChevronRight } from "lucide-react";
 
 import MainLayout from "@/components/layouts/main";
@@ -9,8 +9,8 @@ import {
   MakerPerformanceCharts,
   MyAuditsSection,
 } from "@/components/maker";
-import { MakerDashboardHeader } from "@/components/maker/maker-dashboard-header";
-import { PageHeader } from "@/components/shared/page-header";
+import { MakerDashboardHeader } from "@/components/maker/MakerDashboardHeader";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { useDraftAudits, useReturnedAudits } from "@/queries/maker";
 
 export const Route = createFileRoute("/maker/dashboard/")({
@@ -40,9 +40,11 @@ function MakerDashboard() {
       pageHeader={
         <PageHeader
           title="Planogram Assistant"
-          description={hasAttentionItems
-            ? "You have audits that need your attention"
-            : "Here's how your shelf audits are going"}
+          description={
+            hasAttentionItems
+              ? "You have audits that need your attention"
+              : "Here's how your shelf audits are going"
+          }
         >
           <MakerDashboardHeader />
         </PageHeader>
@@ -50,7 +52,6 @@ function MakerDashboard() {
     >
       <div className="ithina-page">
         <div className="ithina-page-inner">
-
           {/* Key metrics - My Work at a Glance */}
           <MakerAccomplishedCards />
 
@@ -58,7 +59,7 @@ function MakerDashboard() {
           <MakerPerformanceCharts />
 
           {/* Two-column layout: Attention + Assigned Shelves (same height) */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 items-stretch">
+          <div className="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-2">
             <MakerAttentionSection
               onResume={handleResume}
               onViewReport={handleViewReport}
@@ -66,7 +67,10 @@ function MakerDashboard() {
             />
             <MakerAssignedTable
               onShelfClick={(shelfId) => {
-                navigate({ to: "/maker/audits/planogram/$shelfId", params: { shelfId } });
+                navigate({
+                  to: "/maker/audits/planogram/$shelfId",
+                  params: { shelfId },
+                });
               }}
             />
           </div>
@@ -75,18 +79,21 @@ function MakerDashboard() {
           <section
             id="my-audits-section"
             aria-labelledby="my-audits-heading"
-            className="space-y-4 scroll-mt-8"
+            className="scroll-mt-8 space-y-4"
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="ithina-overline mb-1">History</p>
-                <h2 id="my-audits-heading" className="text-xl font-bold text-foreground">
+                <h2
+                  id="my-audits-heading"
+                  className="text-foreground text-xl font-bold"
+                >
                   Recent Audit History
                 </h2>
               </div>
               <Link
                 to="/maker/audits/planogram"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/90 transition-colors shrink-0"
+                className="text-accent hover:text-accent/90 inline-flex shrink-0 items-center gap-1.5 text-sm font-medium transition-colors"
               >
                 View All Audits
                 <ChevronRight className="size-4" aria-hidden />

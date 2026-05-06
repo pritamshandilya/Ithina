@@ -10,4 +10,3 @@ export const PREDEFINED_CURRENCIES = [
 ] as const;
 
 export type PredefinedCurrency = (typeof PREDEFINED_CURRENCIES)[number];
-

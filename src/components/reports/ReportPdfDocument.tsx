@@ -21,7 +21,7 @@ import {
   statusBorder,
   variantBg,
   variantBorder,
-} from "./report-pdf-color-utils";
+} from "./reportPdfColorUtils";
 import {
   type AllIssuesReportData,
   type AllItemsReportData,

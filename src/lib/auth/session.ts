@@ -1,7 +1,8 @@
-import type { Permission } from "@/auth/permissions";
-import { isPermission } from "@/auth/permissions";
-import type { RouterAuthSnapshot } from "@/auth/state";
-import { ApiError, apiClient } from "@/queries/shared";
+import type { Permission } from "@/lib/auth/permissions";
+import { isPermission } from "@/lib/auth/permissions";
+import type { RouterAuthSnapshot } from "@/lib/auth/state";
+import { ApiError } from "@/exceptions/ApiError";
+import { axiosClient } from "@/lib/api/axiosClient";
 import store from "@/store";
 
 export type UserRole = "admin" | "maker" | "checker";
@@ -142,10 +143,13 @@ export class AuthSessionService {
     email: string,
     password: string,
   ): Promise<AuthSessionUser> {
-    const login = await apiClient.post<LoginApiResponse>("/auth/login", {
-      email,
-      password,
-    });
+    const { data: login } = await axiosClient.post<LoginApiResponse>(
+      "/auth/login",
+      {
+        email,
+        password,
+      },
+    );
 
     const tokenExpiry = Date.now() + login.expires_in * 1000;
     store.dispatch({
@@ -165,7 +169,10 @@ export class AuthSessionService {
     body.append("username", username);
     body.append("password", password);
 
-    const login = await apiClient.post<LoginApiResponse>("/auth/token", body);
+    const { data: login } = await axiosClient.post<LoginApiResponse>(
+      "/auth/token",
+      body,
+    );
 
     const tokenExpiry = Date.now() + login.expires_in * 1000;
     store.dispatch({
@@ -205,7 +212,7 @@ export class AuthSessionService {
 
   static async fetchUserInfo(): Promise<AuthSessionUser> {
     try {
-      const me = await apiClient.get<MeApiResponse>("/auth/me");
+      const { data: me } = await axiosClient.get<MeApiResponse>("/auth/me");
       const fallbackNames = getInitialsFromEmail(me.email);
       const mapped: AuthSessionUser = {
         id: me.id,

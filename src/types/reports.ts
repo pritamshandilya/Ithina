@@ -2,12 +2,11 @@
  * Report PDF export types.
  * Data structures passed to ReportPdfView for PDF-safe rendering.
  */
-
 import type {
-  ReportSnippet,
-  AllItemsReportData,
   AllIssuesReportData,
+  AllItemsReportData,
   ImageComparisonData,
+  ReportSnippet,
 } from "@/lib/analysis";
 
 export interface ReportPdfData {

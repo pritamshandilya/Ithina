@@ -9,4 +9,3 @@ export const Route = createFileRoute("/checker/store-settings/")({
 function CheckerStoreSettingsRoute() {
   return <StoreConfigurationPage />;
 }
-

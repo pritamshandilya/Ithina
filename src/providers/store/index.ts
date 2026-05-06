@@ -1,12 +1,11 @@
 import { useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
-import { selectSelectedStore } from "@/store/selectors";
 import type { StoreContextValue } from "./types";
+import { selectSelectedStore } from "@/store/selectors";
 
 export * from "./provider";
 export * from "./types";
-
 
 export function useStore(): StoreContextValue {
   const selectedStore = useSelector(selectSelectedStore);

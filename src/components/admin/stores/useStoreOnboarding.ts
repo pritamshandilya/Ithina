@@ -1,48 +1,51 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
 
-import type { ShelfTemplateModalValues } from "@/components/common/shelf-template-modal";
 import type {
   ConfigSection,
   FixtureConfig,
   ShelfTemplateConfig,
-} from "@/components/admin/stores/store-onboarding-config-step";
+} from "@/components/admin/stores/StoreOnboardingConfigStep";
 import {
   DEFAULT_ONBOARDING_FIXTURES,
   DEFAULT_ONBOARDING_SHELF_TEMPLATES,
   defaultConfigForm,
   emptyShelfTemplateForm,
-} from "@/components/admin/stores/store-onboarding-initial-data";
-import type { OnboardingStep } from "@/components/admin/stores/store-onboarding-stepper";
-import { useToast } from "@/hooks/use-toast";
-import {
-  useAssignStoreUser,
-  useCreateStore,
-  useOrgUsers,
-  shelfTemplatesKeys,
-  useDimensionUnits,
-} from "@/queries/checker";
-import { updateStoreComplianceSettings } from "@/queries/checker/api/org";
-import {
-  createComplianceRuleSetForStore,
-  type CreateComplianceRuleSetInput,
-} from "@/queries/maker/api/compliance-rule-sets";
-import type { ComplianceRuleSetSummary } from "@/types/compliance-rule-set";
-import type { StoreSetting } from "@/types/checker";
-import type { ShelfTemplateCreateInput } from "@/types/shelf-template";
-import { replaceShelfTemplates } from "@/queries/checker/api/shelf-templates";
+} from "@/components/admin/stores/storeOnboardingInitialData";
+import type { OnboardingStep } from "@/components/admin/stores/StoreOnboardingStepper";
+import type { CreateComplianceRuleSetModalProps } from "@/components/common/CreateComplianceRuleSetModal";
+import type { ShelfTemplateModalValues } from "@/components/common/ShelfTemplateModal";
+import { useToast } from "@/hooks/useToast";
 import {
   createStoreFixture,
   createStoreFixturesBulk,
-} from "@/queries/checker/api/fixtures";
-import type { CreateComplianceRuleSetModalProps } from "@/components/common/create-compliance-rule-set-modal";
+} from "@/lib/api/checker/fixtures";
+import { updateStoreComplianceSettings } from "@/lib/api/checker/org";
+import { replaceShelfTemplates } from "@/lib/api/checker/shelfTemplates";
+import {
+  shelfTemplatesKeys,
+  useAssignStoreUser,
+  useCreateStore,
+  useDimensionUnits,
+  useOrgUsers,
+} from "@/queries/checker";
+import {
+  type CreateComplianceRuleSetInput,
+  createComplianceRuleSetForStore,
+} from "@/lib/api/maker/complianceRuleSets";
+import type { StoreSetting } from "@/types/checker";
+import type { ComplianceRuleSetSummary } from "@/types/complianceRuleSet";
+import type { ShelfTemplateCreateInput } from "@/types/shelfTemplate";
 
 const LOCAL_DEFAULT_RULE_SET_ID = "local-default-compliance-rule-set";
 const DEFAULT_ONBOARDING_RULE_SET_NAME = "Default Rule";
 
 function normalizeCodePart(input: string, fallback: string): string {
-  const cleaned = input.trim().toUpperCase().replace(/[^A-Z0-9]+/g, "");
+  const cleaned = input
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "");
   return cleaned || fallback;
 }
 
@@ -120,16 +123,18 @@ export function useStoreOnboarding() {
 
   const [activeConfigSection, setActiveConfigSection] =
     useState<ConfigSection>("fixtures");
-  const [configVisited, setConfigVisited] = useState<Record<ConfigSection, boolean>>({
+  const [configVisited, setConfigVisited] = useState<
+    Record<ConfigSection, boolean>
+  >({
     fixtures: true,
     shelfTemplates: false,
     rules: false,
     dimensions: false,
   });
 
-  const [fixtureTypes, setFixtureTypes] = useState<FixtureConfig[]>(
-    () => [...DEFAULT_ONBOARDING_FIXTURES],
-  );
+  const [fixtureTypes, setFixtureTypes] = useState<FixtureConfig[]>(() => [
+    ...DEFAULT_ONBOARDING_FIXTURES,
+  ]);
   const [shelfTemplatesConfig, setShelfTemplatesConfig] = useState<
     ShelfTemplateConfig[]
   >(() => [...DEFAULT_ONBOARDING_SHELF_TEMPLATES]);
@@ -137,32 +142,34 @@ export function useStoreOnboarding() {
   const [newTemplate, setNewTemplate] = useState<ShelfTemplateConfig>(
     emptyShelfTemplateForm,
   );
-  const [editingTemplateIndex, setEditingTemplateIndex] = useState<number | null>(
-    null,
-  );
+  const [editingTemplateIndex, setEditingTemplateIndex] = useState<
+    number | null
+  >(null);
   const [showAddTemplateForm, setShowAddTemplateForm] = useState(false);
 
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(
     () => new Set(),
   );
 
-  const [localComplianceRuleSets, setLocalComplianceRuleSets] = useState<OnboardingRuleSet[]>(() => [
-    createDefaultOnboardingRuleSet(),
-  ]);
+  const [localComplianceRuleSets, setLocalComplianceRuleSets] = useState<
+    OnboardingRuleSet[]
+  >(() => [createDefaultOnboardingRuleSet()]);
   const [defaultComplianceRuleSetId, setDefaultComplianceRuleSetId] = useState(
     LOCAL_DEFAULT_RULE_SET_ID,
   );
-  const [complianceRuleSetModalOpen, setComplianceRuleSetModalOpen] = useState(false);
+  const [complianceRuleSetModalOpen, setComplianceRuleSetModalOpen] =
+    useState(false);
   const [complianceRuleSetModalMode, setComplianceRuleSetModalMode] = useState<
     "create" | "edit"
   >("create");
-  const [editingComplianceRuleSetId, setEditingComplianceRuleSetId] = useState<string | null>(
-    null,
-  );
-  const [complianceRuleSetInitialValues, setComplianceRuleSetInitialValues] = useState<
-    CreateComplianceRuleSetModalProps["initialValues"]
-  >(undefined);
-  const [confirmDeleteRuleSetId, setConfirmDeleteRuleSetId] = useState<string | null>(null);
+  const [editingComplianceRuleSetId, setEditingComplianceRuleSetId] = useState<
+    string | null
+  >(null);
+  const [complianceRuleSetInitialValues, setComplianceRuleSetInitialValues] =
+    useState<CreateComplianceRuleSetModalProps["initialValues"]>(undefined);
+  const [confirmDeleteRuleSetId, setConfirmDeleteRuleSetId] = useState<
+    string | null
+  >(null);
 
   const canContinueBasic =
     basicForm.name.trim().length > 0 &&
@@ -197,7 +204,9 @@ export function useStoreOnboarding() {
   };
 
   const openEditComplianceRuleSetModal = (ruleSetId: string) => {
-    const ruleSet = localComplianceRuleSets.find((item) => item.id === ruleSetId);
+    const ruleSet = localComplianceRuleSets.find(
+      (item) => item.id === ruleSetId,
+    );
     if (!ruleSet) return;
     setComplianceRuleSetModalMode("edit");
     setEditingComplianceRuleSetId(ruleSetId);
@@ -272,14 +281,17 @@ export function useStoreOnboarding() {
     if (ruleSetId === LOCAL_DEFAULT_RULE_SET_ID) {
       toast({
         title: "Default rule set is required",
-        description: "The default onboarding rule set can be edited but cannot be deleted.",
+        description:
+          "The default onboarding rule set can be edited but cannot be deleted.",
         variant: "destructive",
       });
       setConfirmDeleteRuleSetId(null);
       return;
     }
 
-    setLocalComplianceRuleSets((prev) => prev.filter((ruleSet) => ruleSet.id !== ruleSetId));
+    setLocalComplianceRuleSets((prev) =>
+      prev.filter((ruleSet) => ruleSet.id !== ruleSetId),
+    );
     toast({
       title: "Rule set removed",
       description: "The staged rule set was removed from onboarding.",
@@ -289,8 +301,12 @@ export function useStoreOnboarding() {
 
   const defaultComplianceRuleSet = useMemo(() => {
     const currentDefault =
-      localComplianceRuleSets.find((ruleSet) => ruleSet.id === defaultComplianceRuleSetId) ??
-      localComplianceRuleSets.find((ruleSet) => ruleSet.id === LOCAL_DEFAULT_RULE_SET_ID);
+      localComplianceRuleSets.find(
+        (ruleSet) => ruleSet.id === defaultComplianceRuleSetId,
+      ) ??
+      localComplianceRuleSets.find(
+        (ruleSet) => ruleSet.id === LOCAL_DEFAULT_RULE_SET_ID,
+      );
 
     if (currentDefault) {
       return currentDefault.payload;
@@ -302,21 +318,24 @@ export function useStoreOnboarding() {
   const updateDefaultComplianceRuleSet = (
     updater:
       | CreateComplianceRuleSetInput
-      | ((current: CreateComplianceRuleSetInput) => CreateComplianceRuleSetInput),
+      | ((
+          current: CreateComplianceRuleSetInput,
+        ) => CreateComplianceRuleSetInput),
   ) => {
     setLocalComplianceRuleSets((prev) =>
       prev.map((ruleSet) => {
         if (ruleSet.id !== LOCAL_DEFAULT_RULE_SET_ID) return ruleSet;
         const nextPayload =
-          typeof updater === "function"
-            ? updater(ruleSet.payload)
-            : updater;
+          typeof updater === "function" ? updater(ruleSet.payload) : updater;
         const normalizedPayload: CreateComplianceRuleSetInput = {
           ...nextPayload,
           name: DEFAULT_ONBOARDING_RULE_SET_NAME,
           status: "ACTIVE",
-          rules: (nextPayload.rules.length ? nextPayload.rules : ruleSet.payload.rules).map(
-            (rule, idx) => (idx === 0 ? { ...rule, is_active: true } : rule),
+          rules: (nextPayload.rules.length
+            ? nextPayload.rules
+            : ruleSet.payload.rules
+          ).map((rule, idx) =>
+            idx === 0 ? { ...rule, is_active: true } : rule,
           ),
         };
 
@@ -324,7 +343,8 @@ export function useStoreOnboarding() {
           ...ruleSet,
           name: normalizedPayload.name,
           rulesCount: normalizedPayload.rules.length,
-          enabledCount: normalizedPayload.rules.filter((rule) => rule.is_active).length,
+          enabledCount: normalizedPayload.rules.filter((rule) => rule.is_active)
+            .length,
           payload: normalizedPayload,
         };
       }),
@@ -366,7 +386,8 @@ export function useStoreOnboarding() {
           idx === editingTemplateIndex
             ? {
                 name,
-                description: values.description.trim() || "Custom shelf template",
+                description:
+                  values.description.trim() || "Custom shelf template",
                 fixtureType: values.fixtureType,
                 zone: values.zone,
                 section: values.section,
@@ -417,7 +438,8 @@ export function useStoreOnboarding() {
           width: Number(fixture.width) || 120,
           height: Number(fixture.height) || 200,
           depth: Number(fixture.depth) || 45,
-          dimension_unit: fixture.dimension_unit || configForm.default_dimensions,
+          dimension_unit:
+            fixture.dimension_unit || configForm.default_dimensions,
           section: fixture.section.trim() || "General",
           aisle: fixture.aisle.trim() || "A1",
           zone: fixture.zone.trim() || "General",
@@ -521,8 +543,8 @@ export function useStoreOnboarding() {
         }
       }
 
-      const templatePayload: ShelfTemplateCreateInput[] = shelfTemplatesConfig.map(
-        (tpl) => ({
+      const templatePayload: ShelfTemplateCreateInput[] =
+        shelfTemplatesConfig.map((tpl) => ({
           name: tpl.name.trim(),
           description: tpl.description.trim() || undefined,
           fixtureType: tpl.fixtureType,
@@ -531,11 +553,12 @@ export function useStoreOnboarding() {
           width: Number(tpl.width) || 48,
           height: Number(tpl.height) || 72,
           depth: Number(tpl.depth) || 18,
-        }),
-      );
+        }));
       try {
         await replaceShelfTemplates(storeId, templatePayload);
-        void queryClient.invalidateQueries({ queryKey: shelfTemplatesKeys.all });
+        void queryClient.invalidateQueries({
+          queryKey: shelfTemplatesKeys.all,
+        });
       } catch {
         postCreateWarnings.push(
           "Shelf template defaults could not be saved locally; you can re-add them in store settings.",
@@ -554,7 +577,9 @@ export function useStoreOnboarding() {
             (ruleSet) => ruleSet.id === defaultComplianceRuleSetId,
           );
           persistedDefaultComplianceRuleSetId =
-            defaultLocalIndex >= 0 ? persistedRuleSets[defaultLocalIndex]?.id ?? null : null;
+            defaultLocalIndex >= 0
+              ? (persistedRuleSets[defaultLocalIndex]?.id ?? null)
+              : null;
         } catch {
           postCreateWarnings.push(
             "Some compliance rule sets could not be created during onboarding; you can add them later from store settings.",

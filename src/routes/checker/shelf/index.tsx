@@ -1,21 +1,21 @@
-import { useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useLocation, useParams } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
+import { useState } from "react";
 
 import MainLayout from "@/components/layouts/main";
-import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
-import { useLocation, useParams } from "@tanstack/react-router";
-import { CheckerShelfListPage } from "@/features/shelf/CheckerShelfListPage";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { CheckerShelfListPage } from "@/components/shelf/CheckerShelfListPage";
+import { ShelfTemplatesContent } from "@/components/shelf/ShelfTemplatesContent";
 import {
-  ShelvesPageTabs,
   type ShelvesPageTabId,
-} from "@/features/shelf/shelves-page-tabs";
-import { ShelfTemplatesContent } from "@/features/shelf/ShelfTemplatesContent";
-import { useStore } from "@/providers/store";
-import { Modal } from "@/components/ui/modal";
+  ShelvesPageTabs,
+} from "@/components/shelf/ShelvesPageTabs";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Modal } from "@/components/ui/modal";
 import { Select } from "@/components/ui/select";
+import { useStore } from "@/providers/store";
 import { useShelfTemplates } from "@/queries/checker";
 
 export const Route = createFileRoute("/checker/shelf/")({
@@ -99,14 +99,12 @@ export function PlanogramAnalysisPage() {
         </PageHeader>
       }
     >
-      <div className="mx-auto max-w-screen-2xl px-2 pb-10 pt-4 sm:px-4">
+      <div className="mx-auto max-w-screen-2xl px-2 pt-4 pb-10 sm:px-4">
         <ShelvesPageTabs
           activeTab={activeTab}
           onTabChange={setActiveTab}
           shelvesPanel={
-            <CheckerShelfListPage
-              shelfDetailPath={shelfDetailPath}
-            />
+            <CheckerShelfListPage shelfDetailPath={shelfDetailPath} />
           }
           templatesPanel={<ShelfTemplatesContent showHeaderCard />}
         />
@@ -117,9 +115,11 @@ export function PlanogramAnalysisPage() {
         className="max-w-lg"
         showCloseButton
       >
-        <div className="rounded-xl border border-border bg-card p-6 shadow-2xl">
-          <h3 className="text-lg font-semibold text-foreground">How would you like to add a shelf?</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
+        <div className="border-border bg-card rounded-xl border p-6 shadow-2xl">
+          <h3 className="text-foreground text-lg font-semibold">
+            How would you like to add a shelf?
+          </h3>
+          <p className="text-muted-foreground mt-1 text-sm">
             Choose manual entry or start from an existing shelf template.
           </p>
 
@@ -133,8 +133,8 @@ export function PlanogramAnalysisPage() {
                   : "border-border bg-background/40 hover:border-accent/60"
               }`}
             >
-              <p className="font-medium text-foreground">Manual</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-foreground font-medium">Manual</p>
+              <p className="text-muted-foreground text-xs">
                 Enter shelf details and fixture values manually.
               </p>
             </button>
@@ -147,8 +147,8 @@ export function PlanogramAnalysisPage() {
                   : "border-border bg-background/40 hover:border-accent/60"
               }`}
             >
-              <p className="font-medium text-foreground">Use Template</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-foreground font-medium">Use Template</p>
+              <p className="text-muted-foreground text-xs">
                 Pre-fill shelf fields from a saved shelf template.
               </p>
             </button>
@@ -158,7 +158,7 @@ export function PlanogramAnalysisPage() {
             <div className="mt-4 space-y-2">
               <Label htmlFor="add-shelf-template">Shelf template</Label>
               {shelfTemplatesLoading ? (
-                <div className="h-9 w-full animate-pulse rounded-md bg-muted/50" />
+                <div className="bg-muted/50 h-9 w-full animate-pulse rounded-md" />
               ) : (
                 <Select
                   id="add-shelf-template"
@@ -174,15 +174,19 @@ export function PlanogramAnalysisPage() {
                 </Select>
               )}
               {!shelfTemplatesLoading && shelfTemplates.length === 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  No templates found. Create one in the Shelf Templates tab first.
+                <p className="text-muted-foreground text-xs">
+                  No templates found. Create one in the Shelf Templates tab
+                  first.
                 </p>
               ) : null}
             </div>
           ) : null}
 
           <div className="mt-6 flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsAddShelfModalOpen(false)}>
+            <Button
+              variant="outline"
+              onClick={() => setIsAddShelfModalOpen(false)}
+            >
               Cancel
             </Button>
             <Button

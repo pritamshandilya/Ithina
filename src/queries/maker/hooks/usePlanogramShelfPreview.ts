@@ -4,17 +4,20 @@
  * Fetches shelf and planogram payload for the planogram preview view.
  * Returns null if shelf has no planogramId.
  */
-
 import { useQuery } from "@tanstack/react-query";
 
+import { getShelfById } from "@/lib/api/maker/maker";
+import { fetchPlanogramById } from "@/lib/api/maker/planogram";
 import { useSelectedStoreId } from "@/providers/store";
-import { getShelfById } from "../api/maker";
-import { fetchPlanogramById } from "../api/planogram";
 
 export const planogramShelfPreviewKeys = {
   all: ["maker", "planogram-shelf-preview"] as const,
   byShelfId: (storeId: string | undefined, shelfId: string | null) =>
-    [...planogramShelfPreviewKeys.all, storeId ?? "all", shelfId ?? "none"] as const,
+    [
+      ...planogramShelfPreviewKeys.all,
+      storeId ?? "all",
+      shelfId ?? "none",
+    ] as const,
 };
 
 export interface PlanogramShelfPreview {

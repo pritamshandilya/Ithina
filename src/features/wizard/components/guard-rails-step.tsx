@@ -1,4 +1,4 @@
-import { AlertTriangle, Check, Info, Loader2, Shield, ShieldOff, X, Zap } from "lucide-react";
+import { AlertTriangle, Check, Circle, Info, Loader2, Shield, ShieldOff, X, Zap } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useEnterGuardrailsReview, useValidateCampaignGuardrails } from "@/hooks/use-campaigns";
@@ -6,11 +6,46 @@ import { useGuardrails } from "@/hooks/use-guardrails";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import type { GuardRailRule, GuardRailSeverity } from "@/mocks/guard-rails";
-import type { ApiGuardrailValidateRuleResult } from "@/types/api/campaigns";
+import type { ApiGuardrailValidateRuleResult, ApiValidateGuardrailsResponse } from "@/types/api/campaigns";
 import { useAppSelector } from "@/store/hooks";
 
 const EMPTY_GUARDRAILS_MESSAGE =
   "None are set up for your organization yet. Ask an administrator to add rules.";
+
+/** Shown while validation runs — progressive checklist (API alone can resolve too fast). */
+const COMPLIANCE_CHECK_PHASES = [
+  "Loading campaign data",
+  "Running margin checks",
+  "Verifying brand compliance",
+  "Checking regulatory rules",
+  "Finalising report",
+] as const;
+
+type CompliancePhaseStatus = "pending" | "active" | "done";
+
+function phasesWithActive(activeIndex: number): CompliancePhaseStatus[] {
+  return COMPLIANCE_CHECK_PHASES.map((_, i): CompliancePhaseStatus => {
+    if (i < activeIndex) return "done";
+    if (i === activeIndex) return "active";
+    return "pending";
+  });
+}
+
+const ALL_DONE_PHASES: CompliancePhaseStatus[] = COMPLIANCE_CHECK_PHASES.map(() => "done");
+const INITIAL_PHASE_TRACKER: CompliancePhaseStatus[] = COMPLIANCE_CHECK_PHASES.map(() => "pending");
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+/** Time each early step spends before the next activates (milliseconds). */
+const PHASE_STAGGER_MS = 600;
+/** Spinner on “Finalising report” before all-done (milliseconds). */
+const FINAL_PHASE_DWELL_MS = 550;
+/** Ensure the loading screen stays visible briefly even when `/validate` is instant (milliseconds). */
+const MIN_VALIDATION_VISIBLE_MS = 4000;
 
 /** Pushes Check & Validate / running state up to {@link WizardStepHeader} trailing slot. */
 export type GuardRailsWizardHeaderApi =
@@ -29,6 +64,42 @@ interface GuardRailsStepProps {
 }
 
 type ValidationState = "idle" | "running" | "passed" | "failed";
+
+function CompliancePhaseList({ phases }: { phases: CompliancePhaseStatus[] }) {
+  return (
+    <ul className="mt-2 w-full max-w-md space-y-3 text-left" aria-busy aria-label="Validation progress">
+      {COMPLIANCE_CHECK_PHASES.map((label, idx) => {
+        const phase = phases[idx] ?? "pending";
+        const done = phase === "done";
+        const active = phase === "active";
+        return (
+          <li
+            key={label}
+            className={cn(
+              "flex items-center gap-3 text-sm transition-colors",
+              done && "text-slate-400",
+              active && "font-semibold text-white",
+              phase === "pending" && "text-slate-600",
+            )}
+          >
+            <span className="flex size-8 shrink-0 items-center justify-center" aria-hidden>
+              {done ? (
+                <span className="flex size-6 items-center justify-center rounded-full bg-emerald-400/15">
+                  <Check className="size-4 text-emerald-400" strokeWidth={2.5} />
+                </span>
+              ) : active ? (
+                <Loader2 className="size-6 animate-spin text-ithina-purple" strokeWidth={2} />
+              ) : (
+                <Circle className="size-5 text-slate-600" strokeWidth={1.5} />
+              )}
+            </span>
+            <span>{label}</span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 function severityBadgeClass(sev: GuardRailSeverity) {
   return sev === "Hard"
@@ -97,6 +168,7 @@ export default function GuardRailsStep({
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [state, setState] = useState<ValidationState>("idle");
+  const [runningPhases, setRunningPhases] = useState<CompliancePhaseStatus[]>(INITIAL_PHASE_TRACKER);
   const [complianceScore, setComplianceScore] = useState<number | null>(null);
   const [validateResults, setValidateResults] = useState<ApiGuardrailValidateRuleResult[]>([]);
   const initializedSelectionRef = useRef(false);
@@ -144,29 +216,49 @@ export default function GuardRailsStep({
 
   const runValidation = useCallback(async () => {
     if (state === "running" || !campaignId) return;
+    const startedAt = Date.now();
     setState("running");
+    setRunningPhases(INITIAL_PHASE_TRACKER);
     setValidateResults([]);
     setComplianceScore(null);
+
+    // Step through the first phases so the checklist is visible; hold on “regulatory” until the API returns.
+    for (let activeIdx = 0; activeIdx <= 3; activeIdx++) {
+      setRunningPhases(phasesWithActive(activeIdx));
+      if (activeIdx < 3) {
+        await sleep(PHASE_STAGGER_MS);
+      }
+    }
+
+    let result: ApiValidateGuardrailsResponse;
     try {
-      const result = await validateMutation.mutateAsync({
+      result = await validateMutation.mutateAsync({
         id: campaignId,
         guardrailIds: [...selected],
       });
-      setComplianceScore(result.compliance_score);
-      setValidateResults(result.results);
-      if (result.overall_passed) {
-        setState("passed");
-      } else {
-        setState("failed");
-      }
     } catch {
       toast({
         title: "Validation failed",
         description: "Could not run compliance checks. Please try again.",
         variant: "destructive",
       });
+      setRunningPhases(INITIAL_PHASE_TRACKER);
       setState("idle");
+      return;
     }
+
+    setRunningPhases(phasesWithActive(4));
+    await sleep(FINAL_PHASE_DWELL_MS);
+    setRunningPhases(ALL_DONE_PHASES);
+
+    const remaining = MIN_VALIDATION_VISIBLE_MS - (Date.now() - startedAt);
+    if (remaining > 0) {
+      await sleep(remaining);
+    }
+
+    setComplianceScore(result.compliance_score);
+    setValidateResults(result.results);
+    setState(result.overall_passed ? "passed" : "failed");
   }, [state, campaignId, selected, validateMutation]);
 
   const passedCount = useMemo(
@@ -180,6 +272,7 @@ export default function GuardRailsStep({
 
   const resetValidation = () => {
     setState("idle");
+    setRunningPhases(INITIAL_PHASE_TRACKER);
     setValidateResults([]);
     setComplianceScore(null);
   };
@@ -219,13 +312,19 @@ export default function GuardRailsStep({
         </div>
 
         {state === "running" && (
-          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6">
-            <Loader2 className="size-10 animate-spin text-ithina-purple" strokeWidth={2} aria-hidden />
-            <div className="text-center">
-              <p className="text-sm font-semibold text-white">Running compliance checks…</p>
-              <p className="mt-1 text-xs text-slate-500">
-                Validating {selectedRules.length} rule{selectedRules.length !== 1 ? "s" : ""} against {skuCount} SKUs
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-8">
+            <Loader2
+              className="size-14 shrink-0 animate-spin text-ithina-purple"
+              strokeWidth={2}
+              aria-hidden
+            />
+            <div className="flex w-full max-w-lg flex-col items-center text-center">
+              <p className="text-base font-bold text-white">Running compliance checks…</p>
+              <p className="mt-1 text-sm text-slate-500">
+                Validating {selectedRules.length} rule{selectedRules.length !== 1 ? "s" : ""} against {skuCount}{" "}
+                SKU{skuCount !== 1 ? "s" : ""}
               </p>
+              <CompliancePhaseList phases={runningPhases} />
             </div>
           </div>
         )}

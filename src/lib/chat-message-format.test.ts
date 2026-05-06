@@ -122,3 +122,22 @@ describe("getAssistantMessageChunks: prose comma category list → chip-list", (
     }
   });
 });
+
+describe("getAssistantMessageChunks: NL draft with Other suggestions (null campaign_meta prose)", () => {
+  const fixture =
+    "We recommend running a 30% **Fresh Saver Sale** on expiring perishables this weekend — this discount level starting Friday at 08:00 AM will clear the shelves before the stock hits its limit. Want me to go ahead and launch this, or do you have something else in mind?\n\n**Other suggestions:**\n*   **Clearance Drive**: A BOGO offer on overstock non-perishables to free up warehouse space.\n*   **Weekend Bundle**: Pair slow-moving snacks with top-selling beverages for a 15% bundle discount.\n*   **Payday Special**: A 10% discount on high-demand electronics to capture weekend spending.";
+
+  it("produces summary-card (not promo-type option-grid) with name, 30% offer, start, end", () => {
+    const chunks = getAssistantMessageChunks(fixture);
+    expect(chunks.some((c) => c.kind === "option-grid")).toBe(false);
+    const card = summaryCardFromChunks(chunks);
+    expect(card).not.toBeNull();
+    expect(card?.rows.find((r) => r.label === "Name")?.value).toBe("Fresh Saver Sale");
+    expect(card?.rows.find((r) => r.label === "Offer")?.value).toBe("30%");
+    const start = card?.rows.find((r) => r.label === "Start");
+    expect(start?.value.toLowerCase()).toContain("friday");
+    expect(start?.value).toMatch(/08:00\s*AM/i);
+    const end = card?.rows.find((r) => r.label === "End");
+    expect(end?.value).toMatch(/this weekend/i);
+  });
+});

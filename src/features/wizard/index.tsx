@@ -1,10 +1,14 @@
 import { AlertTriangle, ArrowRight, Loader2, Shield } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useBlocker, useNavigate, useSearch } from "@tanstack/react-router";
+import {
+  useBlocker,
+  useNavigate,
+  useRouterState,
+  useSearch,
+} from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-import HeaderNotificationsTrigger from "@/components/header-notifications-trigger";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import {
   activateCampaign,
@@ -71,7 +75,11 @@ import {
   getDraftProgress,
   setDraftProgress,
 } from "@/lib/wizard-draft-progress";
-import { mapDraftResponseSkusToStaged } from "@/services/wizard";
+import { wizardEntryPathFromPathname } from "@/lib/wizard-route";
+import {
+  defaultIncludedForStagedSku,
+  mapDraftResponseSkusToStaged,
+} from "@/services/wizard";
 import { mergeLayoutVariants } from "@/features/campaign-studio/types";
 import type { ApiCampaignSKU, LayoutVariant } from "@/types/api/campaigns";
 import { buildChatProductsLabel } from "@/lib/chat-products-label";
@@ -130,6 +138,7 @@ function mapCampaignSkusToStaged(skus: ApiCampaignSKU[]): StagedSku[] {
     const current = Number(s.current_price);
     const proposed = Number(s.proposed_price);
     const discount = current > 0 ? Math.round(((current - proposed) / current) * 100) : 0;
+    const marginPct = typeof s.margin_pct === "number" ? s.margin_pct : undefined;
     return {
       sku: s.sku,
       name: s.product_name ?? s.name ?? s.sku,
@@ -137,10 +146,10 @@ function mapCampaignSkusToStaged(skus: ApiCampaignSKU[]): StagedSku[] {
       proposed,
       safe: s.is_safe,
       violationReason: s.violation_reason,
-      marginPct: typeof s.margin_pct === "number" ? s.margin_pct : undefined,
+      marginPct,
       baseCost: typeof s.base_cost === "number" ? s.base_cost : undefined,
       discount,
-      included: true,
+      included: defaultIncludedForStagedSku({ safe: s.is_safe, marginPct }),
       offerType: s.offer_type?.trim() || s.offerType?.trim() || undefined,
       offerLabel: s.offer_label?.trim() || s.offerLabel?.trim() || undefined,
       stockQty: typeof (s.stock_qty ?? s.stockQty) === "number" ? (s.stock_qty ?? s.stockQty) ?? undefined : undefined,
@@ -166,6 +175,11 @@ export default function Wizard() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
   const searchParams = useSearch({ strict: false }) as { resumeId?: string };
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const wizardBasePath = useMemo(
+    () => wizardEntryPathFromPathname(pathname),
+    [pathname],
+  );
   const saveDraftMutation = useSaveDraftCampaign();
 
   const [isResuming, setIsResuming] = useState(false);
@@ -432,28 +446,67 @@ export default function Wizard() {
   );
 
   // ── Navigation helpers ─────────────────────────────────────────────
-  const handleSelectMode = useCallback((mode: WizardMode, input: WizardEntryInput) => {
-    dispatch(setWMode(mode));
-    dispatch(setWStep(1));
-    dispatch(setWizardInputMode(input));
-    dispatch(setHasSplit(input === "csv"));
-    dispatch(setShowGrid(input === "csv"));
-    setActiveDevice(null);
-    setDesignConfigured(false);
-    setAppliedStudioSelection(null);
-    setShowStudio(false);
-    setSelectedVariant("B");
-    setSizeByDevice({
-      chroma29: [],
-      chroma42: ['2.9"'],
-      lcd: [],
-    });
-    setSelectedDevices([]);
-    pipelineSessionIdRef.current = null;
-    hasJustSavedRef.current = false;
-    campaignAlreadyGeneratedRef.current = false;
-    resumedFromCampaignIdRef.current = null;
-  }, [dispatch]);
+  const handleSelectMode = useCallback(
+    (mode: WizardMode, input: WizardEntryInput) => {
+      if (campaignIdFromStore) {
+        clearDraftProgress(campaignIdFromStore);
+      }
+
+      dispatch(resetWizard());
+      dispatch(resetStudio());
+      dispatch(deactivateCampaign());
+      dispatch(setStagedSkus([]));
+
+      dispatch(setWMode(mode));
+      dispatch(setWStep(1));
+      dispatch(setWizardInputMode(input));
+      dispatch(setHasSplit(input === "csv"));
+      dispatch(setShowGrid(input === "csv"));
+
+      navigate({
+        to: wizardBasePath,
+        search: {},
+        replace: true,
+      });
+
+      setActiveDevice(null);
+      setDesignConfigured(false);
+      setAppliedStudioSelection(null);
+      setShowStudio(false);
+      setSelectedVariant("B");
+      setSizeByDevice({
+        chroma29: [],
+        chroma42: ['2.9"'],
+        lcd: [],
+      });
+      setSelectedDevices([]);
+      setUploadedFiles({});
+      setSchedule({
+        startDate: "",
+        startTime: "08:00",
+        endDate: "",
+        endTime: "08:00",
+        autoApprove: false,
+      });
+      setError(null);
+      setSuggestions([]);
+      setInputText("");
+      setIsTyping(false);
+      setDesignGeneratePending(false);
+      setStudioGenerating(false);
+      setGeneratedVariants([]);
+      setIsRefining(false);
+      setImageCacheBuster(0);
+      setGuardRailsCanProceed(false);
+      setGuardRailsHeaderApi(null);
+      setBackConfirmOpen(false);
+      pipelineSessionIdRef.current = null;
+      hasJustSavedRef.current = false;
+      campaignAlreadyGeneratedRef.current = false;
+      resumedFromCampaignIdRef.current = null;
+    },
+    [dispatch, navigate, wizardBasePath, campaignIdFromStore],
+  );
 
   // After generate the campaign is already persisted — no unsaved work (same rule as navigation blocker below).
   const hasUnsavedWork =
@@ -903,7 +956,7 @@ export default function Wizard() {
   }, [searchParams.resumeId, dispatch]);
 
   // ── Save draft handler ────────────────────────────────────────────
-  const handleSaveDraft = useCallback(async () => {
+  const handleSaveDraft = useCallback(async (): Promise<boolean> => {
     // After /campaigns/generate the campaign already exists on the backend.
     // Calling POST /draft/save again with the same session would create a
     // duplicate row, so we skip and just acknowledge.
@@ -913,7 +966,7 @@ export default function Wizard() {
         title: "Campaign already saved",
         description: "Your campaign was saved when layouts were generated.",
       });
-      return;
+      return true;
     }
 
     const sessionId = pipelineSessionIdRef.current;
@@ -922,7 +975,7 @@ export default function Wizard() {
         title: "Nothing to save",
         description: "Start a conversation with the AI first to create a saveable draft.",
       });
-      return;
+      return false;
     }
     try {
       const result = await saveDraftMutation.mutateAsync({
@@ -945,12 +998,29 @@ export default function Wizard() {
         title: "Draft saved",
         description: `"${result.name}" saved. You can resume it from All Campaigns.`,
       });
-    } catch {
+      return true;
+    } catch (err) {
+      let detail = "";
+      if (axios.isAxiosError(err)) {
+        const data = err.response?.data;
+        if (typeof data === "string" && data.trim()) {
+          detail = ` ${data.trim()}`;
+        } else if (data && typeof data === "object") {
+          const raw =
+            (data as { detail?: unknown }).detail ??
+            (data as { message?: unknown }).message;
+          if (typeof raw === "string" && raw.trim()) detail = ` ${raw.trim()}`;
+        }
+        if (!detail && err.message) detail = ` (${err.message})`;
+      } else if (err instanceof Error && err.message) {
+        detail = ` (${err.message})`;
+      }
       toast({
         title: "Save failed",
-        description: "Could not save the draft. Please try again.",
+        description: `Could not save the draft. Please try again.${detail}`,
         variant: "destructive",
       });
+      return false;
     }
   }, [
     saveDraftMutation,
@@ -975,12 +1045,12 @@ export default function Wizard() {
   const unsavedDialogOpen = blocker.status === "blocked" || backConfirmOpen;
 
   const handleUnsavedSaveAndLeave = useCallback(async () => {
+    const saved = await handleSaveDraft();
+    if (!saved) return;
     if (backConfirmOpen) {
-      await handleSaveDraft();
       setBackConfirmOpen(false);
       performWizardBack();
     } else {
-      await handleSaveDraft();
       blocker.proceed?.();
     }
   }, [backConfirmOpen, handleSaveDraft, performWizardBack, blocker]);
@@ -1718,12 +1788,6 @@ export default function Wizard() {
     <>
 
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {wStep === 0 ? (
-          <div className="absolute right-4 top-4 z-20">
-            <HeaderNotificationsTrigger />
-          </div>
-        ) : null}
-
         {/* Error toast */}
         {error && (
           <div className="absolute left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 rounded-lg border border-rose-400/30 bg-rose-900/90 px-4 py-2 text-xs text-rose-400 shadow-xl" role="alert">

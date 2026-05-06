@@ -348,6 +348,15 @@
   height: auto !important;
 }
 
+/* Paginated “list” tables with fitContent — Tabulator’s holder defaults to flex-grow:1, which
+   leaves a tall empty band above the footer when the parent has no fixed height. Pin the body
+   to its content so the footer sits directly under the rows (All Campaigns–style). */
+.data-table-wrapper[data-fit-content="true"] .tabulator-tableholder {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+}
+
+
 .data-table-wrapper .tabulator {
   background-color: var(--tabulator-bg) !important;
   border: none;
@@ -365,6 +374,36 @@
   background-color: var(--tabulator-bg) !important;
   min-width: 100% !important;
   width: max-content !important;
+}
+
+/* Fill a flex column: grow the body; keep pagination pinned to the bottom of the allotted height. */
+.data-table-wrapper[data-stretch-layout="true"] > .data-table-container {
+  min-height: 0 !important;
+  overflow-y: hidden !important;
+}
+
+.data-table-wrapper[data-stretch-layout="true"] .tabulator {
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+.data-table-wrapper[data-stretch-layout="true"] .tabulator-tableholder {
+  flex: 1 1 auto !important;
+  min-height: 0 !important;
+  overflow-x: auto !important;
+  overflow-y: auto !important;
+}
+
+.data-table-wrapper[data-stretch-layout="true"] .tabulator-header {
+  flex-shrink: 0 !important;
+}
+
+.data-table-wrapper[data-stretch-layout="true"] .tabulator-footer {
+  flex-shrink: 0 !important;
 }
 
 /* Bulk row selection: header + body checkboxes visible on dark chrome.
@@ -482,10 +521,45 @@
 /* Negative-margin rows: margin % value — white text for strong contrast on rose bg */
 .data-table-wrapper.wizard-staging-table
   .tabulator-row.wizard-staging-row-negative-margin
-  .tabulator-cell[tabulator-field="marginPct"]
-  span {
+  .tabulator-cell.wizard-staging-col-margin
+  .wizard-staging-margin-pct {
   color: #ffffff !important;
   font-weight: 700 !important;
+}
+
+/* Margin column: show only the percentage span — hide any bar <div>s that
+   Tabulator's progress-formatter onRendered callback may have appended. */
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"],
+.data-table-wrapper.wizard-staging-table .tabulator-cell.wizard-staging-col-margin {
+  background-image: none !important;
+  background-size: 0 !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"] > div,
+.data-table-wrapper.wizard-staging-table .tabulator-cell.wizard-staging-col-margin > div {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"]::before,
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"]::after,
+.data-table-wrapper.wizard-staging-table .tabulator-cell.wizard-staging-col-margin::before,
+.data-table-wrapper.wizard-staging-table .tabulator-cell.wizard-staging-col-margin::after {
+  content: none !important;
+  display: none !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"] progress,
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"] meter {
+  display: none !important;
+}
+
+.data-table-wrapper.wizard-staging-table .tabulator-cell[tabulator-field="marginPct"] {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 /* Include column: align header “select all” with row checkboxes (same vertical axis). */

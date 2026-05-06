@@ -204,11 +204,11 @@ export default function Admin() {
 
   return (
     <>
-      <div className="flex w-full min-w-0 flex-col bg-ithina-bg">
-        <div className="ithina-page w-full flex flex-col">
-          <div className="mx-auto w-full max-w-screen-2xl space-y-4 px-4 pb-10 pt-4 lg:px-8">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-ithina-bg">
+        <div className="ithina-page flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+          <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-3 px-4 pb-4 pt-2 lg:px-8">
             {readOnly ? (
-              <p className="rounded-lg border border-ithina-border/40 bg-ithina-panel/30 px-4 py-3 text-sm text-muted-foreground">
+              <p className="shrink-0 rounded-lg border border-ithina-border/40 bg-ithina-panel/30 px-4 py-3 text-sm text-muted-foreground">
                 View only. Contact an administrator to add or change guard rails.
               </p>
             ) : null}
@@ -281,7 +281,7 @@ export default function Admin() {
               )}
             </div>
 
-            <div className="group relative">
+            <div className="group relative shrink-0">
               <Search
                 className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-accent"
                 aria-hidden
@@ -314,9 +314,9 @@ export default function Admin() {
             )}
 
             {!isLoading && !isError && (
-              <div className="min-w-0">
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <DataTable<GuardRailRule>
-                  className="guard-rails-tabulator-prototype"
+                  className="guard-rails-tabulator-prototype min-h-0 flex-1"
                   columns={columns}
                   data={filteredRules}
                   rowIdField="id"
@@ -326,6 +326,8 @@ export default function Admin() {
                   pageSizeSelector={[5, 10, 20, 50]}
                   emptyMessage="No guard rails found matching your criteria"
                   headerFilters
+                  stretchLayout
+                  renderVertical="basic"
                 />
               </div>
             )}

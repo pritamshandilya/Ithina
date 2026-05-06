@@ -89,7 +89,113 @@ export function formatIsoDateUsShort(iso: string | null | undefined): string | n
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
-/** "Oct 15 – Oct 20" style range for agent schedule hints (local calendar dates). */
+const WEEKDAY_TO_NUM: Record<string, number> = {
+  sunday: 0,
+  monday: 1,
+  tuesday: 2,
+  wednesday: 3,
+  thursday: 4,
+  friday: 5,
+  saturday: 6,
+};
+
+/** Local wall time as `YYYY-MM-DDTHH:mm:ss` (no `Z`; parsed consistently with draft ISOs in the app). */
+function formatLocalDateTimeIso(d: Date): string {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}:00`;
+}
+
+function parseClock12(hour: number, minute: number, meridiem: string): { h: number; m: number } | null {
+  if (minute < 0 || minute > 59 || hour < 1 || hour > 12) return null;
+  const ap = meridiem.toUpperCase();
+  let h = hour;
+  if (ap === "PM" && h !== 12) h += 12;
+  if (ap === "AM" && h === 12) h = 0;
+  return { h, m: minute };
+}
+
+/**
+ * Next occurrence of `weekdayName` at local hour/minute after `from` (strictly greater timestamp).
+ */
+export function nextWeekdayWallIso(
+  weekdayName: string,
+  hour: number,
+  minute: number,
+  from: Date = new Date(),
+): string | null {
+  const target = WEEKDAY_TO_NUM[weekdayName.toLowerCase()];
+  if (target === undefined) return null;
+
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(from.getFullYear(), from.getMonth(), from.getDate() + i, hour, minute, 0, 0);
+    if (d.getDay() !== target) continue;
+    if (d.getTime() > from.getTime()) return formatLocalDateTimeIso(d);
+  }
+  return null;
+}
+
+/** Sunday 23:59 local on the same weekend as `start` when start is Fri–Sun; otherwise next Sunday end. */
+function sundayEndOfWeekendFrom(start: Date): Date {
+  const d = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+  const dow = start.getDay();
+  let add = 0;
+  if (dow === 5) add = 2;
+  else if (dow === 6) add = 1;
+  else if (dow === 0) add = 0;
+  else {
+    add = (7 - dow) % 7;
+    if (add === 0) add = 7;
+  }
+  d.setDate(d.getDate() + add);
+  d.setHours(23, 59, 0, 0);
+  return d;
+}
+
+/**
+ * Best-effort schedule ISOs from NL assistant prose (no year in strings — uses `from` as “today”).
+ * Strips trailing **Other suggestions** so list bullets don’t confuse parsing.
+ */
+export function parseNlScheduleRangeFromAssistantMessage(
+  message: string,
+  from: Date = new Date(),
+): { scheduleStartIso: string | null; scheduleEndIso: string | null } {
+  const norm = message.replace(/\r\n/g, "\n");
+  const splitIdx = norm.search(/\n\n\s*\*{0,2}\s*Other\s+suggestions\b/i);
+  const lead = splitIdx === -1 ? norm : norm.slice(0, splitIdx);
+
+  let scheduleStartIso: string | null = null;
+  let scheduleEndIso: string | null = null;
+
+  const wm = lead.match(
+    /\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+at\s+(\d{1,2}):(\d{2})\s*(AM|PM)\b/i,
+  );
+  if (wm) {
+    const clock = parseClock12(parseInt(wm[2], 10), parseInt(wm[3], 10), wm[4]);
+    if (clock) {
+      scheduleStartIso = nextWeekdayWallIso(wm[1], clock.h, clock.m, from);
+    }
+  }
+
+  if (/\bthis\s+weekend\b/i.test(lead)) {
+    if (scheduleStartIso) {
+      const s = new Date(scheduleStartIso.trim());
+      if (!Number.isNaN(s.getTime())) {
+        scheduleEndIso = formatLocalDateTimeIso(sundayEndOfWeekendFrom(s));
+      }
+    } else {
+      const fri = nextWeekdayWallIso("friday", 0, 0, from);
+      if (fri) {
+        const friD = new Date(fri.trim());
+        if (!Number.isNaN(friD.getTime())) {
+          scheduleStartIso = fri;
+          scheduleEndIso = formatLocalDateTimeIso(sundayEndOfWeekendFrom(friD));
+        }
+      }
+    }
+  }
+
+  return { scheduleStartIso, scheduleEndIso };
+}
+
 export function formatIsoRangeUsShort(startIso: string | null | undefined, endIso: string | null | undefined): string | null {
   if (!startIso?.trim()) return null;
   const s = new Date(startIso.trim());

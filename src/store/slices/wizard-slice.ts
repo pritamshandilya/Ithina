@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import type { PayloadAction } from "@reduxjs/toolkit";
+import { defaultIncludedForStagedSku } from "@/lib/staged-sku-margin-policy";
 import type { ApiCampaignCSVDiscoverResponse } from "@/types/api/campaigns";
 import type { ChatMessage, StagedSku, WizardConstraints } from "@/types/wizard";
 import {
@@ -105,7 +106,7 @@ const wizardSlice = createSlice({
       if (!Array.isArray(rows)) return;
       state.gridData = rows.map((r) => ({
         ...r,
-        included: r.included !== false,
+        included: typeof r.included === "boolean" ? r.included : defaultIncludedForStagedSku(r),
       }));
     },
     mergeGridData(state, action: PayloadAction<StagedSku[]>) {
@@ -118,10 +119,25 @@ const wizardSlice = createSlice({
 
       state.gridData = incoming.map((r) => {
         const prev = existingByKey.get(r.sku);
+        const included = ((): boolean => {
+          if (!prev) {
+            return defaultIncludedForStagedSku(r);
+          }
+          const nowOk = defaultIncludedForStagedSku(r);
+          if (!nowOk) {
+            return false;
+          }
+          // Recovered economics after AI changed offer (e.g. BOGO → 30%); re-include safe rows,
+          // but keep explicit user exclusions when margin was already non-negative last turn.
+          if (!defaultIncludedForStagedSku(prev)) {
+            return defaultIncludedForStagedSku(r);
+          }
+          return prev.included !== false;
+        })();
         return {
           ...r,
-          /** New draft turn always wins for pricing; only preserve user include/exclude toggles. */
-          included: prev ? prev.included : r.included !== false,
+          /** New draft turn always wins for pricing; toggle rules above. */
+          included,
           eslId: r.eslId ?? prev?.eslId,
           rankingScore: r.rankingScore ?? prev?.rankingScore,
           agentSuggestSchedule: r.agentSuggestSchedule ?? prev?.agentSuggestSchedule,
@@ -136,7 +152,10 @@ const wizardSlice = createSlice({
       const row = action.payload;
       state.gridData.push({
         ...row,
-        included: row.included !== false,
+        included:
+          typeof row.included === "boolean"
+            ? row.included
+            : defaultIncludedForStagedSku(row),
       });
     },
     removeGridRow(state, action: PayloadAction<string>) {
@@ -152,13 +171,15 @@ const wizardSlice = createSlice({
     setAllGridRowsIncluded(state, action: PayloadAction<boolean>) {
       const next = action.payload;
       for (const row of state.gridData) {
-        row.included = next;
+        row.included = next ? defaultIncludedForStagedSku(row) : false;
       }
     },
     updateGridRowDiscount(state, action: PayloadAction<{ sku: string; discount: number }>) {
       const { sku, discount } = action.payload;
       const row = state.gridData.find((r) => r.sku === sku);
       if (!row) return;
+
+      const hadMarginViolation = !defaultIncludedForStagedSku(row);
 
       const clamped = Math.max(0, Math.min(100, discount));
       row.discount = clamped;
@@ -173,6 +194,10 @@ const wizardSlice = createSlice({
         : marginPctRounded.toFixed(1);
       row.margin = `${marginText}%`;
       row.marginPct = marginPctRounded;
+      if (marginPctRounded < 0) row.included = false;
+      else if (hadMarginViolation && defaultIncludedForStagedSku(row)) {
+        row.included = defaultIncludedForStagedSku(row);
+      }
 
       const marginFloor = parseFloat(state.constraints.marginFloor) || 15;
       row.safe = marginPctRaw >= marginFloor;

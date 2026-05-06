@@ -258,8 +258,12 @@ function isLikelyMarkdownCampaignTitle(inner: string): boolean {
  */
 function looksLikeCampaignProposal(plainText: string, rawMarkdown?: string): boolean {
   const raw = rawMarkdown?.trim();
-  const boldMatch = raw?.match(/\*\*([^\*\n]{2,80})\*\*/);
-  const hasBoldName = Boolean(boldMatch?.[1] && isLikelyMarkdownCampaignTitle(boldMatch[1]));
+  let hasBoldName = false;
+  if (raw) {
+    const rawLead = textBeforeOtherSuggestionsBlock(raw);
+    const boldSpans = [...rawLead.matchAll(/\*\*([^*\n]{2,80})\*\*/g)].map((m) => m[1].trim());
+    hasBoldName = boldSpans.some((inner) => isLikelyMarkdownCampaignTitle(inner));
+  }
 
   const hasName =
     hasBoldName ||
@@ -276,21 +280,34 @@ function looksLikeCampaignProposal(plainText: string, rawMarkdown?: string): boo
     /\b\d{1,2}:\d{2}\s*(?:AM|PM)\b/i.test(plainText) ||
     /\b(?:tomorrow|today)\b/i.test(plainText) ||
     /\b(?:the\s+)?next\s+\d+\s+days?\b/i.test(plainText) ||
+    /\bthis\s+weekend\b/i.test(plainText) ||
     /\bApril\s+\d{1,2}\b|\bkick\s+(?:it\s+)?off\b/i.test(plainText);
 
-  const hasOffer = /\b(?:bundle|bogo|buy.{0,10}get|discount|clearance|free\s+item|free\s+\w+)\b/i.test(plainText);
+  const hasOffer =
+    /\b(?:bundle|bogo|buy.{0,10}get|discount|clearance|free\s+item|free\s+\w+)\b/i.test(plainText) ||
+    /\b\d+(?:\.\d+)?%\b/.test(plainText);
 
   return hasName && (hasDate || hasOffer);
 }
 
+/** Drop trailing "Other suggestions" blocks so parsers don't pick bullets' offers/dates. */
+function textBeforeOtherSuggestionsBlock(raw: string): string {
+  const idx = raw.search(/\n\n\s*\*{0,2}\s*Other\s+suggestions\b/i);
+  if (idx === -1) return raw;
+  return raw.slice(0, idx).trimEnd();
+}
+
 /** Extract campaign name from **markdown**, quoted text, or "call it …" patterns. */
 function extractCampaignName(plainText: string, rawMarkdown?: string): string | null {
-  const raw = rawMarkdown?.trim();
-  if (raw) {
-    const boldM = raw.match(/\*\*([^\*\n]{2,80})\*\*/);
-    if (boldM?.[1] && isLikelyMarkdownCampaignTitle(boldM[1])) {
-      return boldM[1].trim();
+  const rawLead = rawMarkdown ? textBeforeOtherSuggestionsBlock(rawMarkdown) : "";
+  if (rawLead) {
+    const boldSpans = [...rawLead.matchAll(/\*\*([^*\n]{2,80})\*\*/g)].map((m) => m[1].trim());
+    let best: string | null = null;
+    for (const inner of boldSpans) {
+      if (!isLikelyMarkdownCampaignTitle(inner)) continue;
+      if (!best || inner.length > best.length) best = inner;
     }
+    if (best) return best;
   }
   const quoted = plainText.match(/['"]([A-Z][^'"]{2,80})['"]/);
   if (quoted) return quoted[1].trim();
@@ -305,8 +322,10 @@ function extractCampaignName(plainText: string, rawMarkdown?: string): string | 
 
 /** Extract promo offer type from text. */
 function extractOfferType(text: string): string | null {
-  const pct = text.match(/\b\d+(?:\.\d+)?%\s*(?:off|discount)\b/i);
-  if (pct) return pct[0].trim();
+  const pctOff = text.match(/\b\d+(?:\.\d+)?%\s*(?:off|discount)\b/i);
+  if (pctOff) return pctOff[0].trim();
+  const barePct = text.match(/\b\d+(?:\.\d+)?%(?!\d)/);
+  if (barePct) return barePct[0].trim();
   const m = text.match(
     /\b(buy\s*\d\s*get\s*\d\s*free|bogo(?:f)?|bundle(?:\s+deal)?|clearance|discount|free\s+\w+(?:\s+\w+)?)\b/i,
   );
@@ -325,7 +344,8 @@ function extractDateNear(text: string, triggers: RegExp): string | null {
       String.raw`(?:this\s+)?(?:friday|saturday|sunday|monday|tuesday|wednesday|thursday)(?:\s*,\s*(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}(?:st|nd|rd|th)?)?|` +
       String.raw`\btomorrow\b|` +
       String.raw`\btoday\b|` +
-      String.raw`(?:the\s+)?next\s+\d+\s+days?` +
+      String.raw`(?:the\s+)?next\s+\d+\s+days?|` +
+      String.raw`\bthis\s+weekend\b` +
       String.raw`)` +
       DATE_TIME_SUFFIX,
     "i",
@@ -347,23 +367,25 @@ function buildSummaryCard(
 ): SummaryCard | null {
   let rows: SummaryCardRow[] = [];
 
+  const plainLead = textBeforeOtherSuggestionsBlock(allTextPlain).trim();
+
   // Campaign name (prefer **bold** from raw assistant markdown when plain text had markers stripped)
-  const name = extractCampaignName(allTextPlain, rawForExtraction);
+  const name = extractCampaignName(plainLead, rawForExtraction);
   if (name) rows.push({ label: "Name", value: name });
 
-  // Offer type
-  const offer = extractOfferType(allTextPlain);
+  // Offer type (ignore follow-on suggestion bullets)
+  const offer = extractOfferType(plainLead);
   if (offer) rows.push({ label: "Offer", value: offer, badge: true });
 
   // Products mentioned: pairing X with Y, or N items/products
-  const pairingMatch = allTextPlain.match(
+  const pairingMatch = plainLead.match(
     /(?:pair(?:ing)?\s+(?:the\s+)?(.{5,60}?)\s+with\s+(?:a\s+free\s+)?(.{5,60?})(?:\s+makes|\s+add|\s+would|\.|,))/i,
   );
   if (pairingMatch) {
     rows.push({ label: "Main Item", value: pairingMatch[1].replace(/\*\*/g, "").trim() });
     rows.push({ label: "Free Item", value: pairingMatch[2].replace(/\*\*/g, "").trim() });
   } else {
-    const fromBullets = extractMainAndFreeFromBulletList(allTextPlain);
+    const fromBullets = extractMainAndFreeFromBulletList(plainLead);
     if (fromBullets.main) {
       rows.push({ label: "Main Item", value: fromBullets.main });
     }
@@ -371,7 +393,7 @@ function buildSummaryCard(
       rows.push({ label: "Free Item", value: fromBullets.free });
     }
     if (!fromBullets.main && !fromBullets.free) {
-      const countMatch = allTextPlain.match(
+      const countMatch = plainLead.match(
         /\b(all\s+(?:three|two|four|five|\d+)|(\d+))\s+(?:food\s+)?(?:item|product|sku)s?\b/i,
       );
       if (countMatch) {
@@ -380,18 +402,21 @@ function buildSummaryCard(
     }
   }
 
-  // Start date
+  // Start date (lead prose only — avoids bullets / “Other suggestions”)
   const start = extractDateNear(
-    allTextPlain,
+    plainLead,
     /kick\s+(?:it\s+)?off(?:\s+this)?|start(?:ing)?(?:\s+(?:on|this))?|from\b|launch(?:ing|es)?/i,
   );
   if (start) rows.push({ label: "Start", value: start });
 
-  // End date
-  const end = extractDateNear(
-    allTextPlain,
-    /run(?:ning)?\s+(?:it\s+)?through|end(?:ing)?(?:\s+on)?|through\b|until\b|to\b(?!\s+catch)/i,
-  );
+  // End date (avoid tying "this weekend" to "Friday …" earlier in same sentence via extractDateNear)
+  let end =
+    extractDateNear(
+      plainLead,
+      /run(?:ning)?\s+(?:it\s+)?through|end(?:ing)?(?:\s+on)?|through\b|until\b|to\b(?!\s+catch)|(?:through|throughout)\s+(?:the\s+)?weekend/i,
+    ) ?? null;
+  if (!end && /\bthis\s+weekend\b/i.test(plainLead)) end = "This weekend";
+
   if (end && end !== start) rows.push({ label: "End", value: end });
 
   rows = mergeSummaryEnrichment(rows, enrichment);
@@ -628,6 +653,11 @@ function tryBuildPromoTypesExplainerChunks(
 
   if (looksLikeCampaignDetailBullets(items)) return null;
 
+  const intro = lines.slice(0, firstBullet).join("\n").trim();
+  const introPlain = intro.replace(/\*\*/g, "").trim();
+  if (looksLikeCampaignProposal(introPlain, intro)) return null;
+  if (/\bother\s+suggestions\b/i.test(trimmed)) return null;
+
   const plainLower = trimmed.replace(/\*\*/g, "").toLowerCase();
   const promoContext = /\b(promotion|promo|campaign)\b/.test(plainLower);
   const explainsTypes =
@@ -648,7 +678,6 @@ function tryBuildPromoTypesExplainerChunks(
   }
   if (options.length < 2) return null;
 
-  const intro = lines.slice(0, firstBullet).join("\n").trim();
   const closing = lines.slice(lastBullet + 1).join("\n").trim() || undefined;
 
   const out: AssistantMessageChunk[] = [
@@ -1191,6 +1220,22 @@ function isTrivialStructuredPayload(trimmed: string): boolean {
 
 const TRIVIAL_PAYLOAD_FALLBACK =
   "Thanks — I've noted that. Let me know if you'd like anything else.";
+
+/** For wizard draft_meta when backend `campaign_meta` is empty — same heuristics as summary-card NLP. */
+export function inferNlDraftCampaignHintsFromMessage(rawMessage: string): {
+  campaignThemeName: string | null;
+  offerSummary: string | null;
+} {
+  const trimmed = rawMessage.replace(/\r\n/g, "\n").trim();
+  if (!trimmed) {
+    return { campaignThemeName: null, offerSummary: null };
+  }
+  const plainLead = textBeforeOtherSuggestionsBlock(trimmed.replace(/\*\*/g, "")).trim();
+  return {
+    campaignThemeName: extractCampaignName(plainLead, trimmed),
+    offerSummary: extractOfferType(plainLead),
+  };
+}
 
 /**
  * Returns one fragment per chat bubble: Markdown (rendered in the UI), sanitized HTML,

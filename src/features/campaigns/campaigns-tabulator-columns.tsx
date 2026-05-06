@@ -127,6 +127,7 @@ export function buildCampaignColumns({
     {
       title: "Campaign",
       field: "name",
+      cssClass: "camp-col-campaign",
       minWidth: 220,
       widthGrow: 1.25,
       variableHeight: true,
@@ -150,6 +151,7 @@ export function buildCampaignColumns({
     {
       title: "Status",
       field: "status",
+      cssClass: "camp-col-mid",
       width: 130,
       headerFilter: "input" as const,
       headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
@@ -171,6 +173,7 @@ export function buildCampaignColumns({
     {
       title: "Pipeline Stage",
       field: "pipeline",
+      cssClass: "camp-col-mid",
       minWidth: 620,
       widthGrow: 2,
       headerFilter: "input" as const,
@@ -193,6 +196,7 @@ export function buildCampaignColumns({
     {
       title: "Hardware",
       field: "hardware",
+      cssClass: "camp-col-mid",
       width: 180,
       headerFilter: "input" as const,
       headerFilterFunc: (value: unknown, _fieldVal: unknown, rowData: unknown) => {
@@ -210,6 +214,7 @@ export function buildCampaignColumns({
     {
       title: "SKUs",
       field: "skus",
+      cssClass: "camp-col-mid",
       width: 72,
       sorter: "number",
       headerFilter: "input" as const,
@@ -225,6 +230,7 @@ export function buildCampaignColumns({
     {
       title: "Date",
       field: "date",
+      cssClass: "camp-col-mid",
       width: 120,
       headerFilter: "input" as const,
       formatter: (cell: DataTableCell<CampaignListItem>) =>
@@ -233,6 +239,7 @@ export function buildCampaignColumns({
     {
       title: "Initiator",
       field: "initiator",
+      cssClass: "camp-col-mid",
       width: 140,
       headerFilter: "input" as const,
       formatter: (cell: DataTableCell<CampaignListItem>) =>
@@ -241,6 +248,7 @@ export function buildCampaignColumns({
     {
       title: "Actions",
       field: "actions",
+      cssClass: "camp-col-actions",
       headerSort: false,
       headerFilter: false,
       width: 140,

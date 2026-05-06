@@ -1,3 +1,7 @@
+import {
+  beginManualLogout,
+  scheduleEndManualLogout,
+} from "@/lib/promo-api/manual-logout-guard";
 import { promoApiClient } from "@/lib/promo-api-client";
 import { clearAuthToken, setAuthToken } from "@/lib/auth/session";
 import { resetClientSessionState } from "@/lib/reset-client-session-state";
@@ -177,6 +181,7 @@ export class PromoAuthService {
   }
 
   static async logout(): Promise<void> {
+    beginManualLogout();
     try {
       await promoApiClient.post(`${API_PREFIX}/auth/logout`);
     } catch (error) {
@@ -185,6 +190,7 @@ export class PromoAuthService {
       }
     } finally {
       clearPromoAuthLocalState();
+      scheduleEndManualLogout();
     }
   }
 

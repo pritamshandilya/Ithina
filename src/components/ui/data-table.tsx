@@ -33,8 +33,13 @@ export interface DataTableColumn<T = object> {
   sorter?: "string" | "number" | "alphanum" | "boolean" | "date" | "time" | "datetime";
   width?: number | string;
   minWidth?: number;
-  /** Return an HTML string, HTMLElement, or false (shows nothing) */
-  formatter?: (cell: DataTableCell<T>) => string | HTMLElement | false;
+  /** Return an HTML string, HTMLElement, or false (shows nothing).
+   *  Tabulator passes (cell, params, onRendered) — declare extra params if needed. */
+  formatter?: (
+    cell: DataTableCell<T>,
+    params?: Record<string, unknown>,
+    onRendered?: (cb: () => void) => void,
+  ) => string | HTMLElement | false;
   /** Cell click handler; receives the native MouseEvent + typed cell accessor */
   cellClick?: (e: MouseEvent, cell: DataTableCell<T>) => void;
   headerSort?: boolean;
@@ -112,6 +117,12 @@ export interface DataTableProps<T = object> {
   dataTreeElementColumn?: string;
   /** Shrink wrapper height to content (no default min-heights; for compact admin lists) */
   fitContent?: boolean;
+  /**
+   * Expand the grid inside a flex parent (`flex-1 min-h-0` column): body area grows, rows stay
+   * at the top, pagination footer sits at the bottom of the allotted height (All Campaigns UX).
+   * Ignored when {@link fitContent} is true.
+   */
+  stretchLayout?: boolean;
 
   /**
    * Pin the first N columns (including bulk-select and row number when enabled) so they stay visible during horizontal scroll.
@@ -180,9 +191,11 @@ export function DataTable<T extends object>({
   dataTreeStartExpanded = false,
   dataTreeElementColumn,
   fitContent = false,
+  stretchLayout = false,
   freezeLeadingColumns = 0,
   renderVertical,
 }: DataTableProps<T>) {
+  const effectiveStretch = stretchLayout && !fitContent;
   const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tableRef = useRef<TabulatorGrid | null>(null);
@@ -474,17 +487,21 @@ export function DataTable<T extends object>({
       className={cn(
         "data-table-wrapper min-w-0 w-full max-w-full rounded-lg border border-border bg-card overflow-x-auto overflow-y-hidden",
         fitContent ? "h-auto !min-h-0" : "min-h-[280px]",
+        effectiveStretch && "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden",
         className,
       )}
       role="region"
       aria-label="Data table"
       data-fit-content={fitContent ? "true" : undefined}
+      data-stretch-layout={effectiveStretch ? "true" : undefined}
     >
       <div
         ref={containerRef}
         className={cn(
           "data-table-container w-full min-w-0 max-w-full overflow-x-auto",
-          fitContent ? "h-auto !min-h-0" : "h-full min-h-[200px]",
+          fitContent ? "h-auto !min-h-0" : effectiveStretch
+            ? "flex min-h-0 min-w-0 flex-1 flex-col"
+            : "h-full min-h-[200px]",
         )}
       />
     </div>

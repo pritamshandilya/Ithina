@@ -294,7 +294,9 @@ export default function CampaignStudio() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => navigate({ to: "/maker/wizard" })}
+            onClick={() =>
+              navigate({ to: "/maker/wizard", search: {}, replace: true })
+            }
             className="flex size-8 items-center justify-center rounded-lg border border-ithina-border text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
             aria-label="Back"
           >
@@ -468,7 +470,9 @@ export default function CampaignStudio() {
                           </p>
                           <button
                             type="button"
-                            onClick={() => navigate({ to: "/maker/wizard" })}
+                            onClick={() =>
+              navigate({ to: "/maker/wizard", search: {}, replace: true })
+            }
                             className="mt-3 rounded-lg border border-ithina-border px-3 py-1.5 text-[11px] font-medium text-slate-200 transition-colors hover:bg-white/5"
                           >
                             Back to wizard

@@ -46,15 +46,15 @@ function marginCellHtml(row: StagedSku): string {
   if (typeof m !== "number" || Number.isNaN(m)) {
     if (reason) {
       const t = ` title="${escapeCellText(reason)}"`;
-      return `<span class="font-mono text-[11px] font-medium text-rose-400"${t}>—</span>`;
+      return `<span class="wizard-staging-margin-pct font-mono text-[11px] font-medium text-rose-400"${t}>—</span>`;
     }
-    return `<span class="font-mono text-[11px] text-slate-500">—</span>`;
+    return `<span class="wizard-staging-margin-pct font-mono text-[11px] text-slate-500">—</span>`;
   }
   const label = escapeCellText(formatSkuMarginPercent(m));
   const accent = marginAccentClasses(m);
   const tooltip =
     !row.safe && reason ? ` title="${escapeCellText(reason)}"` : "";
-  return `<span class="font-mono text-xs tabular-nums tracking-tight ${accent}"${tooltip}>${label}</span>`;
+  return `<span class="wizard-staging-margin-pct font-mono text-xs tabular-nums tracking-tight ${accent}"${tooltip}>${label}</span>`;
 }
 
 /** BOGO / buy-X-get-Y style rows (used to show free vs primary when API sets is_free). */
@@ -514,9 +514,23 @@ function DataStagingGrid({
       sorter: "number",
       hozAlign: "right",
       headerHozAlign: "right",
-      formatter: (cell: unknown) => {
+      cssClass: "wizard-staging-col-margin",
+      formatter: (
+        cell: unknown,
+        _params: unknown,
+        onRendered?: (cb: () => void) => void,
+      ) => {
+        // Cancel any residual onRendered callback (e.g. from Tabulator's progress
+        // formatter leaking across renders) so bar <div>s are never appended.
+        onRendered?.(() => {});
         const row = (cell as { getData: () => StagedSku }).getData();
-        return marginCellHtml(row);
+        const html = marginCellHtml(row);
+        // Return an HTMLElement: Tabulator's _generateContents will call
+        // removeChild on every existing child first, clearing any bar divs,
+        // before appending our span.
+        const tmp = document.createElement("span");
+        tmp.innerHTML = html;
+        return (tmp.firstElementChild as HTMLElement) ?? tmp;
       },
     },
     ];

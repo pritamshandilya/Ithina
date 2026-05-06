@@ -143,7 +143,9 @@ export default function MakerDashboard({ variant = "maker" }: Props) {
               <p className="mb-5 text-xs leading-relaxed text-slate-400">{insight.description}</p>
               <button
                 type="button"
-                onClick={() => navigate({ to: routes.wizard })}
+                onClick={() =>
+                  navigate({ to: routes.wizard, search: {}, replace: true })
+                }
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/5 py-2 text-xs font-semibold text-slate-300 shadow-sm transition-colors hover:bg-ithina-purple hover:text-white"
               >
                 {insight.actionLabel}
